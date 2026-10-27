@@ -456,6 +456,14 @@ match is not evidence of absence beyond those bounded records. Compact
 projections retain the aggregate candidate, supporting preflight references,
 and bounded provider-invocation references before dropping individual
 deferral detail.
+When a `diagnostic.deferred` event records a coordination deferral as its
+cause, the same coordination record exposes a bounded
+`diagnostic_capture_relation` with the diagnostic event and failure identity.
+The relation is derived only from that exact event-cause reference. A missing
+match is scoped to the selected window; when the window is complete, it means
+no causally linked diagnostic deferral was recorded in that session history.
+It does not establish that another diagnostic could not have occurred through
+an unrecorded interface.
 When a current `Session.check` observes a mutation or verification conflict,
 it attaches a separate `current_claim_state` with the claim version and
 bounded owner liveness, and whether safe recovery is eligible on a normal

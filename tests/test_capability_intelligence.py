@@ -3626,6 +3626,27 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
             },
         },
     ])
+    events.append({
+        "identity": "evt_diagnostic_capture_deferred_47",
+        "session_id": session.session_id,
+        "sequence": 47,
+        "type": "diagnostic.deferred",
+        "causes": ["evt_coordination_deferred_42"],
+        "payload": {
+            "failure": "fixture.debug-probe::t-case-1",
+            "reason": "coordination-required",
+            "coordination": {
+                "required_coordination": "non-overlapping-operation-scope-or-isolated-worktree",
+                "coordination_status": "overlapping-scope-conflict",
+                "next_step": "select-an-exact-non-overlapping-operation-scope",
+                "authority_event_reference": {
+                    "identity": "evt_coordination_deferred_42",
+                    "sequence": 42,
+                    "type": "authority.coordination-deferred",
+                },
+            },
+        },
+    })
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events), "events": events[-limit:],
         "truncated": False, "next_before_sequence": None,
@@ -3642,6 +3663,34 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     assert deferred["operation_executed"] is False
     assert deferred["event_reference"]["type"] == (
         "authority.coordination-deferred"
+    )
+    capture_relation = deferred["diagnostic_capture_relation"]
+    assert capture_relation["status"] == (
+        "causally-linked-diagnostic-deferral-observed"
+    )
+    assert capture_relation["count"] == 1
+    assert capture_relation["observations"][0]["failure"] == (
+        "fixture.debug-probe::t-case-1"
+    )
+    assert capture_relation["observations"][0]["event_reference"][
+        "identity"
+    ] == "evt_diagnostic_capture_deferred_47"
+    no_capture_relation = next(
+        item["diagnostic_capture_relation"]
+        for item in activity["coordination_deferrals"]
+        if item["event_reference"]["identity"] == "evt_coordination_deferred_41"
+    )
+    assert no_capture_relation["status"] == (
+        "no-causally-linked-diagnostic-deferral-in-session-history"
+    )
+    partial_capture_relation = (
+        capability_intelligence._coordination_diagnostic_relation(
+            [events[0]], deferred["event_reference"],
+            event_window_truncated=True,
+        )
+    )
+    assert partial_capture_relation["status"] == (
+        "not-observed-in-selected-window"
     )
     follow_through = deferred["later_eligibility_relation"]
     assert follow_through["status"] == (
@@ -3715,6 +3764,14 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     assert compact["coordination_deferrals"][0][
         "later_eligibility_status"
     ] == "later-same-objective-eligibility-observed"
+    compact_capture_relation = next(
+        item["diagnostic_capture_relation"]
+        for item in compact["coordination_deferrals"]
+        if item["event_reference"]["identity"] == "evt_coordination_deferred_42"
+    )
+    assert compact_capture_relation["observations"][0][
+        "event_reference"
+    ]["identity"] == "evt_diagnostic_capture_deferred_47"
     compact_summary = compact["coordination_deferral_candidates"][0][
         "later_eligibility_summary"
     ]

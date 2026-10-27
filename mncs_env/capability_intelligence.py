@@ -3922,6 +3922,47 @@ def _compact_projection(
                 compact_item[key] = False
         if isinstance(item.get("scope"), dict):
             compact_item["scope"] = item["scope"]
+        diagnostic_relation = item.get("diagnostic_capture_relation")
+        if isinstance(diagnostic_relation, dict):
+            compact_relation: dict[str, Any] = {
+                "status": _short_text(diagnostic_relation.get("status"), 96),
+                "count": diagnostic_relation.get("count", 0),
+                "event_window_complete_history": (
+                    diagnostic_relation.get("event_window_complete_history")
+                    is True
+                ),
+                "observations": [],
+            }
+            for observation in diagnostic_relation.get("observations", [])[:4]:
+                if not isinstance(observation, dict):
+                    continue
+                compact_observation: dict[str, Any] = {
+                    "reason": "coordination-required",
+                    "failure": _short_text(observation.get("failure"), 160),
+                }
+                reference = observation.get("event_reference")
+                if isinstance(reference, dict):
+                    compact_observation["event_reference"] = {
+                        key: reference[key]
+                        for key in ("identity", "sequence", "type")
+                        if key in reference
+                    }
+                compact_relation["observations"].append(
+                    compact_observation,
+                )
+            if type(diagnostic_relation.get("observations_omitted")) is int:
+                compact_relation["observations_omitted"] = diagnostic_relation[
+                    "observations_omitted"
+                ]
+            if type(diagnostic_relation.get("invalid_matched_event_count")) is int:
+                compact_relation["invalid_matched_event_count"] = (
+                    diagnostic_relation["invalid_matched_event_count"]
+                )
+            if type(diagnostic_relation.get("unlinked_event_count")) is int:
+                compact_relation["unlinked_event_count"] = diagnostic_relation[
+                    "unlinked_event_count"
+                ]
+            compact_item["diagnostic_capture_relation"] = compact_relation
         raw_conflict = item.get("claim_conflict")
         if isinstance(raw_conflict, dict):
             compact_conflict = {
@@ -9438,6 +9479,72 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
     return reference
 
 
+def _coordination_diagnostic_relation(
+    events: list[dict[str, Any]], authority_reference: dict[str, Any], *,
+    event_window_truncated: bool,
+) -> dict[str, Any]:
+    """Link diagnostic capture deferrals only through recorded event causes."""
+    authority_identity = authority_reference.get("identity")
+    if not isinstance(authority_identity, str) or not authority_identity:
+        return {
+            "status": "authority-event-identity-unavailable",
+            "count": 0,
+            "observations": [],
+        }
+    observations: list[dict[str, Any]] = []
+    invalid_matched_event_count = 0
+    unlinked_event_count = 0
+    for event in events:
+        if event.get("type") != "diagnostic.deferred":
+            continue
+        payload = event.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        if payload.get("reason") != "coordination-required":
+            continue
+        causes = event.get("causes")
+        if not isinstance(causes, list):
+            unlinked_event_count += 1
+            continue
+        if authority_identity not in causes:
+            if causes:
+                continue
+            unlinked_event_count += 1
+            continue
+        reference = _event_reference(event)
+        failure = payload.get("failure")
+        if (reference is None or not isinstance(failure, str)
+                or not failure or len(failure) > 1024):
+            invalid_matched_event_count += 1
+            continue
+        observations.append({
+            "event_reference": reference,
+            "failure": _short_text(failure, 160),
+            "reason": "coordination-required",
+        })
+    observations.sort(
+        key=lambda item: item["event_reference"]["sequence"],
+    )
+    if observations:
+        status = "causally-linked-diagnostic-deferral-observed"
+    elif invalid_matched_event_count:
+        status = "matching-diagnostic-event-invalid"
+    elif event_window_truncated:
+        status = "not-observed-in-selected-window"
+    elif unlinked_event_count:
+        status = "unlinked-coordination-diagnostic-events-observed"
+    else:
+        status = "no-causally-linked-diagnostic-deferral-in-session-history"
+    return {
+        "status": status,
+        "count": len(observations),
+        "observations": observations[:4],
+        "observations_omitted": max(0, len(observations) - 4),
+        "invalid_matched_event_count": invalid_matched_event_count,
+        "unlinked_event_count": unlinked_event_count,
+        "event_window_complete_history": not event_window_truncated,
+    }
+
+
 def _current_context_binding_snapshot_summary(
     snapshot: dict[str, Any],
 ) -> dict[str, Any]:
@@ -14539,6 +14646,12 @@ def _session_activity(
             ),
             "event_reference": reference,
         }
+        record["diagnostic_capture_relation"] = (
+            _coordination_diagnostic_relation(
+                events, reference,
+                event_window_truncated=event_window_truncated,
+            )
+        )
         if claim_conflict is not None:
             record["claim_conflict"] = claim_conflict
         coordination_deferrals.append(record)
