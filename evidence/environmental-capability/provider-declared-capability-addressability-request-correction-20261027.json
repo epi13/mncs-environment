@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_declared_capability_request_correction_20261027",
+  "captured_at": "2026-10-27T09:14:51Z",
+  "measurement_basis": "append-only correction from campaign-state contract diagnostics; exact target bytes retained and verified by content digest",
+  "observation": {
+    "kind": "observation-contract-correction",
+    "source_interface": "MNCS Environment observation-correction contract and campaign-state projection",
+    "request": {
+      "operation": "repair-required-observation-request",
+      "target_observation_identity": "ev_environment_provider_declared_capability_addressability_20261027",
+      "target_content_sha256": "897d42ae11d05643cb3dfa6c67cefa3545fc286f7f7c6a48b2f4598328f8409d",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "projection": "environmental-capability",
+      "contract_diagnostic": "missing-observation-request"
+    },
+    "outcome": {
+      "correction": "Supply the missing observation.request object through the supported exact-field append-only correction.",
+      "reason": "Campaign-state readback identified missing-observation-request on the target. The original observation remains immutable; this record adds only the missing request context and lets the projection revalidate it.",
+      "interpretation_limit": "This corrects observation structure only. It does not change the provider evidence, establish implementation ownership or integrity, or establish agent discovery or use."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "campaign_state_checkpoint_id_before_recording": "chk_6d9af0e43be5709e",
+    "campaign_evidence_count_before_recording": 1
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_provider_declared_capability_addressability_20261027",
+      "repository": "mncs-environment",
+      "commit": "c07873ad5cb55949cdbfe1db8b6abc421285a396",
+      "path": "evidence/environmental-capability/provider-declared-capability-addressability-20261027.json",
+      "sha256": "897d42ae11d05643cb3dfa6c67cefa3545fc286f7f7c6a48b2f4598328f8409d"
+    },
+    "corrected_field_paths": [
+      "observation.request"
+    ],
+    "replacement_values": {
+      "observation.request": {
+        "operation": "repair-required-observation-request",
+        "target_observation_identity": "ev_environment_provider_declared_capability_addressability_20261027",
+        "target_content_sha256": "897d42ae11d05643cb3dfa6c67cefa3545fc286f7f7c6a48b2f4598328f8409d",
+        "session_id": "ses_a752e1c55fb4ca6f",
+        "work_intent_id": "int_e9a2959ffe2e952c",
+        "projection": "environmental-capability",
+        "contract_diagnostic": "missing-observation-request"
+      }
+    },
+    "reason": "The target digest is unchanged. Restore only its missing request field, then validate the complete observation through the projection."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_provider_declared_capability_addressability_20261027",
+      "kind": "corrected-observation-target",
+      "repository": "mncs-environment",
+      "commit": "c07873ad5cb55949cdbfe1db8b6abc421285a396",
+      "path": "evidence/environmental-capability/provider-declared-capability-addressability-20261027.json",
+      "sha256": "897d42ae11d05643cb3dfa6c67cefa3545fc286f7f7c6a48b2f4598328f8409d"
+    }
+  ],
+  "not_measured": [
+    "whether the provider-declared Store capabilities are intended to be agent-invocable",
+    "implementation ownership or content integrity of the referenced provider paths",
+    "whether the projection improves discovery or use in subsequent sessions"
+  ]
+}
