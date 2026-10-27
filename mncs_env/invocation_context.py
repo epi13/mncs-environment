@@ -10,6 +10,7 @@ from contextvars import ContextVar
 AMBIENT_OWNER_PASS_CONTEXT_SCHEMA = (
     "mncs.environment.ambient-owner-pass-context/1"
 )
+SESSION_INVOKE_REQUEST_SURFACE = "mncs-env-invoke-cli"
 _CONTEXT: ContextVar[dict[str, str] | None] = ContextVar(
     "mncs_environment_ambient_owner_pass_context", default=None,
 )

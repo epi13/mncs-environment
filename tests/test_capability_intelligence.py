@@ -4281,6 +4281,8 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     completion_context = events[1]["payload"].pop(
         "ambient_owner_pass_context",
     )
+    events[0]["payload"]["request_surface"] = "mncs-env-invoke-cli"
+    events[1]["payload"]["request_surface"] = "mncs-env-invoke-cli"
     unclassified_result = capability_intelligence.project(session)
     unclassified_activity = unclassified_result["session_activity"][
         "service_accountability"
@@ -4304,6 +4306,12 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert unclassified_probe["activity_groups"][0][
         "binding_attribution_status"
     ] == "exact-current-session-binding"
+    assert unclassified_probe["activity_groups"][0]["request_surface"] == (
+        "mncs-env-invoke-cli"
+    )
+    assert unclassified_probe["activity_groups"][0][
+        "request_surface_relation_status"
+    ] == "matched-explicit-session-invoke"
     assert unclassified_probe["activity_groups"][0][
         "completion_context_status_counts"
     ] == {"not-recorded": 1}
@@ -4319,9 +4327,24 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             "type": "invocation.completed",
         },
     ]
-    assert "do not establish that an agent initiated the call" in (
+    assert "does not identify the actor" in (
         unclassified_probe["interpretation_limit"]
     )
+    direct_interaction = unclassified_result["session_activity"]["interactions"][0]
+    assert direct_interaction["request_surface"] == "mncs-env-invoke-cli"
+    assert direct_interaction["request_surface_relation_status"] == (
+        "matched-explicit-session-invoke"
+    )
+    completion_surface = events[1]["payload"].pop("request_surface")
+    unmatched_surface_result = capability_intelligence.project(session)
+    unmatched_surface_interaction = unmatched_surface_result[
+        "session_activity"
+    ]["interactions"][0]
+    assert unmatched_surface_interaction["request_surface_relation_status"] == (
+        "request-surface-event-mismatch"
+    )
+    assert "request_surface" not in unmatched_surface_interaction
+    events[1]["payload"]["request_surface"] = completion_surface
     assert unclassified_result["source"][
         "session_service_accountability_digest"
     ]
@@ -4350,6 +4373,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "supporting_events"
     ][0]["identity"] == (
         "evt_service_readiness_invoked"
+    )
+    assert compact_probe_activity["activity_groups"][0]["request_surface"] == (
+        "mncs-env-invoke-cli"
     )
     events[0]["payload"]["ambient_owner_pass_context"] = invocation_context
     events[1]["payload"]["ambient_owner_pass_context"] = completion_context

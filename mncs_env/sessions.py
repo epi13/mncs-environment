@@ -5838,6 +5838,7 @@ class Session:
         env: dict[str, str] | None = None,
         effect_target: dict[str, Any] | None = None,
         input_artifacts: list[dict[str, Any]] | None = None,
+        request_surface: str | None = None,
     ) -> dict[str, Any]:
         """Invoke a bound capability. Deny, defer, and escalate never spawn.
 
@@ -5852,6 +5853,10 @@ class Session:
         records carry both executor and effect target.
         """
         binding = self._binding(capability)
+        if (request_surface is not None
+                and request_surface
+                != invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE):
+            raise LifecycleError("unsupported capability invocation request surface")
         if output_limit_bytes is None:
             declared_limit = binding.get("output_limit_bytes")
             output_limit_bytes = (
@@ -6297,6 +6302,8 @@ class Session:
                         "parent_request_id": parent_request_id,
                         "provider_request_id": provider_request_id,
                     }
+                    if request_surface is not None:
+                        invocation_payload["request_surface"] = request_surface
                     if ambient_owner_pass_context is not None:
                         invocation_payload["ambient_owner_pass_context"] = (
                             ambient_owner_pass_context
@@ -6334,6 +6341,8 @@ class Session:
              "input_artifacts": input_provenance,
              "parent_request_id": parent_request_id,
              "provider_request_id": provider_request_id,
+             **({"request_surface": request_surface}
+                if request_surface is not None else {}),
              **artifact_fields, "at": utcnow()}
         )
         completion_payload = {
@@ -6346,6 +6355,8 @@ class Session:
             "provider_request_id": provider_request_id,
             "artifact_store_ref": artifact_fields.get("artifact_store_ref"),
         }
+        if request_surface is not None:
+            completion_payload["request_surface"] = request_surface
         if ambient_owner_pass_context is not None:
             completion_payload["ambient_owner_pass_context"] = (
                 ambient_owner_pass_context

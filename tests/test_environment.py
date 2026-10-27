@@ -6998,6 +6998,56 @@ class SessionTests(unittest.TestCase):
                 "ambient_owner_pass_context", invoked_event["payload"],
             )
 
+    def test_session_cli_request_surface_is_preserved_on_invocation_and_completion(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.probe_availability(
+                capabilities.bind(
+                    provider="p", capability="session-reader",
+                    contract_revision="1", entrypoint="e", address="/bin/echo",
+                    effects=["read"],
+                )
+            )
+            session.snapshot["bindings"].append(binding)
+            with mock.patch.object(
+                sessions.capabilities_module,
+                "invoke",
+                return_value={
+                    "status": "ok", "returncode": 0,
+                    "stdout": "ok", "stderr": "",
+                },
+            ):
+                result = session.invoke(
+                    "session-reader", ["status"],
+                    request_surface=(
+                        sessions.invocation_context_module
+                        .SESSION_INVOKE_REQUEST_SURFACE
+                    ),
+                )
+
+            self.assertEqual(result["status"], "ok")
+            invocation = next(
+                event for event in session._log()
+                if event.get("type") == "capability.invoked"
+            )
+            completion = next(
+                event for event in session._log()
+                if event.get("type") == "invocation.completed"
+            )
+            expected_surface = "mncs-env-invoke-cli"
+            self.assertEqual(
+                invocation["payload"]["request_surface"], expected_surface,
+            )
+            self.assertEqual(
+                completion["payload"]["request_surface"], expected_surface,
+            )
+            self.assertEqual(
+                session.snapshot["artifacts"][-1]["request_surface"],
+                expected_surface,
+            )
+
     def test_session_invoke_scopes_parent_rpc_identity_to_provider_child(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))

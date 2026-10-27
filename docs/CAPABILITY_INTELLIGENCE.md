@@ -64,8 +64,12 @@ than concluding that the session received no context.
 For declared service probes, service accountability also exposes bounded
 same-capability calls without valid owner-pass context, including paired
 invocation/completion references, outcome status, and a current-binding match
-when available. This makes outside-pass activity inspectable without claiming
-that an agent initiated it or that it represents manual fallback, a missed
+when available. Locally executed `mncs-env invoke` calls now carry an explicit
+request-surface marker on both invocation and completion events; the projection
+preserves that marker only when the pair agrees. It identifies the CLI path,
+not the actor, whether ambient work was due, or whether the call represents
+avoidable intervention. Unmarked calls remain unattributed. This makes
+outside-pass activity inspectable without claiming manual fallback, a missed
 opportunity, service failure, or reduced intervention. Its digest participates
 in the service-accountability projection identity, including when response-
 budget compaction retains only its summary.

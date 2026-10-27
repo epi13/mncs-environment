@@ -24,6 +24,7 @@ from typing import Any
 from . import authority as authority_module
 from . import claims as claims_module
 from . import invocation_artifacts as invocation_artifacts_module
+from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
 from . import workspace as workspace_module
 from .capabilities import normalize_provider_evidence_path
@@ -218,6 +219,12 @@ SYSTEM_RESOURCE_SAMPLE_STATUSES = frozenset({
     "invalid_interval",
 })
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
+SESSION_REQUEST_SURFACE_RELATION_STATUSES = frozenset({
+    "matched-explicit-session-invoke",
+    "invocation-surface-unpaired-in-selected-window",
+    "request-surface-event-mismatch",
+    "invalid-request-surface",
+})
 MAX_AMBIENT_OWNER_PASS_EXECUTIONS = 16
 MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES = 4
 MAX_AMBIENT_OWNER_PASS_CAPABILITIES = 12
@@ -2578,6 +2585,14 @@ def _compact_unclassified_owner_pass_activity(value: Any) -> list[dict[str, Any]
             "capability": capability,
             "context_status": context_status,
         }
+        request_surface = row.get("request_surface")
+        if request_surface == invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE:
+            compact_row["request_surface"] = request_surface
+        request_surface_status = row.get("request_surface_relation_status")
+        if request_surface_status in SESSION_REQUEST_SURFACE_RELATION_STATUSES:
+            compact_row["request_surface_relation_status"] = (
+                request_surface_status
+            )
         for key in (
             "invocation_count", "completion_count", "nonzero_returncode_count",
         ):
@@ -3866,6 +3881,7 @@ def _compact_projection(
                 "outcome_status", "completion_producer",
                 "ambient_owner_pass_context_status",
                 "ambient_owner_pass_completion_context_status",
+                "request_surface", "request_surface_relation_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -15976,7 +15992,7 @@ def _service_ambient_owner_pass_observation(
         invocation_count = row.get("invocation_count")
         completion_count = row.get("completion_count")
         nonzero_returncode_count = row.get("nonzero_returncode_count")
-        unclassified_probe_calls.append({
+        projected_unclassified_call = {
             "context_status": row.get("context_status")
             if row.get("context_status") in {"not-recorded", "invalid"}
             else "unknown",
@@ -16004,7 +16020,20 @@ def _service_ambient_owner_pass_observation(
                 row.get("supporting_events_truncated") is True
                 or len(raw_references) > len(references)
             ),
-        })
+        }
+        if (row.get("request_surface") == (
+                invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE
+        ) and row.get("request_surface_relation_status") == (
+                "matched-explicit-session-invoke")):
+            projected_unclassified_call["request_surface"] = row[
+                "request_surface"
+            ]
+        request_surface_status = row.get("request_surface_relation_status")
+        if request_surface_status in SESSION_REQUEST_SURFACE_RELATION_STATUSES:
+            projected_unclassified_call[
+                "request_surface_relation_status"
+            ] = request_surface_status
+        unclassified_probe_calls.append(projected_unclassified_call)
     if unclassified_rows:
         unclassified_probe_status = "observed-outside-tagged-owner-pass"
     elif projected_activity_incomplete:
@@ -16033,7 +16062,7 @@ def _service_ambient_owner_pass_observation(
         ),
         "causal_status": "not-established",
         "interpretation_limit": (
-            "These capability calls have no valid owner-pass context. Exact request, completion, or binding matches do not establish that an agent initiated the call, that it was manual fallback, that a service opportunity was missed, or that the service failed."
+            "These capability calls have no valid owner-pass context. The explicit request-surface marker identifies the mncs-env invoke CLI path when both events agree, but does not identify the actor or establish that ambient service work was due, that this was manual fallback, or that the service failed."
         ),
     }
     if any(item["exact_binding"] for item in scoped_rows):
@@ -17060,6 +17089,16 @@ def _ambient_owner_pass_event_context(
     }, "valid"
 
 
+def _session_invoke_request_surface(payload: Any) -> tuple[str | None, str]:
+    """Recognize only the explicit, Environment-owned invoke CLI surface."""
+    if not isinstance(payload, dict) or "request_surface" not in payload:
+        return None, "not-recorded"
+    value = payload.get("request_surface")
+    if value == invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE:
+        return value, "valid"
+    return None, "invalid"
+
+
 def _session_ambient_owner_pass_activity(
     records: list[dict[str, Any]], invocation_count: int,
     trace_view: dict[str, Any],
@@ -17076,7 +17115,7 @@ def _session_ambient_owner_pass_activity(
             trace_rows.setdefault(row["service_execution_id"], []).append(row)
 
     groups: dict[tuple[str, str], dict[str, Any]] = {}
-    unclassified_capabilities: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
+    unclassified_capabilities: dict[tuple[str, ...], dict[str, Any]] = {}
     unclassified_invocation_count = 0
     invalid_context_event_count = 0
     completion_context_mismatch_count = 0
@@ -17091,6 +17130,10 @@ def _session_ambient_owner_pass_activity(
                 binding_identity if isinstance(binding_identity, dict) else {}
             )
             context_status = record.get("context_status")
+            request_surface = record.get("request_surface")
+            request_surface_relation_status = record.get(
+                "request_surface_relation_status",
+            )
             if record.get("context_status") == "invalid":
                 invalid_context_event_count += 1
             else:
@@ -17103,10 +17146,25 @@ def _session_ambient_owner_pass_activity(
                     if isinstance(binding_identity.get(key), str) else ""
                     for key in ("provider", "binding_id", "contract_revision")
                 )
-                key = (capability, str(context_status), *identity_key)
+                key = (
+                    capability, str(context_status),
+                    request_surface or "",
+                    str(request_surface_relation_status or "not-recorded"),
+                    *identity_key,
+                )
                 call_group = unclassified_capabilities.setdefault(key, {
                     "capability": capability,
                     "context_status": context_status,
+                    **({"request_surface": request_surface}
+                       if request_surface == invocation_context_module
+                       .SESSION_INVOKE_REQUEST_SURFACE
+                       and request_surface_relation_status == (
+                           "matched-explicit-session-invoke"
+                       ) else {}),
+                    **({"request_surface_relation_status": (
+                        request_surface_relation_status
+                    )} if request_surface_relation_status
+                    in SESSION_REQUEST_SURFACE_RELATION_STATUSES else {}),
                     "binding_identity": binding_identity,
                     "invocation_count": 0,
                     "completion_count": 0,
@@ -17259,7 +17317,7 @@ def _session_ambient_owner_pass_activity(
         :MAX_AMBIENT_UNCLASSIFIED_CAPABILITIES
     ]:
         binding_identity = call_group.get("binding_identity")
-        projected_unclassified_capabilities.append({
+        projected_call = {
             "capability": call_group["capability"],
             "context_status": call_group["context_status"],
             "invocation_count": call_group["invocation_count"],
@@ -17281,7 +17339,20 @@ def _session_ambient_owner_pass_activity(
                 len(call_group["supporting_events"])
                 > MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
             ),
-        })
+        }
+        request_surface = call_group.get("request_surface")
+        if request_surface == (
+                invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE
+        ):
+            projected_call["request_surface"] = request_surface
+        request_surface_status = call_group.get(
+            "request_surface_relation_status",
+        )
+        if request_surface_status in SESSION_REQUEST_SURFACE_RELATION_STATUSES:
+            projected_call["request_surface_relation_status"] = (
+                request_surface_status
+            )
+        projected_unclassified_capabilities.append(projected_call)
 
     ordered_groups = sorted(
         groups.values(), key=lambda item: item["_first_sequence"], reverse=True,
@@ -17835,14 +17906,45 @@ def _session_activity(
         owner_pass_context, owner_pass_context_status = (
             _ambient_owner_pass_event_context(payload)
         )
+        request_surface, request_surface_status = (
+            _session_invoke_request_surface(payload)
+        )
         completion_owner_pass_context, completion_owner_pass_context_status = (
             _ambient_owner_pass_event_context(completion_payload)
             if completion is not None else (None, "not-recorded")
         )
+        completion_request_surface, completion_request_surface_status = (
+            _session_invoke_request_surface(completion_payload)
+            if completion is not None else (None, "not-recorded")
+        )
+        if (request_surface_status == "invalid"
+                or completion_request_surface_status == "invalid"):
+            request_surface_relation_status = "invalid-request-surface"
+        elif request_surface is not None and completion_request_surface is not None:
+            request_surface_relation_status = (
+                "matched-explicit-session-invoke"
+                if request_surface == completion_request_surface
+                else "request-surface-event-mismatch"
+            )
+        elif request_surface is not None:
+            request_surface_relation_status = (
+                "invocation-surface-unpaired-in-selected-window"
+                if completion is None else "request-surface-event-mismatch"
+            )
+        elif completion_request_surface is not None:
+            request_surface_relation_status = "request-surface-event-mismatch"
+        else:
+            request_surface_relation_status = "not-recorded"
         capability = payload.get("capability")
         ambient_owner_pass_records.append({
             "context": owner_pass_context,
             "context_status": owner_pass_context_status,
+            "request_surface": (
+                request_surface
+                if request_surface_relation_status
+                == "matched-explicit-session-invoke" else None
+            ),
+            "request_surface_relation_status": request_surface_relation_status,
             "capability": (
                 _short_text(capability, 160) if isinstance(capability, str) else None
             ),
@@ -17905,6 +18007,20 @@ def _session_activity(
                 interaction[
                     "ambient_owner_pass_completion_context_status"
                 ] = "invalid"
+        if (request_surface is not None
+                and request_surface_relation_status
+                == "matched-explicit-session-invoke"):
+            interaction["request_surface"] = request_surface
+            interaction["request_surface_relation_status"] = (
+                request_surface_relation_status
+            )
+        elif request_surface_relation_status in (
+            SESSION_REQUEST_SURFACE_RELATION_STATUSES
+            - {"matched-explicit-session-invoke"}
+        ):
+            interaction["request_surface_relation_status"] = (
+                request_surface_relation_status
+            )
         effect_target = _invocation_effect_target(
             payload.get("effect_target"),
             completion_payload.get("effect_target") if completion is not None else None,

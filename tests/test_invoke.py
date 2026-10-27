@@ -104,3 +104,6 @@ def test_invoke_uses_declared_timeout_unless_caller_overrides_it() -> None:
 
     assert result == 0
     assert session.invoke.call_args.kwargs["timeout_seconds"] is None
+    assert session.invoke.call_args.kwargs["request_surface"] == (
+        "mncs-env-invoke-cli"
+    )

@@ -1198,10 +1198,15 @@ context only while the pass is active. The projection validates both event
 contexts, counts outcomes only when the paired completion repeats the exact
 context, and preserves bounded event references for inspection. It also
 distinguishes calls without a context from malformed context; an unclassified
-call is not attributed to an agent or treated as manual work. Bounded
-unclassified groups retain exact binding identity when recorded, paired
-completion counts, outcome status, completion-context status, and source
-references for the invocation and completion. Under response pressure, the
+call is not attributed to an agent or treated as manual work. A locally
+executed `mncs-env invoke` records the explicit CLI request surface in both
+invocation and completion events. The projection exposes that surface only
+when the paired events agree; it does not identify the actor or establish that
+ambient work was due. Other invocation paths remain unmarked. Bounded
+unclassified groups retain the request surface when present, exact binding
+identity when recorded, paired completion counts, outcome status,
+completion-context status, and source references for the invocation and
+completion. Under response pressure, the
 projection trims these details before
 discarding correlated RPC records and marks omitted groups when a compact
 summary fits. An exact trace match establishes that the invocation was observed

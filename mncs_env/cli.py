@@ -30,6 +30,7 @@ from . import entry as entry_module
 from . import evidence_store
 from . import family as family_module
 from . import invocation_artifacts as invocation_artifacts_module
+from . import invocation_context as invocation_context_module
 from . import netcheck as netcheck_module
 from . import pressures as pressures_module
 from . import projections as projections_module
@@ -940,6 +941,9 @@ def cmd_invoke(args: argparse.Namespace) -> int:
                 timeout_seconds=args.timeout,
                 output_limit_bytes=args.output_limit_bytes,
                 input_artifacts=input_artifacts,
+                request_surface=(
+                    invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE
+                ),
                 effect_target=(
                     {"repository": getattr(args, "effect_repository", None)}
                     if getattr(args, "effect_repository", None) else None
