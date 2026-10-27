@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_activity_relation_pointer_correction_20261027",
+  "captured_at": "2026-10-27T05:12:40Z",
+  "measurement_basis": "append-only correction of one campaign evidence commit pointer after integrity readback reported the commit unavailable",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS capability intelligence and reduce avoidable coordination and service burden for agents.",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS capability intelligence and reduce avoidable coordination and service burden for agents.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_205163acb3ccc5ca",
+    "campaign_evidence_count_before_recording": 10
+  },
+  "observation": {
+    "kind": "campaign-evidence-pointer-correction",
+    "source_interface": "MNCS Environment append-only evidence reference correction",
+    "request": {
+      "target_observation_identity": "ev_environment_session_activity_relation_live_readback_20261027",
+      "recorded_commit": "4ac865cb6841160c9eb287d9d78d74cfe4bbb2b7",
+      "verified_commit": "4ac865c4420b86f85f52a2c798bec70a6cb04cb4",
+      "preserved_fields": [
+        "identity",
+        "repository",
+        "path",
+        "sha256"
+      ]
+    },
+    "outcome": {
+      "event_reference": {
+        "identity": "evt_0bea59eea1d1c8a7",
+        "sequence": 7,
+        "type": "authority.integration-eligible"
+      },
+      "correction_status": "append-only-reference-correction-recorded",
+      "content_digest_preserved": true
+    }
+  },
+  "evidence_reference_correction": {
+    "schema_version": "mncs.environment.evidence-reference-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_session_activity_relation_live_readback_20261027",
+      "repository": "mncs-environment",
+      "commit": "4ac865cb6841160c9eb287d9d78d74cfe4bbb2b7",
+      "path": "evidence/environmental-capability/session-activity-relation-live-readback-20261027.json",
+      "sha256": "413f38ff1c991ddf458aca3da43cc10b4d14971d80be7c26fe4ea4c98070ca02"
+    },
+    "replacement_reference": {
+      "identity": "ev_environment_session_activity_relation_live_readback_20261027",
+      "repository": "mncs-environment",
+      "commit": "4ac865c4420b86f85f52a2c798bec70a6cb04cb4",
+      "path": "evidence/environmental-capability/session-activity-relation-live-readback-20261027.json",
+      "sha256": "413f38ff1c991ddf458aca3da43cc10b4d14971d80be7c26fe4ea4c98070ca02"
+    },
+    "reason": "The campaign pointer contained a transcribed commit hash that is absent from Git. The correct main commit is verified locally and remotely; identity, repository, path, and content digest remain unchanged."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_session_activity_relation_live_readback_20261027",
+      "kind": "exact-target-observation",
+      "repository": "mncs-environment",
+      "commit": "4ac865c4420b86f85f52a2c798bec70a6cb04cb4",
+      "path": "evidence/environmental-capability/session-activity-relation-live-readback-20261027.json",
+      "sha256": "413f38ff1c991ddf458aca3da43cc10b4d14971d80be7c26fe4ea4c98070ca02"
+    },
+    {
+      "identity": "mncs_environment_session_activity_relation_implementation_69d8223",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "69d822357238566d85c0351591cc20ef0a0d3e54",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4b5ca378c99a34813c6c03af328c9c468e419dde08a3c27c5640ba9b9e213bd0"
+    }
+  ],
+  "not_measured": [
+    "the cause of the commit-hash transcription error",
+    "whether the append-only correction workflow reduces future agent overhead",
+    "whether this pointer repair affects development outcomes beyond restoring source visibility"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
