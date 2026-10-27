@@ -1,0 +1,90 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_derived_trigger_routing_20261027",
+  "captured_at": "2026-10-27T12:55:59Z",
+  "measurement_basis": "Deterministic second-wave scheduler fixture and incremental-coherence plus capability-intelligence regression suites.",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "observation": {
+    "kind": "ambient-owner-derived-trigger-routing",
+    "source_interface": "MNCS Environment incremental coherence owner-pass scheduler trace",
+    "request": {
+      "operation": "preserve exact routed event categories for each ambient owner pass across scheduler waves",
+      "repository": "mncs-environment",
+      "implementation_commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "verification_command": "python3 -m pytest tests/test_incremental.py tests/test_capability_intelligence.py -q",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c"
+    },
+    "outcome": {
+      "implemented_behavior": "Each scheduled owner trace now records the event categories routed to that owner in its actual scheduler wave. Derived events emitted by an earlier owner are attributed to later passes, and subject context is scoped to the same routed events.",
+      "verification": {
+        "duration_seconds": 5.35,
+        "modules": [
+          "tests/test_incremental.py",
+          "tests/test_capability_intelligence.py"
+        ],
+        "tests_failed": 0,
+        "tests_passed": 170,
+        "tests_skipped": 21
+      },
+      "verification_scope": "The deterministic fixture verified a verification.changed event routed in wave 1 to the family pass and present in that pass's inputs. Toolchain-dependent integration cases were skipped.",
+      "effectiveness_assessment": "Per-wave trigger attribution and regression behavior are verified; later agent use, service fulfillment, and reduced intervention remain unassessed."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_derived_trigger_misattribution_20261027",
+    "title": "Later ambient owner passes could be recorded with trigger categories from the original event batch instead of the derived event that scheduled them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment incremental coherence scheduler and trace projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Carry the exact owner-filtered event set through each scheduling wave and record the admitted trigger categories on that pass."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_derived_trigger_scheduler_c412315",
+      "repository": "mncs-environment",
+      "commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "path": "mncs_env/coherence.py",
+      "sha256": "55c15bde9062618a62ce9bb5abe124b7a688edd338743c847dda789a08a9ad28",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_ambient_derived_trigger_tests_c412315",
+      "repository": "mncs-environment",
+      "commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "path": "tests/test_incremental.py",
+      "sha256": "cc5d7b7770a5017952f4bb4e63d12b050e7beb1dc79201c9b07281ba809071e9",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "identity": "mncs_environment_ambient_derived_trigger_trace_contract_c412315",
+      "repository": "mncs-environment",
+      "commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "path": "docs/INCREMENTAL_COHERENCE.md",
+      "sha256": "0c8edb0be56c922da824d90971a248330ccdef8d708f6ceb6a7339bee4492346",
+      "kind": "committed-contract-documentation"
+    }
+  ],
+  "not_measured": [
+    "Whether later agents discover and use the corrected per-wave trigger context.",
+    "Whether the trace change reduces agent reconstruction or orchestration effort.",
+    "Whether ambient services fulfill all agent-need opportunities or improve downstream outcome quality.",
+    "Native-toolchain end-to-end behavior in this execution environment."
+  ]
+}

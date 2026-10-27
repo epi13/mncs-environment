@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_derived_trigger_routing_improvement_20261027",
+  "captured_at": "2026-10-27T12:55:59Z",
+  "measurement_basis": "Exact scheduler implementation, deterministic later-wave fixture, regression results, and content-addressed source references.",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection and incremental coherence owner-pass scheduler trace",
+    "request": {
+      "operation": "link derived-trigger pressure to the committed scheduler trace fix and its regression evidence",
+      "implementation_commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "pressure_hypothesis_identity": "ph_environment_ambient_derived_trigger_misattribution_20261027",
+      "verification_observation_identity": "ev_environment_ambient_derived_trigger_routing_20261027"
+    },
+    "outcome": {
+      "implemented_behavior": "The trace reports exact admitted trigger categories for each owner in the wave that scheduled it, including derived events, through the existing incremental coherence mechanism.",
+      "verification_basis": "The linked observation records the second-wave family-pass regression fixture and the 170-passed, 21-skipped incremental and capability-intelligence test run.",
+      "effectiveness_assessment": "Immediate routing and trace behavior are verified; reduced agent burden and later service outcomes remain unmeasured."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_derived_trigger_misattribution_20261027",
+    "title": "Later ambient owner passes could be recorded with trigger categories from the original event batch instead of the derived event that scheduled them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment incremental coherence scheduler and trace projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Carry the exact owner-filtered event set through each scheduling wave and record the admitted trigger categories on that pass."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_ambient_derived_trigger_routing_20261027",
+    "addresses_hypothesis_identity": "ph_environment_ambient_derived_trigger_misattribution_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_derived_trigger_scheduler_c412315",
+      "repository": "mncs-environment",
+      "commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "path": "mncs_env/coherence.py",
+      "sha256": "55c15bde9062618a62ce9bb5abe124b7a688edd338743c847dda789a08a9ad28",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_ambient_derived_trigger_routing_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The owner router now retains owner-filtered event facts for each wave and writes those facts into the corresponding scheduled pass. A deterministic fixture verifies that verification.changed is linked to the later family pass, and the existing regression suites pass. This corrects scheduler evidence without treating dispatch as service fulfillment or independent correctness.",
+    "not_measured": [
+      "Whether later agent sessions use the trace to understand service routing without additional reconstruction.",
+      "Whether the change reduces agent intervention burden or coordination overhead.",
+      "Whether subsequent service observations show improved outcome quality or fulfilled agent need."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_derived_trigger_scheduler_c412315",
+      "repository": "mncs-environment",
+      "commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "path": "mncs_env/coherence.py",
+      "sha256": "55c15bde9062618a62ce9bb5abe124b7a688edd338743c847dda789a08a9ad28",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_ambient_derived_trigger_tests_c412315",
+      "repository": "mncs-environment",
+      "commit": "c41231509ee3d09b78efa037e45b97de1fa7e901",
+      "path": "tests/test_incremental.py",
+      "sha256": "cc5d7b7770a5017952f4bb4e63d12b050e7beb1dc79201c9b07281ba809071e9",
+      "kind": "committed-regression-tests"
+    }
+  ],
+  "not_measured": [
+    "Whether agents discover or rely on the corrected trace context in later sessions.",
+    "Ambient fulfillment, the agent-need opportunity denominator, agent receipt, intervention burden, and downstream outcome quality.",
+    "Longitudinal effects across other owner passes, repositories, environments, or native scheduler configurations."
+  ]
+}
