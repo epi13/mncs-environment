@@ -2757,7 +2757,8 @@ def _compact_projection(
             compact_relation = {
                 key: _short_text(resource_relation.get(key), 192)
                 for key in (
-                    "status", "sample_identity", "basis", "source_session_id",
+                "status", "sample_identity", "basis", "declaration_path",
+                "source_session_id",
                     "sample_status", "work_context_status",
                     "artifact_reference_status", "event_correlation_status",
                     "resource_sample_collection_status",
@@ -13160,10 +13161,21 @@ def _observation_resource_sample_relation(
     observation = observation if isinstance(observation, dict) else {}
     outcome = observation.get("outcome")
     outcome = outcome if isinstance(outcome, dict) else {}
-    declared = outcome.get("related_resource_sample")
-    if not isinstance(declared, dict):
+    declarations = [
+        ("observation.related_resource_sample", observation.get(
+            "related_resource_sample",
+        )),
+        ("observation.outcome.related_resource_sample", outcome.get(
+            "related_resource_sample",
+        )),
+    ]
+    declarations = [
+        (path, value) for path, value in declarations
+        if isinstance(value, dict)
+    ]
+    if not declarations:
         return None
-
+    declaration_path, declared = declarations[0]
     sample_identity = declared.get("identity")
     result: dict[str, Any] = {
         "sample_identity": (
@@ -13171,12 +13183,16 @@ def _observation_resource_sample_relation(
             if isinstance(sample_identity, str) and sample_identity else None
         ),
         "basis": "exact-resource-sample-identity-and-session-context",
+        "declaration_path": declaration_path,
         "measurement_interpretation_limit": (
             "The linked resource sample is a host snapshot correlated to this "
             "session; it does not establish agent-attributed consumption, "
             "environmental pressure, or causation."
         ),
     }
+    if len(declarations) > 1 and declarations[0][1] != declarations[1][1]:
+        result["status"] = "conflicting-resource-sample-declarations"
+        return result
     if (not isinstance(sample_identity, str)
             or re.fullmatch(r"rsm_[A-Za-z0-9_-]{1,64}", sample_identity) is None):
         result["status"] = "invalid-resource-sample-identity"

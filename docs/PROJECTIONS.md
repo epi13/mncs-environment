@@ -879,6 +879,13 @@ Missing measurements remain explicit.
 Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
+When an observation records `related_resource_sample` beside `outcome` or
+inside the nested outcome object, the projection joins its exact sample
+identity to the selected session's resource-sample evidence. The projected
+relation reports which recorded field supplied the declaration, checks the
+campaign, session, Work Intent, artifact digest, and invocation/completion
+correlation, and surfaces conflicting declarations. A matched host snapshot
+still does not establish agent-attributed resource use, pressure, or causation.
 When an observation fails the record contract, its bounded
 `observation_reference_diagnostics[].contract_diagnostics` names missing or
 invalid fields such as `missing-observation-source-interface`,

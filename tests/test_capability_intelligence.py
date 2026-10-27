@@ -3254,6 +3254,9 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     )
     relation = observed_record["resource_sample_relation"]
     assert relation["status"] == "matched-exact-resource-sample-and-session"
+    assert relation["declaration_path"] == (
+        "observation.outcome.related_resource_sample"
+    )
     assert relation["sample_identity"] == sample_identity
     assert relation["work_context_status"] == (
         "session-campaign-work-intent-matched"
@@ -3265,6 +3268,49 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     )
     assert "not establish agent-attributed consumption" in (
         relation["measurement_interpretation_limit"]
+    )
+    sibling_record = {
+        **record,
+        "observation": {
+            **record["observation"],
+            "outcome": {
+                key: value for key, value
+                in record["observation"]["outcome"].items()
+                if key != "related_resource_sample"
+            },
+            "related_resource_sample": record["observation"]["outcome"][
+                "related_resource_sample"
+            ],
+        },
+    }
+    sibling_relation = capability_intelligence._observation_resource_sample_relation(
+        sibling_record,
+        result["session_activity"],
+        selected_session_id=session.session_id,
+    )
+    assert sibling_relation["status"] == "matched-exact-resource-sample-and-session"
+    assert sibling_relation["declaration_path"] == "observation.related_resource_sample"
+
+    conflicting_record = {
+        **sibling_record,
+        "observation": {
+            **sibling_record["observation"],
+            "outcome": {
+                **sibling_record["observation"]["outcome"],
+                "related_resource_sample": {
+                    **sibling_record["observation"]["related_resource_sample"],
+                    "identity": "rsm_other_sample",
+                },
+            },
+        },
+    }
+    conflicting_relation = capability_intelligence._observation_resource_sample_relation(
+        conflicting_record,
+        result["session_activity"],
+        selected_session_id=session.session_id,
+    )
+    assert conflicting_relation["status"] == (
+        "conflicting-resource-sample-declarations"
     )
     wrong_intent_record = {
         **record,
