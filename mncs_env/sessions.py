@@ -1872,7 +1872,8 @@ def _discover_read_only_consumed_provider_bindings(
                     or state.manifest_repository != provider):
                 continue
             row = state.record()
-        if row.get("git_error") or not row.get("head"):
+        if (row.get("git_error") or not row.get("head")
+                or row.get("dirty") is not False):
             continue
         provider_roots[provider] = resolved
         provider_facts[provider] = {

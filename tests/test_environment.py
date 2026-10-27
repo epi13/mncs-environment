@@ -4739,6 +4739,19 @@ class CapabilityTests(unittest.TestCase):
             )
             self.assertNotIn("mncs-doctor:mixed-effect", bindings)
             self.assertNotIn("mncs-doctor:unconsumed-write", bindings)
+            doc_script.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
+            (dirty_bindings, _runtime_roots, _runtime_facts,
+             _runtime_diagnostics) = sessions._discover_read_only_consumed_provider_bindings(
+                workspace_root,
+                selected_roots,
+                selected_facts,
+                [],
+            )
+            self.assertEqual(
+                [item["capability"] for item in dirty_bindings],
+                ["mncs-doctor:projection-health"],
+            )
+            doc_script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             external_provider = workspace_root / "external" / "mncs-doctor"
             external_provider.parent.mkdir()
             provider.rename(external_provider)

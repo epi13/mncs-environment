@@ -206,11 +206,11 @@ health, and reconciliation; bindings and toolchains use those exact roots.
 Store routing is persisted for fresh-process continuation.
 
 A selected consumer may also bind a capability it explicitly declares from an
-exact direct workspace repository when that capability declares only the
-`read` effect. Environment records this as a read-only dependency; the provider
-does not enter selected checkouts or gain mutation scope. Mixed-effect,
-write-effect, ambiguous, or symlinked providers are not bound through this
-path.
+exact, clean direct workspace repository when that capability declares only
+the `read` effect. Environment records this as a read-only dependency; the
+provider does not enter selected checkouts or gain mutation scope.
+Mixed-effect, write-effect, dirty, ambiguous, or symlinked providers are not
+bound through this path.
 The runtime binding also selects the Language compiler and embed library used
 by Store. Explicit entry upgrades older package-only bootstrap metadata after
 checking the same selected checkout, preserving session identity and history.
