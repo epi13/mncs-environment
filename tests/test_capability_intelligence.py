@@ -4783,6 +4783,12 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
         "ses_projection_reader",
         "cmp_projection_reader",
     )
+    record["related_work"]["work_intent_id"] = "int_projection_reader"
+    record["observation"]["outcome"]["event_reference"] = {
+        "identity": "evt_integration_eligible",
+        "sequence": 41,
+        "type": "authority.integration-eligible",
+    }
     record["supporting_sources"].append({
         "kind": "authenticated-session-activity-projection",
         "repository": "mncs-environment",
@@ -5019,6 +5025,105 @@ def test_scoped_integration_preflight_projects_without_claim_or_success(
 
     result = capability_intelligence.project(session)
     activity = result["session_activity"]
+    projected_observation = next(
+        item for item in result["observations"]
+        if item["identity"] == record["identity"]
+    )
+    relation = projected_observation["session_activity_relation"]
+    assert relation["status"] == "matched-exact-session-activity"
+    assert relation["activity_kind"] == "integration_eligibility"
+    assert relation["activity_record_identity"] == activity[
+        "integration_eligibility"
+    ][0]["identity"]
+    assert relation["event_reference"] == {
+        "identity": "evt_integration_eligible",
+        "sequence": 41,
+        "type": "authority.integration-eligible",
+    }
+    assert relation["activity_event_reference"] == relation["event_reference"]
+    assert relation["work_context_status"] == (
+        "campaign-and-work-intent-matched"
+    )
+    assert relation["interpretation_limit"].startswith(
+        "The event reference links recorded evidence"
+    )
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 50_000,
+    )
+    compact_observation = next(
+        item for item in compact["observations"]
+        if item["identity"] == record["identity"]
+    )
+    assert compact_observation["session_activity_relation"][
+        "event_reference"
+    ] == relation["event_reference"]
+    assert compact_observation["session_activity_relation"][
+        "activity_kind"
+    ] == "integration_eligibility"
+
+    mismatched_record = {
+        **record,
+        "observation": {
+            **record["observation"],
+            "outcome": {
+                **record["observation"]["outcome"],
+                "event_reference": {
+                    "identity": "evt_integration_eligible",
+                    "sequence": 40,
+                    "type": "authority.integration-eligible",
+                },
+            },
+        },
+    }
+    mismatched_relation = (
+        capability_intelligence._observation_session_activity_relation(
+            mismatched_record, activity,
+            selected_session_id=session.session_id,
+        )
+    )
+    assert mismatched_relation["status"] == "event-reference-mismatch"
+    assert mismatched_relation["activity_event_reference"]["sequence"] == 41
+    wrong_session_record = {
+        **record,
+        "related_work": {
+            **record["related_work"],
+            "session_id": "ses_another_session",
+        },
+    }
+    assert capability_intelligence._observation_session_activity_relation(
+        wrong_session_record, activity,
+        selected_session_id=session.session_id,
+    )["status"] == "source-session-not-selected"
+    no_match_record = {
+        **record,
+        "observation": {
+            **record["observation"],
+            "outcome": {
+                **record["observation"]["outcome"],
+                "event_reference": {
+                    "identity": "evt_not_in_selected_page",
+                    "sequence": 2,
+                    "type": "authority.integration-eligible",
+                },
+            },
+        },
+    }
+    bounded_activity = {
+        **activity,
+        "source": {
+            **activity["source"],
+            "event_window_truncated": True,
+            "event_page_scoped": False,
+        },
+    }
+    assert capability_intelligence._observation_session_activity_relation(
+        no_match_record, bounded_activity,
+        selected_session_id=session.session_id,
+    )["status"] == "not-observed-in-selected-session-event-window"
+    assert capability_intelligence._observation_session_activity_relation(
+        no_match_record, {"status": "partial", "source": {}},
+        selected_session_id=session.session_id,
+    )["activity_history_completeness"] == "unknown"
     eligibility = activity["integration_eligibility"][0]
     assert activity["integration_eligibility_count"] == 1
     assert eligibility["action"] == "merge"

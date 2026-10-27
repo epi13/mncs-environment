@@ -738,6 +738,16 @@ sample artifact digest and invocation/completion event references. Mismatched,
 unavailable, and out-of-window samples remain explicit. A successful relation
 establishes shared provenance, not agent-attributed consumption or causation.
 
+When an observation records an `outcome.event_reference`, the projection also
+exposes `session_activity_relation`. It searches bounded selected-session
+activity records for the exact event identity, sequence, and type, and reports
+the activity record and any campaign/WorkIntent context that can be compared.
+Invalid references, mismatched identities, omitted records, and incomplete
+event windows remain explicit. This is a provenance link: it does not establish
+that an operation executed, that the event caused an outcome, or that the
+change was correct. Compact projections preserve this relation and its exact
+event reference when space is constrained.
+
 `campaign-state <session>` includes this derived view when the existing
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When

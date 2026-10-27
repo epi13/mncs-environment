@@ -2810,6 +2810,39 @@ def _compact_projection(
                     or type(artifact_reference.get(key)) is int
                 }
             compact_observation["resource_sample_relation"] = compact_relation
+        activity_relation = item.get("session_activity_relation")
+        if isinstance(activity_relation, dict):
+            compact_activity_relation = {
+                key: _short_text(activity_relation.get(key), 192)
+                for key in (
+                    "status", "basis", "activity_kind",
+                    "activity_record_identity", "selected_session_id",
+                    "event_reference_status", "work_context_status",
+                    "activity_history_completeness",
+                    "interpretation_limit",
+                )
+                if isinstance(activity_relation.get(key), str)
+            }
+            for key in ("event_reference", "activity_event_reference"):
+                reference = activity_relation.get(key)
+                if isinstance(reference, dict):
+                    compact_activity_relation[key] = {
+                        field: reference[field]
+                        for field in ("identity", "sequence", "type")
+                        if isinstance(reference.get(field), str)
+                        or type(reference.get(field)) is int
+                    }
+            work_context = activity_relation.get("work_context")
+            if isinstance(work_context, dict):
+                compact_activity_relation["work_context"] = {
+                    key: _short_text(value, 64)
+                    for key, value in work_context.items()
+                    if key in {"campaign_id", "work_intent_id"}
+                    and isinstance(value, str)
+                }
+            compact_observation["session_activity_relation"] = (
+                compact_activity_relation
+            )
         compact_sources = []
         raw_sources = item.get("supporting_sources")
         raw_sources = raw_sources if isinstance(raw_sources, list) else []
@@ -2906,6 +2939,7 @@ def _compact_projection(
         key: activity_source[key]
         for key in (
             "event_count", "event_window_truncated",
+            "event_page_scoped",
             "event_page_before_sequence", "next_event_before_sequence",
             "event_window_sequence_start", "event_window_sequence_end",
             "invocation_events_considered", "invocation_records_omitted",
@@ -2934,8 +2968,13 @@ def _compact_projection(
             "repository_ref_transition_selection_policy",
         )
         if key in activity_source
-        and (key not in {"event_page_before_sequence", "next_event_before_sequence"}
-             or activity_source[key] is not None)
+        and (
+            key not in {"event_page_before_sequence", "next_event_before_sequence"}
+            or activity_source[key] is not None
+        )
+        and (
+            key != "event_page_scoped" or activity_source[key] is True
+        )
     }
     if activity_source.get("rpc_operation_capture_count") is not None:
         compact_activity_source.update({
@@ -5205,6 +5244,11 @@ def _compact_projection(
                 if (isinstance(relation, dict)
                         and relation.get("status")
                         == "matched-exact-resource-sample-and-session"):
+                    return 2
+                activity_relation = item.get("session_activity_relation")
+                if (isinstance(activity_relation, dict)
+                        and activity_relation.get("status")
+                        == "matched-exact-session-activity"):
                     return 2
                 correction = item.get("record_correction")
                 if (isinstance(correction, dict)
@@ -13354,6 +13398,206 @@ def _observation_resource_sample_relation(
     return result
 
 
+def _observation_session_activity_relation(
+    record: dict[str, Any], activity: dict[str, Any], *,
+    selected_session_id: str,
+) -> dict[str, Any] | None:
+    """Join a recorded outcome event to bounded selected-session activity."""
+    observation = record.get("observation")
+    observation = observation if isinstance(observation, dict) else {}
+    outcome = observation.get("outcome")
+    outcome = outcome if isinstance(outcome, dict) else {}
+    declared_reference = outcome.get("event_reference")
+    if not isinstance(declared_reference, dict):
+        return None
+
+    expected_reference = _event_reference(declared_reference)
+    result: dict[str, Any] = {
+        "basis": "exact-selected-session-event-identity-sequence-and-type",
+        "event_reference": (
+            expected_reference
+            if expected_reference is not None else {
+                key: declared_reference[key]
+                for key in ("identity", "sequence", "type")
+                if isinstance(declared_reference.get(key), str)
+                or type(declared_reference.get(key)) is int
+            }
+        ),
+        "interpretation_limit": (
+            "The event reference links recorded evidence to session activity; "
+            "it does not establish that a proposed operation executed, that "
+            "the event caused an outcome, or that the change was correct."
+        ),
+    }
+    if expected_reference is None:
+        result.update({
+            "status": "invalid-event-reference",
+            "event_reference_status": "invalid",
+        })
+        return result
+
+    related_work = record.get("related_work")
+    related_work = related_work if isinstance(related_work, dict) else {}
+    source_session_id = related_work.get("session_id")
+    if not isinstance(source_session_id, str) or not source_session_id:
+        result.update({
+            "status": "source-session-not-recorded",
+            "event_reference_status": "not-searched-without-session-context",
+        })
+        return result
+    if source_session_id != selected_session_id:
+        result.update({
+            "status": "source-session-not-selected",
+            "source_session_id": source_session_id[:160],
+            "selected_session_id": selected_session_id[:160],
+            "event_reference_status": "not-searched-outside-selected-session",
+        })
+        return result
+    result["selected_session_id"] = selected_session_id[:160]
+
+    activity_source = activity.get("source")
+    activity_source = activity_source if isinstance(activity_source, dict) else {}
+    if activity.get("status") == "unavailable":
+        result.update({
+            "status": "session-activity-unavailable",
+            "event_reference_status": "not-searchable",
+        })
+        return result
+    if type(activity_source.get("event_window_truncated")) is not bool:
+        result.update({
+            "status": "session-activity-window-completeness-unavailable",
+            "event_reference_status": "search-window-status-unavailable",
+            "activity_history_completeness": "unknown",
+        })
+        return result
+
+    # These are bounded, authoritative activity records that retain their
+    # originating session event references. Derived summaries are excluded.
+    groups = (
+        ("authority_denials", "authority_denial_records_omitted",
+         "authority_denial_records_invalid"),
+        ("coordination_deferrals", "coordination_deferral_records_omitted",
+         "coordination_deferral_records_invalid"),
+        ("integration_eligibility", "integration_eligibility_records_omitted",
+         "integration_eligibility_records_invalid"),
+        ("proposal_eligibility", "proposal_eligibility_records_omitted",
+         "proposal_eligibility_records_invalid"),
+        ("operation_deferrals", "operation_deferral_records_omitted",
+         "operation_deferral_records_invalid"),
+        ("claim_recoveries", "claim_recovery_records_omitted",
+         "claim_recovery_records_invalid"),
+        ("operation_claim_recoveries",
+         "operation_claim_recovery_records_omitted",
+         "operation_claim_recovery_records_invalid"),
+        ("claim_coordination", "claim_coordination_records_omitted",
+         "claim_coordination_records_invalid"),
+        ("repository_ref_transitions",
+         "repository_ref_transition_records_omitted",
+         "repository_ref_transition_records_invalid"),
+    )
+    identity_matches: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+    omitted_record_count = 0
+    invalid_record_count = 0
+    for group_name, omitted_key, invalid_key in groups:
+        raw_records = activity.get(group_name)
+        records = raw_records if isinstance(raw_records, list) else []
+        for item in records:
+            if not isinstance(item, dict):
+                continue
+            reference = item.get("event_reference")
+            reference = (
+                _event_reference(reference)
+                if isinstance(reference, dict) else None
+            )
+            if (reference is not None
+                    and reference["identity"] == expected_reference["identity"]):
+                identity_matches.append((group_name, item, reference))
+        omitted = activity_source.get(omitted_key, 0)
+        invalid = activity_source.get(invalid_key, 0)
+        if type(omitted) is int and omitted > 0:
+            omitted_record_count += omitted
+        if type(invalid) is int and invalid > 0:
+            invalid_record_count += invalid
+
+    if len(identity_matches) > 1:
+        result.update({
+            "status": "ambiguous-session-event-identity",
+            "event_reference_status": "identity-appears-in-multiple-activity-records",
+            "matching_activity_record_count": len(identity_matches),
+        })
+        return result
+
+    if identity_matches:
+        activity_kind, item, actual_reference = identity_matches[0]
+        result.update({
+            "activity_kind": activity_kind,
+            "activity_record_identity": _short_text(item.get("identity"), 160)
+            if isinstance(item.get("identity"), str) else None,
+            "activity_event_reference": actual_reference,
+        })
+        exact_event = all(
+            actual_reference.get(key) == expected_reference.get(key)
+            for key in ("identity", "sequence", "type")
+        )
+        if not exact_event:
+            result.update({
+                "status": "event-reference-mismatch",
+                "event_reference_status": "identity-matched-sequence-or-type-differs",
+            })
+            return result
+
+        context_status: dict[str, str] = {}
+        context_mismatch = False
+        for key in ("campaign_id", "work_intent_id"):
+            expected = related_work.get(key)
+            observed = item.get(key)
+            if not isinstance(expected, str) or not expected:
+                context_status[key] = "not-recorded-on-observation"
+            elif not isinstance(observed, str) or not observed:
+                context_status[key] = "not-recorded-on-activity"
+            elif expected == observed:
+                context_status[key] = "matched"
+            else:
+                context_status[key] = "mismatch"
+                context_mismatch = True
+        result["work_context"] = context_status
+        result["work_context_status"] = (
+            "mismatch" if context_mismatch else
+            "campaign-and-work-intent-matched"
+            if all(value == "matched" for value in context_status.values())
+            else "partial-or-unrecorded"
+        )
+        result["event_reference_status"] = "matched-exact-identity-sequence-and-type"
+        result["status"] = (
+            "session-activity-context-mismatch" if context_mismatch else
+            "matched-exact-session-activity"
+            if result["work_context_status"] == "campaign-and-work-intent-matched"
+            else "matched-session-activity-context-partial"
+        )
+        return result
+
+    if omitted_record_count:
+        status = "not-observed-because-activity-records-were-omitted"
+    elif invalid_record_count:
+        status = "not-observed-because-activity-records-were-invalid"
+    elif (activity_source.get("event_window_truncated") is True
+          or activity_source.get("event_page_scoped") is True):
+        status = "not-observed-in-selected-session-event-window"
+    else:
+        status = "not-found-in-complete-session-activity-history"
+    result.update({
+        "status": status,
+        "event_reference_status": "no-matching-activity-record-returned",
+        "activity_history_completeness": (
+            "partial" if omitted_record_count or invalid_record_count
+            or activity_source.get("event_window_truncated") is True
+            or activity_source.get("event_page_scoped") is True
+            else "complete-selected-session-history"
+        ),
+    })
+    return result
+
+
 def _session_service_readiness(
     session: Any, snapshot: dict[str, Any],
 ) -> dict[str, Any]:
@@ -17315,6 +17559,9 @@ def project(
         resource_sample_relation = _observation_resource_sample_relation(
             record, activity, selected_session_id=session.session_id,
         )
+        session_activity_relation = _observation_session_activity_relation(
+            record, activity, selected_session_id=session.session_id,
+        )
         observations.append({
             "identity": record["identity"],
             "captured_at": record.get("captured_at"),
@@ -17357,6 +17604,8 @@ def project(
                if record_correction_summary is not None else {}),
             **({"resource_sample_relation": resource_sample_relation}
                if resource_sample_relation is not None else {}),
+            **({"session_activity_relation": session_activity_relation}
+               if session_activity_relation is not None else {}),
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",
