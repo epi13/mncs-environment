@@ -3851,6 +3851,23 @@ def test_coordination_deferral_links_exact_blocker_session_lifecycle(
         },
     }
     owner_page_requests = []
+    claim_time = claims.utcnow()
+    current_claim = {
+        "schema_version": claims.SCHEMA,
+        "claim_id": claim_id,
+        "version": 2,
+        "repository": "mncs-environment",
+        "scope": repository_scope,
+        "session_id": owner_session_id,
+        "consumer_id": "consumer_coordination_projection",
+        "basis": claims.BASIS_EXPLICIT,
+        "reason": "projection fixture",
+        "status": "released",
+        "acquired_at": claim_time,
+        "expires_at": claim_time,
+        "released_at": claim_time,
+        "identity": "clm_coordination_released_v2",
+    }
 
     def read_owner_page(session_id, *, limit, before_sequence=None):
         owner_page_requests.append(session_id)
@@ -3863,6 +3880,9 @@ def test_coordination_deferral_links_exact_blocker_session_lifecycle(
         }
 
     session.store = SimpleNamespace(
+        read_latest_claims_for=lambda claim_ids: (
+            [current_claim] if claim_id in claim_ids else []
+        ),
         read_event_page=read_owner_page,
         load_snapshot=lambda session_id: {
             "session_id": session_id, "lifecycle": "active",
@@ -3887,6 +3907,17 @@ def test_coordination_deferral_links_exact_blocker_session_lifecycle(
     assert deferral["claim_conflict"]["blocking_claim"][
         "claim_lifecycle_correlation_identity"
     ] == correlation["identity"]
+    current_state = deferral["claim_conflict"]["current_claim_state"]
+    assert current_state["basis"] == "current-authoritative-claim-store"
+    assert current_state["record_status"] == "released"
+    assert current_state["blocking_status"] == "does-not-block-at-projection-time"
+    guidance = deferral["claim_conflict"]["coordination_guidance"]
+    assert guidance["status"] == "claim-no-longer-blocks"
+    assert guidance["next_step"] == "refresh-operation-scope-and-retry"
+    assert guidance["claim_mutated"] is False
+    assert activity["source"]["coordination_claim_state_lookup"][
+        "lookup_count"
+    ] == 1
     assert owner_page_requests == [owner_session_id]
 
     compact = capability_intelligence.project(
@@ -3897,6 +3928,12 @@ def test_coordination_deferral_links_exact_blocker_session_lifecycle(
     assert compact_deferral["claim_conflict"]["blocking_claim"][
         "claim_lifecycle_correlation_identity"
     ] == compact_correlation["identity"]
+    assert compact_deferral["claim_conflict"]["current_claim_state"][
+        "blocking_status"
+    ] == "does-not-block-at-projection-time"
+    assert compact_deferral["claim_conflict"]["coordination_guidance"][
+        "next_step"
+    ] == "refresh-operation-scope-and-retry"
     assert compact_correlation["related_session_activity"][0]["kind"] == (
         "coordination-deferral"
     )

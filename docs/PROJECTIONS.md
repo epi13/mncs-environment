@@ -433,6 +433,14 @@ requested scope/conflict class. The candidate records one-session recurrence
 only and does not determine whether the concurrency constraint is unnecessary.
 True policy denials and owner-approval escalations retain their separate event
 types.
+When a deferral records an exact blocker claim identity, the projection may
+also read that claim through the existing bounded current-claim lookup. It
+keeps this point-in-time status separate from the event-time decision and can
+show a read-only next step when the claim no longer blocks or is eligible for
+safe recovery on a normal acquisition. These lookups share the existing limit
+of four claim identities across denial, deferral, and integration activity;
+unread or omitted states remain explicit. Guidance does not mutate a claim or
+prove an in-flight operation has stopped.
 Each deferral also exposes `later_eligibility_relation` when exact campaign and
 WorkIntent references are recorded. It joins only a later eligibility event
 with the same repository and action, and retains that event's provenance.

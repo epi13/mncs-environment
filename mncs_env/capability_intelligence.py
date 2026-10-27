@@ -2919,6 +2919,21 @@ def _compact_projection(
                 )
                 if key in claim_lookup
             }
+    if activity_source.get("coordination_deferral_events_considered", 0):
+        claim_lookup = activity_source.get(
+            "coordination_claim_state_lookup",
+        )
+        if isinstance(claim_lookup, dict):
+            compact_activity_source["coordination_claim_state_lookup"] = {
+                key: claim_lookup[key]
+                for key in (
+                    "status", "claim_id_count", "lookup_count",
+                    "lookup_limit", "lookup_omitted_count",
+                    "reused_activity_lookup_count", "activity_lookup_count",
+                    "activity_lookup_limit", "observed_at",
+                )
+                if key in claim_lookup
+            }
     if activity_source.get("claim_recovery_events_considered", 0):
         compact_activity_source.update({
             key: activity_source[key]
@@ -3945,6 +3960,28 @@ def _compact_projection(
                         "persistent_authority_required",
                     )
                     if key in decision_basis
+                }
+            current_claim_state = raw_conflict.get("current_claim_state")
+            if isinstance(current_claim_state, dict):
+                compact_conflict["current_claim_state"] = {
+                    key: current_claim_state[key]
+                    for key in (
+                        "lookup_status", "basis", "claim_version",
+                        "record_status", "blocking_status", "recovery_verdict",
+                        "freshness", "owner_liveness_evidence_status",
+                        "recorded_owner_relation",
+                    )
+                    if key in current_claim_state
+                }
+            guidance = raw_conflict.get("coordination_guidance")
+            if isinstance(guidance, dict):
+                compact_conflict["coordination_guidance"] = {
+                    key: guidance[key]
+                    for key in (
+                        "status", "next_step", "claim_mutated",
+                        "ownership_transfer",
+                    )
+                    if key in guidance
                 }
             if compact_conflict:
                 compact_item["claim_conflict"] = compact_conflict
@@ -14413,6 +14450,100 @@ def _session_activity(
     coordination_deferrals_omitted = max(
         0, valid_coordination_deferral_count - len(coordination_deferrals),
     )
+    coordination_claim_ids: list[str] = []
+    for item in coordination_deferrals:
+        conflict = item.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim")
+            if isinstance(conflict, dict) else None
+        )
+        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+        if isinstance(claim_id, str) and claim_id not in coordination_claim_ids:
+            coordination_claim_ids.append(claim_id)
+    reused_coordination_claim_states = {
+        claim_id: current_claim_states[claim_id]
+        for claim_id in coordination_claim_ids
+        if claim_id in current_claim_states
+    }
+    uninspected_coordination_claim_count = sum(
+        state.get("lookup_status") == "not-inspected-limit"
+        for state in reused_coordination_claim_states.values()
+    )
+    coordination_claim_records_for_lookup = []
+    for item in coordination_deferrals:
+        conflict = item.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim")
+            if isinstance(conflict, dict) else None
+        )
+        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+        if isinstance(claim_id, str) and claim_id not in current_claim_states:
+            coordination_claim_records_for_lookup.append({
+                "claim_conflict": conflict,
+            })
+    prior_activity_claim_lookup_count = claim_state_lookup.get(
+        "lookup_count", 0,
+    )
+    remaining_coordination_claim_lookup_limit = max(
+        0,
+        MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS
+        - prior_activity_claim_lookup_count,
+    )
+    coordination_claim_states, coordination_claim_state_lookup = (
+        _session_activity_current_claim_states(
+            session,
+            coordination_claim_records_for_lookup,
+            lookup_limit=remaining_coordination_claim_lookup_limit,
+        )
+    )
+    current_claim_states.update(coordination_claim_states)
+    omitted_coordination_claim_lookups = (
+        coordination_claim_state_lookup.get("lookup_omitted_count", 0)
+        + uninspected_coordination_claim_count
+    )
+    if omitted_coordination_claim_lookups:
+        coordination_claim_state_lookup["lookup_omitted_count"] = (
+            omitted_coordination_claim_lookups
+        )
+    if (coordination_claim_ids
+            and not coordination_claim_state_lookup.get("lookup_count")
+            and not omitted_coordination_claim_lookups
+            and len(reused_coordination_claim_states)
+            == len(coordination_claim_ids)):
+        coordination_claim_state_lookup["status"] = (
+            "reused-prior-activity-lookups"
+        )
+    coordination_claim_state_lookup.update({
+        "claim_id_count": len(coordination_claim_ids),
+        "reused_activity_lookup_count": sum(
+            state.get("lookup_status") != "not-inspected-limit"
+            for state in reused_coordination_claim_states.values()
+        ),
+        "prior_activity_lookup_count": prior_activity_claim_lookup_count,
+        "activity_lookup_count": (
+            prior_activity_claim_lookup_count
+            + coordination_claim_state_lookup.get("lookup_count", 0)
+        ),
+        "activity_lookup_limit": MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS,
+    })
+    for item in coordination_deferrals:
+        conflict = item.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim")
+            if isinstance(conflict, dict) else None
+        )
+        claim_id = blocker.get("claim_id") if isinstance(blocker, dict) else None
+        current_state = (
+            current_claim_states.get(claim_id)
+            if isinstance(claim_id, str) else None
+        )
+        if isinstance(conflict, dict) and isinstance(current_state, dict):
+            conflict["current_claim_state"] = current_state
+            conflict["coordination_guidance"] = (
+                _authority_claim_conflict_guidance(
+                    str(item.get("action") or ""), conflict, current_state,
+                )
+            )
     coordination_deferral_groups: dict[
         tuple[str, str, str, str], list[dict[str, Any]],
     ] = {}
@@ -15346,7 +15477,10 @@ def _session_activity(
             if overlap.get("claim_id") not in current_claim_states
         ],
     } for item in integration_eligibility_records]
-    prior_claim_lookup_count = claim_state_lookup.get("lookup_count", 0)
+    prior_claim_lookup_count = (
+        claim_state_lookup.get("lookup_count", 0)
+        + coordination_claim_state_lookup.get("lookup_count", 0)
+    )
     remaining_claim_lookup_limit = max(
         0, MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS - prior_claim_lookup_count,
     )
@@ -15557,6 +15691,11 @@ def _session_activity(
             **({
                 "authority_claim_state_lookup": claim_state_lookup,
             } if denial_events else {}),
+            **({
+                "coordination_claim_state_lookup": (
+                    coordination_claim_state_lookup
+                ),
+            } if coordination_deferral_events else {}),
             **({
                 "integration_claim_state_lookup": integration_claim_state_lookup,
             } if integration_eligibility_events else {}),
