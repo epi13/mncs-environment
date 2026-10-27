@@ -2528,8 +2528,10 @@ def _compact_service_accountability_overview(
         for key in summary_fields
         if isinstance(summary.get(key), str)
         or (type(summary.get(key)) is int and summary[key] >= 0)
-        or (key == "eligible_service_opportunity_count"
-            and summary.get(key) is None)
+        or (key in {
+            "eligible_service_opportunity_count", "declared_service_count",
+        }
+            and key in summary and summary[key] is None)
     }
     for key in (
         "capability_relation_status_counts", "readiness_status_counts",
@@ -2542,6 +2544,59 @@ def _compact_service_accountability_overview(
                 name: count for name, count in list(counts.items())[:12]
                 if isinstance(name, str) and type(count) is int and count >= 0
             }
+
+    environment_execution = value.get("environment_service_execution")
+    if isinstance(environment_execution, dict):
+        execution_source = environment_execution.get("source")
+        execution_source = (
+            execution_source if isinstance(execution_source, dict) else {}
+        )
+        execution_summary = environment_execution.get("summary")
+        execution_summary = (
+            execution_summary if isinstance(execution_summary, dict) else {}
+        )
+        compact_environment_source = {
+            key: execution_source[key]
+            for key in (
+                "kind", "projection_digest", "owner_pass_contract_reference",
+            )
+            if isinstance(execution_source.get(key), str)
+            or (key == "snapshot_sequence"
+                and type(execution_source.get(key)) is int
+                and execution_source[key] >= 0)
+        }
+        compact_environment_summary = {
+            key: execution_summary[key]
+            for key in (
+                "declared_owner_pass_count", "owner_pass_decision_count",
+                "owner_pass_decision_coverage", "scheduled_pass_count",
+                "skipped_pass_count", "owner_failure_count",
+                "owner_failure_observation_status",
+                "owner_pass_result_record_count",
+                "ambient_fulfillment_status",
+                "agent_intervention_burden_status", "verification_status",
+            )
+            if isinstance(execution_summary.get(key), str)
+            or (type(execution_summary.get(key)) is int
+                and execution_summary[key] >= 0)
+            or (key == "owner_failure_count" and key in execution_summary
+                and execution_summary.get(key) is None)
+        }
+        result_status_counts = execution_summary.get(
+            "owner_pass_result_status_counts",
+        )
+        if isinstance(result_status_counts, dict):
+            compact_environment_summary["owner_pass_result_status_counts"] = {
+                name: count
+                for name, count in list(result_status_counts.items())[:6]
+                if isinstance(name, str) and type(count) is int and count >= 0
+            }
+        compact_summary["environment_service_execution"] = {
+            "status": environment_execution.get("status"),
+            "scope": environment_execution.get("scope"),
+            "source": compact_environment_source,
+            "summary": compact_environment_summary,
+        }
 
     services = value.get("services")
     services = services if isinstance(services, list) else []
@@ -2562,6 +2617,78 @@ def _compact_service_accountability_overview(
         "services_truncated": omitted > 0,
         "services_omitted_count": omitted,
         "response_budget_summary_only": True,
+    }
+
+
+def _compact_ambient_service_execution_overview(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Retain scheduler coverage and a few exact result links under budget."""
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "kind", "session_id", "environment_id", "snapshot_sequence",
+            "campaign_id", "work_intent_id", "trace_status",
+            "owner_pass_decision_coverage",
+        ) if key in source
+    }
+    execution = value.get("execution")
+    execution = execution if isinstance(execution, dict) else None
+    compact_execution: dict[str, Any] | None = None
+    if execution is not None:
+        compact_execution = {
+            key: execution[key]
+            for key in (
+                "scope", "mode", "decision_record_status",
+                "scheduled_pass_count", "skipped_pass_count",
+                "declared_owner_pass_count", "owner_pass_decision_count",
+                "owner_pass_decision_coverage",
+                "owner_failure_observation_status", "owner_failure_count",
+                "ambient_fulfillment", "agent_need_opportunity_denominator",
+                "trace_persistence_status",
+            ) if key in execution
+        }
+        owner_results = execution.get("owner_pass_results")
+        if isinstance(owner_results, dict):
+            compact_results = {
+                key: owner_results[key]
+                for key in (
+                    "status", "scheduled_owner_count", "result_record_count",
+                    "ambient_fulfillment_status", "invalid_result_records",
+                    "result_records_omitted",
+                ) if key in owner_results
+            }
+            results = owner_results.get("results")
+            results = results if isinstance(results, list) else []
+            compact_results["results"] = [
+                {
+                    key: row[key]
+                    for key in (
+                        "owner", "service_execution_id", "result_status",
+                        "verification_status", "result_identity",
+                        "source_reference_status", "source_reference",
+                    ) if key in row
+                }
+                for row in results[:2] if isinstance(row, dict)
+            ]
+            compact_results["results_omitted_by_response_budget"] = max(
+                0, len(results) - len(compact_results["results"]),
+            )
+            compact_execution["owner_pass_results"] = compact_results
+    return {
+        "status": value.get("status", "partial"),
+        "scope": value.get("scope"),
+        "source": compact_source,
+        "execution": compact_execution,
+        "trace_persistence_status": value.get("trace_persistence_status"),
+        "response_budget_summary_only": True,
+        "measurement_limits": [
+            "Per-pass decisions were omitted by the response budget; use the projection digest and session snapshot context to request the bounded trace again.",
+        ],
     }
 
 
@@ -6573,6 +6700,20 @@ def _compact_projection(
             result["session_activity"]["ambient_service_execution"][
                 "measurement_limits"
             ].pop()
+        elif (isinstance(
+            result["session_activity"].get("ambient_service_execution"), dict,
+        ) and result["session_activity"]["ambient_service_execution"].get(
+            "response_budget_summary_only"
+        ) is not True):
+            compact_execution = _compact_ambient_service_execution_overview(
+                result["session_activity"]["ambient_service_execution"],
+            )
+            if compact_execution is not None:
+                result["session_activity"]["ambient_service_execution"] = (
+                    compact_execution
+                )
+            else:
+                result["session_activity"].pop("ambient_service_execution")
         elif isinstance(
             result["session_activity"].get("ambient_service_execution"), dict,
         ):
@@ -16132,10 +16273,88 @@ def _service_ambient_owner_pass_observation(
     }
 
 
+def _environment_service_execution_accountability(
+    ambient_service_execution: Any,
+) -> dict[str, Any] | None:
+    """Relate the Environment owner-pass contract to its recorded decisions.
+
+    Owner-pass decisions are an Environment-owned service scope independent of
+    agent-declared readiness needs. They are not an agent-opportunity
+    denominator and do not establish fulfillment or burden reduction.
+    """
+    if not isinstance(ambient_service_execution, dict):
+        return None
+    source = ambient_service_execution.get("source")
+    source = source if isinstance(source, dict) else {}
+    execution = ambient_service_execution.get("execution")
+    execution = execution if isinstance(execution, dict) else None
+    execution_source = {
+        "kind": "session_activity.ambient_service_execution",
+        "projection_digest": digest_hex(ambient_service_execution),
+        "owner_pass_contract_reference": "mncs-environment:.mncs/coherence-passes.json",
+    }
+    summary: dict[str, Any] = {
+        "owner_pass_decision_coverage": source.get(
+            "owner_pass_decision_coverage", "unavailable",
+        ),
+        "owner_failure_observation_status": "not-recorded",
+        "ambient_fulfillment_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "verification_status": "not-established",
+    }
+    if execution is not None:
+        for key in (
+            "declared_owner_pass_count", "owner_pass_decision_count",
+            "owner_pass_decision_coverage", "scheduled_pass_count",
+            "skipped_pass_count", "owner_failure_count",
+            "owner_failure_observation_status",
+        ):
+            if key in execution and (
+                isinstance(execution[key], str)
+                or (type(execution[key]) is int and execution[key] >= 0)
+                or (key == "owner_failure_count" and execution[key] is None)
+            ):
+                summary[key] = execution[key]
+
+        owner_results = execution.get("owner_pass_results")
+        owner_results = owner_results if isinstance(owner_results, dict) else {}
+        results = owner_results.get("results")
+        results = results if isinstance(results, list) else []
+        result_status_counts: dict[str, int] = {}
+        for item in results:
+            if isinstance(item, dict) and isinstance(item.get("result_status"), str):
+                status = item["result_status"]
+                result_status_counts[status] = result_status_counts.get(status, 0) + 1
+        if type(owner_results.get("result_record_count")) is int:
+            summary["owner_pass_result_record_count"] = owner_results[
+                "result_record_count"
+            ]
+        if result_status_counts:
+            summary["owner_pass_result_status_counts"] = dict(
+                sorted(result_status_counts.items()),
+            )
+    summary["ambient_fulfillment_status"] = (
+        execution.get("ambient_fulfillment", "not-established")
+        if isinstance(execution, dict) else "not-established"
+    )
+    return {
+        "status": ambient_service_execution.get("status", "partial"),
+        "scope": "selected-session-environment-owner-pass-contract",
+        "source": execution_source,
+        "summary": summary,
+        "measurement_limits": [
+            "The pass contract and scheduler trace expose Environment-owned decisions, not every service opportunity or agent need.",
+            "Scheduled, skipped, and returned results do not establish correctness, agent receipt, or reduced intervention burden.",
+            "The linked ambient_service_execution projection is the bounded source for trigger, execution, and result evidence.",
+        ],
+    }
+
+
 def _session_service_accountability(
     service_readiness: Any, capability_delivery: Any,
     snapshot: dict[str, Any] | None = None,
     ambient_owner_pass_activity: Any = None,
+    ambient_service_execution: Any = None,
 ) -> dict[str, Any] | None:
     """Relate declared services to their exact session capability evidence."""
     if not isinstance(service_readiness, dict):
@@ -16147,7 +16366,14 @@ def _session_service_accountability(
         readiness_source = (
             readiness_source if isinstance(readiness_source, dict) else {}
         )
-        if readiness_source.get("service_declaration_status") != "explicit-empty":
+        declaration_status = readiness_source.get("service_declaration_status")
+        environment_execution = _environment_service_execution_accountability(
+            ambient_service_execution,
+        )
+        if (declaration_status != "explicit-empty"
+                and (environment_execution is None
+                     or environment_execution.get("status")
+                     == "not-recorded-in-session")):
             return None
         snapshot = snapshot if isinstance(snapshot, dict) else {}
         campaign = snapshot.get("campaign")
@@ -16158,7 +16384,7 @@ def _session_service_accountability(
             "service_session_id": readiness_source.get("session_id"),
             "environment_id": readiness_source.get("environment_id"),
             "snapshot_sequence": readiness_source.get("snapshot_sequence"),
-            "service_declaration_status": "explicit-empty",
+            "service_declaration_status": declaration_status,
             **({"campaign_id": _short_text(campaign["identity"], 160)}
                if isinstance(campaign.get("identity"), str)
                and campaign["identity"] else {}),
@@ -16172,11 +16398,21 @@ def _session_service_accountability(
         )
         return {
             "schema_version": "mncs.environment.service-accountability/1",
-            "status": "empty-declared-scope",
-            "scope": "selected-session-declared-readiness-services",
+            "status": (
+                "empty-declared-scope"
+                if declaration_status == "explicit-empty"
+                else "environment-execution-only"
+            ),
+            "scope": (
+                "selected-session-declared-readiness-services"
+                if declaration_status == "explicit-empty"
+                else "selected-session-environment-owner-pass-contract"
+            ),
             "source": source,
             "summary": {
-                "declared_service_count": 0,
+                "declared_service_count": (
+                    0 if declaration_status == "explicit-empty" else None
+                ),
                 "projected_service_count": 0,
                 "eligible_service_opportunity_count": None,
                 "ambient_fulfillment_status": "not-measured",
@@ -16211,15 +16447,21 @@ def _session_service_accountability(
                 "eligible_opportunity_denominator": "not-recorded",
                 "verified_fulfillment_numerator": "not-established",
                 "interpretation_limit": (
-                    "No readiness services were declared for this session. "
-                    "This does not establish whether other ambient services "
+                    (
+                        "No readiness services were declared for this session. "
+                        if declaration_status == "explicit-empty"
+                        else "No readiness-service declaration was recorded. "
+                    )
+                    + "This does not establish whether other ambient services "
                     "were available, ran, or fulfilled agent needs."
                 ),
             },
             "services": [],
+            **({"environment_service_execution": environment_execution}
+               if environment_execution is not None else {}),
             "measurement_limits": [
-                "This view covers only readiness services declared for the selected session; it does not enumerate all Environment capabilities or ambient owner passes.",
-                "An explicit empty declaration records zero readiness-service scope, not zero ambient service activity or successful fulfillment.",
+                "This view covers selected-session readiness declarations plus the bounded Environment owner-pass scheduler contract; it does not enumerate every Environment capability or agent service opportunity.",
+                "An empty or unavailable readiness declaration does not establish zero ambient activity or successful fulfillment.",
                 "Agent need, receipt, intervention burden, and outcome quality remain unmeasured.",
             ],
         }
@@ -17504,15 +17746,16 @@ def _session_activity(
         "The Store page reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
         "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves.",
     ]
+    ambient_service_execution = _session_ambient_service_execution(
+        session, snapshot,
+    )
     service_readiness = _session_service_readiness(session, snapshot)
     service_accountability = _session_service_accountability(
         service_readiness, None, snapshot,
+        ambient_service_execution=ambient_service_execution,
     )
     doctor_health_history = _session_doctor_health_history(session, snapshot)
     projection_coherence_history = _session_projection_coherence_history(
-        session, snapshot,
-    )
-    ambient_service_execution = _session_ambient_service_execution(
         session, snapshot,
     )
     raw_readiness_requirements = snapshot.get("requirements")
@@ -18323,6 +18566,7 @@ def _session_activity(
     service_accountability = _session_service_accountability(
         service_readiness, capability_delivery, snapshot,
         ambient_owner_pass_activity,
+        ambient_service_execution,
     )
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"

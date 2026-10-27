@@ -4552,6 +4552,39 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
             "goal": "observe service accountability scope",
         },
     })
+    execution_id = "ase_" + "a" * 32
+    result_digest = "f" * 64
+    session.snapshot["coherence"] = {"last_trace": {
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "event_count": 1,
+        "scheduled": [{
+            "owner": "doctor",
+            "disposition": 1,
+            "wave": 0,
+            "service_execution_id": execution_id,
+            "owner_reused": False,
+            "timer_or_lifecycle_due": False,
+            "run_elapsed_seconds": 0.1,
+            "inputs": ["repository.control_changed"],
+        }],
+        "skipped": [{
+            "owner": owner,
+            "reason": "current-inputs",
+        } for owner in ("semantics",)],
+        "owner_failures": [],
+        "owner_pass_results": [{
+            "owner": "doctor",
+            "service_execution_id": execution_id,
+            "result_status": "result-recorded",
+            "result_identity": result_digest,
+            "source_reference_status": "session-artifact",
+            "source_reference": (
+                "sessions/ses_projection_reader/coherence-results/"
+                + result_digest + ".json"
+            ),
+        }],
+    }}
 
     result = capability_intelligence.project(session)
     activity = result["session_activity"]
@@ -4585,6 +4618,32 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
         "no-declared-probe-opportunities"
     )
     assert accountability["services"] == []
+    environment_execution = accountability["environment_service_execution"]
+    assert environment_execution["status"] == "partial"
+    assert environment_execution["scope"] == (
+        "selected-session-environment-owner-pass-contract"
+    )
+    assert environment_execution["source"]["owner_pass_contract_reference"] == (
+        "mncs-environment:.mncs/coherence-passes.json"
+    )
+    assert environment_execution["summary"][
+        "owner_pass_decision_coverage"
+    ] == "partial"
+    assert environment_execution["summary"]["scheduled_pass_count"] == 1
+    assert environment_execution["summary"]["skipped_pass_count"] == 1
+    assert environment_execution["summary"]["ambient_fulfillment_status"] == (
+        "not-established"
+    )
+    trace_view = activity["ambient_service_execution"]["execution"]
+    assert environment_execution["source"]["projection_digest"] == (
+        result["source"]["session_ambient_service_execution_digest"]
+    )
+    doctor_pass = trace_view["scheduled_passes"][0]
+    assert doctor_pass["owner"] == "doctor"
+    assert doctor_pass["service_execution_id"] == execution_id
+    doctor_result = trace_view["owner_pass_results"]["results"][0]
+    assert doctor_result["result_identity"] == result_digest
+    assert doctor_result["source_reference"].endswith(result_digest + ".json")
     assert "does not establish whether other ambient services" in (
         accountability["ambient_fulfillment"]["interpretation_limit"]
     )
@@ -4598,8 +4657,28 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert compact["source"]["service_declaration_status"] == "explicit-empty"
     assert compact["summary"]["declared_service_count"] == 0
     assert compact["services"] == []
+    assert compact["summary"]["environment_service_execution"]["summary"][
+        "owner_pass_decision_coverage"
+    ] == "partial"
 
     session.snapshot.pop("requirements")
+    without_readiness_declaration = capability_intelligence.project(session)[
+        "session_activity"
+    ]
+    assert "service_readiness" not in without_readiness_declaration
+    assert without_readiness_declaration["service_accountability"]["status"] == (
+        "environment-execution-only"
+    )
+    assert without_readiness_declaration["service_accountability"]["scope"] == (
+        "selected-session-environment-owner-pass-contract"
+    )
+    assert "declaration was recorded" in without_readiness_declaration[
+        "service_accountability"
+    ]["ambient_fulfillment"]["interpretation_limit"]
+    assert without_readiness_declaration["service_accountability"]["summary"][
+        "declared_service_count"
+    ] is None
+    session.snapshot.pop("coherence")
     absent = capability_intelligence.project(session)["session_activity"]
     assert "service_readiness" not in absent
     assert "service_accountability" not in absent

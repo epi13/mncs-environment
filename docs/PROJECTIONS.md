@@ -1079,10 +1079,29 @@ probe coverage counts to relate this view to its declarations and records.
 When `requirements.services` is explicitly present as an empty list, the
 projection reports `status: empty-declared-scope`, zero declared readiness
 services, and the session, Environment, snapshot, campaign, and WorkIntent
-identities. If the field is absent, the service projection remains absent.
+identities. If the field is absent, `service_readiness` remains absent;
+`service_accountability` may still expose recorded Environment owner-pass
+execution evidence.
 This empty scope is limited to session readiness declarations; it does not
 claim that other Environment capabilities or ambient owner passes were
 unavailable, idle, or successful.
+When no session readiness services are declared or recorded, a bounded
+owner-pass trace makes `service_accountability` available with an
+`environment_service_execution` section derived from the existing
+`.mncs/coherence-passes.json` contract and `session_activity.ambient_service_execution`.
+It correlates the owner-pass decision coverage, scheduled/skipped counts,
+failure and result-record evidence, and exact projection digest with the
+session, Environment, snapshot, campaign, and WorkIntent. This scope is
+available without session-authored service declarations. The nested view links
+to the bounded trace by digest, which retains per-pass trigger and result
+references. When readiness services are declared, their accountability view
+remains scoped to those declarations and the owner-pass trace remains available
+separately. Owner-pass decision coverage is coverage of the scheduler's
+declared decisions only; it does not measure agent need, capability
+discoverability, service fulfillment, or intervention reduction. When no
+owner-pass trace is recorded, an explicit empty readiness scope remains
+limited to readiness declarations; without a readiness declaration, the
+projection does not synthesize a service-accountability record.
 Each row also carries the sanitized readiness observation code and time, and
 the reconciliation operation code when present, so a failed or degraded
 service can be investigated from its declared status without exposing provider
