@@ -2305,6 +2305,11 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
             result = session.context()
             result["entry"] = {"reused": reused, "revalidation": remediation["revalidation"],
                                "operations": remediation["operations"]}
+            ambient_service_execution = incremental.project_trace(_trace)
+            if ambient_service_execution is not None:
+                result["entry"]["ambient_service_execution"] = (
+                    ambient_service_execution
+                )
             if task_selector_status is not None:
                 result["entry"]["task_selector"] = {
                     "status": task_selector_status,

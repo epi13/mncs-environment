@@ -75,8 +75,46 @@ def test_warm_tick_has_zero_processes_and_writes(participant):
         _, trace = coherence.tick(participant, {}, owned)
     assert trace['scheduled'] == []
     assert len(trace['skipped']) == 7
+    assert trace['elapsed_seconds'] >= 0
     assert set(counts.values()) == {1}
     assert participant.saves == saves
+
+
+def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillment():
+    private_path = "/home/private/project/source.mncs"
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "event_count": 2,
+        "elapsed_seconds": 0.25,
+        "scheduled": [{
+            "pass": "verification",
+            "owner": "verification",
+            "disposition": 1,
+            "wave": 0,
+            "owner_reused": False,
+            "timer_or_lifecycle_due": False,
+            "run_elapsed_seconds": 0.125,
+            "inputs": ["source.changed", "private/source.mncs"],
+            "checkout": private_path,
+        }],
+        "skipped": [{"pass": "doctor", "reason": "current inputs"}],
+        "owner_failures": [],
+        "private_detail": private_path,
+    })
+
+    assert projected["decision_record_status"] == "recorded"
+    assert projected["scheduled_pass_count"] == 1
+    assert projected["skipped_pass_count"] == 1
+    assert projected["declared_owner_pass_count"] == 7
+    assert projected["owner_pass_decision_coverage"] == "partial"
+    assert projected["scheduled_passes"][0]["run_elapsed_seconds"] == 0.125
+    assert projected["scheduled_passes"][0]["trigger_kinds"] == ["source.changed"]
+    assert projected["skipped_passes"] == [{
+        "owner": "doctor", "reason": "current inputs",
+    }]
+    assert projected["ambient_fulfillment"] == "not-established"
+    assert projected["agent_need_opportunity_denominator"] == "not-recorded"
+    assert private_path not in json.dumps(projected)
 
 
 @pytest.mark.parametrize('path,expected', [
@@ -90,6 +128,7 @@ def test_external_edits_select_only_subscribed_passes(participant, path, expecte
     (Path(participant.snapshot['selected_checkouts']['app']['path']) / path).write_text('changed')
     _, trace = coherence.tick(participant, {}, owned)
     assert {item['pass'] for item in trace['scheduled']} == expected
+    assert all(item["run_elapsed_seconds"] >= 0 for item in trace["scheduled"])
     _, quiet = coherence.tick(participant, {}, owned)
     assert quiet['scheduled'] == []
 

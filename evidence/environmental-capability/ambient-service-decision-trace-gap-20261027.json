@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_decision_trace_gap_20261027",
+  "captured_at": "2026-10-27T06:30:54+00:00",
+  "observation": {
+    "kind": "ambient-service-decision-trace-gap",
+    "source_interface": "mncs-env entry CLI, process resource counters, and read-only Environment session snapshot",
+    "request": {
+      "operation": "enter and inspect selected session",
+      "entry_command": "./scripts/mncs-env enter --consumer codex-environment-capability-campaign --consumer-kind agent --new-session",
+      "session_id": "ses_b922fbcf64b39a81"
+    },
+    "outcome": {
+      "entry_response_returned": false,
+      "termination": "interrupted after bounded process-resource observation",
+      "session_persisted": true,
+      "session_lifecycle": "active",
+      "snapshot_sequence": 62,
+      "environment_id": "renv_bfe0c756589a0af4",
+      "readiness": {
+        "status": "blocked",
+        "blocker_count": 2,
+        "unavailable_capability_count": 66
+      },
+      "incremental_scheduler_trace": {
+        "status": "not-recorded-in-session-snapshot",
+        "projection_interface": "session_activity.ambient_service_execution"
+      },
+      "session_activity": {
+        "event_count": 57,
+        "capability_invocations": 26,
+        "capability_invocations_completed_ok": 26,
+        "invocations_by_capability": {
+          "mncs-doctor:projection-health": 18,
+          "mncs-doc:documentation-projection": 5,
+          "mncs-automation:automation-reconciliation": 2,
+          "mncs.test-verification-coherence/1": 1
+        },
+        "projection_deferred_events": 2,
+        "doctor_remediation_events": 1,
+        "authority_denial_events": 1,
+        "event_time_window": {
+          "started_at": "2026-10-27T06:15:26+00:00",
+          "ended_at": "2026-10-27T06:16:37+00:00"
+        }
+      },
+      "entry_process_sample": {
+        "basis": "Linux /proc process counters and ps sample",
+        "elapsed_seconds": 76,
+        "cpu_percent_at_sample": 76.7,
+        "resident_memory_kib_at_sample": 509372,
+        "rchar_bytes_at_sample": 4902057764,
+        "wchar_bytes_at_sample": 339637851,
+        "block_read_bytes_at_sample": 73728,
+        "block_write_bytes_at_sample": 834867200,
+        "threads_at_sample": 1
+      },
+      "session_snapshot_json_encoded_bytes": 1866597
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_a671d640b0caa7c0",
+    "session_id": "ses_b922fbcf64b39a81",
+    "work_intent_id": "int_9bcac9814cef9e2c",
+    "work_intent_goal": "improve mncs-environment through a persistent, discoverable MNCS work context",
+    "environment_id": "renv_bfe0c756589a0af4",
+    "repository": "mncs-environment",
+    "repository_head_at_entry": "3a3e7e1de6a273b1c564e1bbf76db5fb95786322"
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "kind": "direct-session-snapshot-readback",
+      "session_id": "ses_b922fbcf64b39a81",
+      "snapshot_sequence": 62,
+      "trace_status": "not-recorded-in-session-snapshot"
+    },
+    {
+      "kind": "direct-session-event-summary",
+      "session_id": "ses_b922fbcf64b39a81",
+      "event_count": 57,
+      "capability_invocation_count": 26
+    },
+    {
+      "kind": "direct-process-resource-sample",
+      "elapsed_seconds": 76,
+      "block_write_bytes_at_sample": 834867200
+    }
+  ],
+  "not_measured": [
+    "Whether the interrupted entry would have returned a scheduler trace after completing.",
+    "Whether any of the 18 Doctor projection-health invocations were redundant or caused the observed process I/O.",
+    "Btrfs metadata allocation or data allocation attributable to this process, and the cause of the earlier Btrfs incident.",
+    "A before-sample baseline for this session or a comparable entry workload.",
+    "Agent need, service fulfillment, agent receipt, or intervention burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_a671d640b0caa7c0",
+    "session_id": "ses_b922fbcf64b39a81",
+    "consumer_id": "codex-environment-capability-campaign",
+    "environment_id": "renv_bfe0c756589a0af4"
+  }
+}

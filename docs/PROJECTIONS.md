@@ -1064,6 +1064,23 @@ includes them in projection identity so snapshot changes remain distinguishable
 even when the event tail and binding inventory are unchanged. These digests
 identify derived input state; they do not verify service correctness.
 
+`session_activity.ambient_service_execution` exposes the latest recorded
+incremental owner-pass scheduler trace from the same session snapshot. Entry
+also returns the current bounded trace directly, including scheduled and
+skipped owner passes, coverage of declared pass decisions, and wall-clock
+duration for completed passes. This makes
+the environment's own service routing visible alongside capability use and
+service readiness. It counts only decisions made by the scheduler; unrecognized
+service opportunities and agent need are not recorded. A returned pass, a
+skipped-current-input decision, or a short duration does not establish correct
+service fulfillment, agent receipt, or reduced intervention burden. The
+projection links the trace to the session, Environment, snapshot revision,
+campaign, and work intent where available, and its digest participates in
+projection identity. It does not add per-entry durable telemetry: a quiet run
+whose scheduler state was not otherwise saved may be visible in the entry
+response but absent from a later session projection. Recovery-scan traces are
+also returned at entry and are not retained as incremental scheduler state.
+
 `session_activity.projection_coherence_history` exposes the selected session's
 recorded projection-pass summaries and their evidence references, together
 with the latest stored epoch summary and campaign context. It reuses the existing

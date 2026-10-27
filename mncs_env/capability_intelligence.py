@@ -2130,6 +2130,7 @@ def _compact_projection(
                     "session_service_readiness_digest",
                     "session_service_accountability_digest",
                     "session_projection_coherence_digest",
+                    "session_ambient_service_execution_digest",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable",
@@ -2992,6 +2993,7 @@ def _compact_projection(
             "event_window_sequence_start", "event_window_sequence_end",
             "invocation_events_considered", "invocation_records_omitted",
             "resource_sample_identity_digest",
+            "ambient_service_execution_digest",
             "claim_coordination_events_considered",
             "claim_coordination_records_returned",
             "claim_coordination_records_omitted",
@@ -4733,6 +4735,10 @@ def _compact_projection(
     if isinstance(raw_projection_history, dict):
         # Projection-pass history is bounded, session-scoped and sanitized.
         compact_activity["projection_coherence_history"] = raw_projection_history
+    raw_ambient_service_execution = activity.get("ambient_service_execution")
+    if isinstance(raw_ambient_service_execution, dict):
+        # Scheduler decisions are bounded and sanitized from the session snapshot.
+        compact_activity["ambient_service_execution"] = raw_ambient_service_execution
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity["operation_deferral_count"] = activity.get(
             "operation_deferral_count", 0,
@@ -5542,6 +5548,40 @@ def _compact_projection(
                 projection_view.pop("current_epoch", None)
             else:
                 result["session_activity"].pop("projection_coherence_history")
+        elif result["session_activity"].get(
+            "ambient_service_execution", {},
+        ).get("execution", {}).get("scheduled_passes"):
+            ambient_view = result["session_activity"][
+                "ambient_service_execution"
+            ]
+            execution = ambient_view["execution"]
+            execution["scheduled_passes"].pop()
+            execution["scheduled_passes_truncated"] = True
+            execution["scheduled_passes_omitted"] = (
+                execution.get("scheduled_passes_omitted", 0) + 1
+            )
+        elif result["session_activity"].get(
+            "ambient_service_execution", {},
+        ).get("execution", {}).get("skipped_passes"):
+            ambient_view = result["session_activity"][
+                "ambient_service_execution"
+            ]
+            execution = ambient_view["execution"]
+            execution["skipped_passes"].pop()
+            execution["skipped_passes_truncated"] = True
+            execution["skipped_passes_omitted"] = (
+                execution.get("skipped_passes_omitted", 0) + 1
+            )
+        elif result["session_activity"].get(
+            "ambient_service_execution", {},
+        ).get("measurement_limits"):
+            result["session_activity"]["ambient_service_execution"][
+                "measurement_limits"
+            ].pop()
+        elif isinstance(
+            result["session_activity"].get("ambient_service_execution"), dict,
+        ):
+            result["session_activity"].pop("ambient_service_execution")
         elif result["session_activity"].get(
             "service_accountability", {},
         ).get("services"):
@@ -14946,6 +14986,90 @@ def _session_projection_coherence_history(
     }
 
 
+def _session_ambient_service_execution(
+    session: Any, snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Project the latest bounded incremental owner-pass scheduler trace."""
+    raw_coherence = snapshot.get("coherence")
+    coherence = raw_coherence if isinstance(raw_coherence, dict) else {}
+    raw_trace = coherence.get("last_trace")
+    session_id = getattr(session, "session_id", None)
+    if not isinstance(raw_trace, dict):
+        has_trace_slot = (
+            "coherence" in snapshot and not isinstance(raw_coherence, dict)
+        ) or "last_trace" in coherence
+        return {
+            "status": "partial" if has_trace_slot else "not-recorded-in-session",
+            "scope": "latest-current-session-incremental-owner-pass-trace",
+            "source": {
+                "kind": "current-session-snapshot",
+                "session_id": _short_text(session_id, 160)
+                if isinstance(session_id, str) else None,
+                "environment_id": _short_text(snapshot.get("environment_id"), 160)
+                if isinstance(snapshot.get("environment_id"), str) else None,
+                "snapshot_sequence": (
+                    snapshot.get("snapshot_sequence")
+                    if type(snapshot.get("snapshot_sequence")) is int
+                    and snapshot["snapshot_sequence"] >= 0 else None
+                ),
+                "trace_status": "missing-or-invalid",
+            },
+            "execution": None,
+            "measurement_limits": [
+                "No latest incremental owner-pass scheduler trace is available in this session snapshot.",
+                "Absence of a trace does not establish that no ambient service work occurred.",
+            ],
+        }
+
+    from .coherence import project_trace
+
+    execution = project_trace(raw_trace)
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    source = {
+        "kind": "current-session-snapshot",
+        "session_id": _short_text(session_id, 160)
+        if isinstance(session_id, str) else None,
+        "environment_id": _short_text(snapshot.get("environment_id"), 160)
+        if isinstance(snapshot.get("environment_id"), str) else None,
+        "snapshot_sequence": (
+            snapshot.get("snapshot_sequence")
+            if type(snapshot.get("snapshot_sequence")) is int
+            and snapshot["snapshot_sequence"] >= 0 else None
+        ),
+        "campaign_id": _short_text(campaign.get("identity"), 160)
+        if isinstance(campaign.get("identity"), str) else None,
+        "work_intent_id": _short_text(intent.get("identity"), 160)
+        if isinstance(intent.get("identity"), str) else None,
+        "trace_status": (
+            execution.get("decision_record_status", "partial")
+            if isinstance(execution, dict) else "invalid"
+        ),
+        "owner_pass_decision_coverage": (
+            execution.get("owner_pass_decision_coverage", "unavailable")
+            if isinstance(execution, dict) else "unavailable"
+        ),
+    }
+    return {
+        "status": (
+            "observed" if (source["trace_status"] == "recorded"
+                           and source["owner_pass_decision_coverage"] == "complete")
+            else "partial"
+        ),
+        "scope": "latest-current-session-incremental-owner-pass-trace",
+        "source": source,
+        "execution": execution,
+        "measurement_limits": (
+            execution.get("measurement_limits", [])
+            if isinstance(execution, dict) else [
+                "The stored scheduler trace could not be projected safely."
+            ]
+        ),
+    }
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -14972,6 +15096,9 @@ def _session_activity(
     projection_coherence_history = _session_projection_coherence_history(
         session, snapshot,
     )
+    ambient_service_execution = _session_ambient_service_execution(
+        session, snapshot,
+    )
     raw_readiness_requirements = snapshot.get("requirements")
     raw_readiness_requirements = (
         raw_readiness_requirements
@@ -14987,6 +15114,13 @@ def _session_activity(
     )
     has_projection_coherence_history = (
         projection_coherence_history["status"] != "not-recorded-in-session"
+    )
+    has_ambient_service_execution = (
+        ambient_service_execution["status"] != "not-recorded-in-session"
+    )
+    ambient_service_execution_digest = (
+        digest_hex(ambient_service_execution)
+        if has_ambient_service_execution else None
     )
     if has_service_readiness and has_doctor_health_history:
         readiness_source = service_readiness.get("source", {})
@@ -15032,6 +15166,8 @@ def _session_activity(
                 "resource_sample_identity_digest": resource_samples["source"][
                     "observation_identity_digest"
                 ],
+                **({"ambient_service_execution_digest": ambient_service_execution_digest}
+                   if ambient_service_execution_digest is not None else {}),
             },
             "interaction_count": 0,
             "interactions": [],
@@ -15048,6 +15184,8 @@ def _session_activity(
                if has_doctor_health_history else {}),
             **({"projection_coherence_history": projection_coherence_history}
                if has_projection_coherence_history else {}),
+            **({"ambient_service_execution": ambient_service_execution}
+               if has_ambient_service_execution else {}),
             "measurement_limits": [
                 *limits,
                 "The session event page interface is unavailable.",
@@ -15077,6 +15215,8 @@ def _session_activity(
                 "resource_sample_identity_digest": resource_samples["source"][
                     "observation_identity_digest"
                 ],
+                **({"ambient_service_execution_digest": ambient_service_execution_digest}
+                   if ambient_service_execution_digest is not None else {}),
             },
             "interaction_count": 0,
             "interactions": [],
@@ -15090,6 +15230,8 @@ def _session_activity(
                if has_doctor_health_history else {}),
             **({"projection_coherence_history": projection_coherence_history}
                if has_projection_coherence_history else {}),
+            **({"ambient_service_execution": ambient_service_execution}
+               if has_ambient_service_execution else {}),
             "measurement_limits": [
                 *limits,
                 "The session event tail could not be read or did not match its declared shape.",
@@ -17217,6 +17359,8 @@ def _session_activity(
            if has_doctor_health_history else {}),
         **({"projection_coherence_history": projection_coherence_history}
            if has_projection_coherence_history else {}),
+        **({"ambient_service_execution": ambient_service_execution}
+           if has_ambient_service_execution else {}),
         "source": {
             "event_count": event_count,
             "event_window_limit": event_limit,
@@ -17230,6 +17374,8 @@ def _session_activity(
             "resource_sample_identity_digest": resource_samples["source"][
                 "observation_identity_digest"
             ],
+            **({"ambient_service_execution_digest": ambient_service_execution_digest}
+               if ambient_service_execution_digest is not None else {}),
             "event_window_sequence_start": (
                 window_references[0]["sequence"] if window_references else None
             ),
@@ -18757,6 +18903,10 @@ def project(
         digest_hex(activity["projection_coherence_history"])
         if isinstance(activity.get("projection_coherence_history"), dict) else None
     )
+    session_ambient_service_execution_digest = (
+        digest_hex(activity["ambient_service_execution"])
+        if isinstance(activity.get("ambient_service_execution"), dict) else None
+    )
     pressure_evidence_summary = _pressure_evidence_summary(
         observations,
         hypotheses,
@@ -18821,6 +18971,11 @@ def project(
                     session_projection_coherence_digest
                 ),
             } if session_projection_coherence_digest is not None else {}),
+            **({
+                "session_ambient_service_execution_digest": (
+                    session_ambient_service_execution_digest
+                ),
+            } if session_ambient_service_execution_digest is not None else {}),
             "session_resource_sample_digest": (
                 activity.get("source", {}).get("resource_sample_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
@@ -18889,6 +19044,11 @@ def project(
                     session_projection_coherence_digest
                 ),
             } if session_projection_coherence_digest is not None else {}),
+            **({
+                "session_ambient_service_execution_digest": (
+                    session_ambient_service_execution_digest
+                ),
+            } if session_ambient_service_execution_digest is not None else {}),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,

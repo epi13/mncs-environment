@@ -329,6 +329,13 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(context["configuration"]["source"], str(self.definition))
         self.assertFalse(context["entry"]["reused"])
         self.assertEqual(context["entry"]["operations"], [])
+        ambient = context["entry"]["ambient_service_execution"]
+        self.assertEqual(
+            ambient["scope"], "incremental-owner-pass-scheduler-trace",
+        )
+        self.assertEqual(ambient["scheduled_pass_count"], 7)
+        self.assertEqual(ambient["owner_pass_decision_coverage"], "complete")
+        self.assertEqual(ambient["ambient_fulfillment"], "not-established")
         self.assertIn("service-ready", json.dumps(context["readiness"]))
 
     def test_reentry_reuses_checkpoint_and_terminal_entry_creates_new_work(self):

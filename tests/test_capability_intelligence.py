@@ -4197,6 +4197,120 @@ def test_session_projection_coherence_history_is_bounded_and_linked(
     assert private_path not in json.dumps(compact)
 
 
+def test_ambient_service_execution_is_projected_with_session_context_and_limits(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    assert capability_intelligence._session_ambient_service_execution(
+        session, {},
+    )["status"] == "not-recorded-in-session"
+    session.snapshot.update({
+        "environment_id": "renv_ambient_service_trace",
+        "snapshot_sequence": 52,
+        "campaign": {"identity": "cmp_ambient_service_trace"},
+        "intent": {"identity": "int_ambient_service_trace"},
+        "coherence": {"last_trace": {
+            "mode": "targeted_update",
+            "event_count": 2,
+            "elapsed_seconds": 0.4,
+            "scheduled": [{
+                "pass": "verification",
+                "owner": "verification",
+                "disposition": 1,
+                "wave": 0,
+                "owner_reused": False,
+                "timer_or_lifecycle_due": False,
+                "run_elapsed_seconds": 0.2,
+                "inputs": ["source.changed"],
+                "checkout": "/private/project",
+            }],
+            "skipped": [{"pass": "doctor", "reason": "current inputs"}],
+            "owner_failures": [],
+        }},
+    })
+
+    projection = capability_intelligence.project(session)
+    view = projection["session_activity"]["ambient_service_execution"]
+    assert view["status"] == "partial"
+    assert view["scope"] == "latest-current-session-incremental-owner-pass-trace"
+    assert view["source"]["session_id"] == "ses_projection_reader"
+    assert view["source"]["environment_id"] == "renv_ambient_service_trace"
+    assert view["source"]["snapshot_sequence"] == 52
+    assert view["source"]["campaign_id"] == "cmp_ambient_service_trace"
+    assert view["source"]["work_intent_id"] == "int_ambient_service_trace"
+    assert view["source"]["owner_pass_decision_coverage"] == "partial"
+    assert view["execution"]["scheduled_pass_count"] == 1
+    assert view["execution"]["skipped_pass_count"] == 1
+    assert view["execution"]["scheduled_passes"][0]["run_elapsed_seconds"] == 0.2
+    assert view["execution"]["ambient_fulfillment"] == "not-established"
+    assert view["execution"]["agent_need_opportunity_denominator"] == "not-recorded"
+    assert projection["source"]["session_ambient_service_execution_digest"]
+    assert "/private/project" not in json.dumps(projection)
+
+    original_identity = projection["identity"]
+    original_event_digest = projection["session_activity"]["source"][
+        "event_window_identity_digest"
+    ]
+    session.snapshot["coherence"]["last_trace"]["elapsed_seconds"] = 0.5
+    changed = capability_intelligence.project(session)
+    assert changed["identity"] != original_identity
+    assert changed["session_activity"]["source"][
+        "event_window_identity_digest"
+    ] == original_event_digest
+    compact = capability_intelligence.project(session, max_result_bytes=8_000)
+    compact_view = compact["session_activity"]["ambient_service_execution"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_view["execution"]["scheduled_pass_count"] == 1
+
+
+def test_live_entry_trace_gap_evidence_projects_without_claiming_causality(
+    tmp_path: Path,
+) -> None:
+    path = Path(__file__).resolve().parents[1] / (
+        "evidence/environmental-capability/"
+        "ambient-service-decision-trace-gap-20261027.json"
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    session, _ = _session(tmp_path, [record])
+    related = record["related_work"]
+    session.session_id = related["session_id"]
+    session.snapshot.update({
+        "environment_id": related["environment_id"],
+        "snapshot_sequence": record["observation"]["outcome"][
+            "snapshot_sequence"
+        ],
+        "campaign": {"identity": related["campaign_id"]},
+        "intent": {
+            "identity": related["work_intent_id"],
+            "goal": related["work_intent_goal"],
+        },
+        "coherence": {},
+    })
+
+    projection = capability_intelligence.project(session)
+
+    assert projection["status"] == "ready"
+    assert projection["observation_count"] == 1
+    observation = projection["observations"][0]
+    assert observation["identity"] == record["identity"]
+    assert observation["pressure_hypothesis"]["identity"] == (
+        "ph_environment_ambient_service_trace_visibility"
+    )
+    assert observation["pressure_hypothesis_role"] == "occurrence"
+    assert observation["related_work"]["session_id"] == related["session_id"]
+    assert observation["related_work"]["environment_id"] == (
+        related["environment_id"]
+    )
+    assert observation["observation"]["outcome"][
+        "incremental_scheduler_trace"
+    ]["status"] == "not-recorded-in-session-snapshot"
+    assert any(
+        "Btrfs metadata allocation" in item
+        for item in observation["measurement_limits"]
+    )
+    assert "ambient_service_execution" not in projection["session_activity"]
+
+
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
     record = _observation(
         "ev_environment_authority_denial_activity",

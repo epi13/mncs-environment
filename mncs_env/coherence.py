@@ -10,6 +10,7 @@ import copy
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -23,6 +24,188 @@ from .persist import write_json
 SCHEMA = "mncs.environment.incremental-coherence/1"
 INPUTS_PATH = Path(__file__).resolve().parents[1] / ".mncs/coherence-passes.json"
 MAX_WAVES = 3
+MAX_TRACE_OWNER_ROWS = 16
+MAX_TRACE_TRIGGER_KINDS = 8
+
+
+def project_trace(value: dict) -> dict | None:
+    """Return a bounded, path-free view of an incremental owner-pass trace."""
+    if not isinstance(value, dict):
+        return None
+
+    def safe_identity(raw):
+        if (not isinstance(raw, str) or len(raw) > 160
+                or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]*", raw) is None):
+            return None
+        return raw
+
+    def safe_text(raw):
+        if not isinstance(raw, str) or len(raw) > 256:
+            return None
+        if any(
+            ord(char) < 32 or ord(char) > 126 or char in "/\\"
+            for char in raw
+        ):
+            return None
+        return raw
+
+    def nonnegative(raw):
+        return raw if type(raw) is int and raw >= 0 else None
+
+    def duration(raw):
+        return round(float(raw), 3) if (
+            type(raw) in (int, float) and 0 <= raw <= 86400
+        ) else None
+
+    raw_scheduled = value.get("scheduled")
+    scheduled_shape_valid = isinstance(raw_scheduled, list)
+    raw_scheduled = raw_scheduled if isinstance(raw_scheduled, list) else []
+    try:
+        declarations_value = declarations()
+        pass_declarations = declarations_value.get("passes")
+        fact_declarations = declarations_value.get("facts")
+        vocabulary_known = (
+            isinstance(pass_declarations, dict)
+            and isinstance(fact_declarations, list)
+            and all(isinstance(name, str) for name in pass_declarations)
+            and all(isinstance(name, str) for name in fact_declarations)
+        )
+        declared_passes = set(pass_declarations) if vocabulary_known else set()
+        declared_facts = set(fact_declarations) if vocabulary_known else set()
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        declared_passes = set()
+        declared_facts = set()
+        vocabulary_known = False
+    scheduled = []
+    invalid_scheduled_count = 0
+    for item in raw_scheduled[:MAX_TRACE_OWNER_ROWS]:
+        if not isinstance(item, dict):
+            invalid_scheduled_count += 1
+            continue
+        owner = safe_identity(item.get("owner") or item.get("pass"))
+        if owner is None or owner not in declared_passes:
+            invalid_scheduled_count += 1
+            continue
+        row = {"owner": owner, "execution_status": "runner-returned"}
+        disposition = nonnegative(item.get("disposition"))
+        if disposition is not None:
+            row["scheduler_disposition_code"] = disposition
+        wave = nonnegative(item.get("wave"))
+        if wave is not None:
+            row["wave"] = wave
+        if type(item.get("owner_reused")) is bool:
+            row["result_reused"] = item["owner_reused"]
+        if type(item.get("timer_or_lifecycle_due")) is bool:
+            row["timer_or_lifecycle_due"] = item["timer_or_lifecycle_due"]
+        elapsed = duration(item.get("run_elapsed_seconds"))
+        if elapsed is not None:
+            row["run_elapsed_seconds"] = elapsed
+        inputs = item.get("inputs")
+        if isinstance(inputs, list):
+            kinds = []
+            for raw in inputs:
+                kind = raw if isinstance(raw, str) and raw in declared_facts else None
+                if kind is not None and kind not in kinds:
+                    kinds.append(kind)
+                if len(kinds) == MAX_TRACE_TRIGGER_KINDS:
+                    break
+            row["trigger_kinds"] = kinds
+        scheduled.append(row)
+
+    raw_skipped = value.get("skipped")
+    skipped_shape_valid = isinstance(raw_skipped, list)
+    raw_skipped = raw_skipped if isinstance(raw_skipped, list) else []
+    skipped = []
+    invalid_skipped_count = 0
+    for item in raw_skipped[:MAX_TRACE_OWNER_ROWS]:
+        if not isinstance(item, dict):
+            invalid_skipped_count += 1
+            continue
+        owner = safe_identity(item.get("owner") or item.get("pass"))
+        if owner is None or owner not in declared_passes:
+            invalid_skipped_count += 1
+            continue
+        row = {"owner": owner}
+        reason = safe_text(item.get("reason"))
+        if reason is not None:
+            row["reason"] = reason
+        skipped.append(row)
+
+    raw_failures = value.get("owner_failures")
+    failures = []
+    if isinstance(raw_failures, list):
+        for raw in raw_failures:
+            owner = safe_identity(raw)
+            if (owner is not None and owner in declared_passes
+                    and owner not in failures):
+                failures.append(owner)
+            if len(failures) == MAX_TRACE_OWNER_ROWS:
+                break
+    decided_owners = [
+        item["owner"] for item in (*scheduled, *skipped)
+        if isinstance(item.get("owner"), str)
+    ]
+    unique_decided_owners = set(decided_owners)
+    decision_coverage = (
+        "unavailable" if not vocabulary_known else (
+            "complete" if (len(unique_decided_owners) == len(declared_passes)
+                           and unique_decided_owners == declared_passes
+                           and len(decided_owners) == len(unique_decided_owners))
+            else "partial"
+        )
+    )
+    result = {
+        "scope": "incremental-owner-pass-scheduler-trace",
+        "mode": (
+            value.get("mode") if isinstance(value.get("mode"), str)
+            and value.get("mode") in {
+                "recovery_scan", "bootstrap_scan", "targeted_update",
+                "bounded_reconciliation",
+            } else "unknown"
+        ),
+        "decision_record_status": (
+            "recorded" if (scheduled_shape_valid and skipped_shape_valid
+                           and vocabulary_known and not invalid_scheduled_count
+                           and not invalid_skipped_count
+                           and len(raw_scheduled) <= MAX_TRACE_OWNER_ROWS
+                           and len(raw_skipped) <= MAX_TRACE_OWNER_ROWS)
+            else "partial"
+        ),
+        "scheduled_pass_count": len(scheduled),
+        "skipped_pass_count": len(skipped),
+        "declared_owner_pass_count": len(declared_passes),
+        "owner_pass_decision_count": len(unique_decided_owners),
+        "owner_pass_decision_coverage": decision_coverage,
+        "scheduled_passes": scheduled,
+        "skipped_passes": skipped,
+        "owner_failure_count": len(failures),
+        "owner_failures": failures,
+        "ambient_fulfillment": "not-established",
+        "agent_need_opportunity_denominator": "not-recorded",
+        "measurement_limits": [
+            "The trace records only owner-pass decisions visible to the incremental scheduler; it does not count unrecognized service opportunities or agent need.",
+            "A returned pass and its wall-clock duration do not establish correctness, agent receipt, or reduced intervention burden.",
+            "A skipped pass means the scheduler judged its selected inputs current; it is not a universal freshness guarantee.",
+        ],
+    }
+    reason = safe_text(value.get("reason"))
+    if reason is not None:
+        result["reason"] = reason
+    event_count = nonnegative(value.get("event_count"))
+    if event_count is not None:
+        result["observed_event_count"] = event_count
+    elapsed = duration(value.get("elapsed_seconds"))
+    if elapsed is not None:
+        result["scheduler_elapsed_seconds"] = elapsed
+    if len(raw_scheduled) > len(scheduled):
+        result["scheduled_passes_omitted"] = len(raw_scheduled) - len(scheduled)
+    if len(raw_skipped) > len(skipped):
+        result["skipped_passes_omitted"] = len(raw_skipped) - len(skipped)
+    if invalid_scheduled_count:
+        result["scheduled_pass_records_invalid"] = invalid_scheduled_count
+    if invalid_skipped_count:
+        result["skipped_pass_records_invalid"] = invalid_skipped_count
+    return result
 
 
 def declarations() -> dict:
@@ -545,12 +728,34 @@ def _owner_result_failed(value) -> bool:
 
 def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
          now_ms: int | None = None) -> tuple[dict, dict]:
+    scheduler_started = time.monotonic()
     # Without the native scheduler provider, retain explicit owner recovery.
     # No host policy mirror and no durable "current" receipt is fabricated.
     automation = os.environ.get("MNCS_AUTOMATION_ROOT") or _roots(session).get("mncs-automation")
     if not automation or not (Path(automation) / "native/mncs/automation/coherence.mncs").is_file():
-        return {name: run() for name, run in runners.items()}, {
-            "mode": "recovery_scan", "reason": "native coherence provider unavailable"}
+        results = {}
+        scheduled = []
+        for name, run in runners.items():
+            owner_started = time.monotonic()
+            results[name] = run()
+            scheduled.append({
+                "pass": name,
+                "owner": name,
+                "run_elapsed_seconds": round(
+                    time.monotonic() - owner_started, 3,
+                ),
+            })
+        owner_failures = sorted(
+            name for name in results if _owner_result_failed(results[name])
+        )
+        return results, {
+            "mode": "recovery_scan",
+            "reason": "native coherence provider unavailable",
+            "scheduled": scheduled,
+            "skipped": [],
+            **({"owner_failures": owner_failures} if owner_failures else {}),
+            "elapsed_seconds": round(time.monotonic() - scheduler_started, 3),
+        }
     now_ms = int(time.time() * 1000) if now_ms is None else now_ms
     spec = declarations()
     previous = session.snapshot.get("coherence") or {}
@@ -631,7 +836,9 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 continue
             key, kind = derived.get(name, (None, None))
             before = _domain_signature(session.snapshot.get(key)) if key else None
+            owner_started = time.monotonic()
             results[name] = runners[name]()
+            owner_elapsed_seconds = round(time.monotonic() - owner_started, 3)
             scheduled.add(name)
             deadlines.pop(name, None)
             if name == "doctor":
@@ -650,6 +857,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                     deadlines[name] = min(int(datetime.fromisoformat(value).timestamp() * 1000) for value in values)
             report["scheduled"].append({"pass": name, "owner": name, "disposition": code, "wave": wave,
                 "owner_reused": bool((results[name] or {}).get("reused", False)),
+                "run_elapsed_seconds": owner_elapsed_seconds,
                 "invalidated_input_mask": rows[names.index(name)][3] if rows else None,
                 "timer_or_lifecycle_due": bool(rows[names.index(name)][7]) if rows else None,
                 "inputs": [event["kind"] for event in events if _event_mask([event], spec) & sum(1 << i for i in spec["passes"][name])],
@@ -730,6 +938,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         report["mode"] = "bounded_reconciliation"
         report["pending_events"] = intervening[:32]
     effects = any(not (results.get(name) or {}).get('reused', False) for name in scheduled)
+    report["elapsed_seconds"] = round(time.monotonic() - scheduler_started, 3)
     if (effects or events or store_reset is not None or not store_known or owner_failures
             or previous.get("repositories") != observed["repositories"]
             or semantic_cursors != previous.get("semantic_cursors", {})
@@ -754,6 +963,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         session.snapshot["coherence"] = state
         session._save()
     report["events"] = events[:32]
+    report["elapsed_seconds"] = round(time.monotonic() - scheduler_started, 3)
     blocks = {name: results[name] if any(item["pass"] == name for item in report["scheduled"])
               else _reuse(results.get(name)) for name in names}
     return blocks, report
