@@ -1247,6 +1247,7 @@ def interpretation(
     evidence_offset=None, evidence_limit=capability_intelligence.MAX_EVIDENCE_REFS,
     session_event_before_sequence=None,
     session_event_limit=capability_intelligence.MAX_SESSION_EVENT_WINDOW,
+    doctor_gap_limit=0,
 ):
     """Ephemeral query over the same canonical subjects as outward views."""
     if route == "environmental-capability":
@@ -1259,6 +1260,7 @@ def interpretation(
             evidence_offset=evidence_offset, evidence_limit=evidence_limit,
             session_event_before_sequence=session_event_before_sequence,
             session_event_limit=session_event_limit,
+            doctor_gap_limit=doctor_gap_limit,
         )
         if isinstance(result, dict):
             result["capability_accountability_links"] = (

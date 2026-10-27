@@ -19,8 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import authority as authority_module
 from . import actions as actions_module
+from . import authority as authority_module
 from . import capabilities as capabilities_module
 from . import capability_intelligence as capability_intelligence_module
 from . import claims as claims_module
@@ -424,6 +424,12 @@ def cmd_projections(args: argparse.Namespace) -> int:
             '--session-event-limit requires '
             '--interpret environmental-capability'
         )
+    if (args.doctor_gap_limit is not None
+            and args.interpret != "environmental-capability"):
+        return fail(
+            '--doctor-gap-limit requires '
+            '--interpret environmental-capability'
+        )
     if args.interpret:
         if args.interpret != "environmental-capability" and not args.repository:
             return fail('--interpret requires --repository')
@@ -448,6 +454,10 @@ def cmd_projections(args: argparse.Namespace) -> int:
                     evidence_limit=evidence_limit,
                     session_event_before_sequence=args.session_event_before_sequence,
                     session_event_limit=session_event_limit,
+                    doctor_gap_limit=(
+                        args.doctor_gap_limit
+                        if args.doctor_gap_limit is not None else 0
+                    ),
                 )
                 if args.interpret == "environmental-capability":
                     out(
@@ -2499,6 +2509,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=("session event records per environmental capability page "
               f"(1-{capability_intelligence_module.MAX_SESSION_EVENT_WINDOW}; default "
               f"{DEFAULT_ECI_SESSION_EVENT_LIMIT})"),
+    )
+    projections.add_argument(
+        '--doctor-gap-limit', type=int, default=None,
+        help=(
+            "include at most this many examples from verified immutable Doctor "
+            "gap classifications in environmental capability analysis "
+            f"(0-{capability_intelligence_module.MAX_DOCTOR_GAP_EXAMPLES}; default 0; "
+            "nonzero values perform one bounded Doctor evidence read)"
+        ),
     )
     projections.add_argument("--evidence", action="store_true",
                              help="print the ambient projection evidence trail (without --interpret)")

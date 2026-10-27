@@ -5033,6 +5033,152 @@ def test_session_doctor_health_history_is_bounded_and_revision_linked(
     assert private_path not in json.dumps(compact)
 
 
+def test_doctor_gap_projection_verifies_and_groups_immutable_evidence(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    doctor_summary = {
+        "repaired": 0, "reconciled": 1, "degraded": 18, "blockers": 0,
+    }
+    unavailable_digest = "b" * 16
+    epoch_digest = "a" * 16
+    validated_at = "2026-10-27T14:10:24+00:00"
+    gaps = [{
+        "capability": f"mncs-store:capability-{index:02d}",
+        "code": "provider-invocation-undeclared",
+        "reason": (
+            "mncs-store must publish an invocation descriptor for this capability"
+        ),
+    } for index in range(18)]
+    evidence = {
+        "schema_version": "mncs.environment.doctor-evidence/1",
+        "session_id": session.session_id,
+        "digest": epoch_digest,
+        "validated_at": validated_at,
+        "reused": False,
+        "summary": doctor_summary,
+        "remaining": [],
+        "repairs": [],
+        "reconciliations": [],
+        "classification": {"gaps": gaps, "transient": []},
+        "operations": [],
+        "revalidation": {},
+        "readiness": {},
+    }
+    content_digest = capability_intelligence.digest_hex(evidence, length=64)
+    evidence_identity = f"{session.session_id}:doctor:{content_digest}"
+
+    class StrictStore:
+        def __init__(self) -> None:
+            self.reads = 0
+            self.identities = []
+
+        def get_record_strict(self, schema: bytes, identity: bytes):
+            self.reads += 1
+            self.identities.append(identity)
+            assert schema == b"mncs.environment.doctor-evidence/1"
+            return evidence
+
+    store = StrictStore()
+    session.store = store
+    session.snapshot.update({
+        "snapshot_sequence": 30,
+        "environment_id": "renv_doctor_gap_projection",
+        "campaign": {"identity": "cmp_doctor_gap_projection"},
+        "intent": {
+            "identity": "int_doctor_gap_projection",
+            "goal": "inspect recurring diagnostics",
+        },
+        "doctor": {
+            "schema_version": "mncs.environment.doctor/2",
+            "epoch": {
+                "schema_version": "mncs.environment.doctor-epoch/2",
+                "digest": epoch_digest,
+                "validated_at": validated_at,
+                "snapshot_sequence": 25,
+                "readiness": "degraded",
+                "summary": doctor_summary,
+                "unavailable": {
+                    "count": 18, "digest": unavailable_digest,
+                },
+            },
+            "history": [{
+                "digest": f"{index:016x}",
+                "validated_at": f"2026-10-27T14:0{index}:00+00:00",
+                "summary": doctor_summary,
+                "unavailable": {
+                    "count": 18, "digest": unavailable_digest,
+                },
+                "reused": False,
+            } for index in range(6)],
+            "evidence_ref": {
+                "schema": "mncs.environment.doctor-evidence/1",
+                "identity": evidence_identity,
+            },
+        },
+    })
+
+    default_history = capability_intelligence._session_doctor_health_history(
+        session, session.snapshot,
+    )
+    assert "diagnostic_pressure" not in default_history
+    assert store.reads == 0
+
+    projection = capability_intelligence.project(session, doctor_gap_limit=5)
+    detail = projection["session_activity"]["doctor_health_history"][
+        "diagnostic_pressure"
+    ]
+    assert store.reads == 1
+    assert detail["status"] == "observed"
+    assert detail["source"]["content_integrity_status"] == "verified"
+    assert detail["source"]["epoch_binding_status"] == "matched"
+    assert detail["source"]["doctor_epoch_snapshot_relation"] == (
+        "earlier-snapshot-revision"
+    )
+    assert detail["summary"]["classified_gap_record_count"] == 18
+    assert detail["summary"]["code_group_count"] == 1
+    assert detail["summary"]["same_unavailable_digest_history_record_count"] == 6
+    assert detail["summary"]["cross_session_recurrence_status"] == (
+        "not-established"
+    )
+    group = detail["candidate_groups"][0]
+    assert group["code"] == "provider-invocation-undeclared"
+    assert group["gap_record_count"] == 18
+    assert group["distinct_capability_count"] == 18
+    assert len(group["capability_examples"]) == 5
+    assert group["capability_examples_omitted"] == 13
+    assert "workspace_root" not in json.dumps(detail)
+
+    compact = capability_intelligence.project(
+        session, max_result_bytes=8_000, doctor_gap_limit=5,
+    )
+    assert compact["source"]["response_truncated"] is True
+    compact_detail = compact["session_activity"]["doctor_health_history"][
+        "diagnostic_pressure"
+    ]
+    assert compact_detail["source"]["content_integrity_status"] == "verified"
+    compact_group = compact_detail["candidate_groups"][0]
+    assert (
+        len(compact_group["capability_examples"])
+        + compact_group["capability_examples_omitted"] == 18
+    )
+    assert compact_detail["summary"]["gap_examples_projected"] == len(
+        compact_group["capability_examples"]
+    )
+    assert capability_intelligence._projection_response_size(compact) <= 8_000
+
+    session.snapshot["doctor"]["evidence_ref"]["identity"] = (
+        f"{session.session_id}:doctor:{'f' * 64}"
+    )
+    mismatched = capability_intelligence.project(
+        session, doctor_gap_limit=5,
+    )["session_activity"]["doctor_health_history"]["diagnostic_pressure"]
+    assert mismatched["status"] == "evidence-content-identity-mismatch"
+    assert mismatched["source"]["content_integrity_status"] == "mismatch"
+    assert mismatched["candidate_groups"] == []
+    assert store.reads == 3
+
+
 def test_session_projection_coherence_history_is_bounded_and_linked(
     tmp_path: Path,
 ) -> None:

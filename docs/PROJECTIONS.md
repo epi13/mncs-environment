@@ -1044,6 +1044,20 @@ workspace paths. Summaries are broader health evidence: they do not establish
 a service-specific cause or improvement, and an epoch recorded at an earlier
 snapshot revision does not prove that health remains unchanged.
 
+Detailed Doctor classification can be requested with
+`mncs-env projections SESSION --interpret environmental-capability
+--doctor-gap-limit N`. The default is zero and performs no additional Doctor
+evidence read. A nonzero limit reads the epoch's exact immutable Doctor record
+through the strict Store reader, verifies its content-derived identity and
+binding to the session epoch, then returns bounded groups of classified
+provider gaps with a limited number of capability-id examples. The
+projection preserves the Doctor epoch's snapshot revision and links matching
+unavailable-set digests in the same session's bounded history. These are
+diagnostic clusters from one authenticated record, not independent-session
+recurrence or proof of a defect. Missing or unverifiable evidence is surfaced
+with an explicit status and no gap details; the immutable evidence reference
+remains available for inspecting the original reason text.
+
 The compact view also relates the current session binding snapshot to observed
 capability calls. `capability_delivery.bindings` reports each bounded binding's
 recorded substrate availability, verification class, observed invocations and

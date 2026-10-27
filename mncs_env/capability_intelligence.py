@@ -206,6 +206,8 @@ CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
 })
 MAX_SESSION_EVENT_WINDOW = 256
 MAX_SESSION_DOCTOR_HISTORY = 8
+MAX_DOCTOR_GAP_EXAMPLES = 16
+MAX_DOCTOR_GAP_CODE_GROUPS = 8
 MAX_SESSION_PROJECTION_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
@@ -6233,6 +6235,47 @@ def _compact_projection(
     def compact_result_size() -> int:
         return _projection_response_size(result)
 
+    def trim_doctor_gap_detail() -> bool:
+        activity_result = result.get("session_activity")
+        doctor_history = (
+            activity_result.get("doctor_health_history")
+            if isinstance(activity_result, dict) else None
+        )
+        diagnostic = (
+            doctor_history.get("diagnostic_pressure")
+            if isinstance(doctor_history, dict) else None
+        )
+        if not isinstance(diagnostic, dict):
+            return False
+        groups = diagnostic.get("candidate_groups")
+        groups = groups if isinstance(groups, list) else []
+        for group in reversed(groups):
+            if not isinstance(group, dict):
+                continue
+            examples = group.get("capability_examples")
+            if isinstance(examples, list) and examples:
+                examples.pop()
+                group["capability_examples_omitted"] = (
+                    group.get("capability_examples_omitted", 0) + 1
+                    if type(group.get("capability_examples_omitted", 0)) is int
+                    else 1
+                )
+                group["capability_examples_truncated"] = True
+                summary = diagnostic.get("summary")
+                if isinstance(summary, dict):
+                    summary["gap_examples_projected"] = max(
+                        0,
+                        summary.get("gap_examples_projected", 0) - 1
+                        if type(summary.get("gap_examples_projected")) is int
+                        else 0,
+                    )
+                return True
+        limits = diagnostic.get("measurement_limits")
+        if isinstance(limits, list) and limits:
+            limits.pop()
+            return True
+        return False
+
     # Protect the evidence-to-pressure path by first reducing secondary session
     # context and derived duplicates. Exact observation and improvement rows
     # are the source records; service summaries and native-consumer joins can
@@ -6859,6 +6902,8 @@ def _compact_projection(
             result["session_activity"].get("capability_delivery"), dict,
         ):
             result["session_activity"].pop("capability_delivery")
+        elif trim_doctor_gap_detail():
+            continue
         else:
             break
     projection_source = projection.get("source")
@@ -16775,8 +16820,248 @@ def _session_service_accountability(
     }
 
 
+def _session_doctor_gap_projection(
+    session: Any, current_epoch: dict[str, Any] | None,
+    history: list[dict[str, Any]], example_limit: int,
+) -> dict[str, Any]:
+    """Read and verify bounded Doctor classifications when explicitly requested."""
+    not_projected = {
+        "status": "unavailable",
+        "source": {
+            "kind": "doctor-immutable-evidence-record",
+            "content_integrity_status": "not-verified",
+        },
+        "summary": {
+            "doctor_gap_example_limit": example_limit,
+            "classified_gap_record_count": None,
+            "code_group_count": None,
+            "candidate_group_count": 0,
+            "gap_examples_projected": 0,
+            "cross_session_recurrence_status": "not-established",
+        },
+        "candidate_groups": [],
+        "measurement_limits": [
+            "Detailed Doctor classifications require a readable immutable evidence reference.",
+            "No cross-session recurrence or environmental cause is inferred from this record.",
+        ],
+    }
+    if current_epoch is None:
+        return {**not_projected, "status": "doctor-epoch-not-recorded"}
+    reference = current_epoch.get("evidence_reference")
+    reference = reference if isinstance(reference, dict) else {}
+    reference_identity = reference.get("identity")
+    session_id = getattr(session, "session_id", None)
+    prefix = f"{session_id}:doctor:" if isinstance(session_id, str) else None
+    if (
+        reference.get("schema") != "mncs.environment.doctor-evidence/1"
+        or not isinstance(reference_identity, str)
+        or prefix is None
+        or not reference_identity.startswith(prefix)
+    ):
+        return {
+            **not_projected,
+            "status": "immutable-evidence-reference-unavailable",
+            "source": {
+                **not_projected["source"],
+                "reference_status": "not-recorded-or-invalid",
+            },
+        }
+
+    store = getattr(session, "store", None)
+    get_record_strict = getattr(store, "get_record_strict", None)
+    if not callable(get_record_strict):
+        return {
+            **not_projected,
+            "status": "strict-evidence-reader-unavailable",
+            "source": {
+                **not_projected["source"],
+                "identity": reference_identity,
+                "reference_status": "identified",
+            },
+        }
+    try:
+        evidence = get_record_strict(
+            b"mncs.environment.doctor-evidence/1",
+            reference_identity.encode("utf-8"),
+        )
+    except StoreIntegrityFailure:
+        return {
+            **not_projected,
+            "status": "evidence-integrity-failure",
+            "source": {
+                **not_projected["source"],
+                "identity": reference_identity,
+                "reference_status": "identified",
+            },
+        }
+    except StoreUnavailable:
+        return {
+            **not_projected,
+            "status": "evidence-store-unavailable",
+            "source": {
+                **not_projected["source"],
+                "identity": reference_identity,
+                "reference_status": "identified",
+            },
+        }
+    if not isinstance(evidence, dict):
+        return {
+            **not_projected,
+            "status": "evidence-record-unavailable",
+            "source": {
+                **not_projected["source"],
+                "identity": reference_identity,
+                "reference_status": "identified",
+            },
+        }
+
+    identity_digest = reference_identity[len(prefix):]
+    content_digest = digest_hex(evidence, length=64)
+    if identity_digest != content_digest:
+        return {
+            **not_projected,
+            "status": "evidence-content-identity-mismatch",
+            "source": {
+                **not_projected["source"],
+                "identity": reference_identity,
+                "content_digest": content_digest,
+                "reference_status": "identified",
+                "content_integrity_status": "mismatch",
+            },
+        }
+    if (
+        evidence.get("schema_version") != "mncs.environment.doctor-evidence/1"
+        or evidence.get("session_id") != session_id
+        or evidence.get("digest") != current_epoch.get("digest")
+        or evidence.get("summary") != current_epoch.get("summary")
+        or evidence.get("validated_at") != current_epoch.get("validated_at")
+    ):
+        return {
+            **not_projected,
+            "status": "evidence-epoch-mismatch",
+            "source": {
+                **not_projected["source"],
+                "identity": reference_identity,
+                "content_digest": content_digest,
+                "reference_status": "identified",
+                "content_integrity_status": "verified",
+                "epoch_binding_status": "mismatch",
+            },
+        }
+
+    classification = evidence.get("classification")
+    classification = classification if isinstance(classification, dict) else {}
+    raw_gaps = classification.get("gaps")
+    raw_gaps = raw_gaps if isinstance(raw_gaps, list) else []
+    grouped: dict[str, dict[str, Any]] = {}
+    invalid_gap_record_count = 0
+    for item in raw_gaps:
+        if not isinstance(item, dict):
+            invalid_gap_record_count += 1
+            continue
+        code = item.get("code")
+        capability = item.get("capability")
+        if (
+            not isinstance(code, str)
+            or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,95}", code)
+            or not isinstance(capability, str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}", capability)
+        ):
+            invalid_gap_record_count += 1
+            continue
+        group = grouped.setdefault(code, {"record_count": 0, "capabilities": set()})
+        group["record_count"] += 1
+        group["capabilities"].add(capability)
+
+    ordered_groups = sorted(
+        grouped.items(), key=lambda item: (-item[1]["record_count"], item[0]),
+    )
+    selected_groups = ordered_groups[:MAX_DOCTOR_GAP_CODE_GROUPS]
+    example_budget = example_limit
+    candidate_groups = []
+    for code, group in selected_groups:
+        capabilities = sorted(group["capabilities"])
+        examples = capabilities[:example_budget]
+        example_budget -= len(examples)
+        candidate = {
+            "interpretation": "doctor-classified-provider-gap",
+            "code": code,
+            "gap_record_count": group["record_count"],
+            "distinct_capability_count": len(capabilities),
+            "capability_examples": examples,
+            "capability_examples_omitted": max(0, len(capabilities) - len(examples)),
+            "cross_session_recurrence_status": "not-established",
+        }
+        if code == "provider-invocation-undeclared":
+            candidate["action_hint"] = (
+                "Inspect the provider-owned invocation contract for these capability ids; "
+                "Doctor classified them as lacking a published invocation descriptor."
+            )
+        candidate_groups.append(candidate)
+
+    epoch_unavailable = current_epoch.get("unavailable")
+    epoch_unavailable = epoch_unavailable if isinstance(epoch_unavailable, dict) else {}
+    unavailable_digest = epoch_unavailable.get("digest")
+    matching_history_count = (
+        sum(
+            1 for item in history
+            if isinstance(item.get("unavailable"), dict)
+            and item["unavailable"].get("digest") == unavailable_digest
+        )
+        if isinstance(unavailable_digest, str) else 0
+    )
+    return {
+        "status": (
+            "partial" if invalid_gap_record_count
+            else "observed" if raw_gaps and candidate_groups
+            else "no-classified-gaps"
+        ),
+        "source": {
+            "kind": "doctor-immutable-evidence-record",
+            "schema": "mncs.environment.doctor-evidence/1",
+            "identity": reference_identity,
+            "content_digest": content_digest,
+            "content_integrity_status": "verified",
+            "epoch_binding_status": "matched",
+            "doctor_epoch_digest": current_epoch.get("digest"),
+            "doctor_epoch_snapshot_sequence": current_epoch.get("snapshot_sequence"),
+            "doctor_epoch_snapshot_relation": current_epoch.get("snapshot_relation"),
+            **({"unavailable_set_digest": unavailable_digest}
+               if isinstance(unavailable_digest, str) else {}),
+        },
+        "summary": {
+            "doctor_gap_example_limit": example_limit,
+            "classified_gap_record_count": len(raw_gaps),
+            "valid_gap_record_count": sum(
+                group["record_count"] for group in grouped.values()
+            ),
+            "invalid_gap_record_count": invalid_gap_record_count,
+            "code_group_count": len(grouped),
+            "candidate_group_count": len(candidate_groups),
+            "candidate_groups_omitted": max(
+                0, len(ordered_groups) - len(candidate_groups),
+            ),
+            "distinct_capability_count": sum(
+                len(group["capabilities"]) for group in grouped.values()
+            ),
+            "gap_examples_projected": sum(
+                len(group["capability_examples"]) for group in candidate_groups
+            ),
+            "same_unavailable_digest_history_record_count": matching_history_count,
+            "cross_session_recurrence_status": "not-established",
+        },
+        "candidate_groups": candidate_groups,
+        "measurement_limits": [
+            "Classified gaps are grouped from one verified Doctor evidence record; one group spanning capabilities is not independent-session recurrence.",
+            "Repeated unavailable-set digests count matching rows in this session's bounded Doctor history only.",
+            "The Doctor epoch snapshot relation is preserved; an earlier epoch does not establish current provider state.",
+            "A diagnostic classification is an investigation candidate, not independent proof of a defect or of a later improvement.",
+        ],
+    }
+
+
 def _session_doctor_health_history(
-    session: Any, snapshot: dict[str, Any],
+    session: Any, snapshot: dict[str, Any], *, doctor_gap_limit: int = 0,
 ) -> dict[str, Any]:
     """Project bounded Doctor epochs and summaries from the session snapshot."""
     identity_pattern = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$")
@@ -16991,7 +17276,7 @@ def _session_doctor_health_history(
         status = "partial"
     else:
         status = "observed"
-    return {
+    result = {
         "status": status,
         "source": source,
         "current_epoch": current_epoch,
@@ -17003,6 +17288,11 @@ def _session_doctor_health_history(
             "Snapshot revision relation identifies which session revision the epoch recorded; it does not prove that health remains unchanged afterward.",
         ],
     }
+    if doctor_gap_limit:
+        result["diagnostic_pressure"] = _session_doctor_gap_projection(
+            session, current_epoch, history, doctor_gap_limit,
+        )
+    return result
 
 
 def _session_projection_coherence_history(
@@ -17732,6 +18022,7 @@ def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
     event_limit: int = MAX_SESSION_EVENT_WINDOW,
+    doctor_gap_limit: int = 0,
 ) -> dict[str, Any]:
     """Project bounded capability and authenticated Control read activity."""
     reader = getattr(session, "recent_events", None)
@@ -17754,7 +18045,9 @@ def _session_activity(
         service_readiness, None, snapshot,
         ambient_service_execution=ambient_service_execution,
     )
-    doctor_health_history = _session_doctor_health_history(session, snapshot)
+    doctor_health_history = _session_doctor_health_history(
+        session, snapshot, doctor_gap_limit=doctor_gap_limit,
+    )
     projection_coherence_history = _session_projection_coherence_history(
         session, snapshot,
     )
@@ -20437,6 +20730,7 @@ def project(
     evidence_limit: int = MAX_EVIDENCE_REFS,
     session_event_before_sequence: int | None = None,
     session_event_limit: int = MAX_SESSION_EVENT_WINDOW,
+    doctor_gap_limit: int = 0,
 ) -> dict[str, Any]:
     """Build a bounded read-only relationship view from campaign evidence.
 
@@ -20475,6 +20769,12 @@ def project(
             "capability projection session event limit must be between 1 and "
             f"{MAX_SESSION_EVENT_WINDOW}"
         )
+    if (type(doctor_gap_limit) is not int
+            or not 0 <= doctor_gap_limit <= MAX_DOCTOR_GAP_EXAMPLES):
+        raise ValueError(
+            "Doctor gap example limit must be between 0 and "
+            f"{MAX_DOCTOR_GAP_EXAMPLES}"
+        )
     if campaign_state is not None and (
         evidence_offset is not None or evidence_limit != MAX_EVIDENCE_REFS
     ):
@@ -20501,6 +20801,7 @@ def project(
         session, snapshot,
         event_before_sequence=session_event_before_sequence,
         event_limit=session_event_limit,
+        doctor_gap_limit=doctor_gap_limit,
     )
     page_truncated = bool(state.get("evidence_truncated", False))
     history_states = [state]

@@ -10576,6 +10576,18 @@ class RightsTests(unittest.TestCase):
 
 
 class CLITests(unittest.TestCase):
+    def test_projection_cli_accepts_opt_in_bounded_doctor_gap_details(self) -> None:
+        parsed = cli.build_parser().parse_args([
+            "projections", "ses_fixture", "--interpret",
+            "environmental-capability", "--doctor-gap-limit", "8",
+        ])
+        self.assertEqual(parsed.doctor_gap_limit, 8)
+        default = cli.build_parser().parse_args([
+            "projections", "ses_fixture", "--interpret",
+            "environmental-capability",
+        ])
+        self.assertIsNone(default.doctor_gap_limit)
+
     def test_relative_workspace_resolves_against_definition_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             definition_file = Path(directory) / "defs" / "env.json"
