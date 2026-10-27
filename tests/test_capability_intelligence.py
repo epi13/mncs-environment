@@ -4634,6 +4634,12 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert environment_execution["summary"]["ambient_fulfillment_status"] == (
         "not-established"
     )
+    assert environment_execution["summary"][
+        "owner_pass_observation_status"
+    ] == "recorded"
+    assert environment_execution["summary"][
+        "owner_pass_observation_count"
+    ] == 2
     trace_view = activity["ambient_service_execution"]["execution"]
     assert environment_execution["source"]["projection_digest"] == (
         result["source"]["session_ambient_service_execution_digest"]
@@ -4644,6 +4650,10 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     doctor_result = trace_view["owner_pass_results"]["results"][0]
     assert doctor_result["result_identity"] == result_digest
     assert doctor_result["source_reference"].endswith(result_digest + ".json")
+    assert trace_view["skipped_passes"] == [{
+        "owner": "semantics",
+        "reason": "current-inputs",
+    }]
     assert "does not establish whether other ambient services" in (
         accountability["ambient_fulfillment"]["interpretation_limit"]
     )
@@ -4651,7 +4661,7 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert result["source"]["session_service_accountability_digest"]
 
     compact = capability_intelligence._compact_service_accountability_overview(
-        accountability,
+        accountability, activity["ambient_service_execution"],
     )
     assert compact["status"] == "empty-declared-scope"
     assert compact["source"]["service_declaration_status"] == "explicit-empty"
@@ -4660,6 +4670,16 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert compact["summary"]["environment_service_execution"]["summary"][
         "owner_pass_decision_coverage"
     ] == "partial"
+    compact_pass_observations = compact["summary"][
+        "environment_service_execution"
+    ]["summary"]["owner_pass_observations"]
+    assert compact_pass_observations["count"] == 2
+    assert compact_pass_observations["items"][0]["trigger_kinds"] == [
+        "repository.control_changed",
+    ]
+    assert compact_pass_observations["items"][0]["result_identity"] == (
+        result_digest
+    )
 
     session.snapshot.pop("requirements")
     without_readiness_declaration = capability_intelligence.project(session)[
@@ -5401,8 +5421,9 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
         "event_window_identity_digest"
     ] == original_event_digest
     compact = capability_intelligence.project(session, max_result_bytes=8_000)
-    compact_view = compact["session_activity"]["ambient_service_execution"]
     assert compact["source"]["response_truncated"] is True
+    compact_activity = compact["session_activity"]
+    compact_view = compact_activity["ambient_service_execution"]
     assert compact_view["execution"]["scheduled_pass_count"] == 1
     assert compact_view["execution"]["owner_pass_results"][
         "result_record_count"

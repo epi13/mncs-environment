@@ -254,6 +254,7 @@ MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS = 8
 MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS = 8
 MAX_SESSION_SERVICE_READINESS_RECORDS = 16
 MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
+MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -2490,7 +2491,7 @@ def _compact_selected_session_delivery_observation(
 
 
 def _compact_service_accountability_overview(
-    value: Any,
+    value: Any, ambient_service_execution: Any = None,
 ) -> dict[str, Any] | None:
     """Keep measured totals and their selected-session source under response pressure."""
     if not isinstance(value, dict):
@@ -2518,6 +2519,7 @@ def _compact_service_accountability_overview(
         "eligible_service_opportunity_count", "ambient_fulfillment_status",
         "agent_intervention_burden_status", "agent_receipt_status",
         "outcome_quality_status", "readiness_probe_opportunity_count",
+        "owner_pass_observation_status", "owner_pass_observation_count",
         "readiness_probe_observation_record_count",
         "readiness_probe_observation_missing_count",
         "readiness_probe_observation_ambiguous_count",
@@ -2593,6 +2595,15 @@ def _compact_service_accountability_overview(
                 for name, count in list(result_status_counts.items())[:6]
                 if isinstance(name, str) and type(count) is int and count >= 0
             }
+        execution_view = _environment_service_execution_accountability(
+            ambient_service_execution, include_owner_pass_observations=True,
+        )
+        pass_observations = (
+            execution_view.get("owner_pass_observations")
+            if isinstance(execution_view, dict) else None
+        )
+        if isinstance(pass_observations, dict):
+            compact_environment_summary["owner_pass_observations"] = pass_observations
         compact_summary["environment_service_execution"] = {
             "status": environment_execution.get("status"),
             "scope": environment_execution.get("scope"),
@@ -5624,8 +5635,11 @@ def _compact_projection(
     if isinstance(raw_service_accountability, dict):
         # The session projection has already bounded and sanitized this join.
         compact_activity["service_accountability"] = raw_service_accountability
+    raw_ambient_service_execution = activity.get("ambient_service_execution")
     compact_service_accountability_fallback = (
-        _compact_service_accountability_overview(raw_service_accountability)
+        _compact_service_accountability_overview(
+            raw_service_accountability, raw_ambient_service_execution,
+        )
     )
     raw_doctor_history = activity.get("doctor_health_history")
     if isinstance(raw_doctor_history, dict):
@@ -5635,7 +5649,6 @@ def _compact_projection(
     if isinstance(raw_projection_history, dict):
         # Projection-pass history is bounded, session-scoped and sanitized.
         compact_activity["projection_coherence_history"] = raw_projection_history
-    raw_ambient_service_execution = activity.get("ambient_service_execution")
     if isinstance(raw_ambient_service_execution, dict):
         # Scheduler decisions are bounded and sanitized from the session snapshot.
         compact_activity["ambient_service_execution"] = raw_ambient_service_execution
@@ -16319,7 +16332,8 @@ def _service_ambient_owner_pass_observation(
 
 
 def _environment_service_execution_accountability(
-    ambient_service_execution: Any,
+    ambient_service_execution: Any, *,
+    include_owner_pass_observations: bool = False,
 ) -> dict[str, Any] | None:
     """Relate the Environment owner-pass contract to its recorded decisions.
 
@@ -16346,6 +16360,14 @@ def _environment_service_execution_accountability(
         "ambient_fulfillment_status": "not-established",
         "agent_intervention_burden_status": "not-measured",
         "verification_status": "not-established",
+    }
+    owner_pass_observations = {
+        "status": "unavailable",
+        "decision_coverage": "unavailable",
+        "count": 0,
+        "limit": MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS,
+        "omitted_count": 0,
+        "items": [],
     }
     if execution is not None:
         for key in (
@@ -16378,11 +16400,114 @@ def _environment_service_execution_accountability(
             summary["owner_pass_result_status_counts"] = dict(
                 sorted(result_status_counts.items()),
             )
+        scheduled = execution.get("scheduled_passes")
+        scheduled = scheduled if isinstance(scheduled, list) else []
+        skipped = execution.get("skipped_passes")
+        skipped = skipped if isinstance(skipped, list) else []
+        result_rows = owner_results.get("results")
+        result_rows = result_rows if isinstance(result_rows, list) else []
+        results_by_execution = {
+            (row.get("owner"), row.get("service_execution_id")): row
+            for row in result_rows
+            if isinstance(row, dict)
+            and isinstance(row.get("owner"), str)
+            and isinstance(row.get("service_execution_id"), str)
+        }
+        observations: list[dict[str, Any]] = []
+        for item in scheduled:
+            if (not isinstance(item, dict)
+                    or not isinstance(item.get("owner"), str)):
+                continue
+            owner = item["owner"]
+            execution_id = item.get("service_execution_id")
+            if (not isinstance(execution_id, str)
+                    or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None):
+                continue
+            row: dict[str, Any] = {
+                "owner_pass": owner,
+                "decision": "scheduled",
+                "service_execution_id": execution_id,
+                "trigger_observation_status": "not-recorded",
+                "outcome_status": item.get("owner_outcome_status", "unknown"),
+                "verification_status": item.get(
+                    "verification_status", "not-established",
+                ),
+            }
+            trigger_kinds = item.get("trigger_kinds")
+            if isinstance(trigger_kinds, list):
+                row["trigger_kinds"] = [
+                    kind for kind in trigger_kinds[:16]
+                    if isinstance(kind, str)
+                ]
+                row["trigger_observation_status"] = "recorded"
+            if type(item.get("timer_or_lifecycle_due")) is bool:
+                row["timer_or_lifecycle_due"] = item["timer_or_lifecycle_due"]
+            if (type(item.get("run_elapsed_seconds")) in (int, float)
+                    and 0 <= item["run_elapsed_seconds"] <= 86400):
+                row["run_elapsed_seconds"] = item["run_elapsed_seconds"]
+            result = results_by_execution.get((owner, execution_id))
+            if isinstance(result, dict):
+                row["result_status"] = result.get("result_status", "unknown")
+                for key in (
+                    "result_identity", "source_reference_status",
+                    "source_reference", "operation_status", "result_code",
+                    "result_reused",
+                ):
+                    value = result.get(key)
+                    if isinstance(value, str) or type(value) is bool:
+                        row[key] = value
+                result_summary = result.get("summary")
+                if isinstance(result_summary, dict):
+                    row["result_summary"] = {
+                        key: value for key, value in list(result_summary.items())[:8]
+                        if isinstance(key, str)
+                        and (type(value) in (int, float, bool))
+                        and (type(value) is bool or 0 <= value <= 86400)
+                    }
+            elif owner_results:
+                row["result_status"] = "not-recorded-for-execution"
+            else:
+                row["result_status"] = "not-recorded"
+            observations.append(row)
+        for item in skipped:
+            if (not isinstance(item, dict)
+                    or not isinstance(item.get("owner"), str)):
+                continue
+            row = {"owner_pass": item["owner"], "decision": "skipped"}
+            reason = item.get("reason")
+            if (isinstance(reason, str) and len(reason) <= 256
+                    and all(32 <= ord(char) <= 126 and char not in "/\\"
+                            for char in reason)):
+                row["reason"] = reason
+            observations.append(row)
+        omitted = max(
+            0, len(observations) - MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS,
+        )
+        owner_pass_observations = {
+            "status": (
+                "recorded"
+                if execution.get("decision_record_status") == "recorded"
+                and omitted == 0 else "partial"
+            ),
+            "decision_coverage": execution.get(
+                "owner_pass_decision_coverage", "unavailable",
+            ),
+            "count": len(observations),
+            "limit": MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS,
+            "omitted_count": omitted,
+            "items": observations[:MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS],
+        }
+        summary["owner_pass_observation_status"] = owner_pass_observations[
+            "status"
+        ]
+        summary["owner_pass_observation_count"] = owner_pass_observations[
+            "count"
+        ]
     summary["ambient_fulfillment_status"] = (
         execution.get("ambient_fulfillment", "not-established")
         if isinstance(execution, dict) else "not-established"
     )
-    return {
+    result = {
         "status": ambient_service_execution.get("status", "partial"),
         "scope": "selected-session-environment-owner-pass-contract",
         "source": execution_source,
@@ -16390,9 +16515,13 @@ def _environment_service_execution_accountability(
         "measurement_limits": [
             "The pass contract and scheduler trace expose Environment-owned decisions, not every service opportunity or agent need.",
             "Scheduled, skipped, and returned results do not establish correctness, agent receipt, or reduced intervention burden.",
+            "Per-pass trigger and result records describe scheduler activity; they are not verified fulfillment of an agent need.",
             "The linked ambient_service_execution projection is the bounded source for trigger, execution, and result evidence.",
         ],
     }
+    if include_owner_pass_observations:
+        result["owner_pass_observations"] = owner_pass_observations
+    return result
 
 
 def _session_service_accountability(
