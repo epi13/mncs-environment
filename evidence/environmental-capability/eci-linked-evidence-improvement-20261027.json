@@ -1,0 +1,110 @@
+{
+  "captured_at": "2026-10-27T18:47:23Z",
+  "identity": "ev_environment_eci_campaign_evidence_retention_improvement_20261027",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_eci_campaign_evidence_not_preserved_at_small_response_budgets_20261027",
+    "basis": "At the same persisted session and 8 KiB request, pre-change main returned no campaign rows; post-change main returned one source-linked observation, matching pressure hypothesis, and addressed improvement relation while preserving explicit omission counts. This demonstrates projection access to one authentic evidence path, not a measured reduction in agent burden or recurrence.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_eci_campaign_linked_evidence_priority_response_20261027",
+    "implementation_reference": {
+      "commit": "c6c5204d8cf61708f10e286fe391a82d5b57b3bf",
+      "identity": "mncs_environment_linked_eci_evidence_c6c5204",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "628de5b88bf443ba60c2f2b78f2d6c7de2bccdabe22ac06a8c1fc6dad6a7392c"
+    },
+    "not_measured": [
+      "whether agents actually consumed the compacted evidence path",
+      "agent intervention avoided or time saved",
+      "whether the related authority pressure recurs less often",
+      "effectiveness for other response budgets and evidence windows"
+    ],
+    "subsequent_evidence_reference": {
+      "commit": "9c41d02800476106b9d1c70fd0791c1c5a8088a6",
+      "identity": "ev_environment_eci_campaign_evidence_retention_live_readback_20261027",
+      "kind": "subsequent-observation",
+      "path": "evidence/environmental-capability/eci-linked-evidence-live-readback-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "72742c78b780eae5b1399602f2a59e7f0f85fbb94c9cb3ba2333ba244a5472ee"
+    },
+    "subsequent_observation_identity": "ev_environment_eci_campaign_evidence_retention_live_readback_20261027",
+    "verification_evidence_reference": {
+      "commit": "9c41d02800476106b9d1c70fd0791c1c5a8088a6",
+      "identity": "ev_environment_eci_campaign_evidence_retention_verification_20261027",
+      "kind": "verification-observation",
+      "path": "evidence/environmental-capability/eci-linked-evidence-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "5c0122c4eb941c0119ca9432ca1355f890a2ac9a3ea844d55a5d6bcf6ebb0320"
+    },
+    "verification_observation_identity": "ev_environment_eci_campaign_evidence_retention_verification_20261027"
+  },
+  "measurement_basis": "Pushed implementation source, automated verification, and post-push projection readback; effectiveness remains unassessed until later ordinary agent activity supplies further evidence.",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The projection shows one real pressure and improvement chain with provenance; its effectiveness for agent experience requires subsequent operational evidence.",
+      "verified_change": "A linked observation-pressure-improvement path now survives the bounded projection; 15 other observations, 3 hypotheses, and 4 relations are explicitly omitted."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_campaign_evidence_not_preserved_at_small_response_budgets_20261027",
+      "implementation_commit": "c6c5204d8cf61708f10e286fe391a82d5b57b3bf",
+      "subsequent_observation_identity": "ev_environment_eci_campaign_evidence_retention_live_readback_20261027",
+      "verification_observation_identity": "ev_environment_eci_campaign_evidence_retention_verification_20261027"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 76,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_d02e8abf8ef09ad8",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "9c41d02800476106b9d1c70fd0791c1c5a8088a6",
+      "identity": "ev_environment_eci_campaign_evidence_retention_pressure_20261027",
+      "kind": "pressure-observation",
+      "path": "evidence/environmental-capability/eci-linked-evidence-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "3202f36b67cfe82b65df6e555e139b48a3d8f819afc7d304fc423ad861d4b6e9"
+    },
+    {
+      "commit": "9c41d02800476106b9d1c70fd0791c1c5a8088a6",
+      "identity": "ev_environment_eci_campaign_evidence_retention_verification_20261027",
+      "kind": "verification-observation",
+      "path": "evidence/environmental-capability/eci-linked-evidence-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "5c0122c4eb941c0119ca9432ca1355f890a2ac9a3ea844d55a5d6bcf6ebb0320"
+    },
+    {
+      "commit": "9c41d02800476106b9d1c70fd0791c1c5a8088a6",
+      "identity": "ev_environment_eci_campaign_evidence_retention_live_readback_20261027",
+      "kind": "subsequent-observation",
+      "path": "evidence/environmental-capability/eci-linked-evidence-live-readback-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "72742c78b780eae5b1399602f2a59e7f0f85fbb94c9cb3ba2333ba244a5472ee"
+    },
+    {
+      "commit": "c6c5204d8cf61708f10e286fe391a82d5b57b3bf",
+      "identity": "mncs_environment_linked_eci_evidence_c6c5204",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "628de5b88bf443ba60c2f2b78f2d6c7de2bccdabe22ac06a8c1fc6dad6a7392c"
+    }
+  ]
+}
