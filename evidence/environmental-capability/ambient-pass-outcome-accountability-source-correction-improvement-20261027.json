@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-10-27T23:18:00Z",
+  "identity": "ev_environment_quiet_owner_pass_supporting_sources_correction_improvement_20261027",
+  "measurement_basis": "ECI readback verified the target improvement record and identified missing digest-bearing supporting-source pointers",
+  "observation": {
+    "kind": "campaign-evidence-record-correction",
+    "outcome": {
+      "reason": "The original immutable observation remains unchanged; this record supplies exact digest-bearing source references for the projection.",
+      "status": "correction-recorded"
+    },
+    "request": {
+      "operation": "correct supporting-source references append-only",
+      "target_observation_identity": "ev_environment_quiet_owner_pass_reason_improvement_20261027"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection"
+  },
+  "record_correction": {
+    "corrected_field_paths": [
+      "supporting_sources"
+    ],
+    "reason": "The immutable improvement record omitted commit and SHA-256 fields on its supporting-source references; replace those pointers with exact committed references.",
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "commit": "ec0fdb790a08fd885dbadd26e63ccd9512b684e2",
+          "identity": "ev_environment_quiet_owner_pass_reason_pressure_20261027",
+          "kind": "campaign-evidence-reference",
+          "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-pressure-20261027.json",
+          "repository": "mncs-environment",
+          "sha256": "4a7c38fa96ceb5cfc6465179d22b99c2045e7f6cdd6f632d908d0a69c7d922aa"
+        },
+        {
+          "commit": "ec0fdb790a08fd885dbadd26e63ccd9512b684e2",
+          "identity": "ev_environment_quiet_owner_pass_reason_verification_20261027",
+          "kind": "campaign-evidence-reference",
+          "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-verification-20261027.json",
+          "repository": "mncs-environment",
+          "sha256": "f3f37064c48bc3f04ab6deb972d59725316f1c494f41eb1deb432ec26842a27b"
+        },
+        {
+          "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+          "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+          "kind": "historical-operational-evidence",
+          "path": "evidence/environmental-capability/ambient-owner-pass-result-trace-20261027.json",
+          "repository": "mncs-environment",
+          "sha256": "73f638e25e5cb940b006856dc6c3e23425c375d337844a2ace71e635d697bd2b"
+        }
+      ]
+    },
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "commit": "ec0fdb790a08fd885dbadd26e63ccd9512b684e2",
+      "identity": "ev_environment_quiet_owner_pass_reason_improvement_20261027",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-improvement-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "0a28bc0af43849948e923fe78f82cfe12def0604d4fc55301a0cbbff7b02890e"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1"
+}
