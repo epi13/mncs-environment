@@ -192,6 +192,17 @@ recurrence requires at least two distinct recorded session IDs. This lets an
 agent inspect authentic evidence without silently promoting missing metadata
 into an occurrence or a recurrence claim.
 
+Where multiple hypotheses or incomplete role coverage make aggregation useful,
+the projection exposes `pressure_evidence_summary` for verified observations
+in the selected evidence window. It separates occurrence, supporting-context,
+and unclassified record counts from hypothesis recurrence statuses. The summary
+reports whether its selected window is complete; existing source metadata gives
+the page/history truncation, unavailable-record, and read-budget details. A
+`read-complete-for-selected-window` status does not claim complete campaign
+history. These counts are evidence coverage, not a service or agent score. A
+response-size limit can omit this aggregate to preserve source evidence; the
+per-hypothesis rows remain available.
+
 ## Measurement limits
 
 - Systemwide native adoption remains `not-measured`; these observations are not

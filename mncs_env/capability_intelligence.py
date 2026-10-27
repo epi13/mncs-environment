@@ -5120,6 +5120,17 @@ def _compact_projection(
         "correlation": projection["correlation"],
         "observation_count": projection["observation_count"],
         "pressure_hypothesis_count": projection["pressure_hypothesis_count"],
+        **({
+            "pressure_evidence_summary": {
+                key: projection["pressure_evidence_summary"][key]
+                for key in (
+                    "scope_status", "role_record_counts",
+                    "recurrence_status_counts",
+                    "recurrence_supported_hypothesis_count",
+                )
+                if key in projection["pressure_evidence_summary"]
+            },
+        } if isinstance(projection.get("pressure_evidence_summary"), dict) else {}),
         "session_activity_pressure_candidate_count": projection.get(
             "session_activity_pressure_candidate_count", 0,
         ),
@@ -5221,6 +5232,12 @@ def _compact_projection(
     # The selected fields are individually bounded. This final reduction also
     # accounts for unusual but valid identifiers and reference paths.
     while len(json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")) > max_result_bytes:
+        if result.pop("pressure_evidence_summary", None) is not None:
+            result["measurement_limits"][0] = (
+                "Response limit compacted payload; pressure totals may be "
+                "omitted to retain source evidence."
+            )
+            continue
         activity_result = result["session_activity"]
         delivery_result = activity_result.get("capability_delivery")
         if isinstance(delivery_result, dict):
@@ -9742,6 +9759,88 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 item["identity"] for item in group
             ]
         result.append(summary)
+    return result
+
+
+def _pressure_evidence_summary(
+    observations: list[dict[str, Any]],
+    hypotheses: list[dict[str, Any]],
+    source: dict[str, Any],
+    *,
+    campaign_state_available: bool,
+) -> dict[str, Any] | None:
+    """Summarize pressure evidence without implying complete campaign history."""
+    classified_counts = {
+        "occurrence": 0,
+        "supporting-context": 0,
+        "unclassified": 0,
+    }
+    pressure_observation_count = 0
+    for observation in observations:
+        if not isinstance(observation.get("pressure_hypothesis"), dict):
+            continue
+        pressure_observation_count += 1
+        classification = observation.get(
+            "pressure_hypothesis_recurrence_classification",
+            observation.get("pressure_hypothesis_role"),
+        )
+        if (not isinstance(classification, str)
+                or classification not in classified_counts):
+            classification = "unclassified"
+        classified_counts[classification] += 1
+
+    recurrence_statuses = (
+        "not-established", "repeated-within-session", "observed-across-sessions",
+    )
+    recurrence_counts = {status: 0 for status in recurrence_statuses}
+    for hypothesis in hypotheses:
+        status = hypothesis.get("recurrence_status")
+        if status in recurrence_counts:
+            recurrence_counts[status] += 1
+    recurrence_supported_count = (
+        recurrence_counts["repeated-within-session"]
+        + recurrence_counts["observed-across-sessions"]
+    )
+    # A lone, fully classified hypothesis is already represented by its row.
+    # Reserve aggregate bytes for cross-hypothesis and role-coverage views.
+    if (pressure_observation_count == 0
+            or (len(hypotheses) == 1
+                and classified_counts["supporting-context"] == 0
+                and classified_counts["unclassified"] == 0)):
+        return None
+    if classified_counts["unclassified"]:
+        role_classification_status = "incomplete"
+    else:
+        role_classification_status = "complete"
+
+    history_truncated = source.get("evidence_history_truncated")
+    history_consistent = source.get("evidence_history_checkpoint_consistent")
+    coverage_incomplete = (
+        source.get("evidence_page_truncated") is True
+        or source.get("observation_records_unavailable", 0) > 0
+        or source.get("observation_records_skipped_by_page_budget", 0) > 0
+        or history_truncated is True
+        or history_consistent is False
+    )
+    if not campaign_state_available:
+        coverage_status = "campaign-state-unavailable"
+    elif coverage_incomplete:
+        coverage_status = "partial-selected-window"
+    else:
+        coverage_status = "read-complete-for-selected-window"
+
+    result: dict[str, Any] = {
+        "scope_status": coverage_status,
+        "pressure_observation_count": pressure_observation_count,
+        "role_record_counts": classified_counts,
+        "role_classification_status": role_classification_status,
+        "recurrence_status_counts": recurrence_counts,
+        "recurrence_supported_hypothesis_count": recurrence_supported_count,
+        "incomplete_session_attribution_hypothesis_count": sum(
+            hypothesis.get("session_attribution_status") == "incomplete"
+            for hypothesis in hypotheses
+        ),
+    }
     return result
 
 
@@ -18575,6 +18674,30 @@ def project(
         digest_hex(activity["projection_coherence_history"])
         if isinstance(activity.get("projection_coherence_history"), dict) else None
     )
+    pressure_evidence_summary = _pressure_evidence_summary(
+        observations,
+        hypotheses,
+        {
+            "evidence_page_offset": state.get("evidence_offset"),
+            "evidence_page_limit": state.get("evidence_limit"),
+            "evidence_page_truncated": page_truncated,
+            "evidence_history_pages_requested": (
+                history_pages if history_pages > 1 else None
+            ),
+            "evidence_history_pages_read": (
+                len(history_states) if history_pages > 1 else None
+            ),
+            "evidence_history_truncated": (
+                history_truncated if history_pages > 1 else None
+            ),
+            "evidence_history_checkpoint_consistent": (
+                history_consistent if history_pages > 1 else None
+            ),
+            "observation_records_unavailable": unavailable,
+            "observation_records_skipped_by_page_budget": skipped_by_page_budget,
+        },
+        campaign_state_available=campaign_state is not None,
+    )
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({
@@ -18776,6 +18899,9 @@ def project(
         },
         "observation_count": len(observations),
         "pressure_hypothesis_count": len(hypotheses),
+        **({"pressure_evidence_summary": pressure_evidence_summary} if (
+            pressure_evidence_summary is not None
+        ) else {}),
         "session_activity_pressure_candidate_count": len(
             activity.get("rpc_failure_candidates", [])
         ) + len(activity.get("authority_denial_candidates", [])) + len(

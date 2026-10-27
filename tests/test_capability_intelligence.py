@@ -9927,9 +9927,88 @@ def test_task_selector_recovery_remains_a_single_unresolved_hypothesis(tmp_path:
     assert hypothesis["unclassified_evidence"][0][
         "observation_identity"
     ] == record["identity"]
+    summary = result["pressure_evidence_summary"]
+    assert summary["pressure_observation_count"] == 1
+    assert summary["role_record_counts"] == {
+        "occurrence": 0,
+        "supporting-context": 0,
+        "unclassified": 1,
+    }
+    assert summary["role_classification_status"] == "incomplete"
+    assert summary["recurrence_supported_hypothesis_count"] == 0
+    assert summary["recurrence_status_counts"] == {
+        "not-established": 1,
+        "repeated-within-session": 0,
+        "observed-across-sessions": 0,
+    }
+    assert summary["scope_status"] == (
+        "read-complete-for-selected-window"
+    )
+    compact = capability_intelligence._compact_projection(
+        result,
+        original_size=capability_intelligence.MAX_RESULT_BYTES + 1,
+        max_result_bytes=12_000,
+    )
+    assert compact["pressure_evidence_summary"]["role_record_counts"] == (
+        summary["role_record_counts"]
+    )
+    assert compact["pressure_evidence_summary"][
+        "recurrence_supported_hypothesis_count"
+    ] == 0
     assert result["observations"][0]["recording_context"]["campaign_id"] == (
         "cmp_environmental_capability_intelligence_20261023"
     )
+
+
+def test_pressure_evidence_summary_reports_selected_window_gaps() -> None:
+    observations = [
+        {
+            "pressure_hypothesis": {"identity": "prs_occurrence"},
+            "pressure_hypothesis_role": "occurrence",
+        },
+        {
+            "pressure_hypothesis": {"identity": "prs_support"},
+            "pressure_hypothesis_role": "supporting-context",
+        },
+        {"pressure_hypothesis": {"identity": "prs_unclassified"}},
+        {"pressure_hypothesis": None},
+    ]
+    hypotheses = [
+        {
+            "recurrence_status": "observed-across-sessions",
+            "session_attribution_status": "complete",
+        },
+        {
+            "recurrence_status": "not-established",
+            "session_attribution_status": "incomplete",
+        },
+    ]
+
+    summary = capability_intelligence._pressure_evidence_summary(
+        observations,
+        hypotheses,
+        {
+            "evidence_page_truncated": True,
+            "evidence_history_pages_requested": 3,
+            "evidence_history_pages_read": 2,
+            "evidence_history_truncated": True,
+            "evidence_history_checkpoint_consistent": True,
+            "observation_records_unavailable": 1,
+            "observation_records_skipped_by_page_budget": 2,
+        },
+        campaign_state_available=True,
+    )
+
+    assert summary["pressure_observation_count"] == 3
+    assert summary["role_record_counts"] == {
+        "occurrence": 1,
+        "supporting-context": 1,
+        "unclassified": 1,
+    }
+    assert summary["role_classification_status"] == "incomplete"
+    assert summary["recurrence_supported_hypothesis_count"] == 1
+    assert summary["incomplete_session_attribution_hypothesis_count"] == 1
+    assert summary["scope_status"] == "partial-selected-window"
 
 
 def test_verification_observation_keeps_resource_context_without_health_scoring(

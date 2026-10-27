@@ -138,6 +138,19 @@ Recurrence describes the selected window;
 `evidence_history_truncated` indicates when it does not cover all available
 history.
 
+When multiple pressure hypotheses or incomplete role coverage make aggregation
+useful, `pressure_evidence_summary` gives compact counts for verified pressure
+observations in the selected window. It separates explicit occurrence,
+supporting-context, and unclassified records from hypothesis recurrence.
+`scope_status` states whether analysis was complete for that window; the
+projection source records carry page offsets, history consistency,
+unavailable-record counts, and read-budget omissions. A
+`read-complete-for-selected-window` status does not imply complete campaign
+history, and the aggregate is evidence coverage rather than an agent or service
+score. Under a response-size limit, the aggregate may be omitted to preserve
+source evidence. The per-hypothesis summaries and observation evidence
+references remain the path to inspect supporting records.
+
 When the selected workspace includes a committed Compiler cache-regression
 record, the projection preserves its bounded per-build metrics and separately
 classifies any source-recorded harness or bootstrap measurements under
