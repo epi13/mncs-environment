@@ -1186,6 +1186,142 @@ def test_append_only_correction_completes_integrity_verified_invalid_observation
     ]["key_count"] == 4
 
 
+def test_observation_correction_restores_source_interface_and_verified_sources(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_missing_source_interface_and_request",
+        "ses_contract_completion",
+        "cmp_contract_completion",
+    )
+    target["observation"].pop("source_interface")
+    target["observation"].pop("request")
+    target["supporting_sources"] = [{"kind": "unverified-legacy-pointer"}]
+    session, state = _session(tmp_path, [target])
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    source_path = checkout / "src" / "authority_contract.py"
+    source_path.parent.mkdir(parents=True)
+    source_bytes = b"# committed source for append-only observation repair\n"
+    source_path.write_bytes(source_bytes)
+    relative_source = source_path.relative_to(checkout).as_posix()
+    _git(checkout, "add", relative_source)
+    _git(checkout, "commit", "--quiet", "-m", "add verified correction source")
+    source = {
+        "identity": "mncs_environment_authority_contract_source",
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative_source,
+        "sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "kind": "implementation-source",
+    }
+    state["evidence"].append({key: source[key] for key in (
+        "identity", "repository", "commit", "path", "sha256",
+    )})
+    state["evidence_count"] = len(state["evidence"])
+
+    correction = _observation(
+        "ev_environment_source_interface_correction",
+        "ses_contract_completion",
+        "cmp_contract_completion",
+    )
+    correction.pop("pressure_hypothesis")
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    correction["supporting_sources"] = [source]
+    fields = [
+        "observation.source_interface",
+        "observation.request",
+        "supporting_sources",
+    ]
+    replacements = {
+        "observation.source_interface": (
+            "MNCS Environment Session.check and capability projection"
+        ),
+        "observation.request": {
+            "scenario": "An exact integration-eligibility observation was recorded without its request context.",
+            "evidence_basis": "The integrity-verified target outcome, related-work identity, and committed authority implementation establish the operation context.",
+        },
+        "supporting_sources": [source],
+    }
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": fields,
+        "replacement_values": replacements,
+        "reason": (
+            "Restore omitted interface and request context and replace the "
+            "legacy unaddressed source with an integrity-verified pointer."
+        ),
+    }
+    assert capability_intelligence._validate_observation_correction(
+        correction["record_correction"],
+    ) is not None
+    over_limit = dict(correction["record_correction"])
+    over_limit["corrected_field_paths"] = [*fields, "not_measured"]
+    over_limit["replacement_values"] = {
+        **replacements,
+        "not_measured": ["one more correction field"],
+    }
+    assert capability_intelligence._validate_observation_correction(
+        over_limit,
+    ) is None
+
+    relative_correction = (
+        "evidence/environmental-capability/source-interface-correction.json"
+    )
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    correction_path = checkout / relative_correction
+    correction_path.parent.mkdir(parents=True, exist_ok=True)
+    correction_path.write_bytes(raw)
+    _git(checkout, "add", relative_correction)
+    _git(checkout, "commit", "--quiet", "-m", "append source interface correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative_correction,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    corrected = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert corrected["record_correction"]["status"] == (
+        "completed-by-append-only-record"
+    )
+    assert corrected["observation"]["source_interface"] == replacements[
+        "observation.source_interface"
+    ]
+    assert corrected["observation"]["request"] == replacements[
+        "observation.request"
+    ]
+    assert corrected["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "content-integrity-verified"
+    diagnostic = next(
+        item for item in result["source"]["observation_reference_diagnostics"]
+        if item["identity"] == target["identity"]
+    )
+    assert diagnostic["correction_status"] == "completed-by-append-only-record"
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 50_000,
+    )
+    compact_target = next(
+        item for item in compact["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert compact_target["record_correction"]["replacement_values"][
+        "observation.source_interface"
+    ] == replacements["observation.source_interface"]
+
+
 def test_observation_contract_correction_requires_complete_contract(
     tmp_path: Path,
 ) -> None:
@@ -2952,12 +3088,52 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
         "ses_resource_sample_activity",
         "cmp_resource_sample_activity",
     )
-    record["observation"]["outcome"]["large_diagnostic"] = "private " * 9_000
-    session, _ = _session(tmp_path, [record])
+    record["observation"]["outcome"]["large_diagnostic"] = "private " * 1_000
     capability = "mncs-system-monitor:system-resource-sample"
     binding_id = "cap_monitor_resource_sample"
     request_id = "req_monitor_resource_sample"
     store_reference = "mncs-store:invocation-result:resource-sample"
+    content = json.dumps({
+        "schema": capability_intelligence.SYSTEM_RESOURCE_SAMPLE_SCHEMA,
+        "observed_at": 1792825200000,
+        "sample_time": {
+            "wall_time_unix_ms": 1792825200000,
+            "monotonic_ns": 123456789,
+        },
+        "host": {
+            "cpu_count": 8,
+            "cpu_utilization": 0.25,
+            "cpu_status": "observed",
+            "load_average": [0.5, 0.75, 1.0],
+            "memory_total_bytes": 32_000_000_000,
+            "memory_available_bytes": 12_000_000_000,
+            "memory_available_status": "observed",
+            "memory_free_bytes": 4_000_000_000,
+        },
+        "hostname": "private-host-name",
+        "processes": [{"command": "private-process-command"}],
+    }, sort_keys=True).encode()
+    metadata = {
+        "store_reference": store_reference,
+        "path": "system-resource-sample.json",
+        "byte_count": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+    sample_identity = "rsm_" + capability_intelligence.digest_hex({
+        "session_id": "ses_projection_reader",
+        "provider_request_id": request_id,
+        "artifact_store_ref": store_reference,
+    }, length=16)
+    record["related_work"].update({
+        "session_id": "ses_projection_reader",
+        "campaign_id": "cmp_projection_reader",
+        "work_intent_id": "int_projection_reader",
+    })
+    record["observation"]["outcome"]["related_resource_sample"] = {
+        "identity": sample_identity,
+        "artifact_reference": dict(metadata),
+    }
+    session, _ = _session(tmp_path, [record])
     session.snapshot["bindings"] = [{
         "binding_id": binding_id,
         "capability": capability,
@@ -3002,33 +3178,6 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
         "event_count": len(events), "events": events[-limit:],
         "truncated": False, "next_before_sequence": None,
     }
-    content = json.dumps({
-        "schema": capability_intelligence.SYSTEM_RESOURCE_SAMPLE_SCHEMA,
-        "observed_at": 1792825200000,
-        "sample_time": {
-            "wall_time_unix_ms": 1792825200000,
-            "monotonic_ns": 123456789,
-        },
-        "host": {
-            "cpu_count": 8,
-            "cpu_utilization": 0.25,
-            "cpu_status": "observed",
-            "load_average": [0.5, 0.75, 1.0],
-            "memory_total_bytes": 32_000_000_000,
-            "memory_available_bytes": 12_000_000_000,
-            "memory_available_status": "observed",
-            "memory_free_bytes": 4_000_000_000,
-        },
-        "hostname": "private-host-name",
-        "processes": [{"command": "private-process-command"}],
-    }, sort_keys=True).encode()
-    metadata = {
-        "store_reference": store_reference,
-        "path": "system-resource-sample.json",
-        "byte_count": len(content),
-        "sha256": hashlib.sha256(content).hexdigest(),
-    }
-
     with patch.object(
         capability_intelligence.invocation_artifacts_module,
         "read_latest_invocation_file",
@@ -3087,6 +3236,90 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
         "host.memory_total_bytes": "measured",
         "host.memory_available_bytes": "measured",
     }
+    observed_record = next(
+        item for item in result["observations"]
+        if item["identity"] == record["identity"]
+    )
+    relation = observed_record["resource_sample_relation"]
+    assert relation["status"] == "matched-exact-resource-sample-and-session"
+    assert relation["sample_identity"] == sample_identity
+    assert relation["work_context_status"] == (
+        "session-campaign-work-intent-matched"
+    )
+    assert relation["artifact_reference_status"] == "matched"
+    assert relation["artifact_reference"]["sha256"] == metadata["sha256"]
+    assert relation["invocation_event"]["identity"] == (
+        "evt_monitor_resource_sample_invoked"
+    )
+    assert "not establish agent-attributed consumption" in (
+        relation["measurement_interpretation_limit"]
+    )
+    wrong_intent_record = {
+        **record,
+        "related_work": {
+            **record["related_work"],
+            "work_intent_id": "int_other_work",
+        },
+    }
+    wrong_intent_relation = (
+        capability_intelligence._observation_resource_sample_relation(
+            wrong_intent_record,
+            result["session_activity"],
+            selected_session_id=session.session_id,
+        )
+    )
+    assert wrong_intent_relation["status"] == "work-context-mismatch"
+    wrong_session_record = {
+        **record,
+        "related_work": {
+            **record["related_work"],
+            "session_id": "ses_other_session",
+        },
+    }
+    wrong_session_relation = (
+        capability_intelligence._observation_resource_sample_relation(
+            wrong_session_record,
+            result["session_activity"],
+            selected_session_id=session.session_id,
+        )
+    )
+    assert wrong_session_relation["status"] == "source-session-not-selected"
+    wrong_artifact_record = {
+        **record,
+        "observation": {
+            **record["observation"],
+            "outcome": {
+                **record["observation"]["outcome"],
+                "related_resource_sample": {
+                    "identity": sample_identity,
+                    "artifact_reference": {
+                        **metadata,
+                        "sha256": "0" * 64,
+                    },
+                },
+            },
+        },
+    }
+    wrong_artifact_relation = (
+        capability_intelligence._observation_resource_sample_relation(
+            wrong_artifact_record,
+            result["session_activity"],
+            selected_session_id=session.session_id,
+        )
+    )
+    assert wrong_artifact_relation["status"] == "artifact-reference-mismatch"
+    missing_relation = (
+        capability_intelligence._observation_resource_sample_relation(
+            record,
+            {"resource_samples": {
+                "status": "not-captured-in-session",
+                "source": {"artifact_window_truncated": False},
+                "observations": [],
+            }},
+            selected_session_id=session.session_id,
+        )
+    )
+    assert missing_relation["status"] == "sample-not-present-in-selected-session"
     assert read_artifact.call_count == 3
     assert activity_only["status"] == "partial"
     assert activity_only["session_activity"]["resource_samples"][
@@ -3103,6 +3336,19 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     ] == 12_000_000_000
     assert compact_samples["observations"][0]["source"][
         "artifact_reference"]["sha256"] == metadata["sha256"]
+    compact_relation_view = capability_intelligence._compact_projection(
+        result, 100_000, 50_000,
+    )
+    compact_record = next(
+        item for item in compact_relation_view["observations"]
+        if item["identity"] == record["identity"]
+    )
+    assert compact_record["resource_sample_relation"]["sample_identity"] == (
+        sample_identity
+    )
+    assert compact_record["resource_sample_relation"]["artifact_reference"][
+        "sha256"
+    ] == metadata["sha256"]
 
 
 def test_session_resource_sample_distinguishes_missing_and_failed_invocations(

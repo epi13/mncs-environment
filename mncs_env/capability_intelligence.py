@@ -38,6 +38,7 @@ from .store_backend import StoreIntegrityFailure, StoreUnavailable
 SCHEMA = "mncs.environment.capability-intelligence/1"
 OBSERVATION_SCHEMA = "mncs.environment.environmental-observation/1"
 OBSERVATION_CORRECTION_SCHEMA = "mncs.environment.observation-correction/1"
+MAX_OBSERVATION_CORRECTION_FIELDS = 3
 PRESSURE_HYPOTHESIS_ROLES = frozenset({"occurrence", "supporting-context"})
 EVIDENCE_REFERENCE_CORRECTION_SCHEMA = (
     "mncs.environment.evidence-reference-correction/1"
@@ -2742,8 +2743,54 @@ def _compact_projection(
                             "key_count": len(payload),
                             "keys_truncated": len(payload) > len(keys),
                         }
+                source_interface = replacement_values.get(
+                    "observation.source_interface",
+                )
+                if isinstance(source_interface, str):
+                    compact_replacements[
+                        "observation.source_interface"
+                    ] = _short_text(source_interface, 128)
                 compact_correction["replacement_values"] = compact_replacements
             compact_observation["record_correction"] = compact_correction
+        resource_relation = item.get("resource_sample_relation")
+        if isinstance(resource_relation, dict):
+            compact_relation = {
+                key: _short_text(resource_relation.get(key), 192)
+                for key in (
+                    "status", "sample_identity", "basis", "source_session_id",
+                    "sample_status", "work_context_status",
+                    "artifact_reference_status", "event_correlation_status",
+                    "resource_sample_collection_status",
+                    "measurement_interpretation_limit",
+                )
+                if isinstance(resource_relation.get(key), str)
+            }
+            work_context = resource_relation.get("work_context")
+            if isinstance(work_context, dict):
+                compact_relation["work_context"] = {
+                    key: _short_text(value, 64)
+                    for key, value in work_context.items()
+                    if key in {"session_id", "campaign_id", "work_intent_id"}
+                    and isinstance(value, str)
+                }
+            for key in ("invocation_event", "completion_event"):
+                event = resource_relation.get(key)
+                if isinstance(event, dict):
+                    compact_relation[key] = {
+                        field: event[field]
+                        for field in ("identity", "sequence", "type", "observed_at")
+                        if isinstance(event.get(field), str)
+                        or type(event.get(field)) is int
+                    }
+            artifact_reference = resource_relation.get("artifact_reference")
+            if isinstance(artifact_reference, dict):
+                compact_relation["artifact_reference"] = {
+                    key: artifact_reference[key]
+                    for key in ("store_reference", "path", "byte_count", "sha256")
+                    if isinstance(artifact_reference.get(key), str)
+                    or type(artifact_reference.get(key)) is int
+                }
+            compact_observation["resource_sample_relation"] = compact_relation
         compact_sources = []
         raw_sources = item.get("supporting_sources")
         raw_sources = raw_sources if isinstance(raw_sources, list) else []
@@ -9121,12 +9168,14 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
     if (value.get("schema_version") != OBSERVATION_CORRECTION_SCHEMA
             or target is None or "sha256" not in target
             or not _is_observation_reference(target)
-            or not isinstance(fields, list) or not 1 <= len(fields) <= 2
+            or not isinstance(fields, list)
+            or not 1 <= len(fields) <= MAX_OBSERVATION_CORRECTION_FIELDS
             or any(
                 not isinstance(field, str)
                 or field not in {
                     "supporting_sources", "not_measured",
-                    "pressure_hypothesis_role", "observation.request",
+                    "pressure_hypothesis_role",
+                    "observation.source_interface", "observation.request",
                     "observation.outcome",
                     "pressure_hypothesis.actionable_recommendation",
                 }
@@ -9168,6 +9217,13 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                  or len(replacements[
                      "pressure_hypothesis.actionable_recommendation"
                  ]) > 512)):
+        return None
+    if ("observation.source_interface" in fields
+            and (not isinstance(
+                    replacements["observation.source_interface"], str,
+                 )
+                 or not replacements["observation.source_interface"]
+                 or len(replacements["observation.source_interface"]) > 256)):
         return None
     for field in ("observation.request", "observation.outcome"):
         if field in fields and not isinstance(replacements[field], dict):
@@ -13031,6 +13087,175 @@ def _session_resource_samples(
         "source": source,
         "observations": observations,
     }
+
+
+def _observation_resource_sample_relation(
+    record: dict[str, Any], activity: dict[str, Any], *,
+    selected_session_id: str,
+) -> dict[str, Any] | None:
+    """Join an observation's declared resource sample to verified session data."""
+    observation = record.get("observation")
+    observation = observation if isinstance(observation, dict) else {}
+    outcome = observation.get("outcome")
+    outcome = outcome if isinstance(outcome, dict) else {}
+    declared = outcome.get("related_resource_sample")
+    if not isinstance(declared, dict):
+        return None
+
+    sample_identity = declared.get("identity")
+    result: dict[str, Any] = {
+        "sample_identity": (
+            sample_identity[:160]
+            if isinstance(sample_identity, str) and sample_identity else None
+        ),
+        "basis": "exact-resource-sample-identity-and-session-context",
+        "measurement_interpretation_limit": (
+            "The linked resource sample is a host snapshot correlated to this "
+            "session; it does not establish agent-attributed consumption, "
+            "environmental pressure, or causation."
+        ),
+    }
+    if (not isinstance(sample_identity, str)
+            or re.fullmatch(r"rsm_[A-Za-z0-9_-]{1,64}", sample_identity) is None):
+        result["status"] = "invalid-resource-sample-identity"
+        return result
+
+    related_work = record.get("related_work")
+    related_work = related_work if isinstance(related_work, dict) else {}
+    source_session_id = related_work.get("session_id")
+    if not isinstance(source_session_id, str) or not source_session_id:
+        result["status"] = "source-session-not-recorded"
+        return result
+    if source_session_id != selected_session_id:
+        result["status"] = "source-session-not-selected"
+        result["source_session_id"] = source_session_id[:160]
+        result["selected_session_id"] = selected_session_id[:160]
+        return result
+
+    resource_samples = activity.get("resource_samples")
+    resource_samples = (
+        resource_samples if isinstance(resource_samples, dict) else {}
+    )
+    raw_samples = resource_samples.get("observations")
+    raw_samples = raw_samples if isinstance(raw_samples, list) else []
+    matches = [
+        sample for sample in raw_samples
+        if isinstance(sample, dict) and sample.get("identity") == sample_identity
+    ]
+    if len(matches) != 1:
+        source = resource_samples.get("source")
+        source = source if isinstance(source, dict) else {}
+        result["status"] = (
+            "ambiguous-resource-sample-match" if len(matches) > 1 else
+            "sample-not-present-in-selected-artifact-window"
+            if source.get("artifact_window_truncated") is True
+            else "sample-not-present-in-selected-session"
+        )
+        result["resource_sample_collection_status"] = _short_text(
+            resource_samples.get("status"), 96,
+        )
+        result["artifact_window_truncated"] = (
+            source.get("artifact_window_truncated") is True
+        )
+        result["resource_sample_records_omitted"] = (
+            source.get("records_omitted")
+            if type(source.get("records_omitted")) is int else None
+        )
+        return result
+
+    sample = matches[0]
+    sample_context = sample.get("context")
+    sample_context = sample_context if isinstance(sample_context, dict) else {}
+    context_statuses: dict[str, str] = {}
+    context_mismatch = False
+    for key in ("session_id", "campaign_id", "work_intent_id"):
+        expected = related_work.get(key)
+        observed = sample_context.get(key)
+        if not isinstance(expected, str) or not expected:
+            context_statuses[key] = "not-recorded-on-observation"
+        elif not isinstance(observed, str) or not observed:
+            context_statuses[key] = "not-captured-on-resource-sample"
+        elif expected == observed:
+            context_statuses[key] = "matched"
+        else:
+            context_statuses[key] = "mismatch"
+            context_mismatch = True
+
+    source = sample.get("source")
+    source = source if isinstance(source, dict) else {}
+    source_reference = source.get("artifact_reference")
+    source_reference = (
+        source_reference if isinstance(source_reference, dict) else {}
+    )
+    declared_reference = declared.get("artifact_reference")
+    declared_reference = (
+        declared_reference if isinstance(declared_reference, dict) else None
+    )
+    if declared_reference is None:
+        artifact_reference_status = "not-recorded-on-observation"
+    else:
+        fields = ("store_reference", "path", "byte_count", "sha256")
+        mismatch = any(
+            key in declared_reference
+            and declared_reference.get(key) != source_reference.get(key)
+            for key in fields
+        )
+        complete = all(
+            key in declared_reference and key in source_reference
+            for key in fields
+        )
+        artifact_reference_status = (
+            "mismatch" if mismatch else
+            "matched" if complete else "partial-match"
+        )
+
+    sample_status = sample.get("status")
+    event_correlation_status = source.get("event_correlation_status")
+    if context_mismatch:
+        status = "work-context-mismatch"
+    elif artifact_reference_status == "mismatch":
+        status = "artifact-reference-mismatch"
+    elif sample_status != "available":
+        status = "matched-identity-sample-data-unavailable"
+    elif event_correlation_status != "matched-by-provider-request-id":
+        status = "matched-sample-event-correlation-incomplete"
+    else:
+        status = "matched-exact-resource-sample-and-session"
+
+    result.update({
+        "status": status,
+        "source_session_id": source_session_id[:160],
+        "sample_status": _short_text(sample_status, 96),
+        "work_context_status": (
+            "mismatch" if context_mismatch else (
+                "session-campaign-work-intent-matched"
+                if all(value == "matched" for value in context_statuses.values())
+                else "partial-or-unrecorded"
+            )
+        ),
+        "work_context": context_statuses,
+        "artifact_reference_status": artifact_reference_status,
+        "event_correlation_status": _short_text(
+            event_correlation_status, 96,
+        ),
+    })
+    for key in ("invocation_event", "completion_event"):
+        reference = source.get(key)
+        if isinstance(reference, dict):
+            result[key] = {
+                field: reference[field]
+                for field in ("identity", "sequence", "type", "observed_at")
+                if isinstance(reference.get(field), str)
+                or type(reference.get(field)) is int
+            }
+    if source_reference:
+        result["artifact_reference"] = {
+            key: source_reference[key]
+            for key in ("store_reference", "path", "byte_count", "sha256")
+            if isinstance(source_reference.get(key), str)
+            or type(source_reference.get(key)) is int
+        }
+    return result
 
 
 def _session_service_readiness(
@@ -17030,6 +17255,9 @@ def project(
         if isinstance(redaction, str):
             projected_observation["redaction"] = redaction[:512]
             projected_observation["redaction_truncated"] = len(redaction) > 512
+        resource_sample_relation = _observation_resource_sample_relation(
+            record, activity, selected_session_id=session.session_id,
+        )
         observations.append({
             "identity": record["identity"],
             "captured_at": record.get("captured_at"),
@@ -17070,6 +17298,8 @@ def project(
             ),
             **({"record_correction": record_correction_summary}
                if record_correction_summary is not None else {}),
+            **({"resource_sample_relation": resource_sample_relation}
+               if resource_sample_relation is not None else {}),
             "pressure_hypothesis": ({
                 key: hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",

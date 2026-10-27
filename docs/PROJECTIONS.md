@@ -730,6 +730,14 @@ not establish resource pressure. Each metric carries availability, and the
 projection identifies Monitor-derived CPU utilization separately from sampled
 host facts; it never fills missing values with zero.
 
+When a campaign observation records an `outcome.related_resource_sample`
+identity, the projection exposes `resource_sample_relation` beside that
+observation. It joins only the exact sample identity in the selected session,
+checks the recorded session/campaign/WorkIntent context, and preserves the
+sample artifact digest and invocation/completion event references. Mismatched,
+unavailable, and out-of-window samples remain explicit. A successful relation
+establishes shared provenance, not agent-attributed consumption or causation.
+
 `campaign-state <session>` includes this derived view when the existing
 128 KiB campaign-state response budget permits, so a caller reading the durable
 ledger can inspect related environmental context in the same response. When
@@ -1094,11 +1102,12 @@ Published observation records are content-addressed and are not rewritten when
 a transcription or relation needs correction. A later record can use the
 `mncs.environment.observation-correction/1` contract to point to the exact
 target evidence reference, name corrected fields, and provide their replacement
-values. Supported fields include `supporting_sources`, `not_measured`,
-`pressure_hypothesis_role`, and
+values. One correction may name up to three supported fields, including
+`supporting_sources`, `not_measured`, `pressure_hypothesis_role`, and
 `pressure_hypothesis.actionable_recommendation`. On an integrity-verified
 contract-invalid target, a correction may supply a missing or invalid
-actionable recommendation, `observation.request`, or `observation.outcome`.
+actionable recommendation, `observation.source_interface`,
+`observation.request`, or `observation.outcome`.
 These fields can only complete a contract-invalid target; they cannot rewrite
 a valid observation. The projection reapplies the complete record contract before it
 includes the corrected record in pressure analysis. It retains the original
