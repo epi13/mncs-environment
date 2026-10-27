@@ -17,10 +17,11 @@ stays FAIL however good the witness becomes, and a diagnostic UNKNOWN
 never reinterprets the test result.
 
 Capture executes provider code against the failing subject under the
-`verify` effect: foreign ownership conflicts deny, dirt is the subject
-rather than a bar, writes stay within session scratch, and the subject
-must be identical before and after the run or the witness is rejected.
-Nothing here seizes claims or touches sessions it does not own.
+`verify` effect: coordination conflicts defer capture with their required
+next step, while policy denials remain denials. Dirt is the subject rather
+than a bar, writes stay within session scratch, and the subject must be
+identical before and after the run or the witness is rejected. Nothing here
+seizes claims or touches sessions it does not own.
 """
 
 from __future__ import annotations
@@ -383,11 +384,13 @@ def _capture_libraries(session, obligation: dict[str, Any]) -> list[str]:
     return roots
 
 
-def _subject_authorized(session, repository: str, checkout: str) -> tuple[bool, str]:
+def _subject_authorized(
+    session, repository: str, checkout: str,
+) -> tuple[bool, str | dict[str, Any]]:
     """Verify-effect check against the subject checkout.
 
-    Foreign ownership conflicts deny exactly like mutation; the subject's
-    own dirt and branch are the diagnostic subject, never a bar.
+    Coordination deferrals remain distinct from policy denials; the
+    subject's own dirt and branch are the diagnostic subject, never a bar.
     """
     if not repository or not checkout:
         return False, "subject-unresolvable"
@@ -397,7 +400,33 @@ def _subject_authorized(session, repository: str, checkout: str) -> tuple[bool, 
     except Exception as error:
         return False, f"authority-error:{type(error).__name__}"
     if verdict.get("verdict") != "allow":
-        return False, str(verdict.get("reason", verdict.get("verdict", "denied")))
+        reason = str(verdict.get("reason", verdict.get("verdict", "denied")))
+        if (verdict.get("verdict") == "defer"
+                and verdict.get("decision_domain") == "coordination"):
+            coordination: dict[str, Any] = {
+                "kind": "coordination-deferred",
+                "reason": reason,
+            }
+            for key in (
+                "required_coordination", "coordination_status", "next_step",
+            ):
+                value = verdict.get(key)
+                if isinstance(value, str) and value and len(value) <= 160:
+                    coordination[key] = value
+            reference = verdict.get("event_reference")
+            if (isinstance(reference, dict)
+                    and isinstance(reference.get("identity"), str)
+                    and 0 < len(reference["identity"]) <= 160
+                    and type(reference.get("sequence")) is int
+                    and reference["sequence"] > 0
+                    and reference.get("type") == "authority.coordination-deferred"):
+                coordination["authority_event_reference"] = {
+                    "identity": reference["identity"],
+                    "sequence": reference["sequence"],
+                    "type": reference["type"],
+                }
+            return False, coordination
+        return False, reason
     return True, ""
 
 
@@ -425,7 +454,7 @@ def _witness_usable(witness: dict[str, Any]) -> tuple[bool, str]:
 
 def capture_witness(session, failure: dict[str, Any], obligation: dict[str, Any],
                     depth: str, capture_tag: str
-                    ) -> tuple[dict[str, Any] | None, str | None]:
+                    ) -> tuple[dict[str, Any] | None, str | dict[str, Any] | None]:
     """Run one admitted capture; return (witness, applicability-problem)."""
     context = failure.get("context") or {}
     checkout = Path(str(obligation.get("checkout", "")))
@@ -444,6 +473,8 @@ def capture_witness(session, failure: dict[str, Any], obligation: dict[str, Any]
     repository = str(context.get("repository", "") or obligation.get("repository", ""))
     allowed, reason = _subject_authorized(session, repository, str(checkout.resolve()))
     if not allowed:
+        if isinstance(reason, dict):
+            return None, reason
         return None, f"authority-denied:{reason}"
     bounds = DEPTH_BOUNDS.get(depth, DEPTH_BOUNDS["minimal"])
     before_head = verification_module.repo_revision(checkout)
@@ -585,6 +616,7 @@ def ambient_pass(session, *, mode: str = "ambient",
     results: list[dict[str, Any]] = []
     next_rows: dict[str, dict[str, Any]] = {}
     failure: dict | None = None
+    observation_incomplete = False
     for key, item in by_key.items():
         verdict = verdicts.get(key) or {}
         context = item.get("context") or {}
@@ -616,12 +648,47 @@ def ambient_pass(session, *, mode: str = "ambient",
                 record["captured"] = witness is not None
                 record["capture_tag"] = capture_tag
                 if witness is None:
-                    record["outcome"] = "unknown"
-                    record["detail"] = problem
-                    failure = {"reason": f"capture-failed:{key}",
-                               "detail": problem}
-                    session._emit("diagnostic.failed", "environment",
-                                  {"failure": key, "detail": problem})
+                    if (isinstance(problem, dict)
+                            and problem.get("kind") == "coordination-deferred"):
+                        record["outcome"] = "deferred"
+                        record["capture_disposition"] = "coordination-deferred"
+                        record["detail"] = problem.get(
+                            "reason", "coordination deferred",
+                        )
+                        record["coordination"] = {
+                            field: problem[field]
+                            for field in (
+                                "required_coordination", "coordination_status",
+                                "next_step", "authority_event_reference",
+                            )
+                            if field in problem
+                        }
+                        observation_incomplete = True
+                        authority_reference = problem.get(
+                            "authority_event_reference",
+                        )
+                        causes = (
+                            [authority_reference["identity"]]
+                            if isinstance(authority_reference, dict)
+                            and isinstance(authority_reference.get("identity"), str)
+                            else None
+                        )
+                        session._emit(
+                            "diagnostic.deferred", "environment",
+                            {
+                                "failure": key,
+                                "reason": "coordination-required",
+                                "coordination": record["coordination"],
+                            },
+                            causes=causes,
+                        )
+                    else:
+                        record["outcome"] = "unknown"
+                        record["detail"] = problem
+                        failure = {"reason": f"capture-failed:{key}",
+                                   "detail": problem}
+                        session._emit("diagnostic.failed", "environment",
+                                      {"failure": key, "detail": problem})
                 else:
                     evidence_id = f"dw-{digest_hex({'key': key, 'at': started})[:12]}"
                     evidence = {
@@ -676,26 +743,30 @@ def ambient_pass(session, *, mode: str = "ambient",
             record["outcome"] = "unknown"
         results.append(record)
     if failure is None:
-        if only is not None:
-            # A filtered explicit pass merges; only a full observation
-            # may prune keys that no longer fail.
+        if only is not None or observation_incomplete:
+            # A filtered explicit pass merges; only a full observation may
+            # prune keys that no longer fail. Coordination deferral also
+            # makes the pass incomplete, so preserve prior evidence.
             merged = dict(rows)
             merged.update(next_rows)
             rows = merged
         else:
             rows = next_rows
     return _finish(session, started, clock_started, results, rows,
-                   observed, mode, depth, failure, epoch, coherence)
+                   observed, mode, depth, failure, epoch, coherence,
+                   observation_complete=not observation_incomplete)
 
 
 def _finish(session, started: str, clock_started: float,
             results: list[dict], rows: dict, observed: int,
             mode: str, depth: str, failure: dict | None,
-            epoch: str, coherence: dict | None) -> dict[str, Any]:
+            epoch: str, coherence: dict | None, *,
+            observation_complete: bool = True) -> dict[str, Any]:
     native = (coherence or {}).get("summary") or {}
     summary = {"failures": len(results),
                "observed": observed,
                "current": 0, "captured": 0, "deferred": 0,
+               "coordination_deferred": 0,
                "unsupported": int(native.get("unsupported", 0)),
                "escalated": int(native.get("escalated", 0)),
                "blockers": 0, "depth": depth,
@@ -709,6 +780,8 @@ def _finish(session, started: str, clock_started: float,
             summary["captured"] += 1
         if outcome == "deferred":
             summary["deferred"] += 1
+        if record.get("capture_disposition") == "coordination-deferred":
+            summary["coordination_deferred"] += 1
         if outcome in ("escalated", "captured"):
             capsule.append(str(record.get("failure")))
     summary["capsule_ids"] = capsule[:MAX_CAPSULE_IDS]
@@ -766,7 +839,7 @@ def _finish(session, started: str, clock_started: float,
     # Transport/capture failures never cache their epoch: the next pass
     # must re-observe, not replay a degraded world. Recorded witnesses
     # cache normally because bound evidence is exact.
-    if mode == "ambient" and failure is None:
+    if mode == "ambient" and failure is None and observation_complete:
         stored_epoch = epoch
     else:
         stored_epoch = f"uncached:{mode}:{epoch}"
@@ -812,7 +885,8 @@ def _append_session_evidence(session, summary: dict[str, Any],
         "depth": depth,
         "summary": {key: summary.get(key) for key in
                     ("failures", "current", "captured", "deferred",
-                     "unsupported", "escalated", "blockers")},
+                     "coordination_deferred", "unsupported", "escalated",
+                     "blockers")},
         "diagnostics": [
             {"failure": record.get("failure"),
              "obligation": record.get("obligation"),
@@ -821,6 +895,8 @@ def _append_session_evidence(session, summary: dict[str, Any],
              "status": record.get("status"),
              "reason": record.get("reason"),
              "operation": record.get("operation"),
+             "capture_disposition": record.get("capture_disposition"),
+             "coordination": record.get("coordination"),
              "evidence_id": record.get("evidence_id"),
              "witness_ref": record.get("witness_ref"),
              "witness_class": record.get("witness_class"),

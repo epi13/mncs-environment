@@ -75,7 +75,7 @@ class VerifyAuthorityTests(unittest.TestCase):
                    "branch": "campaign/x"})
         self.assertEqual(verdict["verdict"], "allow", verdict)
 
-    def test_verify_denied_on_foreign_claim_overlap(self):
+    def test_verify_defers_on_foreign_claim_overlap(self):
         holders = {"target-doc": [{
             "session_id": "foreign-session",
             "scope": {"kind": "repository", "repository": "target-doc"}}]}
@@ -85,7 +85,16 @@ class VerifyAuthorityTests(unittest.TestCase):
             session_id="ses-a", claims=holders,
             repo_facts={"target-doc": {"branch": "main", "dirty": False}},
             scope={"kind": "worktree", "checkout": "/tmp/x"})
-        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(verdict["verdict"], "defer", verdict)
+        self.assertEqual(verdict["decision_domain"], "coordination")
+        self.assertEqual(
+            verdict["coordination_status"], "overlapping-scope-conflict",
+        )
+        self.assertFalse(verdict["persistent_authority_required"])
+        self.assertFalse(verdict["operation_executed"])
+        self.assertEqual(
+            verdict["next_step"], "select-an-exact-non-overlapping-operation-scope",
+        )
 
     def test_verify_denied_on_protected_repository(self):
         context = authority_module.build_context(

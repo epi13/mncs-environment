@@ -40,9 +40,11 @@ runs `mncs_env/diagnostics.py` after verification:
    Host code never reinterprets these decisions.
 4. **Capture queued witnesses.** Each queued failure runs one
    `import-test` capture through `mncs.debugger/1` under the
-   `verify` effect: foreign ownership conflicts deny, writes stay
-   in session scratch, and the subject must be identical before and
-   after or the witness is rejected. Library roots combine the
+   `verify` effect. A coordination overlap defers capture and records its
+   required scope and source event; it is not reported as an authority denial
+   or a failed capture. Policy denials remain distinct. Writes stay in session
+   scratch, and the subject must be identical before and after or the witness
+   is rejected. Library roots combine the
    obligation's declared roots with the test provider's
    adapter-contributed roots from its invocation descriptor.
 5. **Record and quiet down.** Bound witnesses persist in session
@@ -57,6 +59,8 @@ Healthy entry has no `diagnostic` key. A failure entry carries:
 diagnostic:
   failures: 1
   captured: 1
+  deferred: 0
+  coordination_deferred: 0
   capsule_ids:
     - mncs-test.<obligation>::<test-case-id>
   evidence: sessions/<ses>/diagnostic-artifacts/evidence/<ref>
@@ -65,8 +69,12 @@ diagnostic:
 Full evidence lives behind `diagnostic <session> --evidence` and the
 session evidence JSONL stream: per-failure status, reason, admitted
 operation, witness reference, witness class, source path and span,
-and capture tags. Witness documents (traces, values, provenance)
-stay in capture directories, never in working context.
+and capture tags. `coordination_deferred` is the subset of `deferred` where
+the verify preflight found an overlapping operation scope. Those records carry
+the required coordination, next step, and source authority event. The pass
+remains uncached until a later complete observation. Witness documents
+(traces, values, provenance) stay in capture directories, never in working
+context.
 
 Useful commands:
 
@@ -92,8 +100,11 @@ admitted step (trace, then replay) without losing earlier evidence.
   unsupported with their class intact.
 - Recording a broken capture as knowledge. Harness breakage is
   retained in artifacts but never cached; the next pass re-observes.
-- Capturing under a foreign claim on the subject. Denial names the
-  holding session; release makes capture eligible immediately.
+- Capturing while an overlapping coordination claim blocks the
+  subject scope. Environment records a defer and next step; it does
+  not attempt capture or transfer another session's claim.
+- Capturing after a true policy denial. The policy boundary remains
+  authoritative and distinct from coordination.
 - Mutating repositories, snapshots, goldens, or sources. Capture
   confinement is verified after every run.
 - Speculative debugging of healthy executions.
@@ -130,9 +141,10 @@ toolchain work and is recorded as pressure, not implemented here.
 Diagnostic state, captures, and epochs are session-private. Two
 sessions over the same failure capture independently without
 corrupting each other; no shared witness reuse exists yet because
-no unified cross-session evidence identity exists yet. Claims on
-the subject deny foreign capture; claims on anything else are
-untouched. No global locks, no session-wide serialization.
+no unified cross-session evidence identity exists yet. An overlapping
+claim defers capture with a causal link to the authority decision;
+claims on anything else are untouched. No global locks, no
+session-wide serialization.
 
 ## Composition
 

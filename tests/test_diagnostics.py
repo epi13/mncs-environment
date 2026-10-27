@@ -71,6 +71,7 @@ class FakeSession:
         self.coherence_calls: list[dict] = []
         self.captures: list[list[str]] = []
         self.emitted: list[tuple[str, dict]] = []
+        self.emitted_causes: list[list[str] | None] = []
         self.coherence_mode = "policy"
         self.capture_mode = "witness"
         self.authority = "allow"
@@ -79,6 +80,7 @@ class FakeSession:
     def _emit(self, event_type: str, producer: str,
               payload: dict | None = None, causes=None) -> dict:
         self.emitted.append((event_type, dict(payload or {})))
+        self.emitted_causes.append(causes)
         return {"type": event_type}
 
     def _binding(self, capability: str) -> dict:
@@ -94,8 +96,25 @@ class FakeSession:
               repo_facts=None, scope=None) -> dict:
         if self.authority == "allow":
             return {"verdict": "allow", "reason": "fixture allows verify"}
-        return {"verdict": "deny",
-                "reason": f"{target} overlaps scope claimed by another session"}
+        if self.authority == "defer":
+            return {
+                "verdict": "defer",
+                "decision_domain": "coordination",
+                "required_coordination": "non-overlapping-operation-scope-or-isolated-worktree",
+                "coordination_status": "overlapping-scope-conflict",
+                "next_step": "select-an-exact-non-overlapping-operation-scope",
+                "reason": f"{target} overlaps scope claimed by another session",
+                "event_reference": {
+                    "identity": "evt_coordination_deferred",
+                    "sequence": 7,
+                    "type": "authority.coordination-deferred",
+                },
+            }
+        return {
+            "verdict": "deny",
+            "decision_domain": "writable-scope-policy",
+            "reason": f"{target} is outside this session's writable scope",
+        }
 
     def invoke(self, capability: str, argv: list[str], *,
                cwd=None, timeout_seconds=None,
@@ -400,15 +419,64 @@ class LifecycleTests(DiagnosticsFixture):
         stored = self.session.snapshot["diagnostic_epoch"]
         self.assertTrue(stored["epoch"].startswith("uncached:"))
 
-    def test_foreign_claim_denies_capture(self):
+    def test_policy_denial_prevents_capture(self):
         self.session.snapshot["verification_state"] = {
             "fixture.debug-probe": self.fail_row()}
         self.session.authority = "deny"
         result = self.run_pass()
         self.assertEqual(result["summary"]["captured"], 0)
         detail = self.session.emitted[-1][1].get("detail", "")
-        self.assertIn("another session", detail)
+        self.assertIn("outside this session's writable scope", detail)
         self.assertNotIn("diagnostic_state", self.session.snapshot)
+
+    def test_coordination_deferral_is_durable_and_not_a_capture_failure(self):
+        self.session.snapshot["verification_state"] = {
+            "fixture.debug-probe": self.fail_row()}
+        self.session.snapshot["diagnostic_state"] = {
+            "older::witness": {"evidence_id": "dw-older"}}
+        self.session.authority = "defer"
+
+        result = self.run_pass()
+
+        self.assertEqual(result["summary"]["coordination_deferred"], 1)
+        self.assertEqual(result["summary"]["deferred"], 1)
+        self.assertEqual(result["summary"]["blockers"], 0)
+        self.assertEqual(self.session.captures, [])
+        self.assertIn(
+            "older::witness", self.session.snapshot["diagnostic_state"],
+        )
+        self.assertTrue(
+            self.session.snapshot["diagnostic_epoch"]["epoch"].startswith(
+                "uncached:ambient:",
+            ),
+        )
+
+        event_index = next(
+            index for index, (kind, _) in enumerate(self.session.emitted)
+            if kind == "diagnostic.deferred"
+        )
+        event = self.session.emitted[event_index][1]
+        self.assertEqual(event["reason"], "coordination-required")
+        self.assertEqual(
+            self.session.emitted_causes[event_index],
+            ["evt_coordination_deferred"],
+        )
+        self.assertNotIn(
+            "diagnostic.failed", [kind for kind, _ in self.session.emitted],
+        )
+
+        evidence_path = (
+            self.state / "sessions" / self.session.session_id
+            / "diagnostic-artifacts" / "session-evidence.jsonl"
+        )
+        durable = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[-1])
+        record = durable["diagnostics"][0]
+        self.assertEqual(record["outcome"], "deferred")
+        self.assertEqual(record["capture_disposition"], "coordination-deferred")
+        self.assertEqual(
+            record["coordination"]["authority_event_reference"]["identity"],
+            "evt_coordination_deferred",
+        )
 
     def test_only_mode_merges_without_pruning(self):
         self.session.snapshot["verification_state"] = {

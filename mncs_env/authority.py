@@ -532,9 +532,10 @@ def evaluate(
     mutating = action in (
         "write", "mutate", "merge", "delete", "execute", "retire", "publish"
     )
-    # Verification executes provider code inside a checkout, so foreign
-    # ownership conflicts deny exactly like mutation; unlike mutation,
-    # dirt and branch are the *subject* under verification, not a bar.
+    # Verification executes provider code inside a checkout, so an actual
+    # scope overlap defers the operation until it can use an isolated or
+    # non-overlapping scope. Unlike mutation, dirt and branch are the
+    # *subject* under verification, not a bar.
     conflict_checked = mutating or action == "verify"
     requested = (
         _requested_scope(repo, target, scope, repo_facts)
