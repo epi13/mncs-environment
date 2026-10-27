@@ -1,0 +1,147 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_specific_why_readback_20261027",
+  "captured_at": "2026-10-27T20:15:16Z",
+  "measurement_basis": "Focused regression verification and read-only Store-backed query of the selected projection's current semantics, shared state, and latest session pass observation",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_07b42700bf08f574",
+    "campaign_evidence_count_before_recording": 87
+  },
+  "observation": {
+    "kind": "projection-specific-why-live-readback",
+    "source_interface": "MNCS Environment mncs-env projections --interpret why --projection",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --interpret why --repository mncs-environment --projection mncs-environment:overview",
+      "implementation_commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "projection_identity": "mncs-environment:overview",
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "outcome": {
+      "query_status": "completed",
+      "projection_current": false,
+      "advanced_subjects": [
+        "capabilities"
+      ],
+      "health": {
+        "status": "manual-divergence",
+        "code": 6,
+        "repair": 2
+      },
+      "current_semantic_identity": "sha256:b2b284e2f436696f3888ed69334004c041c5a2fcd9ce0764b429531bb5a33c51",
+      "shared_state": {
+        "version": 154,
+        "status": 3,
+        "accepted_owned_digest": "sha256:b530ae8133ae94e4d793f2f6dc4d7ec00b92d306f5c3219ba562535cfa3f7872"
+      },
+      "latest_pass_observation": {
+        "status": "observed",
+        "finished_at": "2026-10-27T20:10:39+00:00",
+        "outcome": "deferred",
+        "gate_reason": "manual-divergence",
+        "evidence_ref": "mncs-store:ses_a752e1c55fb4ca6f:projections:16a3db974616319991e5408aab216f4586c946d149120d8c2afe1efdbe60efc7",
+        "diagnostic": {
+          "target": "README.md",
+          "ownership_scope": "generated-region",
+          "classification": "manual-divergence",
+          "observed_owned_digest": "sha256:7fd0f71f82a9618f14c5b7c6c57eda27a6830a23fe4401064906050a01fe5edf",
+          "candidate_render_bytes_digest": "sha256:af1517913242c6fe13992549e61e6f3bd1cfd3eece6995608a8f2f3e99a475a7",
+          "previously_accepted_digest": "sha256:b530ae8133ae94e4d793f2f6dc4d7ec00b92d306f5c3219ba562535cfa3f7872",
+          "automatic_write": "withheld"
+        },
+        "source_head": "0fb0d44ac8c1347f41627b2962d4af937ba3d056"
+      },
+      "read_only_check": {
+        "command": "git diff --exit-code -- README.md .mncs/project-view.json",
+        "result": "passed"
+      },
+      "interpretation": "The exact-projection query joined current source state and output identity with the latest persisted pass record. It exposed the actual manual-divergence decision, current, candidate, and previously accepted digests, evidence reference, and withheld-write status in one read. It did not infer the author or intent of the changed README bytes, reconcile the target, or establish that reconciliation is appropriate.",
+      "effectiveness_assessment": "diagnostic-availability-demonstrated-for-one-live-projection; agent-effort-reduction-and-divergence-resolution-not-assessed"
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_projection_specific_why_20261027",
+    "addresses_hypothesis_identity": "ph_environment_projection_blocker_context_requires_broad_manual_reconstruction_20261027",
+    "implementation_reference": {
+      "repository": "mncs-environment",
+      "commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "paths": [
+        "mncs_env/projections.py",
+        "mncs_env/cli.py"
+      ]
+    },
+    "verification_observation_identity": "ev_environment_projection_specific_why_readback_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The read-only why route now selects a declared semantic projection by exact id and joins its latest matching session pass observation to current semantic and shared projection state. Focused tests verify exact selection, default compatibility, unknown id handling, route restriction, and CLI forwarding. The live readback demonstrates the joined evidence on a real deferred README projection while preserving the authored region.",
+    "not_measured": [
+      "whether the query reduces agent time or tool calls across workflows",
+      "who changed the divergent README region or why",
+      "whether the divergence should be reconciled",
+      "whether the projection service acts at the right time without explicit invocation",
+      "recurrence across other repositories, sessions, agents, or models"
+    ]
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_blocker_context_requires_broad_manual_reconstruction_20261027",
+    "title": "Projection-specific diagnosis omits the latest ambient comparison unless agents separately inspect the full projection evidence",
+    "category": "environmental-service-discoverability",
+    "subsystem": "MNCS Environment semantic projection diagnosis",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Let a read-only projection-specific diagnosis expose the matching latest pass observation and its immutable evidence reference alongside current source and shared state."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_projection_specific_why_source_3199286",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "path": "mncs_env/projections.py",
+      "sha256": "c01eb194d657c8b2db81da39b8699b14aeba3ed7694a4d35d7b8f21cff1aed8d"
+    },
+    {
+      "identity": "mncs_environment_projection_specific_why_cli_3199286",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "path": "mncs_env/cli.py",
+      "sha256": "d8b82012dd963c355374bc7cc6d4c0773c081958c46603f0e30954d4086dd6dc"
+    },
+    {
+      "identity": "mncs_environment_projection_specific_why_tests_3199286",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "path": "tests/test_projections.py",
+      "sha256": "4c8631df09a1bacd7deff85a81fca9aba5cc0a83b9ff8cbcf8bc4e77392fe724"
+    },
+    {
+      "identity": "mncs_environment_projection_specific_why_cli_tests_3199286",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "path": "tests/test_capability_projection_cli.py",
+      "sha256": "8bf361eb30956f6127f860e4002575131097a7a01077fa1918b315ffa6d407dd"
+    },
+    {
+      "identity": "mncs_environment_projection_specific_why_contract_3199286",
+      "kind": "documentation-source",
+      "repository": "mncs-environment",
+      "commit": "3199286258f788521d61e922ad06f5b7c5fee879",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "5cd8c28dda617a955da99be3ae390675374b11fe2147ea6b40e9876467374b99"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
