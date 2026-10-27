@@ -1468,8 +1468,6 @@ def cmd_claims(args: argparse.Namespace) -> int:
                         if not workspace:
                             return fail("session has no resolved workspace root")
                         checkout = str((Path(workspace) / checkout_path).resolve())
-                if args.worktree and branch is None:
-                    branch = selected.get("branch")
                 scope_kind = "worktree" if args.worktree else "paths"
                 if args.paths and not args.worktree and not args.repository_paths:
                     selected_path = selected.get("path") if isinstance(selected, dict) else None
@@ -1479,15 +1477,12 @@ def cmd_claims(args: argparse.Namespace) -> int:
                             "select a worktree or use --repository-paths for an intentional "
                             "repository-relative claim"
                         )
-                    selected_branch = selected.get("branch")
-                    if args.branch is not None and args.branch != selected_branch:
-                        return fail(
-                            "--branch cannot override the selected checkout branch for "
-                            "a worktree-scoped path claim"
-                        )
                     checkout = selected_path
-                    branch = selected_branch
                     scope_kind = "worktree"
+                # Do not copy a branch from the entry-time snapshot. Claim
+                # acquisition revalidates the exact registered checkout and
+                # derives its current branch when omitted. An explicit branch
+                # remains a precondition checked against that live checkout.
                 scope = {"kind": scope_kind,
                          "checkout": checkout, "branch": branch,
                          "paths": args.paths}

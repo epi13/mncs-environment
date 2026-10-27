@@ -110,8 +110,11 @@ revalidates capabilities and Rights in the same operation, then applies the
 ordinary claim checks to the refreshed state. This handles a branch selection
 or commit without a separate manual reconcile. It does not add repository
 rights, transfer another session's claim, adopt dirty work, or bypass live
-scope conflicts. If checkout identity changes or revalidation cannot establish
-a stable state, acquisition fails closed.
+scope conflicts. The CLI leaves `branch` unspecified when it was not supplied,
+so an entry-time branch value cannot become a stale precondition before that
+refresh. An explicit `--branch` remains an exact precondition checked against
+the live registered checkout. If checkout identity changes or revalidation
+cannot establish a stable state, acquisition fails closed.
 
 Worktree claims preserve stable checkout and Git common-directory identities.
 Several claims held by the same session for one exact checkout can therefore

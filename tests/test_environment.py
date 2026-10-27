@@ -1733,13 +1733,18 @@ class ClaimTests(unittest.TestCase):
                     "campaign/checkout-drift",
                 ], check=True)
 
-                branch_claim = session.acquire_claim(
-                    "mncs-forge", reason="claim after branch selection",
-                    scope={
-                        "kind": "worktree", "checkout": str(selected_root),
-                        "paths": ["advance.txt"],
-                    },
-                )
+                parsed = cli.build_parser().parse_args([
+                    "claims", session.session_id, "--acquire", "mncs-forge",
+                    "--paths", "advance.txt",
+                ])
+                parsed.state_dir = state
+                parsed.persistence = "file"
+                claim_output = io.StringIO()
+                with redirect_stdout(claim_output):
+                    claim_status = cli.cmd_claims(parsed)
+                self.assertEqual(claim_status, 0, claim_output.getvalue())
+                branch_claim = json.loads(claim_output.getvalue())
+                session._reload_snapshot()
 
                 self.assertEqual(branch_claim["scope"]["branch"], "campaign/checkout-drift")
                 self.assertEqual(

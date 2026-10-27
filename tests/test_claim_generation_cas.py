@@ -141,7 +141,7 @@ class ClaimGenerationCliTests(unittest.TestCase):
     def parse(self, *args: str):
         return cli.build_parser().parse_args(["claims", "ses_fixture", *args])
 
-    def test_path_claim_defaults_to_selected_worktree(self):
+    def test_path_claim_defaults_to_selected_worktree_without_stale_branch(self):
         parsed = self.parse(
             "--acquire", "fixture", "--paths", "src/component.mncs",
         )
@@ -168,7 +168,71 @@ class ClaimGenerationCliTests(unittest.TestCase):
         self.assertEqual(observed["scope"], {
             "kind": "worktree",
             "checkout": "/workspace/fixture",
-            "branch": "campaign/agent-a",
+            "branch": None,
+            "paths": ["src/component.mncs"],
+        })
+
+    def test_explicit_branch_is_passed_as_a_live_checkout_precondition(self):
+        parsed = self.parse(
+            "--acquire", "fixture", "--paths", "src/component.mncs",
+            "--branch", "campaign/agent-b",
+        )
+        observed = {}
+        session = SimpleNamespace(
+            snapshot={
+                "selected_checkouts": {"fixture": {
+                    "path": "/workspace/fixture",
+                    "branch": "campaign/agent-a",
+                }},
+                "workspace": {"root": "/workspace"},
+            },
+            acquire_claim=lambda repository, **kwargs: observed.update(
+                repository=repository, **kwargs,
+            ) or {"status": "held", "scope": kwargs["scope"]},
+        )
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), patch.object(
+            cli, "open_store", return_value=SimpleNamespace(close=lambda: None),
+        ), patch.object(cli, "_resume_session", return_value=session):
+            code = cli.cmd_claims(parsed)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(observed["scope"], {
+            "kind": "worktree",
+            "checkout": "/workspace/fixture",
+            "branch": "campaign/agent-b",
+            "paths": ["src/component.mncs"],
+        })
+
+    def test_unselected_worktree_claim_does_not_inherit_selected_branch(self):
+        parsed = self.parse(
+            "--acquire", "fixture", "--worktree", "/workspace/fixture/.worktrees/target",
+            "--paths", "src/component.mncs",
+        )
+        observed = {}
+        session = SimpleNamespace(
+            snapshot={
+                "selected_checkouts": {"fixture": {
+                    "path": "/workspace/fixture",
+                    "branch": "campaign/agent-a",
+                }},
+                "workspace": {"root": "/workspace"},
+            },
+            acquire_claim=lambda repository, **kwargs: observed.update(
+                repository=repository, **kwargs,
+            ) or {"status": "held", "scope": kwargs["scope"]},
+        )
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), patch.object(
+            cli, "open_store", return_value=SimpleNamespace(close=lambda: None),
+        ), patch.object(cli, "_resume_session", return_value=session):
+            code = cli.cmd_claims(parsed)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(observed["scope"], {
+            "kind": "worktree",
+            "checkout": "/workspace/fixture/.worktrees/target",
+            "branch": None,
             "paths": ["src/component.mncs"],
         })
 
