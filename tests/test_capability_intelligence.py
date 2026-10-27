@@ -4815,6 +4815,38 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
             ),
         }],
     }}
+    observed_events = [
+        {
+            "identity": "evt_service_activity_invoked",
+            "sequence": 1,
+            "type": "capability.invoked",
+            "producer": "environment",
+            "payload": {
+                "provider_request_id": "req_service_activity",
+                "capability": "mncs-doc:documentation-projection",
+            },
+        },
+        {
+            "identity": "evt_service_activity_completed",
+            "sequence": 2,
+            "type": "invocation.completed",
+            "producer": "mncs-doc",
+            "payload": {
+                "provider_request_id": "req_service_activity",
+                "capability": "mncs-doc:documentation-projection",
+                "status": "ok",
+                "returncode": 0,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(observed_events),
+        "events": [event for event in observed_events if (
+            before_sequence is None or event["sequence"] < before_sequence
+        )][-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
 
     result = capability_intelligence.project(session)
     activity = result["session_activity"]
@@ -4848,6 +4880,83 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
         "no-declared-probe-opportunities"
     )
     assert accountability["services"] == []
+    observed_activity = accountability["observed_capability_activity"]
+    assert observed_activity["status"] == (
+        "observed-without-valid-owner-pass-context"
+    )
+    assert observed_activity["scope"] == (
+        "selected-session-event-window-capability-calls-without-valid-"
+        "owner-pass-context"
+    )
+    assert observed_activity["summary"] == {
+        "unclassified_invocation_count": 1,
+        "invalid_context_event_count": 0,
+        "capability_group_count": 1,
+        "returned_capability_group_count": 1,
+        "omitted_capability_group_count": 0,
+        "eligible_service_opportunity_count": None,
+    }
+    assert observed_activity["source"]["ambient_owner_pass_activity_digest"] == (
+        result["source"]["session_ambient_owner_pass_activity_digest"]
+    )
+    assert observed_activity["source"]["event_window_status"] == (
+        "complete-selected-window"
+    )
+    assert observed_activity["agent_attribution_status"] == "not-established"
+    assert observed_activity["agent_intervention_burden_status"] == "not-measured"
+    assert observed_activity["causal_status"] == "not-established"
+    assert observed_activity["groups"][0]["capability"] == (
+        "mncs-doc:documentation-projection"
+    )
+    assert [event["identity"] for event in observed_activity["groups"][0][
+        "supporting_events"
+    ]] == [
+        "evt_service_activity_invoked", "evt_service_activity_completed",
+    ]
+
+    compact = capability_intelligence._compact_service_accountability_overview(
+        accountability, activity["ambient_service_execution"],
+    )
+    assert compact["observed_capability_activity"]["groups"][0][
+        "supporting_events"
+    ] == observed_activity["groups"][0]["supporting_events"]
+
+    without_scheduler = capability_intelligence._session_service_accountability(
+        {
+            "services": [],
+            "source": {"service_declaration_status": "not-recorded"},
+            "summary": {},
+        },
+        None,
+        session.snapshot,
+        activity["ambient_owner_pass_activity"],
+        None,
+    )
+    assert without_scheduler is None
+
+    bounded_projection = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+    )
+    bounded_accountability = bounded_projection["session_activity"][
+        "service_accountability"
+    ]
+    assert bounded_projection["source"]["response_truncated"] is True
+    bounded_observed = bounded_accountability["observed_capability_activity"]
+    if bounded_observed.get("group_detail_reference"):
+        assert bounded_observed["group_detail_reference"] == (
+            "session_activity.ambient_owner_pass_activity."
+            "unclassified_capability_activity"
+        )
+        bounded_owner_activity = bounded_projection["session_activity"][
+            "ambient_owner_pass_activity"
+        ]
+        bounded_references = bounded_owner_activity[
+            "unclassified_capability_activity"
+        ][0]["supporting_events"]
+    else:
+        bounded_references = bounded_observed["groups"][0]["supporting_events"]
+    assert bounded_references[0]["identity"] == "evt_service_activity_invoked"
+
     environment_execution = accountability["environment_service_execution"]
     assert environment_execution["status"] == "partial"
     assert environment_execution["scope"] == (

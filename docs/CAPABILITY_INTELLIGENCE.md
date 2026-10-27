@@ -74,15 +74,32 @@ opportunity, service failure, or reduced intervention. Its digest participates
 in the service-accountability projection identity, including when response-
 budget compaction retains only its summary.
 
-In the first response-compaction pass,
-`session_activity.service_accountability` retains bounded per-pass observations
-from the linked `ambient_service_execution` trace. Each scheduled row can relate its
-trigger kinds, raw scheduler disposition and wave, execution identity, elapsed
-time, recorded outcome, and safe result reference; skipped rows preserve the
-scheduler's bounded reason. The disposition remains a code from the router's
-contract, not an interpreted service verdict. These are Environment scheduling
-records, not an agent-opportunity denominator or proof of fulfillment,
-correctness, or reduced intervention.
+When readiness services are explicitly empty and the session records an
+Environment owner-pass execution, the same
+`service_accountability.observed_capability_activity` view joins selected-
+session capability calls lacking valid owner-pass context with the session
+objective, event-window identity, activity-projection digest, and bounded
+invocation/completion references. This makes otherwise separate activity and
+scheduler evidence inspectable together. The view does not infer that a call
+was manual, that a service opportunity existed, or that an agent received a
+result; attribution, causality, eligible opportunities, fulfillment, and
+intervention burden remain unestablished or unmeasured. A complete selected
+window only describes the available session event page, while paged or
+truncated windows retain those limitations explicitly.
+
+Under response pressure, `session_activity.service_accountability` retains
+scheduler totals, the source projection digest, and a few exact links to
+recorded results. The sibling
+`session_activity.ambient_service_execution` contains the bounded per-pass
+source. Each scheduled row can relate trigger kinds, raw scheduler disposition
+and wave, execution identity, elapsed time, recorded outcome, and safe result
+reference; skipped rows preserve the scheduler's bounded reason. The
+disposition remains a code from the router's contract, not an interpreted
+service verdict. These are Environment scheduling records, not an
+agent-opportunity denominator or proof of fulfillment, correctness, or reduced
+intervention. When the final ECI summary must drop the sibling activity
+projection, the service-accountability view restores bounded unscoped-call
+references from its source projection digest.
 
 If the whole ECI response still exceeds its requested byte budget, a final
 summary-only view keeps service totals, exact source references for recorded

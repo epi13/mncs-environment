@@ -2639,7 +2639,7 @@ def _compact_service_accountability_overview(
     if type(previously_omitted) is not int or previously_omitted < 0:
         previously_omitted = 0
     omitted = projected_count + previously_omitted
-    return {
+    result = {
         "schema_version": value.get("schema_version"),
         "status": value.get("status"),
         "scope": value.get("scope"),
@@ -2650,6 +2650,12 @@ def _compact_service_accountability_overview(
         "services_omitted_count": omitted,
         "response_budget_summary_only": True,
     }
+    observed_activity = _compact_service_observed_capability_activity(
+        value.get("observed_capability_activity"),
+    )
+    if observed_activity is not None:
+        result["observed_capability_activity"] = observed_activity
+    return result
 
 
 def _compact_ambient_service_execution_overview(
@@ -2725,7 +2731,7 @@ def _compact_ambient_service_execution_overview(
 
 
 def _compact_session_activity_budget_overview(
-    activity: Any,
+    activity: Any, source_activity: Any = None,
 ) -> dict[str, Any] | None:
     """Summarize secondary session context when detail exceeds the budget.
 
@@ -2921,6 +2927,48 @@ def _compact_session_activity_budget_overview(
                     pass_observations.pop("decision_coverage", None)
                     if omitted:
                         pass_observations["response_budget_truncated"] = True
+            observed = compact_accountability.get(
+                "observed_capability_activity",
+            )
+            source_accountability = (
+                source_activity.get("service_accountability")
+                if isinstance(source_activity, dict) else None
+            )
+            source_observed = (
+                source_accountability.get("observed_capability_activity")
+                if isinstance(source_accountability, dict) else None
+            )
+            if (isinstance(observed, dict)
+                    and observed.get("group_detail_reference")
+                    and isinstance(source_observed, dict)):
+                source_groups = source_observed.get("groups")
+                compact_groups = _compact_unclassified_owner_pass_activity(
+                    source_groups,
+                )
+                if compact_groups:
+                    observed["groups"] = compact_groups
+                    observed["groups_truncated"] = (
+                        source_observed.get("groups_truncated") is True
+                        or (isinstance(source_groups, list)
+                            and len(source_groups) > len(compact_groups))
+                    )
+                    observed.pop("group_detail_reference", None)
+                    observed_summary = observed.get("summary")
+                    source_summary = source_observed.get("summary")
+                    if isinstance(observed_summary, dict):
+                        observed_summary[
+                            "returned_capability_group_count"
+                        ] = len(compact_groups)
+                        if isinstance(source_summary, dict):
+                            for key in (
+                                "capability_group_count",
+                                "omitted_capability_group_count",
+                            ):
+                                if key in source_summary:
+                                    observed_summary[key] = source_summary[key]
+                        observed_summary.pop(
+                            "group_details_referenced_count", None,
+                        )
             result["service_accountability"] = compact_accountability
 
     doctor_history = activity.get("doctor_health_history")
@@ -3512,6 +3560,78 @@ def _compact_unclassified_owner_pass_activity(value: Any) -> list[dict[str, Any]
             )
         compact_rows.append(compact_row)
     return compact_rows
+
+
+def _compact_service_observed_capability_activity(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Retain bounded context, counts and source links for unscoped calls."""
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "ambient_owner_pass_activity_digest", "activity_status",
+            "event_window_status", "event_window_identity_digest",
+        )
+        if isinstance(source.get(key), str)
+    }
+    for key in (
+        "event_window_sequence_start", "event_window_sequence_end",
+        "event_page_before_sequence",
+    ):
+        if type(source.get(key)) is int and source[key] >= 0:
+            compact_source[key] = source[key]
+    summary = value.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    compact_summary = {
+        key: summary[key]
+        for key in (
+            "unclassified_invocation_count", "invalid_context_event_count",
+            "capability_group_count", "returned_capability_group_count",
+            "omitted_capability_group_count", "eligible_service_opportunity_count",
+            "group_details_referenced_count",
+        )
+        if type(summary.get(key)) is int and summary[key] >= 0
+        or (key == "eligible_service_opportunity_count"
+            and key in summary and summary[key] is None)
+    }
+    raw_groups = value.get("groups")
+    groups = _compact_unclassified_owner_pass_activity(raw_groups)
+    omitted = summary.get("omitted_capability_group_count", 0)
+    if type(omitted) is not int or omitted < 0:
+        omitted = 0
+    if isinstance(raw_groups, list) and len(groups) < len(raw_groups):
+        omitted += len(raw_groups) - len(groups)
+    compact_summary["returned_capability_group_count"] = len(groups)
+    if omitted:
+        compact_summary["omitted_capability_group_count"] = omitted
+    result = {
+        "status": value.get("status"),
+        "scope": value.get("scope"),
+        "source": compact_source,
+        "summary": compact_summary,
+        "groups": groups,
+        "groups_truncated": bool(omitted),
+        "causal_status": value.get("causal_status", "not-established"),
+        "agent_attribution_status": value.get(
+            "agent_attribution_status", "not-established",
+        ),
+        "agent_intervention_burden_status": value.get(
+            "agent_intervention_burden_status", "not-measured",
+        ),
+        "measurement_limits": [
+            _short_text(item, 320)
+            for item in value.get("measurement_limits", [])[:4]
+            if isinstance(item, str)
+        ] if isinstance(value.get("measurement_limits"), list) else [],
+    }
+    group_detail_reference = value.get("group_detail_reference")
+    if isinstance(group_detail_reference, str):
+        result["group_detail_reference"] = group_detail_reference
+    return result
 
 
 def _compact_projection(
@@ -6363,7 +6483,7 @@ def _compact_projection(
         compact_activity["service_readiness"] = raw_service_readiness
     raw_service_accountability = activity.get("service_accountability")
     if isinstance(raw_service_accountability, dict):
-        # The session projection has already bounded and sanitized this join.
+        # The session projection already bounds and sanitizes this join.
         compact_activity["service_accountability"] = raw_service_accountability
     raw_ambient_service_execution = activity.get("ambient_service_execution")
     compact_service_accountability_fallback = (
@@ -6478,6 +6598,69 @@ def _compact_projection(
             "A scoped call links to an owner pass; it does not establish fulfillment or reduced intervention burden.",
         ]
         compact_activity["ambient_owner_pass_activity"] = compact_owner_activity
+        accountability_view = compact_activity.get("service_accountability")
+        if isinstance(accountability_view, dict):
+            observed_view = accountability_view.get(
+                "observed_capability_activity",
+            )
+            observed_source = (
+                observed_view.get("source")
+                if isinstance(observed_view, dict) else None
+            )
+            activity_digest = activity_source.get(
+                "ambient_owner_pass_activity_digest",
+            )
+            if (isinstance(observed_source, dict)
+                    and isinstance(activity_digest, str)
+                    and observed_source.get(
+                        "ambient_owner_pass_activity_digest",
+                    ) == activity_digest
+                    and compact_unclassified):
+                observed_summary = observed_view.get("summary")
+                observed_summary = (
+                    observed_summary if isinstance(observed_summary, dict) else {}
+                )
+                compact_observed = {
+                    "status": observed_view.get("status"),
+                    "source": {
+                        key: observed_source[key]
+                        for key in (
+                            "ambient_owner_pass_activity_digest",
+                            "event_window_status",
+                            "event_window_identity_digest",
+                        )
+                        if isinstance(observed_source.get(key), str)
+                    },
+                    "summary": {
+                        key: observed_summary[key]
+                        for key in (
+                            "unclassified_invocation_count",
+                            "invalid_context_event_count",
+                            "capability_group_count",
+                            "eligible_service_opportunity_count",
+                        )
+                        if type(observed_summary.get(key)) is int
+                        or (key == "eligible_service_opportunity_count"
+                            and observed_summary.get(key) is None)
+                    },
+                    "group_detail_reference": (
+                        "session_activity.ambient_owner_pass_activity."
+                        "unclassified_capability_activity"
+                    ),
+                    "causal_status": "not-established",
+                    "agent_attribution_status": "not-established",
+                    "agent_intervention_burden_status": "not-measured",
+                }
+                compact_observed["summary"][
+                    "group_details_referenced_count"
+                ] = len(compact_unclassified)
+                compact_accountability = dict(accountability_view)
+                compact_accountability[
+                    "observed_capability_activity"
+                ] = compact_observed
+                compact_activity["service_accountability"] = (
+                    compact_accountability
+                )
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity["operation_deferral_count"] = activity.get(
             "operation_deferral_count", 0,
@@ -7736,7 +7919,7 @@ def _compact_projection(
                 "evidence-priority-response-budget",
             }):
         compact_activity = _compact_session_activity_budget_overview(
-            result.get("session_activity"),
+            result.get("session_activity"), raw_activity,
         )
         if compact_activity is not None:
             result["session_activity"] = compact_activity
@@ -17383,13 +17566,112 @@ def _environment_service_execution_accountability(
     return result
 
 
+def _service_observed_capability_activity(
+    value: Any, event_window_source: Any = None,
+) -> dict[str, Any] | None:
+    """Expose bounded calls lacking owner-pass context without attribution."""
+    if not isinstance(value, dict):
+        return None
+    raw_groups = value.get("unclassified_capability_activity")
+    raw_groups = raw_groups if isinstance(raw_groups, list) else []
+    groups = _compact_unclassified_owner_pass_activity(raw_groups)
+    unclassified_invocations = value.get("unclassified_invocation_count", 0)
+    if type(unclassified_invocations) is not int or unclassified_invocations < 0:
+        unclassified_invocations = 0
+    invalid_context_events = value.get("invalid_context_event_count", 0)
+    if type(invalid_context_events) is not int or invalid_context_events < 0:
+        invalid_context_events = 0
+    omitted_groups = value.get(
+        "unclassified_capability_activity_omitted_count", 0,
+    )
+    if type(omitted_groups) is not int or omitted_groups < 0:
+        omitted_groups = 0
+    omitted_groups += max(0, len(raw_groups) - len(groups))
+    if not (
+        unclassified_invocations or invalid_context_events or raw_groups
+        or omitted_groups
+    ):
+        return None
+    activity_status = value.get("status")
+    event_window_source = (
+        event_window_source if isinstance(event_window_source, dict)
+        else value.get("event_window_source")
+    )
+    event_window_source = (
+        event_window_source if isinstance(event_window_source, dict) else {}
+    )
+    if activity_status == "unavailable":
+        status = "activity-unavailable"
+    elif unclassified_invocations or invalid_context_events or raw_groups or omitted_groups:
+        status = (
+            "observed-with-details-omitted" if omitted_groups
+            else "observed-without-valid-owner-pass-context"
+        )
+    elif activity_status in {"observed", "partial", "not-recorded-on-invocations"}:
+        status = "not-observed-in-selected-event-window"
+    else:
+        status = "activity-status-unknown"
+    source = {
+        "ambient_owner_pass_activity_digest": digest_hex(value),
+        "activity_status": (
+            activity_status if isinstance(activity_status, str) else "unknown"
+        ),
+        "event_window_status": event_window_source.get(
+            "status", "not-recorded",
+        ),
+    }
+    for key in ("event_window_identity_digest",):
+        if isinstance(event_window_source.get(key), str):
+            source[key] = event_window_source[key]
+    for key in (
+        "event_window_sequence_start", "event_window_sequence_end",
+        "event_page_before_sequence",
+    ):
+        if (type(event_window_source.get(key)) is int
+                and event_window_source[key] >= 0):
+            source[key] = event_window_source[key]
+    all_omitted_groups = value.get(
+        "unclassified_capability_activity_omitted_count", 0,
+    )
+    if type(all_omitted_groups) is not int or all_omitted_groups < 0:
+        all_omitted_groups = 0
+    group_count = len(raw_groups) + all_omitted_groups
+    return {
+        "status": status,
+        "scope": (
+            "selected-session-event-window-capability-calls-without-valid-"
+            "owner-pass-context"
+        ),
+        "source": source,
+        "summary": {
+            "unclassified_invocation_count": unclassified_invocations,
+            "invalid_context_event_count": invalid_context_events,
+            "capability_group_count": group_count,
+            "returned_capability_group_count": len(groups),
+            "omitted_capability_group_count": omitted_groups,
+            "eligible_service_opportunity_count": None,
+        },
+        "groups": groups,
+        "groups_truncated": omitted_groups > 0,
+        "causal_status": "not-established",
+        "agent_attribution_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "measurement_limits": [
+            "Calls without valid owner-pass context are not attributed to an agent or manual work, and do not establish an eligible service opportunity.",
+            "The selected event window and grouped call list are bounded; absent activity does not establish that no service need existed.",
+            "Provider outcomes and return codes are not independent verification of downstream state or service fulfillment.",
+        ],
+    }
+
+
 def _session_service_accountability(
     service_readiness: Any, capability_delivery: Any,
     snapshot: dict[str, Any] | None = None,
     ambient_owner_pass_activity: Any = None,
     ambient_service_execution: Any = None,
+    event_window_source: Any = None,
 ) -> dict[str, Any] | None:
-    """Relate declared services to their exact session capability evidence."""
+    """Relate service declarations, scheduler evidence and session activity."""
     if not isinstance(service_readiness, dict):
         return None
     raw_services = service_readiness.get("services")
@@ -17408,6 +17690,16 @@ def _session_service_accountability(
                      or environment_execution.get("status")
                      == "not-recorded-in-session")):
             return None
+        has_environment_execution = (
+            isinstance(environment_execution, dict)
+            and environment_execution.get("status") != "not-recorded-in-session"
+        )
+        observed_capability_activity = (
+            _service_observed_capability_activity(
+                ambient_owner_pass_activity, event_window_source,
+            ) if declaration_status == "explicit-empty"
+            and has_environment_execution else None
+        )
         snapshot = snapshot if isinstance(snapshot, dict) else {}
         campaign = snapshot.get("campaign")
         campaign = campaign if isinstance(campaign, dict) else {}
@@ -17491,9 +17783,15 @@ def _session_service_accountability(
             },
             "services": [],
             **({"environment_service_execution": environment_execution}
-               if environment_execution is not None else {}),
+               if has_environment_execution else {}),
+            **({"observed_capability_activity": observed_capability_activity}
+               if observed_capability_activity is not None else {}),
             "measurement_limits": [
-                "This view covers selected-session readiness declarations plus the bounded Environment owner-pass scheduler contract; it does not enumerate every Environment capability or agent service opportunity.",
+                (
+                    "This view covers selected-session readiness declarations, bounded Environment owner-pass scheduling when recorded, and bounded capability calls lacking valid owner-pass context; it does not enumerate every Environment capability or agent service opportunity."
+                    if observed_capability_activity is not None else
+                    "This view covers selected-session readiness declarations plus the bounded Environment owner-pass scheduler contract; it does not enumerate every Environment capability or agent service opportunity."
+                ),
                 "An empty or unavailable readiness declaration does not establish zero ambient activity or successful fulfillment.",
                 "Agent need, receipt, intervention burden, and outcome quality remain unmeasured.",
             ],
@@ -19904,7 +20202,32 @@ def _session_activity(
         service_readiness, capability_delivery, snapshot,
         ambient_owner_pass_activity,
         ambient_service_execution,
+        {
+            "status": (
+                "truncated-selected-window" if event_window_truncated else
+                "paged-selected-window" if event_before_sequence is not None else
+                "complete-selected-window"
+            ),
+            "event_window_identity_digest": digest_hex(
+                window_references, length=16,
+            ),
+            "event_window_sequence_start": (
+                window_references[0]["sequence"] if window_references else None
+            ),
+            "event_window_sequence_end": (
+                window_references[-1]["sequence"] if window_references else None
+            ),
+            "event_page_before_sequence": event_before_sequence,
+        },
     )
+    if (ambient_owner_pass_activity_digest is None
+            and ambient_owner_pass_activity.get(
+                "unclassified_invocation_count", 0,
+            )
+            and service_accountability is not None):
+        ambient_owner_pass_activity_digest = digest_hex(
+            ambient_owner_pass_activity,
+        )
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
     ]
@@ -23253,6 +23576,11 @@ def project(
                 or activity["ambient_owner_pass_activity"].get(
                     "invalid_context_event_count", 0,
                 )
+                or (activity["ambient_owner_pass_activity"].get(
+                    "unclassified_invocation_count", 0,
+                ) and isinstance(
+                    activity.get("service_accountability"), dict,
+                ))
             )) else None
     )
     pressure_evidence_summary = _pressure_evidence_summary(
