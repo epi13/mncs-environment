@@ -26,6 +26,7 @@ from . import claims as claims_module
 from . import invocation_artifacts as invocation_artifacts_module
 from . import readiness as readiness_module
 from . import workspace as workspace_module
+from .capabilities import normalize_provider_evidence_path
 from .identity import digest_hex
 from .sessions import (
     MAX_RPC_READ_ACTIVITY_OBSERVATIONS,
@@ -534,6 +535,87 @@ def _short_text(value: Any, limit: int = 192) -> str | None:
     if len(value) <= limit:
         return value
     return value[:limit - 1] + "…"
+
+
+def _provider_declarations(
+    raw_binding: dict[str, Any], provider: str,
+) -> list[dict[str, Any]]:
+    provenance = raw_binding.get("provenance")
+    if not isinstance(provenance, dict):
+        return []
+    coalesced = provenance.get("coalesced_declarations")
+    candidates = coalesced if isinstance(coalesced, list) else [provenance]
+    checkout = provenance.get("checkout")
+    checkout = checkout if isinstance(checkout, dict) else {}
+    observed_head = checkout.get("authoritative_head") or checkout.get("head")
+    if not isinstance(observed_head, str) or not _COMMIT.fullmatch(observed_head):
+        observed_head = None
+
+    result: list[dict[str, Any]] = []
+    for candidate in candidates[:8]:
+        if not isinstance(candidate, dict):
+            continue
+        declaration: dict[str, Any] = {}
+        for source_key, output_key, limit in (
+            ("source", "source", 160),
+            ("addressing", "invocation_addressing", 64),
+            ("addressing_detail", "addressing_detail", 160),
+            ("kind", "declared_kind", 96),
+            ("stability", "declared_stability", 64),
+        ):
+            value = candidate.get(source_key)
+            if isinstance(value, str) and value:
+                declaration[output_key] = _short_text(value, limit)
+        declared_status = candidate.get(
+            "status", candidate.get("provider_declared_status"),
+        )
+        if isinstance(declared_status, str) and declared_status:
+            declaration["declared_status"] = _short_text(
+                declared_status, 64,
+            )
+        for source_key, output_key in (
+            ("declared_invocation", "invocation_descriptor_declared"),
+        ):
+            value = candidate.get(source_key)
+            if type(value) is bool:
+                declaration[output_key] = value
+        address_present = candidate.get("address_present")
+        if type(address_present) is not bool:
+            address = raw_binding.get("address")
+            address_present = isinstance(address, str) and bool(address)
+        declaration["invocation_address_present"] = address_present
+        evidence_path = normalize_provider_evidence_path(
+            candidate.get("provider_declared_evidence_path"),
+        )
+        if evidence_path is not None:
+            reference = {
+                "provider": provider,
+                "path": evidence_path,
+                "basis": "provider-declared",
+                "implementation_ownership_status": "not-established",
+                "content_integrity_status": "not-verified",
+            }
+            source = declaration.get("source")
+            if isinstance(source, str):
+                reference["declaration_source"] = source
+            if observed_head is not None:
+                reference["observed_checkout_head"] = observed_head
+            declaration["provider_declared_evidence_reference"] = reference
+        if declaration:
+            result.append(declaration)
+    return result
+
+
+def _provider_declaration_omitted_count(raw_binding: dict[str, Any]) -> int:
+    provenance = raw_binding.get("provenance")
+    if not isinstance(provenance, dict):
+        return 0
+    coalesced = provenance.get("coalesced_declarations")
+    declared_count = provenance.get("coalesced_declaration_count")
+    if (not isinstance(coalesced, list) or type(declared_count) is not int
+            or declared_count < 0):
+        return 0
+    return max(0, declared_count - len(coalesced))
 
 
 def _compact_measurement_summary(outcome: Any) -> dict[str, Any] | None:
@@ -1906,6 +1988,56 @@ def _compact_context_response_inclusion(value: Any) -> dict[str, Any] | None:
     return compact
 
 
+def _compact_provider_declarations(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    result: list[dict[str, Any]] = []
+    for item in value[:8]:
+        if not isinstance(item, dict):
+            continue
+        declaration = {
+            key: _short_text(item[key], limit)
+            for key, limit in (
+                ("source", 160), ("invocation_addressing", 64),
+                ("addressing_detail", 160), ("declared_kind", 96),
+                ("declared_stability", 64), ("declared_status", 64),
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in (
+            "invocation_descriptor_declared", "invocation_address_present",
+        ):
+            if type(item.get(key)) is bool:
+                declaration[key] = item[key]
+        reference = item.get("provider_declared_evidence_reference")
+        if isinstance(reference, dict):
+            path = normalize_provider_evidence_path(reference.get("path"))
+            repository = reference.get("provider")
+            if path is not None and isinstance(repository, str):
+                compact_reference = {
+                    "provider": _short_text(repository, 128),
+                    "path": path,
+                    "basis": "provider-declared",
+                    "implementation_ownership_status": "not-established",
+                    "content_integrity_status": "not-verified",
+                }
+                source = reference.get("declaration_source")
+                if isinstance(source, str):
+                    compact_reference["declaration_source"] = _short_text(
+                        source, 160,
+                    )
+                observed_head = reference.get("observed_checkout_head")
+                if isinstance(observed_head, str) and _COMMIT.fullmatch(
+                        observed_head):
+                    compact_reference["observed_checkout_head"] = observed_head
+                declaration["provider_declared_evidence_reference"] = (
+                    compact_reference
+                )
+        if declaration:
+            result.append(declaration)
+    return result
+
+
 def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -1933,6 +2065,14 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
             )[:8]
             if type(count) is int and count >= 0
         }
+    provider_declarations = _compact_provider_declarations(
+        value.get("provider_declarations"),
+    )
+    if provider_declarations:
+        result["provider_declarations"] = provider_declarations
+    declaration_omitted_count = value.get("provider_declarations_omitted_count")
+    if type(declaration_omitted_count) is int and declaration_omitted_count > 0:
+        result["provider_declarations_omitted_count"] = declaration_omitted_count
     references = value.get("supporting_events")
     if isinstance(references, list):
         result["supporting_events"] = [
@@ -1989,6 +2129,9 @@ def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
         "exact_binding_invocation_count", "exact_binding_completion_count",
         "binding_details_omitted_count", "binding_records_not_examined",
         "binding_records_invalid",
+        "provider_declared_evidence_reference_count",
+        "provider_evidence_reference_without_callable_address_count",
+        "provider_declarations_omitted_count",
     ):
         count = value.get(key)
         if type(count) is int and count >= 0:
@@ -2001,8 +2144,13 @@ def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
         summary["binding_details_truncated"] = value[
             "binding_details_truncated"
         ]
+    if type(value.get("provider_declaration_scan_complete")) is bool:
+        summary["provider_declaration_scan_complete"] = value[
+            "provider_declaration_scan_complete"
+        ]
     for key in (
         "availability_status_counts",
+        "provider_invocation_addressing_status_counts",
         "context_response_inclusion_status_counts",
         "context_response_binding_id_attribution_status_counts",
         "context_response_binding_id_list_status_counts",
@@ -3416,6 +3564,9 @@ def _compact_projection(
         "availability_transition_event_count",
         "availability_transition_events_omitted",
         "capabilities_not_in_current_binding_snapshot_omitted",
+        "provider_declared_evidence_reference_count",
+        "provider_evidence_reference_without_callable_address_count",
+        "provider_declarations_omitted_count",
     ):
         if type(raw_capability_delivery.get(key)) is int:
             compact_capability_delivery[key] = raw_capability_delivery[key]
@@ -3426,6 +3577,23 @@ def _compact_projection(
             for key, value in sorted(availability_counts.items())[:8]
             if isinstance(key, str) and type(value) is int and value >= 0
         }
+    addressing_counts = raw_capability_delivery.get(
+        "provider_invocation_addressing_status_counts",
+    )
+    if isinstance(addressing_counts, dict):
+        compact_capability_delivery[
+            "provider_invocation_addressing_status_counts"
+        ] = {
+            _short_text(key, 64): value
+            for key, value in sorted(addressing_counts.items())[:8]
+            if isinstance(key, str) and type(value) is int and value >= 0
+        }
+    if type(raw_capability_delivery.get(
+        "provider_declaration_scan_complete",
+    )) is bool:
+        compact_capability_delivery[
+            "provider_declaration_scan_complete"
+        ] = raw_capability_delivery["provider_declaration_scan_complete"]
     probe_binding_counts = raw_capability_delivery.get(
         "service_probe_binding_counts",
     )
@@ -3472,6 +3640,18 @@ def _compact_projection(
             )
             if isinstance(item.get(key), str)
         }
+        provider_declarations = _compact_provider_declarations(
+            item.get("provider_declarations"),
+        )
+        if provider_declarations:
+            compact_item["provider_declarations"] = provider_declarations
+        declaration_omitted_count = item.get(
+            "provider_declarations_omitted_count",
+        )
+        if type(declaration_omitted_count) is int and declaration_omitted_count > 0:
+            compact_item["provider_declarations_omitted_count"] = (
+                declaration_omitted_count
+            )
         for key in ("invocation_count", "completion_count"):
             if type(item.get(key)) is int and item[key] >= 0:
                 compact_item[key] = item[key]
@@ -10939,6 +11119,10 @@ def _capability_binding_evidence_summary(
     bindings: list[dict[str, Any]], *, availability_counts: dict[str, int],
     complete_history: bool, binding_details_omitted_count: int,
     binding_records_not_examined: int, binding_records_invalid: int,
+    provider_invocation_addressing_counts: dict[str, int] | None = None,
+    provider_declared_evidence_reference_count: int = 0,
+    provider_evidence_reference_without_callable_address_count: int = 0,
+    provider_declarations_omitted_count: int = 0,
 ) -> dict[str, Any]:
     def status_counts(field: str, nested_field: str | None = None) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -11028,6 +11212,23 @@ def _capability_binding_evidence_summary(
         ),
         "binding_count": len(bindings),
         "availability_status_counts": dict(sorted(availability_counts.items())[:8]),
+        "provider_invocation_addressing_status_counts": dict(sorted(
+            (provider_invocation_addressing_counts or {}).items(),
+        )[:8]),
+        "provider_declared_evidence_reference_count": max(
+            0, provider_declared_evidence_reference_count,
+        ),
+        "provider_evidence_reference_without_callable_address_count": max(
+            0, provider_evidence_reference_without_callable_address_count,
+        ),
+        "provider_declarations_omitted_count": max(
+            0, provider_declarations_omitted_count,
+        ),
+        "provider_declaration_scan_complete": (
+            binding_records_not_examined == 0
+            and binding_records_invalid == 0
+            and provider_declarations_omitted_count == 0
+        ),
         "context_response_inclusion_status_counts": status_counts(
             "context_response_inclusion", "status",
         ),
@@ -11314,6 +11515,10 @@ def _capability_delivery_view(
     seen_bindings: set[tuple[str, str]] = set()
     invalid_binding_count = 0
     availability_counts: dict[str, int] = {}
+    provider_invocation_addressing_counts: dict[str, int] = {}
+    provider_declared_evidence_reference_count = 0
+    provider_evidence_reference_without_callable_address_count = 0
+    provider_declarations_omitted_count = 0
     bindings_by_capability: dict[str, int] = {}
     examined_bindings = raw_bindings[:MAX_SESSION_ACTIVITY_BINDING_SCAN]
     for raw in examined_bindings:
@@ -11339,7 +11544,23 @@ def _capability_delivery_view(
             status = "unrecorded"
         availability_counts[status] = availability_counts.get(status, 0) + 1
         bindings_by_capability[capability] = bindings_by_capability.get(capability, 0) + 1
-        binding_records.append({
+        provider_declarations = _provider_declarations(raw, provider)
+        declaration_omitted_count = _provider_declaration_omitted_count(raw)
+        provider_declarations_omitted_count += declaration_omitted_count
+        for declaration in provider_declarations:
+            addressing = declaration.get("invocation_addressing")
+            if isinstance(addressing, str) and addressing:
+                provider_invocation_addressing_counts[addressing] = (
+                    provider_invocation_addressing_counts.get(addressing, 0) + 1
+                )
+            evidence_reference = declaration.get(
+                "provider_declared_evidence_reference",
+            )
+            if isinstance(evidence_reference, dict):
+                provider_declared_evidence_reference_count += 1
+                if declaration.get("invocation_address_present") is False:
+                    provider_evidence_reference_without_callable_address_count += 1
+        binding_record = {
             "provider": provider,
             "capability": capability,
             "availability_status": status,
@@ -11355,7 +11576,14 @@ def _capability_delivery_view(
             **({"availability_observed_at": _short_text(
                 availability["observed_at"], 96,
             )} if isinstance(availability.get("observed_at"), str) else {}),
-        })
+        }
+        if provider_declarations:
+            binding_record["provider_declarations"] = provider_declarations
+        if declaration_omitted_count:
+            binding_record["provider_declarations_omitted_count"] = (
+                declaration_omitted_count
+            )
+        binding_records.append(binding_record)
 
     for binding in binding_records:
         binding["context_response_inclusion"] = (
@@ -11666,6 +11894,16 @@ def _capability_delivery_view(
         binding = records_by_exact_identity.get(binding_key)
         if binding is not None:
             select_binding(binding)
+    for binding in binding_records:
+        if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
+            break
+        if any(
+            isinstance(declaration.get(
+                "provider_declared_evidence_reference",
+            ), dict)
+            for declaration in binding.get("provider_declarations", [])
+        ):
+            select_binding(binding)
     observed_capabilities = sorted(
         (item for item in capability_summaries
          if isinstance(item.get("capability"), str)
@@ -11702,6 +11940,18 @@ def _capability_delivery_view(
         binding_details_omitted_count=omitted_bindings,
         binding_records_not_examined=binding_records_not_examined,
         binding_records_invalid=invalid_binding_count,
+        provider_invocation_addressing_counts=(
+            provider_invocation_addressing_counts
+        ),
+        provider_declared_evidence_reference_count=(
+            provider_declared_evidence_reference_count
+        ),
+        provider_evidence_reference_without_callable_address_count=(
+            provider_evidence_reference_without_callable_address_count
+        ),
+        provider_declarations_omitted_count=(
+            provider_declarations_omitted_count
+        ),
     )
     outside_inventory.sort(key=lambda item: item["capability"])
     return {
@@ -11716,10 +11966,27 @@ def _capability_delivery_view(
         "binding_records_not_examined": binding_records_not_examined,
         "binding_records_invalid": invalid_binding_count,
         "availability_counts": dict(sorted(availability_counts.items())),
+        "provider_invocation_addressing_status_counts": dict(sorted(
+            provider_invocation_addressing_counts.items(),
+        )),
+        "provider_declared_evidence_reference_count": (
+            provider_declared_evidence_reference_count
+        ),
+        "provider_evidence_reference_without_callable_address_count": (
+            provider_evidence_reference_without_callable_address_count
+        ),
+        "provider_declarations_omitted_count": (
+            provider_declarations_omitted_count
+        ),
+        "provider_declaration_scan_complete": (
+            binding_records_not_examined == 0
+            and invalid_binding_count == 0
+            and provider_declarations_omitted_count == 0
+        ),
         "bindings_omitted": omitted_bindings,
         "bindings": selected_binding_records,
         "binding_details_selection_basis": (
-            "declared-service-probes-then-exact-invocation-bindings-then-observed-capabilities-then-capability-provider-order"
+            "declared-service-probes-then-exact-invocation-bindings-then-provider-evidence-references-then-observed-capabilities-then-capability-provider-order"
         ),
         "service_probe_binding_counts": probe_binding_counts,
         "service_probe_binding_count_scan_complete": (

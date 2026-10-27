@@ -9686,6 +9686,9 @@ class Session:
         available: list[dict[str, Any]] = []
         unavailable = 0
         unknown = 0
+        unknown_provider_evidence_reference_count = 0
+        unknown_provider_evidence_without_callable_address_count = 0
+        unknown_provider_declarations_omitted_count = 0
         for binding in self.snapshot.get("bindings", []):
             availability = binding.get("availability") or {}
             if availability.get("status") == "available":
@@ -9697,6 +9700,31 @@ class Session:
                 })
             elif availability.get("status") == "unknown":
                 unknown += 1
+                provenance = binding.get("provenance")
+                provenance = provenance if isinstance(provenance, dict) else {}
+                raw_declarations = provenance.get("coalesced_declarations")
+                candidates = (
+                    raw_declarations if isinstance(raw_declarations, list)
+                    else [provenance]
+                )
+                declared_count = provenance.get("coalesced_declaration_count")
+                if (type(declared_count) is int and declared_count >= 0
+                        and declared_count > len(candidates)):
+                    unknown_provider_declarations_omitted_count += (
+                        declared_count - len(candidates)
+                    )
+                for candidate in candidates[:8]:
+                    candidate = candidate if isinstance(candidate, dict) else {}
+                    if capabilities_module.normalize_provider_evidence_path(
+                            candidate.get("provider_declared_evidence_path")) is None:
+                        continue
+                    unknown_provider_evidence_reference_count += 1
+                    address_present = candidate.get("address_present")
+                    if type(address_present) is not bool:
+                        address = binding.get("address")
+                        address_present = isinstance(address, str) and bool(address)
+                    if address_present is False:
+                        unknown_provider_evidence_without_callable_address_count += 1
             else:
                 unavailable += 1
 
@@ -9849,6 +9877,18 @@ class Session:
                 "available_count": len(available),
                 "unavailable_count": unavailable,
                 "unknown_count": unknown,
+                "unknown_provider_declared_evidence_reference_count": (
+                    unknown_provider_evidence_reference_count
+                ),
+                "unknown_provider_evidence_without_callable_address_count": (
+                    unknown_provider_evidence_without_callable_address_count
+                ),
+                "unknown_provider_declarations_omitted_count": (
+                    unknown_provider_declarations_omitted_count
+                ),
+                "unknown_provider_declaration_scan_complete": (
+                    unknown_provider_declarations_omitted_count == 0
+                ),
                 "truncated": len(available) > max_capabilities,
             },
             "actions": self.actions(),

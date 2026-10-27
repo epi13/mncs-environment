@@ -11,13 +11,13 @@ checked by the session before this module ever spawns a process.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
-import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .identity import digest_hex
@@ -782,8 +782,15 @@ def _coalesce_addressed_binding_declarations(
             declaration = {
                 "source": provenance.get("source"),
                 "addressing": provenance.get("addressing"),
+                "addressing_detail": provenance.get("addressing_detail"),
                 "declared_invocation": provenance.get("declared_invocation"),
                 "address_present": bool(item.get("address")),
+                "kind": provenance.get("kind"),
+                "stability": provenance.get("stability"),
+                "provider_declared_status": provenance.get("status"),
+                "provider_declared_evidence_path": provenance.get(
+                    "provider_declared_evidence_path",
+                ),
             }
             declaration_key = json.dumps(
                 declaration, sort_keys=True, separators=(",", ":"),
@@ -942,6 +949,24 @@ def _from_verification_inventory(repo: Path) -> list[dict[str, Any]]:
     return out
 
 
+def normalize_provider_evidence_path(value: Any) -> str | None:
+    """Accept only bounded repository-relative provider evidence pointers."""
+    if not isinstance(value, str) or not value or len(value) > 1024:
+        return None
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
+    path = PurePosixPath(value)
+    if (path.is_absolute() or "\\" in value
+            or any(ord(character) < 0x20 or ord(character) == 0x7f
+                   for character in value)
+            or path.as_posix() != value
+            or any(part in {"", ".", ".."} for part in value.split("/"))):
+        return None
+    return value
+
+
 def _from_semantic_contracts(
     repo: Path,
     workspace: Path,
@@ -1005,6 +1030,24 @@ def _from_semantic_contracts(
                      or output_limit_bytes < 1
                      or output_limit_bytes > MAX_OUTPUT_LIMIT_BYTES)):
             continue
+        provider_evidence_path = normalize_provider_evidence_path(
+            entry.get("evidence"),
+        )
+        provenance = {
+            "source": f"{repo.name}/family-semantic-contracts-v1.json",
+            "status": entry.get("status"), "addressing": addressing,
+            "addressing_detail": declared.get("detail"),
+            "kind": entry.get("kind"),
+            "stability": entry.get("stability"),
+            "declared_invocation": isinstance(
+                entry.get("invocation"), dict,
+            ),
+            "adapter_library_paths": declared["adapter_library_paths"],
+        }
+        if provider_evidence_path is not None:
+            provenance["provider_declared_evidence_path"] = (
+                provider_evidence_path
+            )
         record = bind(
             provider=repository_id,
             capability=contract,
@@ -1019,12 +1062,7 @@ def _from_semantic_contracts(
             event_types=["unknown"],
             timeout_seconds=declared["timeout_seconds"],
             output_limit_bytes=output_limit_bytes,
-            provenance={"source": f"{repo.name}/family-semantic-contracts-v1.json",
-                        "status": entry.get("status"), "addressing": addressing,
-                        "declared_invocation": isinstance(
-                            entry.get("invocation"), dict,
-                        ),
-                        "adapter_library_paths": declared["adapter_library_paths"]},
+            provenance=provenance,
             provider_root=str(repo),
         )
         out.append(record)

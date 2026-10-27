@@ -4203,6 +4203,137 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     ] == "capability-not-observed-in-incomplete-binding-snapshot"
 
 
+def test_provider_declared_evidence_separates_implementation_from_addressability() -> None:
+    generic_bindings = [{
+        "binding_id": f"cap_generic_{index}",
+        "provider": f"provider-{index}",
+        "capability": f"fixture.generic-{index}/1",
+        "contract_revision": "1",
+        "availability": {"status": "unknown"},
+    } for index in range(17)]
+    snapshot = {
+        "environment_id": "renv_provider_evidence",
+        "bindings": [
+            *generic_bindings,
+            {
+                "binding_id": "cap_store_semantic_state",
+                "provider": "mncs-store",
+                "capability": "mncs.store.semantic-state/1",
+                "contract_revision": "1",
+                "availability": {"status": "unknown"},
+                "provenance": {
+                    "checkout": {"head": "a" * 40},
+                    "coalesced_declaration_count": 2,
+                    "coalesced_declarations": [
+                        {
+                            "source": "mncs-store/family-semantic-contracts-v1.json",
+                            "addressing": "none",
+                            "declared_invocation": False,
+                            "address_present": False,
+                            "provider_declared_evidence_path": (
+                                "src/store/semantic_state.mncs"
+                            ),
+                        },
+                        {
+                            "source": "mncs-store/.mncs/project.json",
+                            "addressing": "bootstrap",
+                            "declared_invocation": False,
+                            "address_present": True,
+                        },
+                    ],
+                },
+            },
+            {
+                "binding_id": "cap_truncated_declarations",
+                "provider": "mncs-store",
+                "capability": "mncs.store.truncated/1",
+                "contract_revision": "1",
+                "availability": {"status": "unknown"},
+                "provenance": {
+                    "coalesced_declaration_count": 10,
+                    "coalesced_declarations": [{} for _ in range(8)],
+                },
+            },
+            {
+                "binding_id": "cap_unsafe_provider_evidence",
+                "provider": "mncs-store",
+                "capability": "mncs.store.unsafe-evidence/1",
+                "contract_revision": "1",
+                "availability": {"status": "unknown"},
+                "provenance": {
+                    "source": "mncs-store/family-semantic-contracts-v1.json",
+                    "addressing": "none",
+                    "declared_invocation": False,
+                    "provider_declared_evidence_path": "../private.txt",
+                },
+            },
+        ],
+    }
+
+    delivery = capability_intelligence._capability_delivery_view(
+        snapshot, [], [], [], event_window_truncated=False,
+        event_page_scoped=False, invocation_summaries_omitted=0,
+    )
+
+    semantic = next(
+        item for item in delivery["bindings"]
+        if item["capability"] == "mncs.store.semantic-state/1"
+    )
+    declarations = semantic["provider_declarations"]
+    native_declaration = next(
+        item for item in declarations
+        if item.get("provider_declared_evidence_reference")
+    )
+    reference = native_declaration["provider_declared_evidence_reference"]
+    assert reference["path"] == "src/store/semantic_state.mncs"
+    assert reference["basis"] == "provider-declared"
+    assert reference["observed_checkout_head"] == "a" * 40
+    assert reference["implementation_ownership_status"] == "not-established"
+    assert reference["content_integrity_status"] == "not-verified"
+    assert native_declaration["invocation_descriptor_declared"] is False
+    assert native_declaration["invocation_address_present"] is False
+    bootstrap_declaration = next(
+        item for item in declarations
+        if item.get("invocation_addressing") == "bootstrap"
+    )
+    assert bootstrap_declaration["invocation_address_present"] is True
+    assert bootstrap_declaration["invocation_descriptor_declared"] is False
+
+    summary = delivery["binding_evidence_summary"]
+    assert summary["provider_declared_evidence_reference_count"] == 1
+    assert summary[
+        "provider_evidence_reference_without_callable_address_count"
+    ] == 1
+    assert summary["provider_invocation_addressing_status_counts"] == {
+        "bootstrap": 1, "none": 2,
+    }
+    assert summary["provider_declarations_omitted_count"] == 2
+    assert summary["provider_declaration_scan_complete"] is False
+    assert any(
+        item["capability"] == "mncs.store.semantic-state/1"
+        for item in delivery["bindings"]
+    )
+    unsafe_declarations = capability_intelligence._provider_declarations(
+        snapshot["bindings"][-1], "mncs-store",
+    )
+    assert all(
+        "provider_declared_evidence_reference" not in declaration
+        for declaration in unsafe_declarations
+    )
+
+    compact_binding = capability_intelligence._compact_delivery_binding(semantic)
+    assert compact_binding is not None
+    assert compact_binding["provider_declarations"][0][
+        "provider_declared_evidence_reference"
+    ]["content_integrity_status"] == "not-verified"
+    compact_summary = capability_intelligence._compact_binding_evidence_summary(
+        summary,
+    )
+    assert compact_summary is not None
+    assert compact_summary["provider_declarations_omitted_count"] == 2
+    assert compact_summary["provider_declaration_scan_complete"] is False
+
+
 def test_session_doctor_health_history_is_bounded_and_revision_linked(
     tmp_path: Path,
 ) -> None:

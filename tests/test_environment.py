@@ -4741,6 +4741,67 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
             self.assertEqual(result["stdout"].splitlines(), ["impact", "source.mncs"])
 
+    def test_semantic_provider_evidence_paths_are_repository_relative(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "managed"
+            (repo / "src").mkdir(parents=True)
+            (repo / "src" / "implementation.mncs").write_text(
+                "module fixture\n", encoding="utf-8",
+            )
+            entries = [
+                {
+                    "contract_identity": "fixture.valid-evidence/1",
+                    "contract_revision": "1",
+                    "evidence": "src/implementation.mncs",
+                },
+                {
+                    "contract_identity": "fixture.traversal-evidence/1",
+                    "contract_revision": "1",
+                    "evidence": "../outside.mncs",
+                },
+                {
+                    "contract_identity": "fixture.absolute-evidence/1",
+                    "contract_revision": "1",
+                    "evidence": "/tmp/outside.mncs",
+                },
+            ]
+            (repo / "family-semantic-contracts-v1.json").write_text(
+                json.dumps({
+                    "schema_version": (
+                        "commons.mncs.semantic-contract-declarations/v1"
+                    ),
+                    "repository_id": "campaign-provider",
+                    "revision": "1",
+                    "provides": entries,
+                    "consumes": [],
+                }),
+                encoding="utf-8",
+            )
+
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={"campaign-provider": repo},
+            )
+            by_capability = {
+                item["capability"]: item for item in bindings
+            }
+
+            self.assertEqual(
+                by_capability["fixture.valid-evidence/1"]["provenance"][
+                    "provider_declared_evidence_path"
+                ],
+                "src/implementation.mncs",
+            )
+            self.assertNotIn(
+                "provider_declared_evidence_path",
+                by_capability["fixture.traversal-evidence/1"]["provenance"],
+            )
+            self.assertNotIn(
+                "provider_declared_evidence_path",
+                by_capability["fixture.absolute-evidence/1"]["provenance"],
+            )
+
     def test_unaddressed_manifest_declaration_coalesces_with_matching_semantic_binding(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -5619,6 +5680,52 @@ class SessionTests(unittest.TestCase):
                 self.assertEqual(len(available), 1)
                 self.assertEqual(available[0]["binding_id"], binding_id)
                 self.assertEqual(available[0]["capability"], "mncs-test:run")
+            finally:
+                session.close()
+
+    def test_context_surfaces_bounded_unknown_capability_opportunities(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            try:
+                session.snapshot["bindings"] = [{
+                    "binding_id": f"cap_unknown_{index}",
+                    "capability": f"fixture.unknown-{index:02d}/1",
+                    "provider": "fixture-provider",
+                    "contract_revision": "1",
+                    "availability": {"status": "unknown"},
+                    "provenance": {
+                        "source": "fixture-provider/family-semantic-contracts-v1.json",
+                        "addressing": "none",
+                        "declared_invocation": False,
+                        "provider_declared_evidence_path": (
+                            "src/unknown.mncs" if index == 9
+                            else "../outside.mncs" if index == 8 else None
+                        ),
+                        "checkout": {"head": "b" * 40},
+                    },
+                } for index in range(10)]
+
+                context = session.context()["capabilities"]
+
+                self.assertEqual(context["unknown_count"], 10)
+                self.assertEqual(
+                    context["unknown_provider_declared_evidence_reference_count"],
+                    1,
+                )
+                self.assertEqual(
+                    context[
+                        "unknown_provider_evidence_without_callable_address_count"
+                    ],
+                    1,
+                )
+                self.assertTrue(
+                    context["unknown_provider_declaration_scan_complete"],
+                )
+                self.assertNotIn("unknown", context)
+                self.assertNotIn(
+                    "src/unknown.mncs",
+                    json.dumps(context, sort_keys=True),
+                )
             finally:
                 session.close()
 

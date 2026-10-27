@@ -19,6 +19,24 @@ including their effects, versions, and invocation paths. This establishes
 catalog presence and discoverability through the project view; it does not
 establish that an agent found or successfully used those interfaces.
 
+The session activity view also retains bounded provider declarations for each
+binding. A declaration's `provider_declared_evidence_reference` points to the
+repository-relative path named by its provider and, when available, the
+observed checkout HEAD. This is a source pointer only: implementation
+ownership is `not-established` and content integrity is `not-verified`.
+Invocation descriptor declaration, resolved callable address, and provider
+addressing mode are reported separately so an implementation reference does
+not imply that an agent can invoke the capability. The evidence summary counts
+valid provider-declared references and addressing modes; its callable-address
+count does not treat an unresolved declaration as usable. Counts cover the
+scanned binding snapshot and coalesced declarations. Check
+`provider_declaration_scan_complete` and `provider_declarations_omitted_count`
+before interpreting them as complete. These fields do not establish that the
+referenced file implements the capability or that an agent discovered it.
+When the bounded binding-detail window is full, declared service probes and
+exact observed use retain priority; bindings with provider-declared evidence
+references are then selected before ordinary inventory rows.
+
 Inspect `capability_accountability_links` in the result. It reports exact
 repository, commit, path, and SHA-256 relationships, along with their source
 references, the owner audit's declared host responsibilities, the candidate

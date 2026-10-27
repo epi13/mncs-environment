@@ -266,6 +266,14 @@ Each listed available capability includes its opaque `binding_id` so later
 authenticated context-response evidence can be correlated to that exact
 session binding. Presence in this response does not establish consumer receipt,
 discovery, or successful use.
+For the bounded unknown-capability count, entry also reports how many
+provider-declared evidence references are present and how many lack a callable
+address. The counters are declaration-level hints, not verified implementation
+ownership or file integrity; `unknown_provider_declaration_scan_complete` and
+`unknown_provider_declarations_omitted_count` expose coalescing truncation.
+Exact provider paths remain in the detailed capability and environmental
+capability projections so the first-use context does not inline reference
+lists.
 When a campaign matches the authenticated continuation authority, the
 response also includes a compact campaign capsule with prior Environment
 sessions, checkpoints, claims, repository checkout identities, branch heads,
