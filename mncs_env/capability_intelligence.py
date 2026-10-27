@@ -189,6 +189,7 @@ MAX_NATIVE_CONSUMER_ACTIVITY_SOURCE_REFERENCES = 2
 MAX_EVIDENCE_REFS = 32
 MAX_EVIDENCE_HISTORY_PAGES = 4
 MAX_OBSERVATIONS = 16
+MAX_PRESSURE_ROLE_EVIDENCE = 8
 MAX_OBSERVATION_BYTES = 64 * 1024
 MAX_SOURCE_BYTES = 512 * 1024
 MAX_SOURCE_HASH_BYTES = 4 * 1024 * 1024
@@ -2422,7 +2423,10 @@ def _compact_projection(
                 len(definition_observations) > MAX_OBSERVATIONS
             )
         for key in (
-            "observation_count", "distinct_session_count", "distinct_campaign_count",
+            "observation_count", "distinct_session_count",
+            "occurrence_distinct_session_count", "distinct_campaign_count",
+            "supporting_context_observation_count",
+            "unclassified_observation_count", "total_evidence_count",
             "distinct_work_intent_count", "distinct_environment_version_count",
             "affected_work_context_count", "distinct_recording_session_count",
             "distinct_recording_campaign_count", "recording_context_count",
@@ -2432,6 +2436,9 @@ def _compact_projection(
         ):
             if type(hypothesis.get(key)) is int:
                 summary[key] = hypothesis[key]
+        for key in ("role_classification_status", "session_attribution_status"):
+            if isinstance(hypothesis.get(key), str):
+                summary[key] = _short_text(hypothesis[key], 64)
         for context_key in ("affected_work_contexts", "recording_contexts"):
             raw_contexts = hypothesis.get(context_key)
             raw_contexts = raw_contexts if isinstance(raw_contexts, list) else []
@@ -2464,6 +2471,36 @@ def _compact_projection(
         summary["evidence_references_truncated"] = (
             len(evidence_references) > len(summary["evidence_references"])
         )
+        for evidence_key in (
+            "supporting_context_evidence", "unclassified_evidence",
+        ):
+            raw_role_evidence = hypothesis.get(evidence_key)
+            raw_role_evidence = (
+                raw_role_evidence if isinstance(raw_role_evidence, list) else []
+            )
+            compact_role_evidence = []
+            for evidence in raw_role_evidence[:MAX_PRESSURE_ROLE_EVIDENCE]:
+                if not isinstance(evidence, dict):
+                    continue
+                compact_evidence = {
+                    key: _short_text(evidence[key], 160)
+                    for key in (
+                        "observation_identity", "observation_kind", "session_id",
+                        "campaign_id", "recording_session_id",
+                        "recording_campaign_id",
+                    )
+                    if isinstance(evidence.get(key), str) and evidence[key]
+                }
+                pointer = _validate_reference(evidence.get("evidence_reference"))
+                if pointer is not None:
+                    compact_evidence["evidence_reference"] = pointer
+                if compact_evidence:
+                    compact_role_evidence.append(compact_evidence)
+            summary[evidence_key] = compact_role_evidence
+            summary[f"{evidence_key}_truncated"] = (
+                hypothesis.get(f"{evidence_key}_truncated") is True
+                or len(raw_role_evidence) > len(compact_role_evidence)
+            )
         summary["evidence_observation_identities"] = [
             item["identity"] for item in observations
             if isinstance(item.get("pressure_hypothesis"), dict)
@@ -2569,6 +2606,13 @@ def _compact_projection(
             compact_observation["pressure_hypothesis_role"] = (
                 pressure_hypothesis_role
             )
+        for key in (
+            "pressure_hypothesis_role_status",
+            "pressure_hypothesis_recurrence_classification",
+        ):
+            value = item.get(key)
+            if isinstance(value, str) and value:
+                compact_observation[key] = _short_text(value, 64)
         pointer_correction = item.get("evidence_reference_correction")
         if isinstance(pointer_correction, dict):
             compact_pointer_correction = {
@@ -5250,6 +5294,23 @@ def _compact_projection(
                     "source_audit_details_omitted_count", 0,
                 ) + 1
                 continue
+        role_evidence_to_trim = next(
+            (
+                (hypothesis, evidence_key)
+                for hypothesis in result["pressure_hypotheses"]
+                for evidence_key in (
+                    "supporting_context_evidence", "unclassified_evidence",
+                )
+                if isinstance(hypothesis.get(evidence_key), list)
+                and hypothesis[evidence_key]
+            ),
+            None,
+        )
+        if role_evidence_to_trim is not None:
+            hypothesis, evidence_key = role_evidence_to_trim
+            hypothesis[evidence_key].pop()
+            hypothesis[f"{evidence_key}_truncated"] = True
+            continue
         if result["observations"]:
             def observation_retention_priority(item: dict[str, Any]) -> int:
                 relation = item.get("resource_sample_relation")
@@ -9468,33 +9529,65 @@ def _validate_evidence_reference_correction(
 
 
 def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[str, list[dict[str, Any]]] = {}
+    grouped: dict[str, list[tuple[dict[str, Any], str]]] = {}
     for observation in observations:
-        hypothesis = observation["pressure_hypothesis"]
-        if (not isinstance(hypothesis, dict)
-                or observation.get("improvement_relation_identity") is not None
-                or observation.get("pressure_hypothesis_role", "occurrence")
-                != "occurrence"):
-            # An implementation record may restate the pressure it addresses.
-            # Its linked hypothesis is context for the change, not a second
-            # occurrence. Other supporting records can state that role too.
+        hypothesis = observation.get("pressure_hypothesis")
+        identity = hypothesis.get("identity") if isinstance(hypothesis, dict) else None
+        if not isinstance(identity, str) or not identity:
             continue
-        identity = hypothesis.get("identity")
-        if isinstance(identity, str) and identity:
-            grouped.setdefault(identity, []).append(observation)
+        if observation.get("improvement_relation_identity") is not None:
+            # A verified improvement link makes the repeated hypothesis
+            # supporting context for that change, not another occurrence.
+            classification = "supporting-context"
+        else:
+            role = observation.get("pressure_hypothesis_role")
+            classification = (
+                role if isinstance(role, str)
+                and role in PRESSURE_HYPOTHESIS_ROLES else "unclassified"
+            )
+        grouped.setdefault(identity, []).append((observation, classification))
     result = []
-    for identity, group in sorted(grouped.items()):
-        sessions = sorted({
+    for identity, classified_group in sorted(grouped.items()):
+        group = [item for item, _classification in classified_group]
+        occurrences = [
+            item for item, classification in classified_group
+            if classification == "occurrence"
+        ]
+        supporting_context = [
+            item for item, classification in classified_group
+            if classification == "supporting-context"
+        ]
+        unclassified = [
+            item for item, classification in classified_group
+            if classification == "unclassified"
+        ]
+        occurrence_sessions = sorted({
+            item["related_work"].get("session_id")
+            for item in occurrences
+            if isinstance(item.get("related_work"), dict)
+            and isinstance(item["related_work"].get("session_id"), str)
+            and item["related_work"]["session_id"]
+        })
+        evidence_sessions = sorted({
             item["related_work"].get("session_id")
             for item in group
             if isinstance(item.get("related_work"), dict)
             and isinstance(item["related_work"].get("session_id"), str)
+            and item["related_work"]["session_id"]
         })
+        occurrence_session_count = sum(
+            1 for item in occurrences
+            if isinstance(item.get("related_work"), dict)
+            and isinstance(item["related_work"].get("session_id"), str)
+            and item["related_work"]["session_id"]
+        )
+        session_attribution_complete = occurrence_session_count == len(occurrences)
         campaigns = sorted({
             item["related_work"].get("campaign_id")
             for item in group
             if isinstance(item.get("related_work"), dict)
             and isinstance(item["related_work"].get("campaign_id"), str)
+            and item["related_work"]["campaign_id"]
         })
         work_contexts = _distinct_contexts(group, "related_work", (
             "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
@@ -9534,9 +9627,10 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             context["environment_version"] for context in recording_contexts
             if context.get("environment_version")
         }
-        if len(sessions) > 1:
+        if len(occurrence_sessions) > 1:
             recurrence_status = "observed-across-sessions"
-        elif len(group) > 1:
+        elif (len(occurrences) > 1 and session_attribution_complete
+              and len(occurrence_sessions) == 1):
             recurrence_status = "repeated-within-session"
         else:
             recurrence_status = "not-established"
@@ -9564,13 +9658,47 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "conflicting-recorded-definitions"
             if definition_conflicts else "consistent"
         )
+
+        def role_evidence(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            evidence = []
+            for item in items[:MAX_PRESSURE_ROLE_EVIDENCE]:
+                work = item.get("related_work")
+                work = work if isinstance(work, dict) else {}
+                recording = item.get("recording_context")
+                recording = recording if isinstance(recording, dict) else {}
+                observation = item.get("observation")
+                observation = observation if isinstance(observation, dict) else {}
+                entry = {
+                    "observation_identity": item.get("identity"),
+                    "evidence_reference": item.get("evidence_reference"),
+                    "observation_kind": observation.get("kind"),
+                }
+                for output_key, context, source_key in (
+                    ("session_id", work, "session_id"),
+                    ("campaign_id", work, "campaign_id"),
+                    ("recording_session_id", recording, "session_id"),
+                    ("recording_campaign_id", recording, "campaign_id"),
+                ):
+                    value = context.get(source_key)
+                    if isinstance(value, str) and value:
+                        entry[output_key] = value
+                evidence.append(entry)
+            return evidence
+
+        role_classification_status = "incomplete" if unclassified else "complete"
+        if not occurrences:
+            session_attribution_status = "no-classified-occurrences"
+        elif session_attribution_complete:
+            session_attribution_status = "complete"
+        else:
+            session_attribution_status = "incomplete"
         summary = {
             "identity": identity,
             **definition,
             "definition_status": definition_status,
             "interpretation": "hypothesis",
-            "observation_count": len(group),
-            "distinct_session_count": len(sessions),
+            "observation_count": len(occurrences),
+            "distinct_session_count": len(evidence_sessions),
             "distinct_campaign_count": len(campaigns),
             "distinct_work_intent_count": len(work_intents),
             "distinct_environment_version_count": len(environment_versions),
@@ -9586,8 +9714,25 @@ def _recurrence(observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "recording_context_count": len(recording_contexts),
             "recording_contexts": recording_contexts,
             "recurrence_status": recurrence_status,
-            "evidence": [item["evidence_reference"] for item in group],
+            "evidence": [item["evidence_reference"] for item in occurrences],
         }
+        if supporting_context or unclassified or not session_attribution_complete:
+            summary.update({
+                "supporting_context_observation_count": len(supporting_context),
+                "unclassified_observation_count": len(unclassified),
+                "total_evidence_count": len(group),
+                "role_classification_status": role_classification_status,
+                "session_attribution_status": session_attribution_status,
+                "occurrence_distinct_session_count": len(occurrence_sessions),
+                "supporting_context_evidence": role_evidence(supporting_context),
+                "unclassified_evidence": role_evidence(unclassified),
+                "supporting_context_evidence_truncated": (
+                    len(supporting_context) > MAX_PRESSURE_ROLE_EVIDENCE
+                ),
+                "unclassified_evidence_truncated": (
+                    len(unclassified) > MAX_PRESSURE_ROLE_EVIDENCE
+                ),
+            })
         if definition_conflicts:
             summary["definition_conflict_fields"] = definition_conflicts
             summary["definition_evidence_observation_identities"] = [
@@ -17958,7 +18103,17 @@ def project(
         effective_sources = sources
         effective_measurement_limits = record.get("not_measured", [])
         effective_pressure_hypothesis_role = record.get(
-            "pressure_hypothesis_role", "occurrence",
+            "pressure_hypothesis_role",
+        )
+        effective_pressure_hypothesis_role_status = (
+            "recorded"
+            if (isinstance(effective_pressure_hypothesis_role, str)
+                and effective_pressure_hypothesis_role
+                in PRESSURE_HYPOTHESIS_ROLES)
+            else (
+                "not-recorded"
+                if effective_pressure_hypothesis_role is None else "invalid"
+            )
         )
         if correction_for_target is not None:
             correction_record, correction, correction_reference = correction_for_target
@@ -17972,6 +18127,9 @@ def project(
                 effective_pressure_hypothesis_role = replacement_values[
                     "pressure_hypothesis_role"
                 ]
+                effective_pressure_hypothesis_role_status = (
+                    "corrected-by-verified-record"
+                )
             if record_correction_summary is None:
                 record_correction_summary = {
                     "status": (
@@ -18097,6 +18255,14 @@ def project(
         session_activity_relation = _observation_session_activity_relation(
             record, activity, selected_session_id=session.session_id,
         )
+        if raw_improvement is not None:
+            pressure_hypothesis_recurrence_classification = "supporting-context"
+        elif effective_pressure_hypothesis_role == "occurrence":
+            pressure_hypothesis_recurrence_classification = "occurrence"
+        elif effective_pressure_hypothesis_role == "supporting-context":
+            pressure_hypothesis_recurrence_classification = "supporting-context"
+        else:
+            pressure_hypothesis_recurrence_classification = "unclassified"
         observations.append({
             "identity": record["identity"],
             "captured_at": record.get("captured_at"),
@@ -18150,6 +18316,23 @@ def project(
             } if hypothesis is not None else None),
             **({
                 "pressure_hypothesis_role": effective_pressure_hypothesis_role,
+            } if (hypothesis is not None
+                  and isinstance(effective_pressure_hypothesis_role, str)
+                  and effective_pressure_hypothesis_role
+                  in PRESSURE_HYPOTHESIS_ROLES) else {}),
+            **({
+                **({
+                    "pressure_hypothesis_role_status": (
+                        effective_pressure_hypothesis_role_status
+                    ),
+                } if effective_pressure_hypothesis_role_status != "recorded"
+                   else {}),
+                **({
+                    "pressure_hypothesis_recurrence_classification": (
+                        pressure_hypothesis_recurrence_classification
+                    ),
+                } if (effective_pressure_hypothesis_role
+                      != pressure_hypothesis_recurrence_classification) else {}),
             } if hypothesis is not None else {}),
             "supporting_sources": [
                 {

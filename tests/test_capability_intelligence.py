@@ -389,6 +389,11 @@ def _add_campaign_charter(
     return reference
 
 
+def _drop_pressure_hypothesis(record: dict) -> None:
+    record.pop("pressure_hypothesis", None)
+    record.pop("pressure_hypothesis_role", None)
+
+
 def _observation(identity: str, session_id: str, campaign_id: str) -> dict:
     return {
         "schema_version": capability_intelligence.OBSERVATION_SCHEMA,
@@ -419,6 +424,7 @@ def _observation(identity: str, session_id: str, campaign_id: str) -> dict:
             "owner": "mncs-control-mcp",
             "actionable_recommendation": "Allow exact session selection after owner and scope checks.",
         },
+        "pressure_hypothesis_role": "occurrence",
         "supporting_sources": [
             {"kind": "direct-operation-result", "campaign_id": campaign_id,
              "session_id": session_id},
@@ -793,7 +799,12 @@ def test_live_compiler_scope_records_link_evidence_and_preserve_uncertainty(
         item for item in result["pressure_hypotheses"]
         if item["identity"] == "ph_environment_workspace_scope_visibility_20261024"
     )
-    assert hypothesis["observation_count"] == 1
+    assert hypothesis["observation_count"] == 0
+    assert hypothesis["unclassified_observation_count"] == 1
+    assert hypothesis["role_classification_status"] == "incomplete"
+    assert hypothesis["unclassified_evidence"][0]["observation_identity"] == (
+        records[0]["identity"]
+    )
     relation = next(
         item for item in result["improvement_relations"]
         if item["identity"] == "im_environment_workspace_scope_visibility_20261024"
@@ -884,13 +895,13 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
             "ses_environment_followup",
             "cmp_environment_followup",
         )
-        verification.pop("pressure_hypothesis")
+        _drop_pressure_hypothesis(verification)
         followup = _observation(
             "ev_environment_correction_followup",
             "ses_environment_followup",
             "cmp_environment_followup",
         )
-        followup.pop("pressure_hypothesis")
+        _drop_pressure_hypothesis(followup)
         session, state = _session(root, [target, verification, followup])
         checkout = Path(session.snapshot["selected_checkouts"][
             "mncs-environment"
@@ -919,7 +930,7 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
             "ses_environment_correction",
             "cmp_environment_followup",
         )
-        correction.pop("pressure_hypothesis")
+        _drop_pressure_hypothesis(correction)
         correction["record_correction"] = {
             "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
             "target_reference": target_reference,
@@ -1067,7 +1078,7 @@ def test_append_only_correction_completes_integrity_verified_invalid_observation
         "ses_contract_completion",
         "cmp_contract_completion",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["observation"]["kind"] = "environmental-observation-correction"
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
@@ -1196,7 +1207,7 @@ def test_observation_correction_restores_source_interface_and_verified_sources(
     )
     target["observation"].pop("source_interface")
     target["observation"].pop("request")
-    target.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(target)
     target["supporting_sources"] = [{"kind": "unverified-legacy-pointer"}]
     session, state = _session(tmp_path, [target])
     checkout = Path(session.snapshot["selected_checkouts"][
@@ -1227,7 +1238,7 @@ def test_observation_correction_restores_source_interface_and_verified_sources(
         "ses_contract_completion",
         "cmp_contract_completion",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["observation"]["kind"] = "environmental-observation-correction"
     correction["supporting_sources"] = [source]
     fields = [
@@ -1340,7 +1351,7 @@ def test_observation_contract_correction_requires_complete_contract(
         "ses_contract_completion",
         "cmp_contract_completion",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
         "target_reference": dict(state["evidence"][0]),
@@ -1396,7 +1407,7 @@ def test_observation_contract_correction_can_restore_pressure_recommendation(
         "ses_pressure_recommendation_correction",
         "cmp_pressure_recommendation_correction",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["observation"]["kind"] = "environmental-observation-correction"
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
@@ -1492,7 +1503,7 @@ def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
         "ses_pressure_recommendation_immutability",
         "cmp_pressure_recommendation_immutability",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["observation"]["kind"] = "environmental-observation-correction"
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
@@ -1565,7 +1576,7 @@ def test_observation_contract_correction_cannot_rewrite_valid_observation(
         "ses_contract_immutability",
         "cmp_contract_immutability",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
         "target_reference": dict(state["evidence"][0]),
@@ -1640,7 +1651,7 @@ def test_append_only_pressure_role_correction_does_not_count_context_as_recurren
         "ses_pressure_role_correction",
         "cmp_pressure_role",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["observation"]["kind"] = "environmental-observation-correction"
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
@@ -1692,6 +1703,9 @@ def test_append_only_pressure_role_correction_does_not_count_context_as_recurren
     assert hypothesis["observation_count"] == 1
     assert hypothesis["evidence"][0]["identity"] == pressure["identity"]
     assert corrected_target["pressure_hypothesis_role"] == "supporting-context"
+    assert corrected_target["pressure_hypothesis_role_status"] == (
+        "corrected-by-verified-record"
+    )
     assert corrected_target["record_correction"]["status"] == (
         "corrected-by-verified-record"
     )
@@ -1709,6 +1723,120 @@ def test_append_only_pressure_role_correction_does_not_count_context_as_recurren
     assert compact_target["record_correction"]["replacement_values"] == {
         "pressure_hypothesis_role": "supporting-context",
     }
+
+
+def test_unclassified_pressure_evidence_does_not_establish_recurrence(
+    tmp_path: Path,
+) -> None:
+    occurrence = _observation(
+        "ev_environment_classified_occurrence",
+        "ses_pressure_classified",
+        "cmp_pressure_classification",
+    )
+    occurrence["pressure_hypothesis"]["identity"] = "ph_role_coverage"
+
+    legacy = _observation(
+        "ev_environment_legacy_unclassified",
+        "ses_pressure_legacy",
+        "cmp_pressure_classification",
+    )
+    legacy["pressure_hypothesis"]["identity"] = "ph_role_coverage"
+    legacy.pop("pressure_hypothesis_role")
+
+    context = _observation(
+        "ev_environment_explicit_supporting_context",
+        "ses_pressure_context",
+        "cmp_pressure_classification",
+    )
+    context["pressure_hypothesis"]["identity"] = "ph_role_coverage"
+    context["pressure_hypothesis_role"] = "supporting-context"
+    context["observation"]["kind"] = "environmental-improvement-verification"
+    session, _ = _session(tmp_path, [occurrence, legacy, context])
+
+    result = capability_intelligence.project(session)
+    hypothesis = result["pressure_hypotheses"][0]
+    assert hypothesis["recurrence_status"] == "not-established"
+    assert hypothesis["observation_count"] == 1
+    assert hypothesis["supporting_context_observation_count"] == 1
+    assert hypothesis["unclassified_observation_count"] == 1
+    assert hypothesis["total_evidence_count"] == 3
+    assert hypothesis["role_classification_status"] == "incomplete"
+    assert hypothesis["session_attribution_status"] == "complete"
+    assert hypothesis["distinct_session_count"] == 3
+    assert hypothesis["occurrence_distinct_session_count"] == 1
+    assert hypothesis["evidence"][0]["identity"] == occurrence["identity"]
+    assert hypothesis["supporting_context_evidence"][0][
+        "observation_identity"
+    ] == context["identity"]
+    assert hypothesis["supporting_context_evidence"][0]["observation_kind"] == (
+        "environmental-improvement-verification"
+    )
+    assert hypothesis["unclassified_evidence"][0][
+        "observation_identity"
+    ] == legacy["identity"]
+    assert hypothesis["unclassified_evidence"][0]["session_id"] == (
+        "ses_pressure_legacy"
+    )
+    assert hypothesis["unclassified_evidence"][0]["evidence_reference"][
+        "identity"
+    ] == legacy["identity"]
+
+    legacy_projection = next(
+        item for item in result["observations"]
+        if item["identity"] == legacy["identity"]
+    )
+    assert "pressure_hypothesis_role" not in legacy_projection
+    assert legacy_projection["pressure_hypothesis_role_status"] == "not-recorded"
+    assert legacy_projection[
+        "pressure_hypothesis_recurrence_classification"
+    ] == "unclassified"
+
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 24_000,
+    )
+    compact_hypothesis = compact["pressure_hypotheses"][0]
+    assert compact_hypothesis["observation_count"] == 1
+    assert compact_hypothesis["supporting_context_observation_count"] == 1
+    assert compact_hypothesis["unclassified_observation_count"] == 1
+    assert compact_hypothesis["role_classification_status"] == "incomplete"
+    assert compact_hypothesis["unclassified_evidence"][0][
+        "evidence_reference"
+    ]["identity"] == legacy["identity"]
+    compact_legacy = next(
+        item for item in compact["observations"]
+        if item["identity"] == legacy["identity"]
+    )
+    assert compact_legacy["pressure_hypothesis_role_status"] == "not-recorded"
+    assert compact_legacy[
+        "pressure_hypothesis_recurrence_classification"
+    ] == "unclassified"
+
+
+def test_recurrence_requires_complete_session_attribution_within_one_session() -> None:
+    def occurrence(identity: str, session_id: str | None) -> dict:
+        related_work = {"campaign_id": "cmp_session_attribution"}
+        if session_id is not None:
+            related_work["session_id"] = session_id
+        return {
+            "identity": identity,
+            "pressure_hypothesis": {"identity": "ph_session_attribution"},
+            "pressure_hypothesis_role": "occurrence",
+            "related_work": related_work,
+            "recording_context": {},
+            "observation": {"kind": "project-campaign-state-read"},
+            "evidence_reference": {"identity": identity},
+        }
+
+    hypothesis = capability_intelligence._recurrence([
+        occurrence("ev_session_attribution_one", "ses_attribution"),
+        occurrence("ev_session_attribution_missing", None),
+    ])[0]
+
+    assert hypothesis["observation_count"] == 2
+    assert hypothesis["distinct_session_count"] == 1
+    assert hypothesis["occurrence_distinct_session_count"] == 1
+    assert hypothesis["session_attribution_status"] == "incomplete"
+    assert hypothesis["recurrence_status"] == "not-established"
 
 
 def test_observation_correction_accepts_integrity_verified_read_only_source(
@@ -1757,7 +1885,7 @@ def test_observation_correction_accepts_integrity_verified_read_only_source(
         "ses_environment_read_only_correction",
         "cmp_environment_read_only_correction",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["supporting_sources"] = [source]
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
@@ -1847,7 +1975,7 @@ def test_observation_correction_accepts_verified_source_outside_campaign_page(
         "ses_environment_page_local_correction",
         "cmp_environment_page_local_correction",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["supporting_sources"] = [source]
     correction["record_correction"] = {
         "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
@@ -1923,7 +2051,7 @@ def test_append_only_evidence_reference_correction_recovers_exact_record(
             "ses_environment_pointer_correction",
             "cmp_environment_pointer_correction",
         )
-        correction.pop("pressure_hypothesis")
+        _drop_pressure_hypothesis(correction)
         correction["observation"]["kind"] = "campaign-evidence-pointer-correction"
         correction["evidence_reference_correction"] = {
             "schema_version": (
@@ -2025,7 +2153,7 @@ def test_append_only_evidence_reference_correction_crosses_history_pages(
         "ses_environment_pointer_correction",
         "cmp_environment_pointer_correction",
     )
-    correction.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(correction)
     correction["observation"]["kind"] = "campaign-evidence-pointer-correction"
     correction["evidence_reference_correction"] = {
         "schema_version": (
@@ -7701,7 +7829,7 @@ def test_invalid_recorder_environment_identity_is_rejected(tmp_path: Path) -> No
 
 def test_resource_observation_can_be_projected_without_inventing_a_pressure(tmp_path: Path) -> None:
     record = _observation("ev_environment_resource_sample", "ses_environment", "cmp_environment")
-    record.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(record)
     record["measurement_basis"] = "direct-resource-observation"
     record["observation"] = {
         "kind": "resource-headroom-snapshot",
@@ -9785,7 +9913,12 @@ def test_task_selector_recovery_remains_a_single_unresolved_hypothesis(tmp_path:
     assert result["pressure_hypothesis_count"] == 1
     hypothesis = result["pressure_hypotheses"][0]
     assert hypothesis["recurrence_status"] == "not-established"
-    assert hypothesis["observation_count"] == 1
+    assert hypothesis["observation_count"] == 0
+    assert hypothesis["unclassified_observation_count"] == 1
+    assert hypothesis["role_classification_status"] == "incomplete"
+    assert hypothesis["unclassified_evidence"][0][
+        "observation_identity"
+    ] == record["identity"]
     assert result["observations"][0]["recording_context"]["campaign_id"] == (
         "cmp_environmental_capability_intelligence_20261023"
     )
@@ -9921,11 +10054,11 @@ def test_improvement_relation_links_pressure_change_verification_and_followup(
     pressure = _observation("ev_environment_capture_gap", "ses_compiler", "cmp_compiler")
     pressure["pressure_hypothesis"]["identity"] = "ph_capture_context"
     verification = _observation("ev_environment_change_verification", "ses_environment", "cmp_environment")
-    verification.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(verification)
     followup = _observation("ev_environment_change_followup", "ses_compiler", "cmp_compiler")
-    followup.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(followup)
     change = _observation("ev_environment_capture_change", "ses_environment", "cmp_environment")
-    change.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(change)
     implementation = {
         "identity": "ev_environment_capture_context_implementation",
         "repository": "mncs-environment",
@@ -9982,17 +10115,17 @@ def test_compact_projection_preserves_improvement_path_before_owner_audit_detail
     change = _observation(
         "ev_environment_compaction_change", "ses_environment", "cmp_environment",
     )
-    change.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(change)
     verification = _observation(
         "ev_environment_compaction_verification",
         "ses_environment",
         "cmp_environment",
     )
-    verification.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(verification)
     followup = _observation(
         "ev_environment_compaction_followup", "ses_agent_later", "cmp_agent",
     )
-    followup.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(followup)
     implementation = {
         "identity": "ev_environment_compaction_implementation",
         "repository": "mncs-environment",
@@ -10079,11 +10212,11 @@ def test_improvement_relation_without_followup_preserves_unassessed_status(
     verification = _observation(
         "ev_environment_change_verification", "ses_environment", "cmp_environment",
     )
-    verification.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(verification)
     change = _observation(
         "ev_environment_change_implementation", "ses_environment", "cmp_environment",
     )
-    change.pop("pressure_hypothesis")
+    _drop_pressure_hypothesis(change)
     implementation_reference = {
         "identity": "ev_environment_change_source",
         "repository": "mncs-environment",

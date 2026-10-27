@@ -175,6 +175,23 @@ inspectable source records and the missing-pointer status. It leaves
 responsibility matching, causality, and native migration readiness
 `not-established`.
 
+## Pressure recurrence and role coverage
+
+`pressure_hypotheses` counts only observations that explicitly declare
+`pressure_hypothesis_role: occurrence`. Explicit supporting-context records and
+validated improvement-linked records remain visible with their source
+references but do not add recurrence. Legacy observations without a role are
+reported as unclassified evidence rather than presumed occurrences. The
+projection's `observation_count` counts classified occurrences. For identities
+with supporting or unclassified evidence, the summary adds
+their counts, total evidence count, role-coverage status, and bounded evidence
+pointers with observation kind and recorded session/campaign context. Omitted
+supporting and unclassified counts mean zero. Within-session recurrence
+requires complete, matching session attribution; across-session
+recurrence requires at least two distinct recorded session IDs. This lets an
+agent inspect authentic evidence without silently promoting missing metadata
+into an occurrence or a recurrence claim.
+
 ## Measurement limits
 
 - Systemwide native adoption remains `not-measured`; these observations are not

@@ -885,7 +885,22 @@ provide evidence. An implementation record that restates its target pressure
 is not counted as another pressure occurrence; a later observation can count
 when it independently records that pressure again. Repeated candidate IDs or
 resource use alone do not create an efficiency score or a causal claim.
-Missing measurements remain explicit.
+Only records that explicitly declare the `occurrence` role count toward
+recurrence. Explicit `supporting-context` records and records linked to an
+improvement remain visible as supporting evidence; legacy records without a
+role remain visible as unclassified evidence and do not count as occurrences.
+When supporting or unclassified evidence is present, or an occurrence lacks
+session attribution, the summary adds those role counts, the total evidence
+count, role-coverage and session-attribution status, and bounded source
+references. Omitted supporting and unclassified counts mean zero. The existing
+`observation_count` and `evidence` pointer list cover explicit occurrences;
+`distinct_session_count` and affected-work context describe all linked evidence,
+while `occurrence_distinct_session_count` separates the occurrence sessions
+when role classes are mixed. Recurrence within one session is established only
+when every counted occurrence has the same recorded session identity.
+Across-session recurrence requires at least two distinct recorded occurrence
+session identities. Missing session attribution remains visible as incomplete
+context. Missing measurements remain explicit.
 Observations can also report measurements without a pressure hypothesis, so a
 resource sample is not forced into a healthy/unhealthy judgment. Its sampling
 scope and unavailable attribution remain attached to that observation.
@@ -1168,10 +1183,12 @@ includes the corrected record in pressure analysis. It retains the original
 contract diagnostic, exact target pointer, and correction identity so the
 corrected projection does not make the original record appear complete.
 A pressure hypothesis can have role `occurrence` or
-`supporting-context`; records without an explicit role retain the historical
-`occurrence` default. A verification or improvement record that repeats a
-hypothesis only to describe the change should use `supporting-context`, so the
-same declaration is not counted as another observed pressure occurrence. An
+`supporting-context`. Records without an explicit role are unclassified and do
+not count toward recurrence. A verification or improvement record that repeats
+a hypothesis only to describe the change should use `supporting-context`; a
+validated improvement relation is also treated as supporting context in the
+recurrence view. Projected observation rows distinguish a recorded role, a
+verified append-only role correction, and a role that was not recorded. An
 append-only correction can fix a previously published role while preserving the
 original record and its pointer.
 Each replacement source must have verified content integrity. A source may
