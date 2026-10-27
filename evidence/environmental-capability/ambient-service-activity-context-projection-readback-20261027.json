@@ -1,0 +1,155 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_activity_projection_readback_20261027",
+  "captured_at": "2026-10-27T14:31:07Z",
+  "measurement_basis": "direct-authenticated-bounded-ECI-session-activity-readback-after-implementation",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_b922fbcf64b39a81 --interpret environmental-capability --evidence-limit 1 --session-event-limit 16",
+      "source_session_id": "ses_b922fbcf64b39a81",
+      "event_window_sequences": [50, 65]
+    },
+    "outcome": {
+      "projection_identity": "eci_5b5dba61a7df3290",
+      "content_digest": "827a8e78b1717d65817b3be93d09acd1",
+      "status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 104351,
+      "source_campaign_id": "cmp_a671d640b0caa7c0",
+      "source_campaign_state_checkpoint_id": "chk_4bf1142904fbd0d0",
+      "source_campaign_evidence_count": 1,
+      "source_pointer_content_integrity_verified_count": 0,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "ambient_owner_pass_activity": {
+        "status": "partial",
+        "invocation_event_count": 3,
+        "scoped_invocation_count": 0,
+        "unclassified_invocation_count": 3,
+        "unclassified_groups": [
+          {
+            "capability": "mncs-automation:automation-reconciliation",
+            "binding_identity": {
+              "provider": "mncs-automation",
+              "binding_id": "cap_2d76de021e79ca4c",
+              "contract_revision": "1"
+            },
+            "invocation_count": 1,
+            "completion_count": 1,
+            "completion_context": "not-recorded",
+            "outcome": "ok",
+            "nonzero_returncode_count": 0,
+            "supporting_events": [
+              "evt_23ffd52d16e5c7be",
+              "evt_8bf10dd301e632c0"
+            ]
+          },
+          {
+            "capability": "mncs-doctor:projection-health",
+            "binding_identity": {
+              "provider": "mncs-doctor",
+              "binding_id": "cap_95eabb0251840162",
+              "contract_revision": "1"
+            },
+            "invocation_count": 1,
+            "completion_count": 1,
+            "completion_context": "not-recorded",
+            "outcome": "ok",
+            "nonzero_returncode_count": 0,
+            "supporting_events": [
+              "evt_b795fccdc182f4f7",
+              "evt_62341696cf063fb1"
+            ]
+          },
+          {
+            "capability": "mncs-doc:documentation-projection",
+            "binding_identity": {
+              "provider": "mncs-doc",
+              "binding_id": "cap_7dce14e3aa9fcab1",
+              "contract_revision": "1"
+            },
+            "invocation_count": 1,
+            "completion_count": 1,
+            "completion_context": "not-recorded",
+            "outcome": "ok",
+            "nonzero_returncode_count": 0,
+            "supporting_events": [
+              "evt_314d17e5d362e341",
+              "evt_6088613b3238290f"
+            ]
+          }
+        ]
+      },
+      "declared_readiness_services": [
+        "mncs-environment:workspace-readiness",
+        "mncs-doctor:compiler-vm-coherence",
+        "mncs-language-service:resident-workspace",
+        "mncs-forge:resident-workspace"
+      ],
+      "exact_probe_capability_matches_for_unclassified_groups": 0,
+      "service_accountability": {
+        "ambient_fulfillment_status": "not-measured",
+        "eligible_opportunity_denominator": "not-recorded",
+        "agent_intervention_burden_status": "not-measured",
+        "outcome_quality_status": "not-established"
+      },
+      "interpretation_limit": "The readback establishes that bounded capability activity, binding identities, and source event references are queryable. All three calls completed with status ok, but their initiation context and relation to agent need, service opportunities, readiness, or reduced work are not established. The response is partial and truncated."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_service_activity_context_pressure_20261027",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-activity-context-pressure-20261027.json",
+      "sha256": "ad15626d12bc6147a2b9e37df4fe258e038c247ea6b090200dfb2c6e19c83b0b"
+    },
+    {
+      "identity": "ev_environment_ambient_service_activity_context_verification_20261027",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-activity-context-verification-20261027.json",
+      "sha256": "5a47674a2b274e479bf362abab00086a1381cd532d2461f29ab73872f85f414b"
+    },
+    {
+      "identity": "ev_environment_ambient_service_activity_context_improvement_20261027",
+      "kind": "campaign-improvement-relation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-activity-context-improvement-20261027.json",
+      "sha256": "3ef745b215003078a6fb105c5ac4d111f43ff14bb2419bee4fc767299747c33f"
+    }
+  ],
+  "not_measured": [
+    "whether other agents discover or use the unclassified-call projection",
+    "whether the scheduler decision trace is available in other session interfaces",
+    "whether those calls correspond to eligible opportunities or agent requests",
+    "whether any environmental service reduced agent intervention",
+    "whether this projection changes future behavior or service outcomes"
+  ]
+}

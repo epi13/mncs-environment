@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_activity_context_improvement_20261027",
+  "captured_at": "2026-10-27T14:31:07Z",
+  "measurement_basis": "committed-bounded-activity-projection-linked-to-targeted-verification-and-live-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "link session activity that lacks service context to bounded, inspectable capability-call evidence",
+      "addresses_hypothesis_identity": "ph_environment_ambient_service_trace_visibility",
+      "implementation_commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "verification_observation_identity": "ev_environment_ambient_service_activity_context_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_ambient_service_activity_projection_readback_20261027"
+    },
+    "outcome": {
+      "implementation_change": "The existing ECI session-activity projection now groups bounded capability invocations that lack valid ambient owner-pass context. It retains capability identity, exact binding identity when available, invocation/completion counts, completion context and outcome summaries, nonzero return-code counts, and exact source-event references. Declared readiness probes expose the nested unclassified activity relation and exact current-binding match status. No agent attribution, manual-fallback label, missed-opportunity inference, or service-failure conclusion is generated.",
+      "verification_basis": "Focused ECI and projection CLI tests pass; a bounded live query exposes three authentic unclassified calls with exact source references and reports a partial, truncated result.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The projection makes activity and uncertainty inspectable. It does not yet record the scheduler decision or prove that any call fulfilled an eligible opportunity or reduced agent work."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_ambient_service_activity_context_20261027",
+    "addresses_hypothesis_identity": "ph_environment_ambient_service_trace_visibility",
+    "implementation_reference": {
+      "identity": "mncs_environment_unclassified_ambient_activity_implementation_9fdaa61",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "03418a1d30ccfb6752f6b7b81e07382184cf4f54"
+    },
+    "verification_observation_identity": "ev_environment_ambient_service_activity_context_verification_20261027",
+    "subsequent_observation_identity": "ev_environment_ambient_service_activity_projection_readback_20261027",
+    "basis": "The targeted projection behavior is covered by regressions and is demonstrated against an authentic session containing three calls without recorded ambient owner-pass context. Exact bindings and source event references are available to another agent for investigation. This improves activity discoverability while leaving the decision trace and agent/service outcome unestablished.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether scheduler context is recorded for future capability invocations",
+      "whether calls are service initiated, agent requested, or otherwise triggered",
+      "whether calls correspond to eligible service opportunities or reduce intervention burden",
+      "whether the projection improves agent decisions across sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_unclassified_ambient_activity_tests_9fdaa61",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "a269f2e0a0c40a2e6570eedc8224d18b3c64a7ed"
+    },
+    {
+      "identity": "ev_environment_ambient_service_activity_context_verification_20261027",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-activity-context-verification-20261027.json"
+    }
+  ],
+  "not_measured": [
+    "whether the pressure recurs across additional sessions",
+    "whether agents use the added activity references",
+    "whether the new projection reduces intervention work or changes service outcomes",
+    "whether ambient service opportunities were missed in the historical window"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_activity_context_pressure_20261027",
+  "captured_at": "2026-10-27T14:31:07Z",
+  "measurement_basis": "authenticated-session-event-projection-and-previous-service-decision-trace-observation",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_ab3d007d2f8b6de7",
+    "campaign_evidence_count_before_recording": 47
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment environmental-capability projection over authenticated session activity",
+    "request": {
+      "operation": "inspect bounded capability invocation groups and their relation to ambient service context",
+      "session_id": "ses_b922fbcf64b39a81",
+      "event_window_sequences": [50, 65],
+      "command": "./scripts/mncs-env projections ses_b922fbcf64b39a81 --interpret environmental-capability --evidence-limit 1 --session-event-limit 16"
+    },
+    "outcome": {
+      "projection_identity": "eci_5b5dba61a7df3290",
+      "content_digest": "827a8e78b1717d65817b3be93d09acd1",
+      "projection_status": "partial",
+      "response_truncated": true,
+      "invocation_count_in_selected_window": 3,
+      "scoped_invocation_count": 0,
+      "unclassified_invocation_count": 3,
+      "unclassified_capabilities": [
+        "mncs-automation:automation-reconciliation",
+        "mncs-doctor:projection-health",
+        "mncs-doc:documentation-projection"
+      ],
+      "all_three_completion_statuses": "ok",
+      "all_three_completion_contexts": "not-recorded",
+      "readiness_probe_relation": "none of the three capability identities exactly matches the four declared readiness probes in this selected session",
+      "interpretation": "The calls are now inspectable with exact binding identities and invocation/completion event references, but the recorded context does not establish whether they were ambient service work, agent-requested work, or eligible service opportunities. This is a traceability limitation, not evidence of service failure or avoidable agent burden.",
+      "recurrence_status": "not-established; the current readback and prior trace-gap record describe the same session"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "kind": "prior-authenticated-session-service-decision-trace-observation",
+      "identity": "ev_environment_ambient_service_decision_trace_gap_20261027",
+      "repository": "mncs-environment",
+      "commit": "6731aa2decd80b39ca893a4c170db7afba9021cc",
+      "path": "evidence/environmental-capability/ambient-service-decision-trace-gap-20261027.json",
+      "sha256": "99e2561c18873b8e8aed984462f7bd6ff90d8511c76b4e77d4ca835b7d2f6c27"
+    }
+  ],
+  "not_measured": [
+    "whether any of the calls were initiated by an agent or by an ambient service",
+    "whether any call corresponded to an eligible service opportunity or agent need",
+    "whether the calls reduced or increased agent intervention burden",
+    "whether the three calls were causally related to the readiness observations",
+    "cross-session recurrence of this precise missing-context condition",
+    "Btrfs metadata allocation, attribution, or the cause of the earlier filesystem incident"
+  ]
+}
