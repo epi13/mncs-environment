@@ -1,0 +1,140 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_compact_event_reference_live_readback_20261027",
+  "captured_at": "2026-10-27T05:03:04Z",
+  "measurement_basis": "bounded read-only MNCS Environmental Capability projection and selected-session activity correlation",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_93b86c1a9796c12f",
+    "campaign_evidence_count_before_recording": 8
+  },
+  "observation": {
+    "kind": "compact-observation-event-reference-live-readback",
+    "source_interface": "MNCS Environment mncs-env projections --interpret environmental-capability",
+    "request": {
+      "projection_identity": "eci_6514e9ffc3f1d266",
+      "campaign_state_checkpoint_id": "chk_93b86c1a9796c12f",
+      "evidence_count": 8,
+      "history_pages": 1,
+      "evidence_offset": 0,
+      "evidence_limit": 8,
+      "session_event_before_sequence": 8,
+      "session_event_limit": 4,
+      "target_observation_identity": "ev_environment_unowned_scope_integration_observation_20261027",
+      "source_event_identity": "evt_0bea59eea1d1c8a7"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_compacted": true,
+      "record_corrections_applied_count": 2,
+      "record_corrections_unverified_count": 0,
+      "target_observation": {
+        "evidence_reference": {
+          "identity": "ev_environment_unowned_scope_integration_observation_20261027",
+          "repository": "mncs-environment",
+          "commit": "710f10a3dcd771631a603fac7bc04f56e6e65872",
+          "path": "evidence/environmental-capability/unowned-scope-integration-observation-20261027.json",
+          "sha256": "28ec4b5ce98ebe3309b739fec35adae1811f1c75724936364e015efe1f495493"
+        },
+        "record_correction_status": "completed-by-append-only-record",
+        "correction_observation_identity": "ev_environment_unowned_scope_resource_sample_correction_20261027",
+        "event_reference": {
+          "identity": "evt_0bea59eea1d1c8a7",
+          "sequence": 7,
+          "type": "authority.integration-eligible"
+        },
+        "resource_sample_relation_status": "matched-exact-resource-sample-and-session",
+        "resource_sample_identity": "rsm_254530d2d63a5219"
+      },
+      "session_activity_relation": {
+        "status": "exact-identity-sequence-type-match",
+        "event_reference": {
+          "identity": "evt_0bea59eea1d1c8a7",
+          "sequence": 7,
+          "type": "authority.integration-eligible"
+        },
+        "action": "publish",
+        "authorization_basis": "writable-repository-rights",
+        "eligibility_basis": "exact-observed-scope-and-repository-native-concurrency",
+        "persistent_claim_required": false,
+        "operation_executed": false,
+        "coordination_overlap_count": 8,
+        "coordination_overlap_records_returned": 4,
+        "claim_state_lookup_omitted_count": 4,
+        "claim_state_lookup_status": "partial-lookup-limit"
+      },
+      "interpretation": "The compact Environmental Capability result preserves the observation's exact eligibility event beside the source pointer. The same identity, sequence, and type match the selected-session integration-eligibility activity. This exposes the recorded separation of authorization, operation eligibility, and coordination evidence; it does not establish that the publish operation executed or that every overlapping claim was live."
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_unowned_scope_integration_observation_20261027",
+      "kind": "historical-operational-observation",
+      "repository": "mncs-environment",
+      "commit": "710f10a3dcd771631a603fac7bc04f56e6e65872",
+      "path": "evidence/environmental-capability/unowned-scope-integration-observation-20261027.json",
+      "sha256": "28ec4b5ce98ebe3309b739fec35adae1811f1c75724936364e015efe1f495493"
+    },
+    {
+      "identity": "ev_environment_unowned_scope_resource_sample_correction_20261027",
+      "kind": "append-only-observation-correction",
+      "repository": "mncs-environment",
+      "commit": "2486ad11d10653e31ffb3cd75b454eab167b3079",
+      "path": "evidence/environmental-capability/unowned-scope-resource-sample-correction-20261027.json",
+      "sha256": "d0037e037d48030f608b3a27062b5fef72eb334e4a65830e6b0b9cebb24d9454"
+    },
+    {
+      "identity": "ev_environment_resource_sample_observation_live_readback_20261027",
+      "kind": "previous-live-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "6f5d5be7a609633a8c2ba8c8935367cd432f6582",
+      "path": "evidence/environmental-capability/resource-sample-observation-live-readback-20261027.json",
+      "sha256": "8361532d47a9d2bb6c7da84d11ec1a828a813db2c382ccd73da6cb8baa59bc03"
+    },
+    {
+      "identity": "mncs_environment_compact_event_reference_implementation_7e8f188",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "7e8f1883e6bc8be466365537e9a4b8979939dd7f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "84b9e2b99cbbc21ad23ee9d5b17a4fed08f94ad2910f5c9140edd39216e2b975"
+    },
+    {
+      "identity": "mncs_environment_compact_event_reference_regression_7e8f188",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "7e8f1883e6bc8be466365537e9a4b8979939dd7f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "53d8ee5cc0b5e6bc396d93db10715830d01eccb1f7939610b3d8a6a125e790ab"
+    },
+    {
+      "identity": "mncs_environment_compact_event_reference_contract_7e8f188",
+      "kind": "projection-documentation-source",
+      "repository": "mncs-environment",
+      "commit": "7e8f1883e6bc8be466365537e9a4b8979939dd7f",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "a8dbb937b10c18d40d53f61bb9b94825d55697a1a844a2555eb222d6a6157b25"
+    }
+  ],
+  "not_measured": [
+    "whether the publish operation was later executed or succeeded",
+    "liveness of all eight overlapping claim records",
+    "whether avoiding persistent claim acquisition reduced agent overhead",
+    "agent-attributed CPU or memory use",
+    "causal effect of the authority decision on resource use or development outcome",
+    "recurrence of the same eligibility pattern across sessions or agents"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

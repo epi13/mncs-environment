@@ -106,6 +106,13 @@ The bounded live projection result is preserved in
 It shows the exact sample, event, artifact-digest, and Work Intent joins while
 retaining the distinction between a preflight observation and an executed
 integration.
+The follow-up
+[`compact-event-reference-live-readback-20261027.json`](../evidence/environmental-capability/compact-event-reference-live-readback-20261027.json)
+records how the compact ECI row preserves the exact eligibility-event
+reference and matches it to the selected session's activity. It keeps the
+recorded authorization basis, eligibility basis, claim requirement, and
+coordination overlap beside their distinct evidence, while retaining the
+bounded claim-liveness and non-execution limits.
 
 The 2026-10-27
 [`coordination-aware-diagnostic-deferral-20261027.json`](../evidence/environmental-capability/coordination-aware-diagnostic-deferral-20261027.json)
