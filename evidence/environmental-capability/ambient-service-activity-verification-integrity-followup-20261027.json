@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_activity_verification_integrity_followup_20261027",
+  "captured_at": "2026-10-27T14:37:02Z",
+  "measurement_basis": "focused-projection-regressions-with-sha256-verified-source-references",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_6ff1d2386b911688",
+    "campaign_evidence_count_before_recording": 51
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment focused ECI and projection CLI tests",
+    "request": {
+      "implementation_commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "supersedes_verification_observation_identity": "ev_environment_ambient_service_activity_context_verification_20261027",
+      "correction_note": "The earlier record used Git blob object IDs as SHA-256 source digests. These pointers now contain actual SHA-256 content digests."
+    },
+    "outcome": {
+      "status": "passed",
+      "targeted_test_command": "python3 -m pytest tests/test_capability_intelligence.py tests/test_capability_projection_cli.py -q",
+      "targeted_tests": {
+        "passed": 164,
+        "failed": 0
+      },
+      "commit_whitespace_check": "git show --check --oneline 9fdaa61 --: passed",
+      "verified_behaviors": [
+        "bounded unclassified capability-call groups retain exact event references",
+        "binding identity and completion context/outcome are represented without agent attribution",
+        "compact response-budget behavior retains activity evidence within configured limits",
+        "service-accountability digest changes with nested probe activity"
+      ],
+      "live_readback": {
+        "session_id": "ses_b922fbcf64b39a81",
+        "projection_identity": "eci_5b5dba61a7df3290",
+        "content_digest": "827a8e78b1717d65817b3be93d09acd1",
+        "status": "partial",
+        "response_truncated": true,
+        "unclassified_invocation_count": 3
+      },
+      "interpretation_limit": "The tests establish projection representation and size bounds. The live readback exposes authentic call references, but neither establishes service need, fulfillment, agent receipt, or reduced intervention burden."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_unclassified_ambient_activity_implementation_9fdaa61",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "24c3f9caa73527b27a83c72309bb074da9084012c7f748cb39ccee9bb1a03d27"
+    },
+    {
+      "identity": "mncs_environment_unclassified_ambient_activity_tests_9fdaa61",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "f516e82bb0522409251db388862b405d982d0dac1f29cae1ffae3057d35b9eea"
+    },
+    {
+      "identity": "mncs_environment_unclassified_ambient_activity_docs_9fdaa61",
+      "kind": "committed-projection-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "d9abe49c37897dd5a02d22c73bd342925693a71ad01fd619836ea4709882c40a"
+    }
+  ],
+  "not_measured": [
+    "whether independent agents discover or use the projection",
+    "whether this environmental change reduces intervention burden",
+    "whether future events contain complete scheduler context",
+    "whether service opportunity and agent need are recorded"
+  ]
+}

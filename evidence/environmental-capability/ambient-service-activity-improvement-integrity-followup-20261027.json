@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_activity_improvement_integrity_followup_20261027",
+  "captured_at": "2026-10-27T14:37:02Z",
+  "measurement_basis": "source-integrity-corrected-improvement-relation-and-bounded-live-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "publish a content-integrity-verifiable improvement relation for the bounded activity projection",
+      "addresses_hypothesis_identity": "ph_environment_ambient_service_trace_visibility",
+      "implementation_commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "verification_observation_identity": "ev_environment_ambient_service_activity_verification_integrity_followup_20261027",
+      "subsequent_observation_identity": "ev_environment_ambient_service_activity_projection_readback_integrity_followup_20261027",
+      "supersedes_observation_identity": "ev_environment_ambient_service_activity_context_improvement_20261027",
+      "supersession_reason": "The earlier relation used a 40-character Git blob ID in the SHA-256 field; this append-only follow-up uses the actual 64-character content digest."
+    },
+    "outcome": {
+      "implementation_change": "The ECI projection groups unclassified capability calls with exact binding and source-event references, and relates declared probes to that activity without inferring agent intent or service failure.",
+      "verification_basis": "The focused ECI and projection CLI suites passed 164 tests. An authenticated live projection exposed three authentic calls with exact event references and returned a partial, truncated result.",
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The implementation and projection path are verified. Ambient scheduler decisions are already represented separately in the current session snapshot; the historical calls remain unclassified because their event records lack that context. No reduction in agent burden has been measured."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_ambient_service_activity_context_integrity_followup_20261027",
+    "addresses_hypothesis_identity": "ph_environment_ambient_service_trace_visibility",
+    "implementation_reference": {
+      "identity": "mncs_environment_unclassified_ambient_activity_implementation_9fdaa61",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "24c3f9caa73527b27a83c72309bb074da9084012c7f748cb39ccee9bb1a03d27"
+    },
+    "verification_observation_identity": "ev_environment_ambient_service_activity_verification_integrity_followup_20261027",
+    "subsequent_observation_identity": "ev_environment_ambient_service_activity_projection_readback_integrity_followup_20261027",
+    "basis": "The projection's bounded activity representation is covered by focused regression tests and demonstrated on authentic session events. The new records use actual SHA-256 source digests; the resulting live readback will independently report source integrity and relation status. This documents a verified observability capability, not empirically reduced intervention or service fulfillment.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether an agent uses the new event references in subsequent work",
+      "whether ambient service need and fulfillment become observable",
+      "whether scheduler context is present for future invocation events",
+      "whether any service reduced agent intervention burden"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_unclassified_ambient_activity_tests_9fdaa61",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "f516e82bb0522409251db388862b405d982d0dac1f29cae1ffae3057d35b9eea"
+    },
+    {
+      "identity": "mncs_environment_unclassified_ambient_activity_docs_9fdaa61",
+      "kind": "committed-projection-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "9fdaa61f176dd2a206346ac12e9cb0cd7b353be4",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "d9abe49c37897dd5a02d22c73bd342925693a71ad01fd619836ea4709882c40a"
+    }
+  ],
+  "not_measured": [
+    "longitudinal agent use or intervention reduction",
+    "cross-session recurrence of the missing-context pattern",
+    "causal relationship between scheduler decisions and historical capability calls",
+    "the effectiveness of the service for the agent's objective"
+  ]
+}
