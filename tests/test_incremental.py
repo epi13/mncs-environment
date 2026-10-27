@@ -240,6 +240,93 @@ def test_external_edits_select_only_subscribed_passes(participant, path, expecte
     assert quiet['scheduled'] == []
 
 
+def test_later_owner_wave_records_its_derived_trigger(tmp_path, monkeypatch):
+    session = Participant(tmp_path / 'state', tmp_path)
+    automation = tmp_path / 'automation'
+    coherence_provider = automation / 'native/mncs/automation/coherence.mncs'
+    coherence_provider.parent.mkdir(parents=True)
+    coherence_provider.write_text('fixture provider')
+    monkeypatch.setenv('MNCS_AUTOMATION_ROOT', str(automation))
+    declarations = coherence.declarations()
+    names = list(declarations['passes'])
+    session.snapshot['coherence'] = {
+        'schema_version': coherence.SCHEMA,
+        'stable': True,
+        'policy_identity': 'fixture-policy',
+        'current_request': 'prior-request',
+        'policy_artifacts': {},
+        'result_refs': {},
+        'deadlines': {},
+        'repositories': {},
+        'artifacts': {},
+        'libraries': {},
+        'store_cursor': 0,
+        'semantic_cursors': {},
+    }
+    monkeypatch.setattr(coherence, '_roots', lambda _session: {})
+    monkeypatch.setattr(coherence, '_policy_identity', lambda *_args: (
+        'fixture-policy', {},
+    ))
+    event_sample = {'count': 0}
+
+    def observe(_session, _prior):
+        event_sample['count'] += 1
+        events = (
+            [{'kind': 'source.changed', 'identity': 'fixture-source'}]
+            if event_sample['count'] == 1 else []
+        )
+        return (
+            {'repositories': {}, 'artifacts': {}, 'libraries': {}},
+            events, True,
+            {'metadata_paths': 0, 'enumerated_repositories': [], 'errors': []},
+        )
+
+    monkeypatch.setattr(coherence, '_observe', observe)
+    monkeypatch.setattr(coherence, '_store_events', lambda *_args: ([], 0, True))
+    monkeypatch.setattr(coherence, '_semantic_events', lambda *_args: ([], {}, True))
+    monkeypatch.setattr(coherence, '_file_events', lambda _session, events: events)
+    monkeypatch.setattr(coherence, '_load_results', lambda *_args: ({
+        name: {'summary': {}, 'reused': True} for name in names
+    }, True))
+    monkeypatch.setattr(coherence, '_result_refs', lambda *_args: {})
+    monkeypatch.setattr(family, 'scheduler_deadlines', lambda _session: [])
+
+    route_call = {'count': 0}
+    verification_changed = 1 << declarations['facts'].index('verification.changed')
+
+    def native(_session, function, rows):
+        assert function == 'route_batch'
+        route_call['count'] += 1
+        if route_call['count'] == 1:
+            codes = [1 if name == 'verification' else 0 for name in names]
+        elif route_call['count'] == 2:
+            codes = [
+                1 if name == 'family' and row[3] & verification_changed else 0
+                for name, row in zip(names, rows)
+            ]
+        else:
+            codes = [0] * len(rows)
+        return codes, {}
+
+    monkeypatch.setattr(coherence, '_native', native)
+
+    def run(name):
+        if name == 'verification':
+            session.snapshot['verification_state'] = {
+                'ob-1': {'verdict': 'PASS'},
+            }
+        return {'summary': {}, 'reused': False}
+
+    _, trace = coherence.tick(
+        session, {}, {name: lambda name=name: run(name) for name in names},
+    )
+    family_pass = next(
+        item for item in trace['scheduled'] if item['pass'] == 'family'
+    )
+    assert family_pass['wave'] == 1
+    assert family_pass['inputs'] == ['verification.changed']
+
+
 def test_same_dirty_filename_edited_twice_is_not_cached(participant):
     counts, owned = runners()
     coherence.tick(participant, {}, owned)
@@ -305,6 +392,11 @@ def test_verification_change_routes_to_family_and_projection(participant):
     _, trace = coherence.tick(participant, {}, owned)
     assert 'family' in {item['pass'] for item in trace['scheduled']}
     assert any(item['kind'] == 'verification.changed' for item in trace['derived_events'])
+    family_pass = next(
+        item for item in trace['scheduled'] if item['pass'] == 'family'
+    )
+    assert family_pass['wave'] == 1
+    assert family_pass['inputs'] == ['verification.changed']
 
 
 def test_store_publication_during_pass_is_not_skipped(participant):

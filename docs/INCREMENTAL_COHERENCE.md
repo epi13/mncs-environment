@@ -135,6 +135,13 @@ pass without a reported owner failure is still not independent verification or
 evidence that an agent need was fulfilled; the projection keeps correctness
 verification and the opportunity denominator unestablished.
 
+For a scheduled pass, `inputs` lists the observed fact categories admitted to
+that pass in the wave that scheduled it. If an earlier owner emits a derived
+event, the later pass now records that derived category rather than categories
+from the original event batch. This makes scheduler routing inspectable across
+waves; it does not establish an agent-need opportunity or successful service
+fulfillment.
+
 Selectivity currently operates at declared pass/category and selected-workspace
 boundaries. Semantic subject/obligation-level subscriptions, stream-reset routing,
 provider-owned repair receipts and one resident scheduling path remain work for

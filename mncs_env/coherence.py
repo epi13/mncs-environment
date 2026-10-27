@@ -578,11 +578,12 @@ def _semantic_events(session, prior, definition):
     return events, cursors, known
 
 
-def _pass_masks(session, events, spec, definition):
-    masks = {name: _event_mask(events, spec) for name in spec['passes']}
+def _pass_events(session, events, spec, definition):
+    """Return the exact observed events admitted to each owner's route."""
+    routed = {name: events for name in spec['passes']}
     subscriptions = definition.get('coherence_subscriptions') or {}
     for name, subscription in subscriptions.items():
-        if name not in masks:
+        if name not in routed:
             raise ValueError('unknown coherence subscription owner')
         rows, considered = [], []
         for event in events:
@@ -604,8 +605,8 @@ def _pass_masks(session, events, spec, definition):
                 decisions.extend(codes)
             retained = [event for event in events if event not in considered]
             retained.extend(event for event, code in zip(considered, decisions) if code == 1)
-            masks[name] = _event_mask(retained, spec)
-    return masks
+            routed[name] = retained
+    return routed
 
 
 def _observe(session, prior: dict) -> tuple[dict, list[dict], bool, dict]:
@@ -856,9 +857,15 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     if set(names) != set(runners):
         raise ValueError("coherence runners must match the declared owner passes")
     rows = []
+    routed_events = {name: [] for name in names}
+    masks = {name: 0 for name in names}
     try:
         events = _file_events(session, events)
-        masks = _pass_masks(session, events, spec, definition)
+        routed_events = _pass_events(session, events, spec, definition)
+        masks = {
+            name: _event_mask(owner_events, spec)
+            for name, owner_events in routed_events.items()
+        }
         rows = [[int(name in results), int(known),
                  sum(1 << index for index in spec["passes"][name]), masks[name], 1, 0, 0,
                  int(name in expired or (name == "doctor" and _runtime_due(session, definition)))]
@@ -922,20 +929,33 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 values = scheduler_deadlines(session)
                 if values:
                     deadlines[name] = min(int(datetime.fromisoformat(value).timestamp() * 1000) for value in values)
+            interest_mask = sum(
+                1 << index for index in spec["passes"][name]
+            )
+            owner_events = routed_events.get(name, [])
+            trigger_kinds = list(dict.fromkeys(
+                event["kind"] for event in owner_events
+                if _event_mask([event], spec) & interest_mask
+            ))[:MAX_TRACE_TRIGGER_KINDS]
             report["scheduled"].append({"pass": name, "owner": name, "disposition": code, "wave": wave,
                 "service_execution_id": service_execution_id,
                 "owner_reused": bool((results[name] or {}).get("reused", False)),
                 "run_elapsed_seconds": owner_elapsed_seconds,
                 "invalidated_input_mask": rows[names.index(name)][3] if rows else None,
                 "timer_or_lifecycle_due": bool(rows[names.index(name)][7]) if rows else None,
-                "inputs": [event["kind"] for event in events if _event_mask([event], spec) & sum(1 << i for i in spec["passes"][name])],
-                "subjects": sorted({item.get("identity", "") for event in events for item in event.get("semantic_subjects", []) if isinstance(item, dict)})[:64]})
+                "inputs": trigger_kinds,
+                "subjects": sorted({item.get("identity", "") for event in owner_events for item in event.get("semantic_subjects", []) if isinstance(item, dict)})[:64]})
             if key and before != _domain_signature(session.snapshot.get(key)):
                 emitted.append({"kind": kind, "producer": name})
         if not emitted or len(scheduled) == len(names):
             break
+        routed_events = _pass_events(session, emitted, spec, definition)
+        masks = {
+            name: _event_mask(owner_events, spec)
+            for name, owner_events in routed_events.items()
+        }
         rows = [[int(name in results), 1, sum(1 << i for i in spec["passes"][name]),
-                 _event_mask(emitted, spec), int(name not in scheduled), 0, 0, 0] for name in names]
+                 masks[name], int(name not in scheduled), 0, 0, 0] for name in names]
         next_codes, _ = _native(session, "route_batch", rows)
         pending = dict(zip(names, next_codes))
         report.setdefault("derived_events", []).extend(emitted)
