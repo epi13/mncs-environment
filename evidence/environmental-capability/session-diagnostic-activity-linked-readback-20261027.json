@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_diagnostic_activity_linked_readback_20261027",
+  "captured_at": "2026-10-27T21:54:08Z",
+  "measurement_basis": "live-ECI-readback-after-improvement-relation-recording",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "latest_checkpoint": {
+      "identity": "chk_0de15b1cbf595760"
+    },
+    "campaign_evidence_count_before_recording": 99
+  },
+  "observation": {
+    "kind": "environmental-capability-linked-live-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_0de15b1cbf595760",
+      "evidence_page_offset": 93,
+      "evidence_page_limit": 6,
+      "history_pages": 1,
+      "session_event_limit": 4,
+      "projection_identity": "eci_6f3c9d3dd847a2b1",
+      "content_digest": "ac829461cf479689b644ed10c8709851",
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 131877,
+      "evidence_count": 99,
+      "observation_records_considered": 6,
+      "observation_records_verified": 6,
+      "observation_records_unavailable": 0,
+      "improvement_relation_count": 1,
+      "improvement_relation_identity": "im_environment_session_diagnostic_activity_projection_20261027",
+      "improvement_relation_status": "validated",
+      "pressure_hypothesis_identity": "ph_environment_session_diagnostic_activity_not_projected_20261027",
+      "pressure_hypothesis_status": "present-in-projection",
+      "pressure_recurrence_status": "not-established",
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_observation_record_status": "record-integrity-verified-in-projection",
+      "effectiveness_assessment": "not-assessed",
+      "diagnostic_activity_status": "recorded",
+      "diagnostic_history_identity": "dgh_452c26ca0fa418ad",
+      "diagnostic_history_record_count": 1,
+      "diagnostic_evidence_reference": "mncs-store:ses_a752e1c55fb4ca6f:diagnostics:01d4b7791191e40e06923a04693561370b50890fe8d37f8d949ff105f2ecef54",
+      "diagnostic_current_epoch_relation": "matches-latest-history-record",
+      "preserved_correction_limitation": "One historical correction record remains unverified because the correction mechanism cannot add a top-level improvement relation that was absent from the original record. The new immutable relation record is independently validated; no historical record was rewritten.",
+      "actionable_result": "The existing ECI projection now connects the authentic session diagnostic pressure hypothesis to the implementation, focused verification, and live readback through a schema-valid improvement relation with verified source integrity."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-environmental-capability-projection",
+      "identity": "eci_6f3c9d3dd847a2b1",
+      "content_digest": "ac829461cf479689b644ed10c8709851",
+      "checkpoint_id": "chk_0de15b1cbf595760"
+    },
+    {
+      "kind": "validated-improvement-relation-record",
+      "identity": "ev_environment_session_diagnostic_activity_improvement_relation_repair_20261027",
+      "repository": "mncs-environment",
+      "commit": "617d17adadd7d9eb100fa9434e8f2dcd931ee571",
+      "path": "evidence/environmental-capability/session-diagnostic-activity-improvement-relation-repair-20261027.json",
+      "sha256": "8429850b02609298e50c1e2bdad22bea9649e8dbecceb6184d73cbc59641b1cb"
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_diagnostic_activity_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+    },
+    {
+      "kind": "authentic-session-diagnostic-evidence",
+      "identity": "dgh_452c26ca0fa418ad",
+      "reference": "mncs-store:ses_a752e1c55fb4ca6f:diagnostics:01d4b7791191e40e06923a04693561370b50890fe8d37f8d949ff105f2ecef54"
+    }
+  ],
+  "measurement_limits": [
+    "The projection response is partial and truncated; only returned observations are described.",
+    "The pressure has one affected work context and recurrence is not established.",
+    "The projection readback occurred in the implementing campaign session and does not establish independent agent discovery, reduced intervention, or long-term effectiveness.",
+    "Session, campaign, WorkIntent, Environment, and definition identities are current session snapshot context, not captured context from the time the diagnostic ran."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
