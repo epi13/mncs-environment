@@ -1,0 +1,125 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_capability_projection_live_readback_20261027",
+  "captured_at": "2026-10-27T13:52:22Z",
+  "measurement_basis": "direct-environmental-capability-projection-readback-after-campaign-evidence-registration",
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_d891f915aa1f3006",
+      "history_pages": 1,
+      "evidence_limit": 8,
+      "session_event_limit": 8
+    },
+    "outcome": {
+      "projection_identity": "eci_ac2a722863855483",
+      "projection_status": "partial",
+      "response_truncated": true,
+      "record_corrections_applied": 2,
+      "record_corrections_unverified": 0,
+      "observable_evidence_identities": [
+        "ev_environment_ambient_owner_pass_result_trace_20261027",
+        "ev_environment_ambient_pressure_definition_correction_verification_20261027",
+        "ev_environment_ambient_pressure_definition_correction_improvement_20261027"
+      ],
+      "ambient_owner_pass_results": {
+        "mode": "bounded_reconciliation",
+        "trace_persistence_status": "session-snapshot",
+        "result_status": "recorded",
+        "result_count": 7,
+        "fulfillment": "not-established",
+        "agent_need_opportunity_denominator": "not-recorded"
+      },
+      "pressure_hypotheses": [
+        {
+          "identity": "ph_environment_ambient_native_router_discovery_20261027",
+          "definition_status": "consistent",
+          "recurrence_status": "not-established",
+          "recommendation": "Select the existing mncs-automation checkout in the capability-observation profile, then verify a standard resident entry uses that selected provider without an invocation-specific root override."
+        },
+        {
+          "identity": "ph_environment_corroborated_pressure_recommendation_correction_20261027",
+          "definition_status": "consistent",
+          "recurrence_status": "not-established",
+          "recommendation": "Allow a valid actionable-recommendation correction only when it exactly matches an integrity-verified occurrence for the same hypothesis definition and campaign; preserve rejection of unsupported rewrites."
+        }
+      ],
+      "improvement_relations": [
+        {
+          "identity": "im_environment_ambient_native_router_profile_20261027",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "effectiveness_assessment": "not-assessed"
+        },
+        {
+          "identity": "im_environment_corroborated_pressure_definition_correction_20261027",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "effectiveness_assessment": "not-assessed"
+        }
+      ]
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-observation",
+      "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+      "repository": "mncs-environment",
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "path": "evidence/environmental-capability/ambient-owner-pass-result-trace-20261027.json",
+      "sha256": "73f638e25e5cb940b006856dc6c3e23425c375d337844a2ace71e635d697bd2b"
+    },
+    {
+      "kind": "campaign-verification-observation",
+      "identity": "ev_environment_ambient_native_router_profile_verification_20261027",
+      "repository": "mncs-environment",
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "path": "evidence/environmental-capability/ambient-native-router-profile-verification-20261027.json",
+      "sha256": "6505c3c5ecbe0bdf4020e59fb2bb360dc8e537ed16f3f5b22969702927078a55"
+    },
+    {
+      "kind": "campaign-improvement-relation",
+      "identity": "ev_environment_ambient_native_router_profile_improvement_20261027",
+      "repository": "mncs-environment",
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "path": "evidence/environmental-capability/ambient-native-router-profile-improvement-20261027.json",
+      "sha256": "e7a008212ca3d33a2359551fb0a038ae53811d1fcb8031d0578ff2e77adff5df"
+    },
+    {
+      "kind": "campaign-verification-observation",
+      "identity": "ev_environment_ambient_pressure_definition_correction_verification_20261027",
+      "repository": "mncs-environment",
+      "commit": "34fcb9138b5e48f8be490e58c1feec66cbab38bf",
+      "path": "evidence/environmental-capability/ambient-pressure-definition-correction-verification-20261027.json",
+      "sha256": "fe12ec93e4980d8abce34427d46839b6c20cece98092fb696f78aabf02edc5d9"
+    },
+    {
+      "kind": "campaign-improvement-relation",
+      "identity": "ev_environment_ambient_pressure_definition_correction_improvement_20261027",
+      "repository": "mncs-environment",
+      "commit": "34fcb9138b5e48f8be490e58c1feec66cbab38bf",
+      "path": "evidence/environmental-capability/ambient-pressure-definition-correction-improvement-20261027.json",
+      "sha256": "baf6c77a6d7279873180169bafea280115ec4ee4e8f381962824a57ea3351ece"
+    }
+  ],
+  "not_measured": [
+    "Whether the profile change reduces future agent orchestration or intervention.",
+    "Whether later sessions reproduce either pressure or show reduced recurrence.",
+    "Whether verified recommendations correspond to improved downstream service outcomes.",
+    "The meaning of stable ECI identity across different projection implementation versions."
+  ]
+}
