@@ -3844,6 +3844,130 @@ def test_session_doctor_health_history_is_bounded_and_revision_linked(
     assert private_path not in json.dumps(compact)
 
 
+def test_session_projection_coherence_history_is_bounded_and_linked(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    assert capability_intelligence._session_projection_coherence_history(
+        session, {"projection_history": []},
+    )["status"] == "not-recorded-in-session"
+    session.snapshot.update({
+        "environment_id": "renv_projection_reader",
+        "snapshot_sequence": 41,
+        "campaign": {"identity": "cmp_projection_reader"},
+        "intent": {
+            "identity": "int_projection_reader",
+            "goal": "inspect projection freshness",
+        },
+    })
+    private_path = "/home/private/workspace/.state/projection-evidence"
+    evidence_prefix = "mncs-store:ses_projection_reader:projections:"
+    session.snapshot["projection_epoch"] = {
+        "epoch": "uncached:ambient:" + "a" * 64,
+        "at": "2026-10-27T05:10:02Z",
+        "summary": {
+            "current": 4,
+            "pending": 1,
+            "reconciled": 2,
+            "blockers": 0,
+            "degraded": 1,
+            "epoch_reused": False,
+            "elapsed_seconds": 1.25,
+        },
+        "evidence_ref": evidence_prefix + "b" * 64,
+    }
+    session.snapshot["projection_history"] = [
+        {
+            "at": f"2026-10-27T05:{index:02d}:02Z",
+            "mode": "ambient" if index % 2 == 0 else "explicit",
+            "summary": {
+                "current": 3,
+                "pending": 1,
+                "reconciled": 2,
+                "blockers": 0,
+                "degraded": 0,
+                "epoch_reused": False,
+                "elapsed_seconds": index / 10,
+            },
+            "evidence_ref": (
+                private_path if index == 8
+                else (
+                    "sessions/ses_projection_reader/projection-artifacts/evidence/"
+                    "projection-explicit-0123456789ab.json"
+                ) if index == 7
+                else (
+                    "mncs-store:ses_other:projections:" + "d" * 64
+                ) if index == 6
+                else evidence_prefix + f"{index:064x}"
+            ),
+            "raw_detail": private_path,
+        }
+        for index in range(10)
+    ]
+
+    projection = capability_intelligence.project(session)
+    view = projection["session_activity"]["projection_coherence_history"]
+    assert view["status"] == "partial"
+    assert view["scope"] == "current-session-ambient-projection-pass-history"
+    assert view["source"]["session_id"] == "ses_projection_reader"
+    assert view["source"]["campaign_id"] == "cmp_projection_reader"
+    assert view["source"]["work_intent_id"] == "int_projection_reader"
+    assert view["source"]["snapshot_sequence"] == 41
+    assert view["source"]["history_record_count"] == 10
+    assert view["source"]["history_records_projected"] == 8
+    assert view["source"]["history_records_omitted"] == 2
+    assert view["source"]["mode_counts_projected"] == {
+        "ambient": 4,
+        "explicit": 4,
+    }
+    assert view["current_epoch"]["summary"]["reconciled"] == 2
+    assert view["current_epoch"]["evidence_reference"] == {
+        "kind": "projection-immutable-evidence-record",
+        "schema": "mncs.environment.session-evidence/1",
+        "identity": "ses_projection_reader:projections:" + "b" * 64,
+    }
+    assert view["history"][0]["ordinal_from_newest"] == 1
+    assert view["history"][0]["evidence_reference_status"] == (
+        "reference-identified"
+    )
+    assert view["history"][1]["evidence_reference_status"] == (
+        "reference-invalid-or-unmatched"
+    )
+    assert view["history"][2]["evidence_reference"] == {
+        "kind": "session-projection-evidence-artifact",
+        "session_id": "ses_projection_reader",
+        "relative_path": (
+            "sessions/ses_projection_reader/projection-artifacts/evidence/"
+            "projection-explicit-0123456789ab.json"
+        ),
+    }
+    assert view["history"][3]["evidence_reference_status"] == (
+        "reference-invalid-or-unmatched"
+    )
+    assert private_path not in json.dumps(projection)
+    assert projection["source"]["session_projection_coherence_digest"]
+
+    original_identity = projection["identity"]
+    original_event_digest = projection["session_activity"]["source"][
+        "event_window_identity_digest"
+    ]
+    session.snapshot["projection_history"][-1]["summary"]["reconciled"] = 3
+    changed = capability_intelligence.project(session)
+    assert changed["identity"] != original_identity
+    assert changed["session_activity"]["source"][
+        "event_window_identity_digest"
+    ] == original_event_digest
+
+    compact = capability_intelligence.project(session, max_result_bytes=8_000)
+    compact_view = compact["session_activity"]["projection_coherence_history"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_view["source"]["history_record_count"] == 10
+    assert compact_view["history"][0]["evidence_reference"]["identity"].endswith(
+        "0" * 63 + "9",
+    )
+    assert private_path not in json.dumps(compact)
+
+
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
     record = _observation(
         "ev_environment_authority_denial_activity",

@@ -1024,6 +1024,23 @@ includes them in projection identity so snapshot changes remain distinguishable
 even when the event tail and binding inventory are unchanged. These digests
 identify derived input state; they do not verify service correctness.
 
+`session_activity.projection_coherence_history` exposes the selected session's
+recorded projection-pass summaries and their evidence references, together
+with the latest stored epoch summary and campaign context. It reuses the existing
+session snapshot; evidence references identify immutable Store records or
+session-scoped file artifacts according to the persistence backend. The view
+does not create a second telemetry store or fetch or integrity-verify the
+referenced historical evidence. The view is bounded to
+the newest eight pass records and rejects evidence references belonging to
+another session or projection owner. Cache-reused ambient reads and trigger
+opportunities that never resulted in a recorded pass are not counted, so the
+history cannot establish an ambient-fulfillment ratio. A reconciled or
+current outcome records the pass result; it does not establish lasting
+freshness or reduced agent burden. Its digest participates in projection
+identity, so a snapshot-only history change is detectable even when the event
+tail is unchanged. Per-pass snapshot-save durability is not recorded in the
+history and remains unknown.
+
 New write-effect invocation events may include an `effect_target` with the
 exact repository, checkout, and branch admitted for that operation.
 `session_activity.interactions[].effect_target` exposes the recorded

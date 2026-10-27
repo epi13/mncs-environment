@@ -203,6 +203,7 @@ CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
 })
 MAX_SESSION_EVENT_WINDOW = 256
 MAX_SESSION_DOCTOR_HISTORY = 8
+MAX_SESSION_PROJECTION_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
 MAX_RESOURCE_SAMPLE_BYTES = 64 * 1024
@@ -2127,6 +2128,7 @@ def _compact_projection(
                     "source_pointer_content_integrity_not_verified_count",
                     "session_service_readiness_digest",
                     "session_service_accountability_digest",
+                    "session_projection_coherence_digest",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable",
@@ -4683,6 +4685,10 @@ def _compact_projection(
     if isinstance(raw_doctor_history, dict):
         # Doctor's snapshot history is already bounded and sanitized here.
         compact_activity["doctor_health_history"] = raw_doctor_history
+    raw_projection_history = activity.get("projection_coherence_history")
+    if isinstance(raw_projection_history, dict):
+        # Projection-pass history is bounded, session-scoped and sanitized.
+        compact_activity["projection_coherence_history"] = raw_projection_history
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity["operation_deferral_count"] = activity.get(
             "operation_deferral_count", 0,
@@ -5421,6 +5427,43 @@ def _compact_projection(
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
+        elif result["session_activity"].get(
+            "projection_coherence_history", {},
+        ).get("history"):
+            projection_view = result["session_activity"][
+                "projection_coherence_history"
+            ]
+            projection_view["history"].pop()
+            projection_view["history_truncated"] = True
+            projection_source = projection_view.get("source")
+            if isinstance(projection_source, dict):
+                projection_source["history_records_projected"] = max(
+                    0, projection_source.get("history_records_projected", 0) - 1,
+                )
+                projection_source["history_records_omitted"] = (
+                    projection_source.get("history_records_omitted", 0) + 1
+                )
+        elif result["session_activity"].get(
+            "projection_coherence_history", {},
+        ).get("measurement_limits"):
+            result["session_activity"]["projection_coherence_history"][
+                "measurement_limits"
+            ].pop()
+        elif isinstance(
+            result["session_activity"].get("projection_coherence_history"), dict,
+        ):
+            projection_view = result["session_activity"][
+                "projection_coherence_history"
+            ]
+            epoch = projection_view.get("current_epoch")
+            if isinstance(epoch, dict) and epoch.get("evidence_reference"):
+                epoch.pop("evidence_reference")
+                epoch["evidence_reference"] = None
+                epoch["evidence_reference_status"] = "omitted-by-response-budget"
+            elif isinstance(epoch, dict):
+                projection_view.pop("current_epoch", None)
+            else:
+                result["session_activity"].pop("projection_coherence_history")
         elif result["session_activity"].get(
             "service_accountability", {},
         ).get("services"):
@@ -14362,6 +14405,217 @@ def _session_doctor_health_history(
     }
 
 
+def _session_projection_coherence_history(
+    session: Any, snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Project bounded ambient projection outcomes from the session snapshot."""
+    identity_pattern = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$")
+    digest_pattern = re.compile(r"^[0-9a-f]{64}$")
+    timestamp_pattern = re.compile(
+        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$"
+    )
+
+    def identity(value: Any) -> str | None:
+        return value if isinstance(value, str) and identity_pattern.fullmatch(value) else None
+
+    def timestamp(value: Any) -> str | None:
+        return value if isinstance(value, str) and timestamp_pattern.fullmatch(value) else None
+
+    def summary(value: Any) -> dict[str, Any] | None:
+        if not isinstance(value, dict):
+            return None
+        counts = {
+            key: value[key]
+            for key in ("current", "pending", "reconciled", "blockers", "degraded")
+            if type(value.get(key)) is int and value[key] >= 0
+        }
+        if len(counts) != 5:
+            return None
+        if type(value.get("epoch_reused")) is bool:
+            counts["epoch_reused"] = value["epoch_reused"]
+        elapsed = value.get("elapsed_seconds")
+        if (type(elapsed) in (int, float)
+                and 0 <= elapsed <= 10**12):
+            counts["elapsed_seconds"] = round(float(elapsed), 3)
+        return counts
+
+    def evidence_reference(value: Any, session_id: str | None) -> tuple[dict[str, Any] | None, str]:
+        if not isinstance(value, str) or not value:
+            return None, "not-recorded"
+        if session_id is None:
+            return None, "session-identity-unavailable"
+        store_prefix = f"mncs-store:{session_id}:projections:"
+        if value.startswith(store_prefix):
+            digest = value[len(store_prefix):]
+            if digest_pattern.fullmatch(digest):
+                return {
+                    "kind": "projection-immutable-evidence-record",
+                    "schema": "mncs.environment.session-evidence/1",
+                    "identity": value[len("mncs-store:"):],
+                }, "reference-identified"
+            return None, "reference-invalid-or-unmatched"
+        expected_prefix = f"sessions/{session_id}/projection-artifacts/evidence/"
+        if value.startswith(expected_prefix):
+            filename = value[len(expected_prefix):]
+            if (PurePosixPath(value).as_posix() == value
+                    and "/" not in filename
+                    and re.fullmatch(
+                        r"projection-(?:ambient|explicit)-[0-9a-f]{12}\.json",
+                        filename,
+                    )):
+                return {
+                    "kind": "session-projection-evidence-artifact",
+                    "session_id": session_id,
+                    "relative_path": value,
+                }, "reference-identified"
+        if value == "projection-evidence-unwritable":
+            return None, "evidence-unwritable"
+        return None, "reference-invalid-or-unmatched"
+
+    session_id = identity(getattr(session, "session_id", None))
+    environment_id = identity(snapshot.get("environment_id"))
+    snapshot_sequence = snapshot.get("snapshot_sequence")
+    snapshot_sequence = (
+        snapshot_sequence
+        if type(snapshot_sequence) is int and snapshot_sequence >= 0 else None
+    )
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+
+    raw_history_value = snapshot.get("projection_history")
+    invalid_history_container = (
+        "projection_history" in snapshot and not isinstance(raw_history_value, list)
+    )
+    raw_history = raw_history_value if isinstance(raw_history_value, list) else []
+    raw_epoch_value = snapshot.get("projection_epoch")
+    invalid_epoch_shape = (
+        "projection_epoch" in snapshot and not isinstance(raw_epoch_value, dict)
+    )
+    epoch = raw_epoch_value if isinstance(raw_epoch_value, dict) else None
+    has_records = (
+        bool(raw_history) or epoch is not None
+        or invalid_history_container or invalid_epoch_shape
+    )
+
+    selected_history = raw_history[-MAX_SESSION_PROJECTION_HISTORY:]
+    invalid_history_count = int(invalid_history_container)
+    invalid_reference_count = 0
+    evidence_reference_issue_count = 0
+    history = []
+    mode_counts = {"ambient": 0, "explicit": 0}
+    for offset, item in enumerate(reversed(selected_history), start=1):
+        if not isinstance(item, dict):
+            invalid_history_count += 1
+            continue
+        recorded_at = timestamp(item.get("at"))
+        mode = item.get("mode")
+        outcome_summary = summary(item.get("summary"))
+        if (recorded_at is None or not isinstance(mode, str)
+                or mode not in mode_counts
+                or outcome_summary is None):
+            invalid_history_count += 1
+            continue
+        pointer, pointer_status = evidence_reference(
+            item.get("evidence_ref"), session_id,
+        )
+        evidence_reference_issue_count += pointer_status != "reference-identified"
+        if pointer_status in {
+            "session-identity-unavailable", "reference-invalid-or-unmatched",
+        }:
+            invalid_reference_count += 1
+        row = {
+            "ordinal_from_newest": offset,
+            "recorded_at": recorded_at,
+            "mode": mode,
+            "summary": outcome_summary,
+            "evidence_reference_status": pointer_status,
+        }
+        if pointer is not None:
+            row["evidence_reference"] = pointer
+        history.append(row)
+        mode_counts[mode] += 1
+
+    current_epoch = None
+    invalid_epoch = invalid_epoch_shape
+    if epoch is not None:
+        epoch_value = epoch.get("epoch")
+        recorded_at = timestamp(epoch.get("at"))
+        outcome_summary = summary(epoch.get("summary"))
+        if (not isinstance(epoch_value, str) or not 1 <= len(epoch_value) <= 192
+                or recorded_at is None or outcome_summary is None):
+            invalid_epoch = True
+        else:
+            pointer, pointer_status = evidence_reference(
+                epoch.get("evidence_ref"), session_id,
+            )
+            evidence_reference_issue_count += (
+                pointer_status != "reference-identified"
+            )
+            if pointer_status in {
+                "session-identity-unavailable", "reference-invalid-or-unmatched",
+            }:
+                invalid_reference_count += 1
+            current_epoch = {
+                "epoch_identity_digest": digest_hex(epoch_value, length=16),
+                "cache_status": (
+                    "uncached" if epoch_value.startswith("uncached:")
+                    else "cacheable" if digest_pattern.fullmatch(epoch_value)
+                    else "non-cacheable-or-unknown"
+                ),
+                "recorded_at": recorded_at,
+                "summary": outcome_summary,
+                "evidence_reference_status": pointer_status,
+            }
+            if pointer is not None:
+                current_epoch["evidence_reference"] = pointer
+
+    history_omitted = max(0, len(raw_history) - len(selected_history))
+    provenance_status = (
+        "identified"
+        if session_id and environment_id and snapshot_sequence is not None
+        else "incomplete"
+    )
+    source = {
+        "kind": "current-session-snapshot",
+        "session_id": session_id,
+        "environment_id": environment_id,
+        "snapshot_sequence": snapshot_sequence,
+        "campaign_id": identity(campaign.get("identity")),
+        "work_intent_id": identity(intent.get("identity")),
+        "history_record_count": len(raw_history),
+        "history_records_projected": len(history),
+        "history_records_omitted": history_omitted,
+        "history_limit": MAX_SESSION_PROJECTION_HISTORY,
+        "mode_counts_projected": mode_counts,
+        "invalid_history_record_count": invalid_history_count,
+        "invalid_evidence_reference_count": invalid_reference_count,
+        "evidence_reference_issue_count": evidence_reference_issue_count,
+        "provenance_status": provenance_status,
+    }
+    if not has_records:
+        status = "not-recorded-in-session"
+    elif (provenance_status != "identified" or history_omitted
+          or invalid_history_count or invalid_epoch
+          or invalid_reference_count or evidence_reference_issue_count):
+        status = "partial"
+    else:
+        status = "observed"
+    return {
+        "status": status,
+        "scope": "current-session-ambient-projection-pass-history",
+        "source": source,
+        "current_epoch": current_epoch,
+        "history": history,
+        "measurement_limits": [
+            "History records projection passes present in this session snapshot; per-pass save durability is unavailable, and cache-reused ambient reads and unobserved trigger opportunities are not counted.",
+            "Pass summaries and evidence references identify recorded outcomes; they do not independently establish lasting freshness or agent burden reduction.",
+            "Pending and blocked projections may reflect safe coordination or provider deferral, not a service defect.",
+        ],
+    }
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -14385,6 +14639,9 @@ def _session_activity(
         service_readiness, None, snapshot,
     )
     doctor_health_history = _session_doctor_health_history(session, snapshot)
+    projection_coherence_history = _session_projection_coherence_history(
+        session, snapshot,
+    )
     raw_readiness_requirements = snapshot.get("requirements")
     raw_readiness_requirements = (
         raw_readiness_requirements
@@ -14397,6 +14654,9 @@ def _session_activity(
     ))
     has_doctor_health_history = (
         doctor_health_history["status"] != "not-recorded-in-session"
+    )
+    has_projection_coherence_history = (
+        projection_coherence_history["status"] != "not-recorded-in-session"
     )
     if has_service_readiness and has_doctor_health_history:
         readiness_source = service_readiness.get("source", {})
@@ -14456,6 +14716,8 @@ def _session_activity(
                if service_accountability is not None else {}),
             **({"doctor_health_history": doctor_health_history}
                if has_doctor_health_history else {}),
+            **({"projection_coherence_history": projection_coherence_history}
+               if has_projection_coherence_history else {}),
             "measurement_limits": [
                 *limits,
                 "The session event page interface is unavailable.",
@@ -14496,6 +14758,8 @@ def _session_activity(
                if service_accountability is not None else {}),
             **({"doctor_health_history": doctor_health_history}
                if has_doctor_health_history else {}),
+            **({"projection_coherence_history": projection_coherence_history}
+               if has_projection_coherence_history else {}),
             "measurement_limits": [
                 *limits,
                 "The session event tail could not be read or did not match its declared shape.",
@@ -16621,6 +16885,8 @@ def _session_activity(
            if service_accountability is not None else {}),
         **({"doctor_health_history": doctor_health_history}
            if has_doctor_health_history else {}),
+        **({"projection_coherence_history": projection_coherence_history}
+           if has_projection_coherence_history else {}),
         "source": {
             "event_count": event_count,
             "event_window_limit": event_limit,
@@ -18115,6 +18381,10 @@ def project(
         digest_hex(activity["service_accountability"])
         if isinstance(activity.get("service_accountability"), dict) else None
     )
+    session_projection_coherence_digest = (
+        digest_hex(activity["projection_coherence_history"])
+        if isinstance(activity.get("projection_coherence_history"), dict) else None
+    )
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({
@@ -18150,6 +18420,11 @@ def project(
                     session_service_accountability_digest
                 ),
             } if session_service_accountability_digest is not None else {}),
+            **({
+                "session_projection_coherence_digest": (
+                    session_projection_coherence_digest
+                ),
+            } if session_projection_coherence_digest is not None else {}),
             "session_resource_sample_digest": (
                 activity.get("source", {}).get("resource_sample_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
@@ -18213,6 +18488,11 @@ def project(
                     session_service_accountability_digest
                 ),
             } if session_service_accountability_digest is not None else {}),
+            **({
+                "session_projection_coherence_digest": (
+                    session_projection_coherence_digest
+                ),
+            } if session_projection_coherence_digest is not None else {}),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
