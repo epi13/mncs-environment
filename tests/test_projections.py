@@ -147,6 +147,56 @@ if __name__ == "__main__":
 '''
 
 
+VERIFICATION_COHERENCE_STUB = '''\
+import json
+import sys
+from pathlib import Path
+
+
+def main(argv):
+    request = json.loads(Path(argv[0]).read_text(encoding="utf-8"))
+    verdicts = []
+    summary = {"obligations": len(request["obligations"]), "current": 0,
+               "queued": 0, "deferred": 0, "failed": 0, "unknown": 0,
+               "contradictory": 0, "unsupported": 0, "unresolved": 0,
+               "excluded": 0}
+    for item in request["obligations"]:
+        evidence = item["external_evidence"]
+        admitted = (item["external_evidence_present"]
+                    and evidence["obligation"] == item["identity"]
+                    and bool(evidence["subject_digest"])
+                    and bool(evidence["evidence_id"]))
+        if item["lifecycle"] not in ("permanent", "transitional", "scheduled"):
+            status, reason = "not_selected", "lifecycle_excluded"
+            summary["excluded"] += 1
+        elif item["executor_kind"] == "external_integration" and admitted:
+            status, reason = "current", "evidence_current"
+            summary["current"] += 1
+            summary["failed"] += evidence["verdict"] == "FAIL"
+            summary["unknown"] += evidence["verdict"] == "UNKNOWN"
+        elif item["executor_kind"] == "external_integration":
+            status, reason = "not_selected", "executor_not_runnable"
+            summary["unsupported"] += 1
+        else:
+            status, reason = "not_selected", "executor_not_runnable"
+            summary["unsupported"] += 1
+        verdicts.append({"identity": item["identity"], "status": status,
+                         "reason": reason, "deferred": False,
+                         "verdict_known": admitted,
+                         "verdict": evidence["verdict"] if admitted else "UNKNOWN",
+                         "evidence_id": evidence["evidence_id"] if admitted else "",
+                         "resolved_test_identities": [], "unresolved_count": 0})
+    result = {"schema_version": "mncs.test-verification-coherence/1",
+              "verdicts": verdicts, "run_queue": [], "summary": summary}
+    Path(argv[1]).write_text(json.dumps(result), encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
+'''
+
+
 def fixture_bytes(inputs: Path) -> bytes:
     digest = hashlib.sha256()
     for member in sorted(inputs.rglob("*")):
@@ -191,6 +241,7 @@ class ProjectionFixture(unittest.TestCase):
         self._write_provider(
             "mncs-doc", "documentation-projection",
             "tools/stub.py", [], RENDER_STUB)
+        self._write_coherence_provider()
         self.target_doc = self._write_target(
             "target-doc", "whole-file", "docs/out.generated.md")
         self.target_region = self._write_target(
@@ -202,15 +253,39 @@ class ProjectionFixture(unittest.TestCase):
             "workspace_scope": {
                 "kind": "workspace",
                 "repositories": ["mncs-automation", "mncs-doc",
-                                 "target-doc", "target-region"]},
+                                 "fixture-test", "target-doc", "target-region"]},
             "required_capabilities": [
                 "mncs-automation:automation-reconciliation",
-                "mncs-doc:documentation-projection"],
+                "mncs-doc:documentation-projection",
+                "mncs.test-verification-coherence/1"],
             "intent": {"goal": "exercise ambient projections",
-                       "repositories": []}}
+                       "repositories": ["target-doc", "target-region"]}}
         (entry / ".mncs" / "environment.json").write_text(
             json.dumps(definition))
         self.entry = entry
+
+    def _write_coherence_provider(self) -> Path:
+        root = self.entry / "fixture-test"
+        (root / ".mncs").mkdir(parents=True)
+        (root / "tools").mkdir(parents=True)
+        (root / "tools" / "coherence.py").write_text(
+            VERIFICATION_COHERENCE_STUB)
+        (root / ".mncs" / "project.json").write_text(json.dumps({
+            "schema_version": "mncs-family.repository-manifest/v0alpha1",
+            "repository": "fixture-test", "contracts": {"provides": []}}))
+        (root / "family-semantic-contracts-v1.json").write_text(json.dumps({
+            "schema_version": "commons.mncs.semantic-contract-declarations/v1",
+            "repository_id": "fixture-test", "revision": "1",
+            "provides": [{
+                "contract_identity": "mncs.test-verification-coherence/1",
+                "contract_revision": "1",
+                "canonical_entrypoint": "fixture-coherence",
+                "status": "native_canonical",
+                "invocation": {"kind": "python",
+                               "path": "tools/coherence.py"}}],
+            "consumes": []}))
+        git_init(root)
+        return root
 
     def _write_provider(self, repo: str, contract: str, script: str,
                         fixed_argv: list[str], stub: str) -> Path:
@@ -268,6 +343,7 @@ class ProjectionFixture(unittest.TestCase):
         inventory = {"repository": repo,
                      "obligations": [{
                          "identity": identity,
+                         "lifecycle": "permanent",
                          "executor": {
                              "provider": repo,
                              "kind": "external_integration",

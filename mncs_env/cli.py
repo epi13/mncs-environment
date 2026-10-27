@@ -470,6 +470,9 @@ def cmd_projections(args: argparse.Namespace) -> int:
         except sessions_module.LifecycleError as error:
             return fail(str(error))
         try:
+            # Ambient reconciliation follows live repository activity. Refresh
+            # checkout and provider identities before using entry-time bindings.
+            session.revalidate()
             if args.apply:
                 result = projections_module.ambient_pass(
                     session, mode="explicit", only=args.apply)
@@ -515,6 +518,7 @@ def cmd_projections_watch(args: argparse.Namespace) -> int:
                 except sessions_module.LifecycleError as error:
                     return fail(str(error))
                 try:
+                    session.revalidate()
                     result = projections_module.ambient_pass(session)
                 finally:
                     session.close()
@@ -2362,6 +2366,7 @@ def cmd_resident(args):
             expected = session.snapshot.get('provenance', {}).get('definition_id')
             if expected and entry_module.identity.environment_id(definition) != expected:
                 raise ValueError('resident definition changed; re-enter to select and bind the new environment')
+            session.revalidate()
             _, trace = entry_module.ambient_tick(session, definition)
             if not args.watch or trace.get('scheduled') or trace.get('events'):
                 out({'session_id': session.session_id, 'trace': trace})

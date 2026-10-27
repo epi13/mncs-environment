@@ -250,6 +250,8 @@ def run_executor(session, capability: str, checkout: Path,
     Evidence is recorded by the caller only for PASS/FAIL; UNKNOWN is
     never recorded, so transient outages retry instead of wedging.
     """
+    from .sessions import AuthorityDenied
+
     binding = _executor_binding(session, capability)
     if binding is None:
         return VERDICT_UNKNOWN, "unbound", "executor-unbound"
@@ -263,6 +265,21 @@ def run_executor(session, capability: str, checkout: Path,
     timeout_seconds = timeout if isinstance(timeout, int) and timeout > 0 else 120
     try:
         result = session.invoke(capability, [], timeout_seconds=timeout_seconds)
+    except workspace_module.WorkspaceResolutionError as error:
+        if ((getattr(error, "diagnostics", {}) or {}).get("status")
+                == "operation-lease-busy"):
+            return (VERDICT_UNKNOWN, "refused",
+                    "invoke-deferred-coordination")
+        return VERDICT_UNKNOWN, "invoke-failed", (
+            f"invoke-failed:{type(error).__name__}")
+    except AuthorityDenied as error:
+        if "provider checkout identity is unavailable:" in str(error):
+            # A concurrent repository update invalidated the entry-time
+            # binding. The next ambient pass will revalidate it before retrying.
+            return (VERDICT_UNKNOWN, "refused",
+                    "invoke-deferred-refresh")
+        return VERDICT_UNKNOWN, "invoke-failed", (
+            f"invoke-failed:{type(error).__name__}")
     except Exception as error:
         return VERDICT_UNKNOWN, "invoke-failed", (
             f"invoke-failed:{type(error).__name__}")
@@ -309,6 +326,15 @@ def _defer_retry(session, evidence_id: str) -> None:
         backoff[evidence_id] = time.time() + RETRY_BACKOFF_SECONDS
 
 
+def _clear_retry(session, evidence_id: str) -> None:
+    backoff = session.snapshot.get("verification_retry_after")
+    if not isinstance(backoff, dict):
+        return
+    backoff.pop(evidence_id, None)
+    if not backoff:
+        session.snapshot.pop("verification_retry_after", None)
+
+
 def resolve_verdict(session, declaration: dict[str, Any],
                     checkout: Path, subject: dict[str, Any] | None,
                     *, allow_run: bool) -> tuple[int, str | None, str, list]:
@@ -345,6 +371,7 @@ def resolve_verdict(session, declaration: dict[str, Any],
             return (VERDICT_UNKNOWN, None,
                     "verification-store-unavailable", seen)
         if isinstance(record, dict) and record.get("verdict") in (0, 1, 2):
+            _clear_retry(session, evidence_id)
             seen.append({"obligation": capability,
                          "evidence_id": evidence_id,
                          "verdict": int(record["verdict"]),
@@ -366,7 +393,14 @@ def resolve_verdict(session, declaration: dict[str, Any],
         verdict, method, detail = run_executor(
             session, capability, checkout, subject)
         if verdict == VERDICT_UNKNOWN:
-            _defer_retry(session, evidence_id)
+            if (method == "refused"
+                    and detail in {"invoke-deferred-coordination",
+                                   "invoke-deferred-refresh"}):
+                # The executor did not start. Reconsider when the conflicting
+                # operation releases its scope instead of imposing backoff.
+                _clear_retry(session, evidence_id)
+            else:
+                _defer_retry(session, evidence_id)
             seen.append({"obligation": capability,
                          "evidence_id": evidence_id,
                          "verdict": verdict, "method": method,
@@ -394,6 +428,7 @@ def resolve_verdict(session, declaration: dict[str, Any],
         except store_module.SharedStoreUnavailable:
             return (VERDICT_UNKNOWN, None,
                     "verification-store-unavailable", seen)
+        _clear_retry(session, evidence_id)
         seen.append({"obligation": capability, "evidence_id": evidence_id,
                      "verdict": verdict, "method": method})
         session._emit("verification.completed", "environment",

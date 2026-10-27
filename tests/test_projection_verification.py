@@ -14,6 +14,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -41,6 +42,54 @@ class EnvelopeTests(unittest.TestCase):
         self.assertIsNone(parse("not json"))
         self.assertIsNone(parse('{"verdict": "maybe"}'))
         self.assertIsNone(parse("[]"))
+
+
+class VerificationRetryTests(unittest.TestCase):
+    def _resolve(self, result):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        store = open_store(Path(temporary.name), "file")
+        capability = "target:verification-executor/check"
+        binding = {"provenance": {"executor_identity": "exec-v1"}}
+        session = types.SimpleNamespace(
+            session_id="ses-retry", store=store, snapshot={},
+            _binding=lambda requested: binding if requested == capability else None)
+        declaration = {"verification": {"obligations": [capability]}}
+        subject = {"head": "abc", "branch": "main",
+                   "input_digest": "sha256:inputs",
+                   "worktree": "sha256:worktree"}
+        with patch.object(verification_module, "run_executor",
+                          return_value=result):
+            resolved = verification_module.resolve_verdict(
+                session, declaration, Path("."), subject, allow_run=True)
+        return session, resolved
+
+    def test_coordination_deferral_does_not_start_time_backoff(self):
+        session, resolved = self._resolve((
+            verification_module.VERDICT_UNKNOWN, "refused",
+            "invoke-deferred-coordination"))
+        self.assertEqual(resolved[0], verification_module.VERDICT_UNKNOWN)
+        self.assertNotIn("verification_retry_after", session.snapshot)
+
+    def test_executor_outage_keeps_bounded_backoff(self):
+        session, resolved = self._resolve((
+            verification_module.VERDICT_UNKNOWN, "invoke-failed",
+            "invoke-failed:TimeoutError"))
+        self.assertEqual(resolved[0], verification_module.VERDICT_UNKNOWN)
+        self.assertTrue(session.snapshot["verification_retry_after"])
+
+    def test_projection_epoch_observes_retry_deadline(self):
+        session = types.SimpleNamespace(snapshot={
+            "verification_retry_after": {
+                "vev_pending": 101.0, "vev_old_subject": 90.0}})
+        with patch.object(projections_module.time, "time", return_value=100.0):
+            waiting = projections_module._verification_retry_state(
+                session, ["vev_pending"])
+        with patch.object(projections_module.time, "time", return_value=101.0):
+            due = projections_module._verification_retry_state(
+                session, ["vev_pending"])
+        self.assertEqual(waiting, {"due": [], "waiting": ["vev_pending"]})
+        self.assertEqual(due, {"due": ["vev_pending"], "waiting": []})
 
     def test_evidence_identity_binds_subject(self):
         subject = {"head": "abc", "branch": "main",
@@ -127,7 +176,8 @@ class ExecutorBindingTests(unittest.TestCase):
         (root / "tools").mkdir(parents=True)
         (root / "tools" / "check.py").write_text("print('ok')\n")
         inventory = {"repository": "demo", "obligations": [{
-            "identity": "demo.check", "executor": executor}]}
+            "identity": "demo.check", "lifecycle": "permanent",
+            "executor": executor}]}
         (root / ".mncs" / "verification.json").write_text(
             json.dumps(inventory))
         manifest = {"repository": "demo",

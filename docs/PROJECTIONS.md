@@ -27,9 +27,10 @@ runs `mncs_env/projections.py`:
    directories are never inspected.
 2. **Fingerprint the world.** Inputs, declarations, repository branch/head
    and dirty content, live claims, shared projection rows, verification
-   verdicts, provider availability, and lifecycle form a projection
-   epoch. An unchanged epoch reuses the last validated summary instead
-   of re-rendering; the stored epoch describes the post-pass world.
+   verdicts, pending verifier retry deadlines, provider availability, and
+   lifecycle form a projection epoch. An unchanged epoch reuses the last
+   validated summary instead of re-rendering; the stored epoch describes the
+   post-pass world.
 3. **Resolve real verification.** Each stale projection's obligations
    resolve to PASS/FAIL/UNKNOWN from generation-bound evidence covering
    the exact subject (repository HEAD, worktree, input digest).
@@ -74,6 +75,13 @@ retrievable with:
 ./scripts/mncs-env projections <session> --evidence
 ```
 
+Each result retains up to eight compact verification observations with the
+obligation, evidence identity, verdict, method, and bounded reason. An omitted
+count preserves awareness when a declaration has more observations. This lets
+an agent distinguish missing evidence, a started executor failure, and a
+coordination or stale-binding deferral without treating them as one generic
+UNKNOWN.
+
 Each pass also appends `mncs.session-evidence/1` for future journal and
 media consumers.
 
@@ -86,8 +94,13 @@ Related surfaces:
   projection and authorizes region splicing under a live claim.
 - `mncs-env projections <session> --watch <seconds>` loops epoch-gated
   passes so long-running sessions notice commits, claim releases, and
-  verification resolutions without re-entry. Quiet ticks reuse the
-  epoch; the entry lock is held per tick, never across the sleep.
+  verification resolutions without re-entry. Each resumed pass refreshes
+  selected checkout and provider identities before evaluation. If coordination
+  or a stale binding prevents a verifier from starting, bounded evidence
+  records the deferral and the epoch stays uncached so the next tick can
+  reconsider it. Completed executor outages keep their backoff; the epoch
+  becomes eligible again when that retry deadline arrives. Quiet ticks reuse
+  the epoch; the entry lock is held per tick, never across the sleep.
 
 ## Environmental capability interpretation
 

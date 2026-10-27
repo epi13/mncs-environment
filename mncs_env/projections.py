@@ -43,6 +43,7 @@ PLAN_SCHEMA = "mncs.reconcile-plan/1"
 EVIDENCE_SCHEMA = "mncs.session-evidence/1"
 MAX_HISTORY = 10
 MAX_DECLARATIONS = 256
+MAX_VERIFICATION_OBSERVATIONS = 8
 MAX_INPUT_FILES = 512
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_RENDER_CACHE = 20
@@ -594,6 +595,60 @@ def _session_binding(session, capability: str) -> dict[str, Any] | None:
     return binding if isinstance(binding, dict) else None
 
 
+def _verification_observations(seen: list | None) -> dict[str, Any]:
+    """Expose bounded evidence provenance with the projection result."""
+    if not isinstance(seen, list):
+        return {"items": [], "omitted": 0}
+    items = []
+    for item in seen[:MAX_VERIFICATION_OBSERVATIONS]:
+        if not isinstance(item, dict):
+            continue
+        observation = {
+            key: item[key] for key in (
+                "obligation", "evidence_id", "verdict", "method", "detail",
+            ) if key in item and (
+                isinstance(item[key], (str, int, bool))
+                or item[key] is None
+            )
+        }
+        items.append(observation)
+    return {"items": items,
+            "omitted": max(0, len(seen) - MAX_VERIFICATION_OBSERVATIONS)}
+
+
+def _retryable_verification_defer(results: list[dict[str, Any]]) -> bool:
+    """Keep ambient passes live when a verifier never got an execution slot."""
+    retryable = {"invoke-deferred-coordination", "invoke-deferred-refresh"}
+    for record in results:
+        observations = record.get("verification_observations")
+        items = observations.get("items") if isinstance(observations, dict) else None
+        if isinstance(items, list) and any(
+                isinstance(item, dict) and item.get("detail") in retryable
+                for item in items):
+            return True
+    return False
+
+
+def _verification_retry_state(session, evidence_ids: list[str]) -> dict[str, list[str]]:
+    """Fingerprint only whether bounded verifier retries have become due."""
+    retry_after = session.snapshot.get("verification_retry_after")
+    if not isinstance(retry_after, dict):
+        return {"due": [], "waiting": []}
+    now = time.time()
+    due: list[str] = []
+    waiting: list[str] = []
+    for evidence_id in sorted(set(evidence_ids)):
+        deadline = retry_after.get(evidence_id)
+        if deadline is None:
+            continue
+        try:
+            is_due = float(deadline) <= now
+        except (TypeError, ValueError):
+            continue
+        (due if is_due else waiting).append(evidence_id)
+    return {"due": sorted(due), "waiting": sorted(waiting)}
+
+
 def planner_available(session) -> bool:
     binding = _session_binding(session, PLANNER_CAPABILITY)
     if binding is None:
@@ -1026,11 +1081,16 @@ def _lookup_verdict(session, declaration: dict[str, Any],
                     digest: str | None) -> dict[str, Any]:
     """Read-only verdict for epoch invalidation (never runs executors)."""
     checkout = Path(str(declaration["checkout"]))
-    verdict, evidence_id, detail, _seen = (
+    verdict, evidence_id, detail, seen = (
         verification_module.resolve_declared(
             session, declaration, checkout, digest, allow_run=False))
     return {"verdict": verdict, "evidence_id": evidence_id,
-            "detail": detail}
+            "detail": detail,
+            "retry_evidence_ids": [
+                item["evidence_id"] for item in seen
+                if isinstance(item, dict)
+                and item.get("verdict") == verification_module.VERDICT_UNKNOWN
+                and isinstance(item.get("evidence_id"), str)]}
 
 
 def _epoch_inputs(session, declarations: list[dict],
@@ -1095,6 +1155,10 @@ def _epoch_inputs(session, declarations: list[dict],
                  "evidence_id", "status")}
         verdicts[projection_id] = _lookup_verdict(
             session, declaration, digests.get(projection_id))
+    retry_evidence_ids = [
+        evidence_id
+        for verdict in verdicts.values()
+        for evidence_id in verdict.get("retry_evidence_ids", [])]
     return {
         "declarations": {declaration["id"]: digest_hex(
             {key: value for key, value in declaration.items()
@@ -1108,6 +1172,8 @@ def _epoch_inputs(session, declarations: list[dict],
         "bindings": bindings,
         "shared": shared,
         "verification": verdicts,
+        "verification_retries": _verification_retry_state(
+            session, retry_evidence_ids),
         "lifecycle": session.snapshot.get("lifecycle", "active"),
     }
 
@@ -1350,6 +1416,8 @@ def _reconcile_one(session, declaration: dict[str, Any],
                        'renderer': declaration['renderer'], 'target': declaration['output']})
     record.update({"verdict": verdict, "evidence_id": evidence_id,
                    "verification": detail,
+                   "verification_observations":
+                       _verification_observations(seen),
                    "require_verified": require_verified,
                    "source": source, "digest": digest})
     fresh, reason, cached = render_cached(session, declaration, checkout,
@@ -1807,7 +1875,9 @@ def _finish(session, started: str, clock_started: float,
     # provider outage must re-validate on the next pass, not replay
     # stale degraded state. Defers and escalations cache normally
     # because claims, markers, and inputs feed the next fingerprint.
-    if mode == "ambient" and summary.get("degraded", 0) == 0 and failure is None:
+    retryable_verification = _retryable_verification_defer(results)
+    if (mode == "ambient" and summary.get("degraded", 0) == 0
+            and failure is None and not retryable_verification):
         stored_epoch = epoch
     else:
         stored_epoch = f"uncached:{mode}:{epoch}"
@@ -1860,6 +1930,8 @@ def _append_session_evidence(session, summary: dict[str, Any],
              "verdict": record.get("verdict"),
              "evidence_id": record.get("evidence_id"),
              "verification": record.get("verification"),
+             "verification_observations": record.get(
+                 "verification_observations"),
              "source": (record.get("source") or {
                  "head": (record.get("repo") or {}).get("head")}),
              "gate_reason": (record.get("plan") or {}).get(
