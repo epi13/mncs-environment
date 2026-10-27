@@ -1808,6 +1808,128 @@ def _resolve_declared_runtime_toolchain_checkouts(
     return roots, facts, diagnostics
 
 
+def _discover_read_only_consumed_provider_bindings(
+    workspace_root: str | Path,
+    consumer_roots: dict[str, Path],
+    consumer_facts: dict[str, dict[str, Any]],
+    workspace_repositories: list[dict[str, Any]],
+) -> tuple[
+    list[dict[str, Any]],
+    dict[str, Path],
+    dict[str, dict[str, Any]],
+    dict[str, dict[str, str]],
+]:
+    """Bind only declared read-only capabilities from observed workspace repos.
+
+    Consumed providers remain outside ``selected_checkouts`` and therefore do
+    not inherit the consumer's write scope. The provider must be an exact
+    workspace-observed repository, and its consumed contract must declare
+    exactly the ``read`` effect before Environment exposes the binding.
+    """
+    root = Path(workspace_root).resolve()
+    consumers_by_capability = capabilities_module.declared_consumed_contracts(
+        consumer_roots,
+    )
+    if not consumers_by_capability or not isinstance(workspace_repositories, list):
+        return [], {}, {}, {}
+
+    capabilities_by_provider: dict[str, set[str]] = {}
+    for capability in consumers_by_capability:
+        provider, separator, _contract = capability.partition(":")
+        if separator and provider not in consumer_roots:
+            capabilities_by_provider.setdefault(provider, set()).add(capability)
+
+    provider_roots: dict[str, Path] = {}
+    provider_facts: dict[str, dict[str, Any]] = {}
+    for provider in sorted(capabilities_by_provider):
+        candidate = root / provider
+        try:
+            if candidate.is_symlink():
+                continue
+            resolved = candidate.resolve(strict=True)
+            resolved.relative_to(root)
+        except (OSError, ValueError):
+            continue
+        if not resolved.is_dir():
+            continue
+        matches = [
+            row for row in workspace_repositories
+            if isinstance(row, dict)
+            and row.get("manifest_repository") == provider
+            and row.get("path") == str(resolved)
+        ]
+        if len(matches) > 1:
+            continue
+        if matches:
+            row = matches[0]
+        else:
+            # A selected Environment session may intentionally observe only
+            # its selected repositories. Resolve the provider named by the
+            # consumer manifest directly at its exact workspace path rather
+            # than widening selection or inheriting mutation authority.
+            state = workspace_module.inspect_repo(resolved, _refresh=True)
+            if (state is None or state.git_error or not state.head
+                    or state.manifest_repository != provider):
+                continue
+            row = state.record()
+        if row.get("git_error") or not row.get("head"):
+            continue
+        provider_roots[provider] = resolved
+        provider_facts[provider] = {
+            "repository": provider,
+            "path": str(resolved),
+            "branch": row.get("branch"),
+            "head": row.get("head"),
+            "clean": not bool(row.get("dirty")),
+            "source_ref": "declared-read-only-provider-dependency",
+            "authoritative_head": row.get("head"),
+        }
+    if not provider_roots:
+        return [], {}, {}, {}
+
+    all_provider_roots = dict(consumer_roots)
+    all_provider_roots.update(provider_roots)
+    all_provider_facts = dict(consumer_facts)
+    all_provider_facts.update(provider_facts)
+    runtime_roots, runtime_facts, runtime_diagnostics = (
+        _resolve_declared_runtime_toolchain_checkouts(
+            root, all_provider_roots, all_provider_facts,
+        )
+    )
+    discovered = capabilities_module.discover_capabilities(
+        root,
+        repository_roots=provider_roots,
+        checkout_facts=provider_facts,
+        runtime_toolchain_roots=runtime_roots,
+        runtime_toolchain_facts=runtime_facts,
+    )
+    by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for binding in discovered:
+        key = (str(binding.get("provider", "")),
+               str(binding.get("capability", "")))
+        by_key.setdefault(key, []).append(binding)
+
+    result: list[dict[str, Any]] = []
+    for capability, consumers in sorted(consumers_by_capability.items()):
+        provider, separator, _contract = capability.partition(":")
+        if not separator or provider not in provider_roots:
+            continue
+        matches = by_key.get((provider, capability), [])
+        if len(matches) != 1 or matches[0].get("effects") != ["read"]:
+            continue
+        binding = dict(matches[0])
+        provenance = binding.get("provenance")
+        provenance = dict(provenance) if isinstance(provenance, dict) else {}
+        provenance["consumed_read_only_dependency"] = {
+            "consumers": consumers,
+            "provider_checkout_selected": False,
+            "authority_scope": "workspace-read-only",
+        }
+        binding["provenance"] = provenance
+        result.append(binding)
+    return result, runtime_roots, runtime_facts, runtime_diagnostics
+
+
 def _provider_managed_checkouts(
     definition: dict[str, Any],
     workspace_root: str | Path,
@@ -2179,6 +2301,22 @@ def resolve_environment(
             runtime_toolchain_facts=runtime_toolchain_facts,
             language_binary=language_binary,
         )
+        (read_only_provider_bindings, consumed_runtime_roots,
+         consumed_runtime_facts, consumed_runtime_diagnostics) = (
+            _discover_read_only_consumed_provider_bindings(
+                resolved_root, selected_roots, selected_facts,
+                workspace_view.get("repositories", []),
+            )
+        )
+        discovered.extend(read_only_provider_bindings)
+        runtime_toolchain_roots.update(consumed_runtime_roots)
+        runtime_toolchain_facts.update(consumed_runtime_facts)
+        runtime_toolchain_diagnostics.update(consumed_runtime_diagnostics)
+        workspace_view["runtime_toolchain_checkouts"] = [
+            runtime_toolchain_facts[name]
+            for name in sorted(runtime_toolchain_facts)
+        ]
+        workspace_view["runtime_toolchain_diagnostics"] = runtime_toolchain_diagnostics
     else:
         discovered = capabilities_module.discover_capabilities(resolved_root)
     toolchain = None
@@ -8652,6 +8790,26 @@ class Session:
                 runtime_toolchain_facts=runtime_toolchain_facts,
                 language_binary=language_binary,
             )
+            (read_only_provider_bindings, consumed_runtime_roots,
+             consumed_runtime_facts, consumed_runtime_diagnostics) = (
+                _discover_read_only_consumed_provider_bindings(
+                    workspace_root, roots, facts,
+                    (self.snapshot.get("workspace") or {}).get(
+                        "repositories", [],
+                    ),
+                )
+            )
+            discovered.extend(read_only_provider_bindings)
+            runtime_toolchain_roots.update(consumed_runtime_roots)
+            runtime_toolchain_facts.update(consumed_runtime_facts)
+            runtime_toolchain_diagnostics.update(consumed_runtime_diagnostics)
+            workspace_snapshot = dict(self.snapshot.get("workspace", {}))
+            workspace_snapshot["runtime_toolchain_checkouts"] = [
+                runtime_toolchain_facts[name]
+                for name in sorted(runtime_toolchain_facts)
+            ]
+            workspace_snapshot["runtime_toolchain_diagnostics"] = runtime_toolchain_diagnostics
+            self.snapshot["workspace"] = workspace_snapshot
         elif workspace_root:
             discovered = capabilities_module.discover_capabilities(workspace_root)
 

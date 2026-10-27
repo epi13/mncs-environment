@@ -4603,6 +4603,125 @@ class CapabilityTests(unittest.TestCase):
                 "mncs-language",
             )
 
+    def test_consumed_readonly_provider_binds_without_selected_or_write_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory)
+            consumer = self._git_checkout(
+                workspace_root / "mncs-environment", "mncs-environment", {
+                    "contracts": {"consumes": [
+                        {"contract": "mncs-doctor.projection-health"},
+                        {"contract": "mncs-doctor.mixed-effect"},
+                    ]},
+                },
+            )
+            provider = self._git_checkout(
+                workspace_root / "mncs-doctor", "mncs-doctor", {
+                    "contracts": {"provides": [
+                        {
+                            "contract": "projection-health",
+                            "version": "1",
+                            "effects": ["read"],
+                            "invocation": {
+                                "kind": "executable",
+                                "path": "tools/projection-health.sh",
+                            },
+                        },
+                        {
+                            "contract": "mixed-effect",
+                            "version": "1",
+                            "effects": ["read", "write"],
+                            "invocation": {
+                                "kind": "executable",
+                                "path": "tools/mixed-effect.sh",
+                            },
+                        },
+                        {
+                            "contract": "unconsumed-write",
+                            "version": "1",
+                            "effects": ["write"],
+                            "invocation": {
+                                "kind": "executable",
+                                "path": "tools/unconsumed-write.sh",
+                            },
+                        },
+                    ]},
+                },
+            )
+            for name in (
+                "projection-health.sh", "mixed-effect.sh", "unconsumed-write.sh",
+            ):
+                script = provider / "tools" / name
+                script.parent.mkdir(parents=True, exist_ok=True)
+                script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                script.chmod(0o755)
+            subprocess.run(["git", "-C", str(provider), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(provider), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                "provider contracts",
+            ], check=True)
+            consumer_head = workspace.inspect_repo(consumer, _refresh=True).head
+            selected_roots = {"mncs-environment": consumer}
+            selected_facts = {"mncs-environment": {
+                "repository": "mncs-environment",
+                "path": str(consumer),
+                "head": consumer_head,
+                "branch": "main",
+                "clean": True,
+                "source_ref": "session-pinned-checkout",
+                "authoritative_head": consumer_head,
+            }}
+            (read_only_bindings, _runtime_roots, _runtime_facts,
+             runtime_diagnostics) = sessions._discover_read_only_consumed_provider_bindings(
+                workspace_root,
+                selected_roots,
+                selected_facts,
+                [],
+            )
+            self.assertEqual(runtime_diagnostics, {})
+            self.assertEqual(set(selected_roots), {"mncs-environment"})
+            self.assertEqual(
+                selected_roots["mncs-environment"], consumer,
+            )
+            bindings = {
+                item["capability"]: capabilities.probe_availability(item)
+                for item in read_only_bindings
+            }
+            self.assertIn("mncs-doctor:projection-health", bindings)
+            self.assertEqual(
+                bindings["mncs-doctor:projection-health"]["effects"], ["read"],
+            )
+            self.assertEqual(
+                bindings["mncs-doctor:projection-health"]["availability"]["status"],
+                "available",
+            )
+            self.assertEqual(
+                bindings["mncs-doctor:projection-health"]["provenance"][
+                    "consumed_read_only_dependency"
+                ],
+                {
+                    "consumers": ["mncs-environment"],
+                    "provider_checkout_selected": False,
+                    "authority_scope": "workspace-read-only",
+                },
+            )
+            self.assertNotIn("mncs-doctor:mixed-effect", bindings)
+            self.assertNotIn("mncs-doctor:unconsumed-write", bindings)
+            external_provider = workspace_root / "external" / "mncs-doctor"
+            external_provider.parent.mkdir()
+            provider.rename(external_provider)
+            (workspace_root / "mncs-doctor").symlink_to(
+                external_provider, target_is_directory=True,
+            )
+            (symlink_bindings, _runtime_roots, _runtime_facts,
+             _runtime_diagnostics) = sessions._discover_read_only_consumed_provider_bindings(
+                workspace_root,
+                selected_roots,
+                selected_facts,
+                [],
+            )
+            self.assertEqual(symlink_bindings, [])
+
     def test_unclaimed_dirty_external_toolchain_is_not_resolved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory)

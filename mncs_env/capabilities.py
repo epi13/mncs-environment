@@ -716,6 +716,50 @@ def discover_capabilities(
     return bindings
 
 
+def declared_consumed_contracts(
+    consumer_repository_roots: dict[str, Path | str],
+) -> dict[str, list[str]]:
+    """Return provider capabilities named by selected repository contracts.
+
+    A consumer declaration identifies a capability dependency, but does not
+    by itself add a provider to the selected checkout or grant mutation
+    authority. Environment uses this bounded view to resolve workspace-local
+    dependencies whose provider contract is independently read-only.
+    """
+    consumers_by_capability: dict[str, set[str]] = {}
+    for consumer, raw_root in sorted(consumer_repository_roots.items()):
+        root = Path(raw_root)
+        manifest_path = root / ".mncs" / "project.json"
+        try:
+            if root.is_symlink() or not root.is_dir():
+                continue
+            raw = manifest_path.read_bytes()
+            if len(raw) > 4 * 1024 * 1024:
+                continue
+            manifest = json.loads(raw)
+        except (OSError, ValueError):
+            continue
+        contracts = manifest.get("contracts") if isinstance(manifest, dict) else None
+        consumes = contracts.get("consumes") if isinstance(contracts, dict) else None
+        if not isinstance(consumes, list) or len(consumes) > 256:
+            continue
+        for item in consumes:
+            reference = item.get("contract") if isinstance(item, dict) else None
+            if not isinstance(reference, str) or len(reference) > 256:
+                continue
+            provider, separator, contract = reference.partition(".")
+            if (not separator
+                    or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", provider)
+                    or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", contract)):
+                continue
+            capability = f"{provider}:{contract}"
+            consumers_by_capability.setdefault(capability, set()).add(consumer)
+    return {
+        capability: sorted(consumers)
+        for capability, consumers in sorted(consumers_by_capability.items())
+    }
+
+
 def _coalesce_addressed_binding_declarations(
     bindings: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
