@@ -1,0 +1,177 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_provider_declared_capability_addressability_20261027",
+  "captured_at": "2026-10-27T09:11:26Z",
+  "measurement_basis": "Live MNCS Environment entry context and Environmental Capability projection, checked against focused regression tests.",
+  "observation": {
+    "kind": "provider-declared-capability-addressability",
+    "source_interface": "mncs-env context and mncs-env projections --interpret environmental-capability",
+    "outcome": {
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "binding_count": 49,
+      "availability_status_counts": {
+        "available": 31,
+        "unknown": 18
+      },
+      "provider_invocation_addressing_status_counts": {
+        "descriptor": 19,
+        "fixed-manifest-argv": 12,
+        "none": 18
+      },
+      "provider_declared_evidence_reference_count": 8,
+      "provider_evidence_reference_without_callable_address_count": 8,
+      "provider_declaration_scan_complete": true,
+      "entry_context_unknown_count": 18,
+      "entry_context_unknown_provider_declared_evidence_reference_count": 8,
+      "entry_context_unknown_provider_evidence_without_callable_address_count": 8,
+      "entry_context_unknown_provider_declaration_scan_complete": true,
+      "provider_declared_references": [
+        {
+          "capability": "mncs.store.adaptive-representations/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "src/store/envelope.mncs",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.commit-feed/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "src/store/commit_feed.mncs",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.durable-publication/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "python/mncs_store/embedded.py",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.persistent-object/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "python/mncs_store/embedded.py",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.provenance/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "src/store/provenance.mncs",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.scalable-content/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "src/store/content.mncs",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.semantic-state/1",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "src/store/semantic_state.mncs",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        },
+        {
+          "capability": "mncs.store.typed-relations/2",
+          "provider": "mncs-store",
+          "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+          "path": "src/store/relationship.mncs",
+          "availability_status": "unknown",
+          "invocation_addressing": "none",
+          "callable_address_present": false
+        }
+      ],
+      "declaration_source": {
+        "provider": "mncs-store",
+        "checkout_head": "d0d8f1c1ab8a575490d6c858517a623d0839ab0c",
+        "path": "family-semantic-contracts-v1.json",
+        "basis": "provider-declared",
+        "implementation_ownership_status": "not-established",
+        "content_integrity_status": "not-verified"
+      },
+      "candidate_investigation": "Determine from the provider contract whether these eight semantic declarations are intended to be agent-invocable services. Add callable descriptors only where that intent is established; otherwise keep them descriptive and record why they are not invocation bindings.",
+      "interpretation_limit": "The projection relates provider-declared paths to binding availability and addressability. It does not establish that a path implements the named capability, that the capability should be callable, or that an agent discovered or used it."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "implementation": {
+    "repository": "mncs-environment",
+    "commit": "ea74257602c012a46d31115dd0583d4fe5f0a050",
+    "source_references": [
+      {
+        "path": "mncs_env/capabilities.py",
+        "sha256": "f8b9527bf00791a29b7ba204df93277d9987fbb695cf79a0891f45b8d8907f2b"
+      },
+      {
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "ff87d8dddad1116820e58eb11921695e12a87894ff2919c13e6197d54c0d1a0a"
+      },
+      {
+        "path": "mncs_env/sessions.py",
+        "sha256": "3f385b274d2b8fd0bcf0340959add882db0d8cd1a0d6e8a845ed37eb486892f1"
+      }
+    ]
+  },
+  "verification": {
+    "capability_intelligence_tests": {
+      "command": "python3 -m pytest -q tests/test_capability_intelligence.py",
+      "passed": 152,
+      "failed": 0
+    },
+    "focused_environment_tests": {
+      "command": "python3 -m pytest -q tests/test_environment.py -k 'context_surfaces_bounded_unknown_capability_opportunities or semantic_provider_evidence_paths_are_repository_relative'",
+      "passed": 2,
+      "failed": 0
+    },
+    "python_compile": "passed",
+    "git_diff_check": "passed",
+    "live_projection": "returned eight Store provider evidence references with unknown availability and no callable address",
+    "full_environment_test_suite": {
+      "status": "interrupted-before-result",
+      "elapsed_seconds": 157,
+      "resident_bytes_at_interruption": 1177346048,
+      "process_write_bytes_at_interruption": 1596821504,
+      "btrfs_metadata_use_percent_observed": 66.6,
+      "btrfs_free_bytes_estimate_observed": 35203026944,
+      "interpretation_limit": "This one broad test run was stopped for resource proportionality. It produced no test result and did not encounter Btrfs exhaustion."
+    }
+  },
+  "not_measured": [
+    "whether the eight Store semantic contracts are intended to be agent-invocable capabilities",
+    "implementation ownership or content integrity of the provider-declared paths",
+    "agent discovery, receipt, or use of these capabilities",
+    "whether native implementation paths displace host-language functionality",
+    "cross-session recurrence or improvement after a provider contract change"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  }
+}
