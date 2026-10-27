@@ -1,0 +1,63 @@
+{
+  "captured_at": "2026-10-27T18:20:08Z",
+  "identity": "ev_environment_eci_response_budget_pressure_20261027",
+  "measurement_basis": "Before-change read-only serialization of the live ECI response using the same selected session and request parameters as the post-change readback.",
+  "not_measured": [
+    "cause of the original larger response outside the measured surviving summary fields",
+    "whether any agent was blocked or spent time handling the response",
+    "agent receipt, intervention burden, or service quality",
+    "the cause of the earlier Btrfs incident"
+  ],
+  "observation": {
+    "kind": "environmental-projection-response-budget-overrun",
+    "outcome": {
+      "encoded_response_bytes": 19656,
+      "owner_pass_count": 7,
+      "owner_pass_decision_coverage": "complete",
+      "pressure_hypothesis_identity": "ph_environment_eci_response_budget_exceeded_20261027",
+      "problem": "The projection marked itself truncated but its serialized response exceeded the caller-requested maximum by 11656 bytes.",
+      "recorded_result_count": 2,
+      "response_byte_count_reported_by_projection": 224371,
+      "response_truncated": true,
+      "runner_returned_none_count": 5
+    },
+    "request": {
+      "evidence_limit": 8,
+      "history_pages": 4,
+      "max_result_bytes": 8000,
+      "projection_identity": "eci_56073e13e7789ec1",
+      "session_event_limit": 80,
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "MNCS Environment capability-intelligence project function"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "After ordinary compaction, reduce repeated session detail and page metadata while retaining aggregate service counts, exact source links for recorded results, and explicit omission counts; measure the final serialized bytes.",
+    "category": "environmental-observation-and-resource-pressure",
+    "identity": "ph_environment_eci_response_budget_exceeded_20261027",
+    "interpretation": "Bounded owner-pass and Doctor history summaries could remain larger than the response budget after truncation had been reported.",
+    "owner": "mncs-environment",
+    "role": "occurrence",
+    "subsystem": "mncs-environment capability-intelligence response compaction",
+    "title": "ECI session summaries can exceed the requested response byte budget"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 68,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_5921be09cc8bb108",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1"
+}

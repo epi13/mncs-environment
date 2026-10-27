@@ -1,0 +1,82 @@
+{
+  "captured_at": "2026-10-27T18:20:08Z",
+  "identity": "ev_environment_owner_pass_accountability_improvement_20261027",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_ambient_service_accountability_scope_gap_20261027",
+    "basis": "The implementation reuses the existing owner-pass contract and execution trace, correlates decisions and results within the same selected session, and exposes the result source references. Tests independently validate correlation and compact output; the live projection confirms the seven-pass relationship.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_owner_pass_accountability_20261027",
+    "implementation_reference": {
+      "commit": "549edaab107e4309609886cee2e2f36cfc3cdf8f",
+      "identity": "mncs_environment_owner_pass_accountability_549edaa",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "ef20dc3036cc9cbba2e550b54b267f895c14ffa18ad47879c8aa5cf265a4b44b"
+    },
+    "not_measured": [
+      "agent opportunities or need for any owner pass",
+      "agent receipt or reduced intervention burden",
+      "service correctness beyond the recorded projection and tests",
+      "cross-session recurrence or generalization to other service domains"
+    ],
+    "subsequent_observation_identity": "ev_environment_owner_pass_accountability_live_readback_20261027",
+    "verification_observation_identity": "ev_environment_owner_pass_accountability_verification_20261027"
+  },
+  "measurement_basis": "Implementation, focused regression verification, and post-change read-only ECI trace inspection.",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "The existing ECI service-accountability view now correlates its selected-session Environment owner-pass contract with the ambient scheduler trace. Compact views carry bounded decision and result observations with source identity; a later disposition extension preserves the raw router code and wave without interpreting them as service verdicts.",
+      "interpretation_limit": "The readback proves scheduler and result relationships are inspectable. It does not show agent need, receipt, correctness, or reduced intervention; runner-returned-none is not treated as failure.",
+      "verified_change": "The final capability-intelligence test module passes 161 tests. The live session exposes seven scheduled decisions, complete decision coverage, two exact Store-backed result links, five runner-returned-none records, and zero owner failures."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_service_accountability_scope_gap_20261027",
+      "implementation_commits": [
+        "a70d6665b0bd2342b661c678b9912a1b77248c7f",
+        "549edaab107e4309609886cee2e2f36cfc3cdf8f"
+      ],
+      "subsequent_observation_identity": "ev_environment_owner_pass_accountability_live_readback_20261027",
+      "verification_observation_identity": "ev_environment_owner_pass_accountability_verification_20261027"
+    },
+    "source_interface": "MNCS Environment service-accountability and session-activity projections"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 68,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_5921be09cc8bb108",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_service_accountability_scope_gap_20261027",
+      "kind": "pressure-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_owner_pass_accountability_verification_20261027",
+      "kind": "verification-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_owner_pass_accountability_live_readback_20261027",
+      "kind": "subsequent-observation",
+      "repository": "mncs-environment"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "captured_at": "2026-10-27T18:20:08Z",
+  "identity": "ev_environment_readonly_provider_case_variant_improvement_20261027",
+  "measurement_basis": "Bounded read-only workspace provider lookup, exact manifest identity, persisted capability binding, and targeted verification.",
+  "observation": {
+    "kind": "read-only-provider-resolution-improvement",
+    "measurement_limits": [
+      "The lookup fix establishes safe provider source discovery and identity, not callable capability availability.",
+      "The current binding is read-only and unselected; no Commons files were modified.",
+      "This observation does not establish that every declared external provider uses the same path convention."
+    ],
+    "outcome": {
+      "current_binding": {
+        "authority_scope": "workspace-read-only",
+        "availability": "unknown",
+        "availability_code": "provider-invocation-undeclared",
+        "binding_id": "cap_557d7adc92b34c7f",
+        "contract_revision": "1",
+        "effects": [
+          "read"
+        ],
+        "provider_selected_in_session": false,
+        "reason": "The Commons contract publishes source fingerprints but no invocation descriptor, so Environment cannot treat those fingerprints as an executable command."
+      },
+      "current_provider_manifest": {
+        "branch": "main",
+        "head": "f942e7631e03e6fefb594118463e8b66fad5df3d",
+        "repository": "mncs-commons",
+        "revision": 10,
+        "working_tree_clean": true
+      },
+      "implementation_change": "When the declared provider path is absent, Environment performs bounded workspace discovery for that repository ID and accepts only one direct child whose manifest has the exact repository ID. Existing symlink, containment, clean-checkout, and identity checks remain in force; the provider is not selected or made writable.",
+      "implementation_commit": "1a1c2584df872f6471e83aa04fd05cd68371a3a0",
+      "verification": {
+        "command": "python -m pytest -q tests/test_environment.py -k 'consumed_readonly_provider or declared_external_toolchain_is_readonly_and_does_not_add_provider_or_effect_scope'",
+        "deselected": 280,
+        "git_diff_check": "passed",
+        "passed": 2,
+        "py_compile": "passed"
+      }
+    },
+    "request": {
+      "consumer_repository": "mncs-environment",
+      "declared_provider_repository": "mncs-commons",
+      "provider_directory_spelling": "MNCS-Commons",
+      "requested_effects": [
+        "read"
+      ]
+    },
+    "source_interface": "MNCS Environment workspace discovery and consumed read-only provider binding"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 68,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_5921be09cc8bb108",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_commons_native_process_consumer_evidence_20261026",
+      "kind": "prior-read-only-provider-consumer-evidence",
+      "path": "evidence/environmental-capability/commons-native-process-consumer-evidence-20261026.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "1a1c2584df872f6471e83aa04fd05cd68371a3a0",
+      "identity": "mncs_environment_readonly_provider_case_variant_1a1c258",
+      "kind": "implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "447ac7976328aa1aec9a949ed65152fed129c3a36986ef532c5aac5ac41c64e2"
+    },
+    {
+      "commit": "1a1c2584df872f6471e83aa04fd05cd68371a3a0",
+      "kind": "verification-source",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "d1962e22df638cc82266d36adc5d3fb4b5cb89b1a8457dc9b8d0496a63300ff4"
+    }
+  ]
+}

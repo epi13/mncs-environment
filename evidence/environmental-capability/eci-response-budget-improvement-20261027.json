@@ -1,0 +1,79 @@
+{
+  "captured_at": "2026-10-27T18:20:08Z",
+  "identity": "ev_environment_eci_response_budget_improvement_20261027",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_eci_response_budget_exceeded_20261027",
+    "basis": "The response is measured by exact UTF-8 JSON serialization after the fixed-size content digest is added. The regression test forces large owner-pass and Doctor history detail; the live post-push projection uses the same selected session and request budgets as the pre-change overrun.",
+    "effectiveness_assessment": "not-assessed",
+    "identity": "im_environment_eci_response_budget_20261027",
+    "implementation_reference": {
+      "commit": "8e7ad758ca14b81891834f104044ca1fb7526951",
+      "identity": "mncs_environment_eci_response_budget_8e7ad75",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "d86b3c889077c05ef2abf87d51fe1d3692e5e8dd568014b79a300bd3da76d564"
+    },
+    "not_measured": [
+      "whether any agent was blocked or manually compacted the previous response",
+      "agent receipt, time saved, or intervention burden",
+      "response-size behavior for all possible evidence windows and limits",
+      "longer-term service quality or pressure recurrence"
+    ],
+    "subsequent_observation_identity": "ev_environment_eci_response_budget_live_readback_20261027",
+    "verification_observation_identity": "ev_environment_eci_response_budget_verification_20261027"
+  },
+  "measurement_basis": "Implementation, independent automated regression verification, and post-push live response-size readback.",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "Added a final summary-only session-activity fallback for oversized ECI responses. It preserves aggregate service coverage, exact source references for recorded owner results, Doctor epoch/history identifiers, and omission markers; it reduces page identity metadata only when needed to meet the requested serialized byte bound.",
+      "interpretation_limit": "This verifies response size and retained provenance for the observed workload. It does not establish that agents received the view, spent less time, or experienced better service.",
+      "verified_change": "The 161-test capability-intelligence module passes. The same live request now returns 7652 serialized bytes against an 8000-byte limit, retaining two exact Store result links and marking five no-result rows omitted."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_response_budget_exceeded_20261027",
+      "implementation_commit": "8e7ad758ca14b81891834f104044ca1fb7526951",
+      "subsequent_observation_identity": "ev_environment_eci_response_budget_live_readback_20261027",
+      "verification_observation_identity": "ev_environment_eci_response_budget_verification_20261027"
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 68,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_5921be09cc8bb108",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_response_budget_pressure_20261027",
+      "kind": "pressure-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_eci_response_budget_verification_20261027",
+      "kind": "verification-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_eci_response_budget_live_readback_20261027",
+      "kind": "subsequent-observation",
+      "repository": "mncs-environment"
+    }
+  ]
+}

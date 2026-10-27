@@ -1,0 +1,68 @@
+{
+  "captured_at": "2026-10-27T18:20:08Z",
+  "identity": "ev_environment_eci_response_budget_live_readback_20261027",
+  "measurement_basis": "Post-push read-only ECI projection over the same session, byte limit, history window, and evidence limit used before the change.",
+  "observation": {
+    "kind": "environmental-projection-response-budget-live-readback",
+    "outcome": {
+      "activity_detail_status": "summary-only-response-budget",
+      "encoded_response_bytes": 7652,
+      "measurement_limits": [
+        "The size now honors this request and keeps recorded source references; not every detail is returned.",
+        "Omission of rows that returned no record does not imply failure or fulfillment.",
+        "No later agent behavior establishes reduced intervention or improved service quality."
+      ],
+      "omitted_no_result_rows": 5,
+      "owner_pass_count": 7,
+      "owner_pass_decision_coverage": "complete",
+      "owner_pass_items_returned": [
+        {
+          "owner_pass": "doctor",
+          "result_identity": "bf76800f6dbc3c872b432079e818f3401a9538a3ff0ac8c739137c06edd8891b",
+          "source_reference": "mncs-store:ses_a752e1c55fb4ca6f:incremental-coherence:doctor:6d0386d95eaff5d9ff89a2a57d551e6fbd2e83fbdd6ad90fdf8a8c6f08c49611"
+        },
+        {
+          "owner_pass": "projections",
+          "result_identity": "211dc660b27e3e1434d80c65277c13f22d828bda3e99f06661baaa64c5178892",
+          "source_reference": "mncs-store:ses_a752e1c55fb4ca6f:incremental-coherence:projections:69a4f5f934d34f139f91cea128b8fd9e1488a23575b249387b73412a968bed7d"
+        }
+      ],
+      "owner_pass_result_status_counts": {
+        "result-recorded": 2,
+        "runner-returned-none": 5
+      },
+      "response_byte_count_reported_by_projection": 224371,
+      "response_truncated": true
+    },
+    "request": {
+      "content_digest": "8aa6a2d031a074329a8355fe3385fb8f",
+      "evidence_limit": 8,
+      "history_pages": 4,
+      "max_result_bytes": 8000,
+      "projection_identity": "eci_56073e13e7789ec1",
+      "repository_head": "8e7ad758ca14b81891834f104044ca1fb7526951",
+      "session_event_limit": 80,
+      "session_id": "ses_a752e1c55fb4ca6f"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection on origin/main"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 68,
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id": "chk_5921be09cc8bb108",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1"
+}
