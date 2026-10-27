@@ -5989,9 +5989,7 @@ def _compact_projection(
                     claim.pop("claim_lifecycle_correlation_identity", None)
 
     def compact_result_size() -> int:
-        return len(
-            json.dumps(result, ensure_ascii=False, sort_keys=True).encode("utf-8")
-        )
+        return _projection_response_size(result)
 
     # Protect the evidence-to-pressure path by first reducing secondary session
     # context and derived duplicates. Exact observation and improvement rows
@@ -6135,6 +6133,11 @@ def _compact_projection(
             hypothesis[evidence_key].pop()
             hypothesis[f"{evidence_key}_truncated"] = True
             continue
+        if len(result["measurement_limits"]) > 2:
+            # Exact pointers are present in the compact rows, making this
+            # generic pointer-availability note redundant at the byte limit.
+            result["measurement_limits"].pop(1)
+            continue
         if result["observations"]:
             def observation_retention_priority(item: dict[str, Any]) -> int:
                 hypothesis = item.get("pressure_hypothesis")
@@ -6243,6 +6246,25 @@ def _compact_projection(
         elif result["session_activity"].get("integration_eligibility"):
             result["session_activity"]["integration_eligibility"].pop()
             result["session_activity"]["integration_eligibility_truncated"] = True
+        elif any(
+            isinstance(candidate.get("not_measured"), list)
+            and candidate["not_measured"]
+            for candidate in result.get("context_pressure_candidates", [])
+            if isinstance(candidate, dict)
+        ):
+            candidate = next(
+                candidate for candidate in reversed(
+                    result["context_pressure_candidates"],
+                )
+                if isinstance(candidate, dict)
+                and isinstance(candidate.get("not_measured"), list)
+                and candidate["not_measured"]
+            )
+            candidate["not_measured"].pop()
+            candidate["not_measured_truncated"] = True
+            candidate["not_measured_omitted_count"] = (
+                candidate.get("not_measured_omitted_count", 0) + 1
+            )
         elif result.get("context_pressure_candidates"):
             result["context_pressure_candidates"].pop(0)
         elif isinstance(
@@ -6530,13 +6552,32 @@ def _compact_projection(
                     compact_with_empty_resource_status["session_activity"][
                         "resource_samples"
                     ][key] = value
-            if len(json.dumps(
+            if _projection_response_size(
                 compact_with_empty_resource_status,
-                ensure_ascii=False,
-                sort_keys=True,
-            ).encode("utf-8")) <= max_result_bytes:
+            ) <= max_result_bytes:
                 result = compact_with_empty_resource_status
     return result
+
+
+def _projection_response_size(projection: dict[str, Any]) -> int:
+    """Measure the returned projection including its fixed-size content digest."""
+    measured = dict(projection)
+    measured["content_digest"] = "0" * 32
+    return len(json.dumps(
+        measured, ensure_ascii=False, sort_keys=True,
+    ).encode("utf-8"))
+
+
+def _projection_content_digest(projection: dict[str, Any]) -> str:
+    """Fingerprint the interpreted response without making the digest recursive."""
+    content = {
+        key: value for key, value in projection.items()
+        if key != "content_digest"
+    }
+    return digest_hex({
+        "kind": "environmental-capability-projection-content/1",
+        "projection": content,
+    }, length=32)
 
 
 def _compiler_regression_reference_family(
@@ -21313,7 +21354,12 @@ def project(
             "selected checkouts, and bounded source-visibility diagnostics without "
             "treating a candidate as a recorded pressure or granting access."
         )
-    encoded = json.dumps(projection, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    if len(encoded) > max_result_bytes:
-        return _compact_projection(projection, len(encoded), max_result_bytes)
-    return projection
+    response_size = _projection_response_size(projection)
+    if response_size > max_result_bytes:
+        result = _compact_projection(
+            projection, response_size, max_result_bytes,
+        )
+    else:
+        result = projection
+    result["content_digest"] = _projection_content_digest(result)
+    return result

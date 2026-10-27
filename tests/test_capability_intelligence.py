@@ -12882,6 +12882,17 @@ def test_conflicting_pressure_recommendations_are_preserved_as_ambiguous(
     assert compact_pressure["definition_evidence_observation_identities"] == [
         first["identity"], second["identity"],
     ]
+    assert compact["identity"] == full["identity"]
+    assert compact["content_digest"] != full["content_digest"]
+    assert full["content_digest"] == (
+        capability_intelligence._projection_content_digest(full)
+    )
+    assert compact["content_digest"] == (
+        capability_intelligence._projection_content_digest(compact)
+    )
+    assert len(json.dumps(
+        compact, ensure_ascii=False, sort_keys=True,
+    ).encode("utf-8")) <= 6_000
 
 
 def test_authentic_compiler_selection_records_surface_recommendation_conflict(

@@ -1419,6 +1419,15 @@ inspectable in a compact response. If their observation summaries are omitted,
 the relation and hypothesis still carry exact evidence references when present
 in the selected view.
 
+The top-level `identity` is a correlation key for the selected source context,
+including its evidence and session-state digests; it does not identify the
+projection implementation or guarantee identical interpretation output. The
+`content_digest` is a 128-bit fingerprint of the complete returned
+interpretation, calculated with that field omitted. It therefore changes
+when projection logic changes the result for the same source context, and also
+distinguishes a compact response from its full response. The fixed-size digest
+is included in response-budget accounting.
+
 ## What the ambient pass refuses
 
 - **Occupied checkouts.** Foreign claims, unknown dirt, foreign branches,
