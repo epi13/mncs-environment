@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_content_digest_improvement_20261027",
+  "captured_at": "2026-10-27T14:00:25Z",
+  "measurement_basis": "committed-content-fingerprint-and-response-budget-regression-linked-to-live-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "link projection output traceability pressure to a verified content fingerprint",
+      "addresses_hypothesis_identity": "ph_environment_eci_output_identity_20261027",
+      "implementation_commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "verification_observation_identity": "ev_environment_eci_content_digest_verification_20261027",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The existing ECI projection retains identity as a correlation key for selected source context and returns a separate 128-bit content_digest for the exact full or compact interpretation. The digest excludes itself, is deterministic for the returned content, and is included in response-size accounting. Compact output now reduces redundant notes and explicitly counts omitted not_measured entries before dropping evidence relationships.",
+      "verification_basis": "The capability-intelligence tests verify same-context identity with different full and compact content digests, digest reproducibility, and the compact response byte limit. The CLI tests pass, and a bounded live campaign projection returns a content digest.",
+      "effectiveness_assessment": "The projection's output identity and budget behavior are verified. Longitudinal agent use and resulting reduction in repeated interpretation work are not assessed."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_output_identity_20261027",
+    "title": "A stable source-context identity did not distinguish changed environmental-capability interpretations",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment capability-intelligence projection identity and response budgeting",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Keep the source-context identity stable and add a content fingerprint for each returned interpretation, including compact responses, within the existing output budget."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_eci_content_digest_20261027",
+    "addresses_hypothesis_identity": "ph_environment_eci_output_identity_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_eci_content_digest_70de9fc",
+      "repository": "mncs-environment",
+      "commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "7e613338b9b122225521640d18d2b21ee47cf7c5bd1d0202a6d715e082feb815",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_eci_content_digest_verification_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The source-context identity remains stable while a separate content digest fingerprints the exact result. Regression tests verify distinct digests for full and compact interpretations over the same source context and enforce the response bound. The live readback demonstrates that the existing ECI interface exposes the new digest. This establishes output traceability, not projection correctness or longitudinal agent benefit.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "whether independent agents use the digest to detect interpretation changes",
+      "whether this prevents repeated projection investigation or reduces intervention burden",
+      "whether the verified digest contract improves the correctness of any environmental conclusion"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_eci_content_digest_70de9fc",
+      "repository": "mncs-environment",
+      "commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "7e613338b9b122225521640d18d2b21ee47cf7c5bd1d0202a6d715e082feb815"
+    },
+    {
+      "identity": "mncs_environment_eci_content_digest_tests_70de9fc",
+      "repository": "mncs-environment",
+      "commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ea1acbd744ffdf3b5175cb0b1ab7aad2e3416103be6a38426775f20194fd1e5d"
+    }
+  ],
+  "not_measured": [
+    "whether later agents use the digest across sessions or projection versions",
+    "whether agent intervention burden is reduced",
+    "whether a future live projection of the same source context receives the same digest when inputs and implementation are unchanged"
+  ]
+}

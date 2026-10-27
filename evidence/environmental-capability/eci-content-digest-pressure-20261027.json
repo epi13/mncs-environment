@@ -1,0 +1,73 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_content_digest_pressure_20261027",
+  "captured_at": "2026-10-27T14:00:25Z",
+  "measurement_basis": "projection-source-identity-contract-and-authenticated-readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_7da280fa8dce981f",
+    "campaign_evidence_count_before_recording": 43
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "inspect the identity and output provenance of the environmental-capability projection",
+      "prior_projection_identity": "eci_ac2a722863855483",
+      "source_context_checkpoint": "chk_7da280fa8dce981f"
+    },
+    "outcome": {
+      "observed_limitation": "The projection identity was derived from selected source context and state digests, but the returned interpretation had no content fingerprint. A projection implementation change could therefore alter conclusions while preserving the same source-context identity.",
+      "interpretation": "This is an output traceability and accountability gap. It does not establish that the projection's pressure analysis was incorrect or that agents experienced measurable intervention burden.",
+      "recurrence_status": "not-established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_output_identity_20261027",
+    "title": "A stable source-context identity did not distinguish changed environmental-capability interpretations",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment capability-intelligence projection identity and response budgeting",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Keep the source-context identity stable and add a content fingerprint for each returned interpretation, including compact responses, within the existing output budget."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_eci_context_identity_02c54cb",
+      "kind": "pre-change-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "02c54cbf0cfb767168bd7c3a2509c18c3b4850a8",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "451f5ed3c203d3547294c8071718100d3b0bad50da5f429009c2bedaff9dce8d"
+    },
+    {
+      "identity": "ev_environment_ambient_capability_projection_live_readback_20261027",
+      "kind": "authenticated-campaign-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "02c54cbf0cfb767168bd7c3a2509c18c3b4850a8",
+      "path": "evidence/environmental-capability/ambient-capability-projection-live-readback-20261027.json",
+      "sha256": "bc1ef6c4e5e0e8e51295c4876ba60f4378849243334ea1f92b5d0d4ede0f04ef"
+    }
+  ],
+  "not_measured": [
+    "whether later agents use the content fingerprint to distinguish interpretation changes",
+    "whether this traceability gap caused duplicated investigation or other measurable intervention",
+    "whether changed interpretations improve service correctness or agent outcomes"
+  ],
+  "measurement_limits": [
+    "One selected session and projection context are represented; cross-session recurrence is not established.",
+    "The source identity remains a context correlation key and is not evidence of projection correctness."
+  ]
+}

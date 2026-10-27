@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_content_digest_verification_20261027",
+  "captured_at": "2026-10-27T14:00:25Z",
+  "measurement_basis": "capability-intelligence-regression-suite-and-bounded-live-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment environmental-capability projection and projections CLI",
+    "request": {
+      "implementation_commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m pytest tests/test_capability_projection_cli.py -q",
+        "git diff --check",
+        "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --interpret environmental-capability --history-pages 1 --evidence-offset 41 --evidence-limit 2 --session-event-limit 1"
+      ]
+    },
+    "outcome": {
+      "status": "passed",
+      "results": [
+        {
+          "command_index": 0,
+          "passed": 159
+        },
+        {
+          "command_index": 1,
+          "passed": 5
+        },
+        {
+          "command_index": 2,
+          "status": "passed"
+        },
+        {
+          "command_index": 3,
+          "exit_code": 0,
+          "projection_identity": "eci_dab13682061edcdf",
+          "content_digest": "ca17efe4a826d452a70f71b6821cef12",
+          "status": "partial",
+          "response_truncated": true,
+          "response_byte_count": 100732,
+          "campaign_checkpoint_id": "chk_7da280fa8dce981f",
+          "evidence_count": 43,
+          "observation_count": 2,
+          "pressure_hypothesis_count": 1,
+          "improvement_relation_count": 1
+        }
+      ],
+      "coverage": "Regression tests verify that the same source context keeps its identity while full and compact returned interpretations receive distinct reproducible content digests. They verify compact responses include the digest within the configured byte limit. The live campaign query returns a content digest through the existing projection CLI.",
+      "interpretation_limit": "The live query is explicitly partial and truncated. It verifies availability of the digest in a genuine campaign read, not complete-history coverage, projection correctness, future recurrence, or reduced agent burden."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_output_identity_20261027",
+    "title": "A stable source-context identity did not distinguish changed environmental-capability interpretations",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment capability-intelligence projection identity and response budgeting",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Keep the source-context identity stable and add a content fingerprint for each returned interpretation, including compact responses, within the existing output budget."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_eci_content_digest_70de9fc",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "7e613338b9b122225521640d18d2b21ee47cf7c5bd1d0202a6d715e082feb815"
+    },
+    {
+      "identity": "mncs_environment_eci_content_digest_tests_70de9fc",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "ea1acbd744ffdf3b5175cb0b1ab7aad2e3416103be6a38426775f20194fd1e5d"
+    },
+    {
+      "identity": "mncs_environment_eci_content_digest_docs_70de9fc",
+      "kind": "committed-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "70de9fc915a057c1c82dbb09a393b3965dde56f1",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "847954fe41420deaaa2838ca7bb071c3acc7f4abb4189d83cd6cde902f4d333d"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence or consistency of content digests across independent agents",
+    "agent use of the digest to detect changes or recover prior projection outputs",
+    "projection correctness or downstream environmental-service effectiveness"
+  ]
+}
