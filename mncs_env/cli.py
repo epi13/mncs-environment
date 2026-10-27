@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import authority as authority_module
 from . import actions as actions_module
 from . import capabilities as capabilities_module
 from . import capability_intelligence as capability_intelligence_module
@@ -847,10 +848,18 @@ def cmd_authority(args: argparse.Namespace) -> int:
             )
         scope = matches[0]["scope"]
     if args.action:
+        check_arguments = {
+            "action": args.action,
+            "target": args.target or "*",
+            "scope": scope,
+        }
+        if (
+            scope_json is not None
+            and args.action in authority_module.PROPOSAL_WORKTREE_ACTIONS
+        ):
+            check_arguments["proposal_preflight"] = True
         result = {
-            "evaluation": session.check(
-                action=args.action, target=args.target or "*", scope=scope,
-            ),
+            "evaluation": session.check(**check_arguments),
             "context": result,
             **({"scope_claim_id": claim_id} if claim_id else {}),
         }

@@ -436,6 +436,22 @@ executed edit or its outcome, and records whether repository write scope was
 present at proposal time. Merge and publish always require a fresh writable
 scope and exact operation preflight.
 
+For a proposal in an unselected worktree, pass its explicit worktree scope
+without acquiring a claim:
+
+```sh
+./scripts/mncs-env authority "$SESSION" --action write \
+  --target mncs-environment \
+  --scope-json '{"kind":"worktree","checkout":"/workspace/mncs-environment/.worktrees/change","branch":"campaign/change","exclusive":false}'
+```
+
+Environment verifies that exact checkout is currently registered and still on
+the named branch, then records its fresh HEAD and working-tree state with the
+proposal eligibility event. The worktree need not be selected or present in an
+earlier workspace projection. This remains a non-executing eligibility check:
+it creates no claim, grants no repository rights, and does not perform the
+proposed edit.
+
 For up to four unique recorded blocker claim IDs, the projection also performs
 a bounded targeted read of current claim records and exposes a separate
 `current_claim_state` observation. Its `observed_at`, current claim version,

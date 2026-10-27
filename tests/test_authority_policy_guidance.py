@@ -402,6 +402,51 @@ def test_authority_cli_accepts_explicit_unowned_scope_as_an_operation_proposal()
     assert parsed.claim_id is None
 
 
+def test_authority_cli_marks_explicit_worktree_write_as_non_executing_preflight() -> None:
+    session_id = "ses_unassigned"
+    scope = _scope()
+    calls = {}
+
+    def check(**kwargs):
+        calls.update(kwargs)
+        return {
+            "verdict": "allow",
+            "decision_domain": "eligibility",
+            "eligibility_basis": authority.PROPOSAL_WORKTREE_ELIGIBILITY,
+            "persistent_claim_required": False,
+            "operation_executed": False,
+        }
+
+    fake_session = SimpleNamespace(
+        session_id=session_id,
+        inspect=lambda: {"authority": {"claim_holders": {}}},
+        check=check,
+    )
+    args = Namespace(
+        session=session_id,
+        action="write",
+        target="mncs-environment",
+        claim_id=None,
+        scope_json=json.dumps(scope),
+    )
+
+    with patch.object(cli, "_open", return_value=fake_session), patch.object(
+        cli, "out",
+    ) as output:
+        assert cli.cmd_authority(args) == 0
+
+    assert calls == {
+        "action": "write",
+        "target": "mncs-environment",
+        "scope": scope,
+        "proposal_preflight": True,
+    }
+    result = output.call_args.args[0]
+    assert result["evaluation"]["verdict"] == "allow"
+    assert result["evaluation"]["persistent_claim_required"] is False
+    assert result["evaluation"]["operation_executed"] is False
+
+
 def test_authority_cli_rejects_malformed_explicit_scope_before_opening_session() -> None:
     args = Namespace(
         session="ses_unassigned",

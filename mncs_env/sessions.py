@@ -4786,7 +4786,13 @@ class Session:
         target: str,
         repo_facts: dict[str, dict[str, Any]] | None = None,
         scope: dict[str, Any] | None = None,
+        proposal_preflight: bool = False,
     ) -> dict[str, Any]:
+        """Evaluate eligibility; explicit proposal preflights refresh exact worktrees.
+
+        The flag is reserved for the non-executing authority interface. Provider
+        effect checks continue to enforce their own current mutation boundary.
+        """
         observed_facts = authority_module.repository_facts_for_snapshot(
             self.snapshot, repo_facts,
         )
@@ -4850,12 +4856,12 @@ class Session:
             )
             explicit_worktree_checkout = (
                 normalized_scope.get("checkout")
-                if (integration_action
+                if ((integration_action or proposal_preflight)
                     and isinstance(normalized_scope, dict)
                     and normalized_scope.get("kind") == "worktree")
                 else None
             )
-            needs_explicit_integration_scope = (
+            needs_explicit_worktree_scope = (
                 isinstance(explicit_worktree_checkout, str)
                 and bool(explicit_worktree_checkout)
             )
@@ -4871,7 +4877,7 @@ class Session:
                 and not needs_selected_checkout_observation
             )
             needs_scoped_checkout_observation = (
-                needs_explicit_integration_scope
+                needs_explicit_worktree_scope
                 and not (os.path.isabs(target) and target_checkout is not None)
             )
             if (needs_absolute_target_validation
@@ -4889,7 +4895,7 @@ class Session:
                         and needs_absolute_target_validation):
                     observed_checkout = target_checkout[1]
                     checkout_path = observed_checkout.get("path")
-                elif needs_explicit_integration_scope:
+                elif needs_explicit_worktree_scope:
                     observed_checkout = {}
                     checkout_path = explicit_worktree_checkout
                 elif needs_workspace_root_observation:
@@ -4950,7 +4956,10 @@ class Session:
                           and isinstance(checkout_path, str)):
                         expected_repository_root = checkout_path
                 expected_branch = observed_checkout.get("branch")
-                if (needs_explicit_integration_scope
+                if (proposal_preflight
+                        and needs_explicit_worktree_scope):
+                    expected_branch = normalized_scope.get("branch")
+                elif (needs_explicit_worktree_scope
                         and not (os.path.isabs(target)
                                  and target_checkout is not None)):
                     expected_branch = normalized_scope.get("branch")
@@ -4977,7 +4986,7 @@ class Session:
                     )
                 except workspace_module.WorkspaceResolutionError as error:
                     scope_description = (
-                        "explicit integration scope checkout"
+                        "explicit worktree scope checkout"
                         if needs_scoped_checkout_observation
                         else "absolute target checkout"
                     )
@@ -4989,7 +4998,7 @@ class Session:
                 )
                 if inspected is None or inspected.git_error:
                     observation_description = (
-                        "explicit integration scope checkout"
+                        "explicit worktree scope checkout"
                         if needs_scoped_checkout_observation
                         else "absolute integration target"
                     )

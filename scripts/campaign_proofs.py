@@ -83,13 +83,20 @@ def proof_two_agent() -> None:
         check("two-agent.conflict", conflict is not None and
               agent_a.session_id in conflict,
               f"conflicting acquire denied naming holder: {conflict}")
-        # Peer session's overlapping mutation is denied by live authority.
+        # The shared root is writable in principle, but this overlapping
+        # operation has no exact non-overlapping scope. Defer it as a
+        # coordination prerequisite rather than misclassifying it as a policy
+        # denial.
         agent_b._refresh_holders()
         verdict = agent_b.check(action="write", target="proof-repo",
                                 repo_facts={"proof-repo": {"clean": True,
                                                           "main_branch": True,
                                                           "foreign_signals": []}})
-        check("two-agent.authority-deny", verdict["verdict"] == "deny",
+        check("two-agent.authority-coordination-defer",
+              verdict["verdict"] == "defer"
+              and verdict.get("decision_domain") == "coordination"
+              and verdict.get("coordination_status") == "overlapping-scope-conflict"
+              and verdict.get("operation_executed") is False,
               f"peer write verdict: {verdict}")
         # Handoff path: transfer moves the claim; the receiver may proceed.
         moved = agent_a.transfer_claim(record["claim_id"],
@@ -123,10 +130,16 @@ def proof_bypass() -> None:
             ] + [binding]
 
         expose_proof_binding()
-        # No claim: escalation, nothing executes.
+        # No claim: coordination defers the shared-checkout mutation before
+        # invocation; this is not an authority escalation and nothing executes.
         outcome = session.invoke("proof-write", ["-c", f"echo planted > {canary}"])
         check("bypass.no-claim-no-exec",
-              outcome["status"] == "pending-escalation" and not canary.exists(),
+              outcome["status"] == "deferred-coordination"
+              and outcome.get("coordination_status")
+              == "workspace-scope-not-observed"
+              and outcome.get("returncode") is None
+              and outcome.get("binding_id") is None
+              and not canary.exists(),
               f"no-claim invoke -> {outcome['status']}, canary exists: {canary.exists()}")
         # Live claim: the same invoke executes.
         session.acquire_claim("proof-repo", basis="explicit-claim", reason="proof")
@@ -135,13 +148,19 @@ def proof_bypass() -> None:
         check("bypass.claim-executes",
               outcome2["status"] == "ok" and canary.read_text().strip() == "planted",
               f"claimed invoke -> {outcome2['status']}")
-        # Released claim: authority fails closed again, nothing executes.
+        # Released claim: the same scoped coordination prerequisite returns;
+        # the provider is not invoked and no persistent authority is retained.
         canary.unlink()
         session.release_claim("proof-repo", reason="proof done")
         expose_proof_binding()
         outcome3 = session.invoke("proof-write", ["-c", f"echo planted > {canary}"])
         check("bypass.release-revokes",
-              outcome3["status"] == "pending-escalation" and not canary.exists(),
+              outcome3["status"] == "deferred-coordination"
+              and outcome3.get("coordination_status")
+              == "workspace-scope-not-observed"
+              and outcome3.get("returncode") is None
+              and outcome3.get("binding_id") is None
+              and not canary.exists(),
               f"released invoke -> {outcome3.get('status')}, canary exists: {canary.exists()}")
 
 

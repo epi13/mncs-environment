@@ -1002,6 +1002,124 @@ class AuthorityTests(unittest.TestCase):
             )
             self.assertNotIn(checkout, json.dumps(event["payload"]))
 
+    def test_unselected_explicit_proposal_checkout_is_freshly_observed_without_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(
+                Path(directory),
+                intent={
+                    "goal": "propose an unassigned environmental improvement",
+                    "repositories": [],
+                },
+            )
+            root = "/workspace/mncs-atlas"
+            checkout = f"{root}/.worktrees/unselected-proposal"
+            branch = "campaign/unselected-proposal"
+            fresh_head = "d" * 40
+            session.snapshot["workspace"] = {
+                "root": "/workspace",
+                "repositories": [{
+                    "name": "mncs-atlas",
+                    "path": root,
+                    "manifest_repository": "mncs-atlas",
+                    "branch": "main",
+                }],
+            }
+            session.snapshot["selected_checkouts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": root,
+                "branch": "main",
+                "head": "a" * 40,
+                "clean": True,
+            }}
+            session.snapshot["repo_facts"] = {"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": root,
+                "branch": "main",
+                "head": "a" * 40,
+                "dirty": False,
+            }}
+            session.snapshot["claim_holders"] = {"mncs-atlas": [{
+                "session_id": "ses_descriptive_coordinator",
+                "claim_id": "claim:mncs-atlas",
+                "scope": {
+                    "kind": "repository",
+                    "repository": "mncs-atlas",
+                    "exclusive": True,
+                },
+            }]}
+            scope = {
+                "kind": "worktree",
+                "repository": "mncs-atlas",
+                "checkout": checkout,
+                "branch": branch,
+                "exclusive": False,
+            }
+            checkout_identity = {
+                "path": checkout,
+                "branch": branch,
+                "checkout_identity": "checkout:unselected-proposal",
+                "git_common_directory_identity": "git-common:atlas",
+                "manifest_identity": "manifest:atlas",
+            }
+            inspected = sessions.workspace_module.RepoState(
+                name="unselected-proposal",
+                path=checkout,
+                manifest_repository="mncs-atlas",
+                manifest_revision=1,
+                branch=branch,
+                head=fresh_head,
+                dirty=True,
+            )
+            with mock.patch.object(
+                session, "_refresh_holders",
+                return_value=session.snapshot["claim_holders"],
+            ), mock.patch.object(
+                sessions.workspace_module, "verify_registered_checkout",
+                return_value=checkout_identity,
+            ) as verify_checkout, mock.patch.object(
+                sessions.workspace_module, "inspect_repo",
+                return_value=inspected,
+            ) as inspect_checkout:
+                verdict = session.check(
+                    action="write", target="mncs-atlas", scope=scope,
+                    proposal_preflight=True,
+                )
+
+            self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertFalse(verdict["persistent_claim_required"])
+            self.assertEqual(
+                verdict["eligibility_basis"],
+                authority.PROPOSAL_WORKTREE_ELIGIBILITY,
+            )
+            verify_checkout.assert_called_once_with(
+                checkout,
+                repository="mncs-atlas",
+                workspace_root="/workspace",
+                expected_repository_root=root,
+                expected_branch=branch,
+            )
+            inspect_checkout.assert_called_once()
+            self.assertEqual(
+                inspect_checkout.call_args.args[0], Path(checkout),
+            )
+            event = session._log()[-1]
+            self.assertEqual(event["type"], "authority.proposal-eligible")
+            self.assertFalse(event["payload"]["persistent_claim_required"])
+            self.assertFalse(event["payload"]["operation_executed"])
+            self.assertEqual(
+                event["payload"]["proposal_preflight_state"]["branch"],
+                branch,
+            )
+            self.assertEqual(
+                event["payload"]["proposal_preflight_state"]["head"],
+                fresh_head,
+            )
+            self.assertEqual(
+                event["payload"]["coordination_only_claims"][0]["claim_id"],
+                "claim:mncs-atlas",
+            )
+            self.assertNotIn(checkout, json.dumps(event["payload"]))
+
     def test_selected_dirty_main_checkout_keeps_claim_gate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(
