@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_pass_outcome_accountability_improvement_20261027",
+  "captured_at": "2026-10-27T12:46:18Z",
+  "measurement_basis": "exact implementation and regression evidence linked to the recorded owner-pass outcome pressure",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection and incremental coherence owner-pass trace",
+    "request": {
+      "operation": "link ambient owner-pass outcome pressure to committed implementation and regression evidence",
+      "pressure_hypothesis_identity": "ph_environment_ambient_owner_pass_outcome_coverage",
+      "implementation_commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "verification_observation_identity": "ev_environment_ambient_owner_pass_outcome_accountability_20261027"
+    },
+    "outcome": {
+      "implemented_behavior": "New traces explicitly record empty owner-failure lists. The bounded trace projection links classified owner failures to scheduled passes, reports missing legacy outcome coverage as unknown, and keeps independent verification unestablished. Exact execution-ID joins expose this evidence and measured owner-pass duration in service-accountability rows.",
+      "verification_basis": "The referenced implementation observation records the 169-pass, 21-skip regression run across incremental coherence and capability-intelligence tests, including explicit-empty, reported-failure, missing-field, malformed-field, exact service join, and compact-projection cases.",
+      "effectiveness_assessment": "Immediate projection and regression behavior are verified; longitudinal service fulfillment and intervention reduction remain unmeasured."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_pass_outcome_coverage",
+    "title": "The ambient trace projection obscured missing owner outcome evidence and required separate trace lookup to inspect service results",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment incremental coherence and capability intelligence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Record explicit empty owner-failure coverage and expose outcome evidence through exact execution-ID joins in the existing service-accountability projection."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_ambient_owner_pass_outcome_accountability_20261027",
+    "addresses_hypothesis_identity": "ph_environment_ambient_owner_pass_outcome_coverage",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_owner_pass_outcomes_e9e0f09",
+      "repository": "mncs-environment",
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "path": "mncs_env/coherence.py",
+      "sha256": "69aa30d0b0a469e8f5d05258058746f792069848dc6b06c475939f86bc16f791",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_ambient_owner_pass_outcome_accountability_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The exact implementation preserves missing and malformed outcome evidence as unknown or partial, correlates only exact execution identities, and exposes the result through the existing service projection. The linked regression evidence verifies these behaviors without treating pass completion as independent correctness or agent-need fulfillment.",
+    "not_measured": [
+      "whether later sessions encounter fewer owner-pass failures",
+      "agent receipt, intervention burden, eligible service opportunities, or ambient fulfillment",
+      "whether subsequent service outcomes demonstrate reduced agent orchestration"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_owner_pass_outcomes_e9e0f09",
+      "repository": "mncs-environment",
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "path": "mncs_env/coherence.py",
+      "sha256": "69aa30d0b0a469e8f5d05258058746f792069848dc6b06c475939f86bc16f791",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_ambient_owner_pass_outcome_tests_e9e0f09",
+      "repository": "mncs-environment",
+      "commit": "e9e0f094e44858166e0835b0780e5bb5b391a4b0",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "7e5ac2922acab931322a429e69f7a40de6413faf34b232520620eda2a92135db",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_pass_outcome_accountability_20261027",
+      "repository": "mncs-environment",
+      "commit": "921bd68b4cccd3cc3f712e9eb8cd77fea4ce1b84",
+      "path": "evidence/environmental-capability/ambient-owner-pass-outcome-accountability-20261027.json",
+      "sha256": "d86ae8b5f1e9691c02da8558364db58c1e97eea034753140d66846f7658d068d",
+      "kind": "verification-observation"
+    }
+  ],
+  "not_measured": [
+    "cross-session recurrence reduction",
+    "agent intervention or total tool-call reduction",
+    "subsequent outcomes after other consumers use the projected status"
+  ]
+}
