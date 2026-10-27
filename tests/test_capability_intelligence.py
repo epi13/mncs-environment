@@ -4637,6 +4637,9 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert environment_execution["summary"][
         "owner_pass_observation_status"
     ] == "recorded"
+    assert environment_execution["summary"]["scheduler_mode"] == (
+        "targeted_update"
+    )
     assert environment_execution["summary"][
         "owner_pass_observation_count"
     ] == 2
@@ -4677,6 +4680,10 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert compact_pass_observations["items"][0]["trigger_kinds"] == [
         "repository.control_changed",
     ]
+    assert compact_pass_observations["items"][0][
+        "scheduler_disposition_code"
+    ] == 1
+    assert compact_pass_observations["items"][0]["wave"] == 0
     assert compact_pass_observations["items"][0]["result_identity"] == (
         result_digest
     )

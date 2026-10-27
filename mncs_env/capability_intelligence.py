@@ -2572,6 +2572,8 @@ def _compact_service_accountability_overview(
         compact_environment_summary = {
             key: execution_summary[key]
             for key in (
+                "scheduler_mode", "owner_pass_observation_status",
+                "owner_pass_observation_count",
                 "declared_owner_pass_count", "owner_pass_decision_count",
                 "owner_pass_decision_coverage", "scheduled_pass_count",
                 "skipped_pass_count", "owner_failure_count",
@@ -16370,6 +16372,9 @@ def _environment_service_execution_accountability(
         "items": [],
     }
     if execution is not None:
+        scheduler_mode = execution.get("mode")
+        if isinstance(scheduler_mode, str):
+            summary["scheduler_mode"] = scheduler_mode
         for key in (
             "declared_owner_pass_count", "owner_pass_decision_count",
             "owner_pass_decision_coverage", "scheduled_pass_count",
@@ -16433,6 +16438,12 @@ def _environment_service_execution_accountability(
                     "verification_status", "not-established",
                 ),
             }
+            disposition = item.get("scheduler_disposition_code")
+            if type(disposition) is int and disposition >= 0:
+                row["scheduler_disposition_code"] = disposition
+            wave = item.get("wave")
+            if type(wave) is int and wave >= 0:
+                row["wave"] = wave
             trigger_kinds = item.get("trigger_kinds")
             if isinstance(trigger_kinds, list):
                 row["trigger_kinds"] = [

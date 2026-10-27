@@ -77,10 +77,12 @@ budget compaction retains only its summary.
 When the response budget compacts `session_activity.service_accountability`,
 the Environment owner-pass summary retains bounded per-pass observations from
 the linked `ambient_service_execution` trace. Each scheduled row can relate its
-trigger kinds, execution identity, elapsed time, recorded outcome, and safe
-result reference; skipped rows preserve the scheduler's bounded reason. These
-are Environment scheduling records, not an agent-opportunity denominator or
-proof of fulfillment, correctness, or reduced intervention.
+trigger kinds, raw scheduler disposition and wave, execution identity, elapsed
+time, recorded outcome, and safe result reference; skipped rows preserve the
+scheduler's bounded reason. The disposition remains a code from the router's
+contract, not an interpreted service verdict. These are Environment scheduling
+records, not an agent-opportunity denominator or proof of fulfillment,
+correctness, or reduced intervention.
 
 ## Entry and persistence observation
 
