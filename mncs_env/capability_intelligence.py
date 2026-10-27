@@ -4003,6 +4003,7 @@ def _compact_projection(
                 "identity", "action", "repository", "authorization_basis",
                 "eligibility_basis", "campaign_id", "work_intent_id",
                 "work_intent_reference_status", "preflight_state_status",
+                "writable_scope_observation_status",
             )
             if isinstance(item.get(key), str)
         }
@@ -4128,6 +4129,8 @@ def _compact_projection(
                 )
         for key in (
             "persistent_claim_required", "operation_executed",
+            "writable_scope_required_for_integration",
+            "repository_writable_scope_present",
             "coordination_only_claim_count", "coordination_only_claims_truncated",
         ):
             if key in item and type(item[key]) in {bool, int}:
@@ -14282,6 +14285,29 @@ def _session_activity(
         scope = _authority_conflict_scope(payload.get("scope"), repository)
         authorization_basis = payload.get("authorization_basis")
         eligibility_basis = payload.get("eligibility_basis")
+        writable_scope_required = payload.get(
+            "writable_scope_required_for_integration",
+        )
+        writable_scope_present = payload.get(
+            "repository_writable_scope_present",
+        )
+        valid_authorization_basis = authorization_basis in {
+            "session-writable-scope",
+            authority_module.PROPOSAL_ONLY_AUTHORIZATION_BASIS,
+        }
+        valid_integration_scope_requirement = (
+            writable_scope_required is None
+            and authorization_basis == "session-writable-scope"
+        ) or writable_scope_required is True
+        valid_writable_scope_observation = (
+            writable_scope_present is None
+            and authorization_basis == "session-writable-scope"
+        ) or (
+            type(writable_scope_present) is bool
+            and writable_scope_present == (
+                authorization_basis == "session-writable-scope"
+            )
+        )
         if (
             reference is None
             or action not in authority_module.PROPOSAL_WORKTREE_ACTIONS
@@ -14289,7 +14315,9 @@ def _session_activity(
             or scope is None
             or scope.get("kind") != "worktree"
             or scope.get("branch") in {None, "main", "master"}
-            or authorization_basis != "session-writable-scope"
+            or not valid_authorization_basis
+            or not valid_integration_scope_requirement
+            or not valid_writable_scope_observation
             or eligibility_basis != authority_module.PROPOSAL_WORKTREE_ELIGIBILITY
             or payload.get("persistent_claim_required") is not False
             or payload.get("operation_executed") is not False
@@ -14368,6 +14396,10 @@ def _session_activity(
             MAX_SESSION_ACTIVITY_PROPOSAL_ELIGIBILITY
         ):
             continue
+        proposal_only = (
+            authorization_basis
+            == authority_module.PROPOSAL_ONLY_AUTHORIZATION_BASIS
+        )
         proposal_eligibility_records.append({
             "identity": "proposaleligible_" + digest_hex({
                 "session_id": session.session_id,
@@ -14378,6 +14410,13 @@ def _session_activity(
             **_authority_event_objective_context(payload),
             "authorization_basis": authorization_basis,
             "eligibility_basis": eligibility_basis,
+            "writable_scope_required_for_integration": True,
+            "writable_scope_observation_status": (
+                "recorded" if type(writable_scope_present) is bool
+                else "not-recorded-on-event"
+            ),
+            **({"repository_writable_scope_present": writable_scope_present}
+               if type(writable_scope_present) is bool else {}),
             "persistent_claim_required": False,
             "operation_executed": False,
             "preflight_state_status": preflight_state_status,
@@ -14388,7 +14427,18 @@ def _session_activity(
             "interpretation": (
                 "This preflight found local work eligible in an observed "
                 "non-main worktree without requiring a persistent claim. "
-                "It records neither an executed edit nor its outcome."
+                + (
+                    "The session lacked repository write scope at this "
+                    "preflight, so this was a local proposal only; merge and "
+                    "publish still require writable repository scope. "
+                    if proposal_only else (
+                        "Repository write scope was present at this preflight, "
+                        "but integration still requires a fresh scoped "
+                        "preflight. "
+                        if writable_scope_present is True else ""
+                    )
+                )
+                + "It records neither an executed edit nor its outcome."
             ),
             "event_reference": reference,
         })

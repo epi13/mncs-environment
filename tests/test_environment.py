@@ -652,7 +652,7 @@ class AuthorityTests(unittest.TestCase):
                 Path(directory),
                 intent={
                     "goal": "propose a compiler integration improvement",
-                    "repositories": ["mncs-atlas"],
+                    "repositories": [],
                 },
             )
             proposal_scope = {
@@ -665,9 +665,11 @@ class AuthorityTests(unittest.TestCase):
             }
             decision = {
                 "verdict": "allow",
-                "authorization_basis": "session-writable-scope",
+                "authorization_basis": authority.PROPOSAL_ONLY_AUTHORIZATION_BASIS,
                 "eligibility_basis": authority.PROPOSAL_WORKTREE_ELIGIBILITY,
                 "persistent_claim_required": False,
+                "writable_scope_required_for_integration": True,
+                "repository_writable_scope_present": False,
                 "operation_executed": False,
                 "coordination_only_claim_count": 1,
                 "coordination_only_claims": [{
@@ -700,6 +702,16 @@ class AuthorityTests(unittest.TestCase):
             self.assertEqual(verdict["verdict"], "allow")
             event = session._log()[-1]
             self.assertEqual(event["type"], "authority.proposal-eligible")
+            self.assertEqual(
+                event["payload"]["authorization_basis"],
+                authority.PROPOSAL_ONLY_AUTHORIZATION_BASIS,
+            )
+            self.assertTrue(
+                event["payload"]["writable_scope_required_for_integration"],
+            )
+            self.assertFalse(
+                event["payload"]["repository_writable_scope_present"],
+            )
             self.assertEqual(event["payload"]["repository"], "mncs-atlas")
             self.assertEqual(event["payload"]["scope"]["branch"],
                              "campaign/proposal")
@@ -713,13 +725,13 @@ class AuthorityTests(unittest.TestCase):
                 proposal_scope["checkout"], json.dumps(event["payload"]),
             )
 
-    def test_selected_proposal_checkout_needs_no_claim_or_absolute_target(self) -> None:
+    def test_selected_proposal_checkout_needs_no_repo_scope_claim_or_absolute_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(
                 Path(directory),
                 intent={
                     "goal": "propose a native implementation improvement",
-                    "repositories": ["mncs-atlas"],
+                    "repositories": [],
                 },
             )
             root = "/workspace/mncs-atlas"
@@ -807,15 +819,34 @@ class AuthorityTests(unittest.TestCase):
                 )
 
             self.assertEqual(verdict["verdict"], "allow", verdict)
+            self.assertEqual(session.effective_authority()["writable"], [])
             self.assertEqual(
                 verdict["eligibility_basis"],
                 authority.PROPOSAL_WORKTREE_ELIGIBILITY,
             )
             self.assertFalse(verdict["persistent_claim_required"])
+            self.assertEqual(
+                verdict["authorization_basis"],
+                authority.PROPOSAL_ONLY_AUTHORIZATION_BASIS,
+            )
+            self.assertTrue(
+                verdict["writable_scope_required_for_integration"],
+            )
+            self.assertFalse(verdict["repository_writable_scope_present"])
             verify_checkout.assert_called_once()
             self.assertIsNone(verify_checkout.call_args.kwargs["expected_branch"])
             event = session._log()[-1]
             self.assertEqual(event["type"], "authority.proposal-eligible")
+            self.assertEqual(
+                event["payload"]["authorization_basis"],
+                authority.PROPOSAL_ONLY_AUTHORIZATION_BASIS,
+            )
+            self.assertTrue(
+                event["payload"]["writable_scope_required_for_integration"],
+            )
+            self.assertFalse(
+                event["payload"]["repository_writable_scope_present"],
+            )
             self.assertFalse(event["payload"]["operation_executed"])
             self.assertEqual(
                 verdict["eligibility_evidence"]["event_reference"]["identity"],
@@ -8137,15 +8168,15 @@ class SessionTests(unittest.TestCase):
                 recovery["identity"],
             )
 
-    def test_provider_write_uses_selected_proposal_worktree_without_claim(self) -> None:
+    def test_provider_write_uses_selected_proposal_worktree_without_repo_scope_or_claim(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory) / "workspace"
             repository_root = workspace_root / "MNCS-Commons"
             checkout = repository_root / ".worktrees" / "campaign"
             checkout.mkdir(parents=True)
             session = make_session(workspace_root)
-            session.snapshot["intent"]["repositories"] = ["MNCS-Commons"]
-            session.snapshot["authority"]["writable"] = ["MNCS-Commons"]
+            session.snapshot["intent"]["repositories"] = []
+            session.snapshot["authority"]["writable"] = []
             branch = "campaign/commons-parity"
             checkout_path = str(checkout)
             session.snapshot["workspace"]["repositories"] = [{
@@ -8230,6 +8261,18 @@ class SessionTests(unittest.TestCase):
             proposal_event = proposal_events[-1]
             self.assertFalse(
                 proposal_event["payload"]["persistent_claim_required"],
+            )
+            self.assertEqual(
+                proposal_event["payload"]["authorization_basis"],
+                authority.PROPOSAL_ONLY_AUTHORIZATION_BASIS,
+            )
+            self.assertTrue(
+                proposal_event["payload"][
+                    "writable_scope_required_for_integration"
+                ],
+            )
+            self.assertFalse(
+                proposal_event["payload"]["repository_writable_scope_present"],
             )
             self.assertEqual(
                 proposal_event["payload"]["proposal_preflight_state"]["head"],

@@ -480,16 +480,24 @@ observed count; compact responses retain up to four and mark any projection
 truncation separately from overlap records omitted at capture time.
 Local `write`, `mutate`, `execute`, and `verify` preflights are also eligible
 without an owned claim when they name a freshly observed attached non-main
-linked worktree separate from the repository root, under the session's writable
-repository scope. Repository-wide and repository-relative path claims are
-preserved as coordination evidence but do not reserve isolated proposal
-worktrees. Checkout-bound worktree claims still block same-checkout and
-same-branch overlaps. Main-checkout mutations retain the existing clean-state
-or exact-claim checks, and checkout retirement remains claim-gated.
+linked worktree separate from the repository root. For local `write` and
+`mutate`, that exact isolated proposal scope can be eligible without the
+session having repository-wide write scope; the event records whether that
+scope was present at proposal time. Repository write scope is always required
+for merge or publish. `execute` remains gated by repository write scope.
+Repository-wide and
+repository-relative path claims are preserved as coordination evidence but do
+not reserve isolated proposal worktrees. Checkout-bound worktree claims still
+block same-checkout and same-branch overlaps. Main-checkout mutations retain
+the existing clean-state or exact-claim checks, and checkout retirement
+remains claim-gated.
 The bounded `session_activity.proposal_eligibility` projection exposes
 validated `authority.proposal-eligible` records, their objective references,
-observed worktree scope, and repository-wide or repository-relative path
-claims treated as coordination-only.
+observed worktree scope, whether repository write scope was present at the
+proposal preflight, and repository-wide or repository-relative path claims
+treated as coordination-only. Merge and publish always require a fresh
+writable-scope preflight. Eligibility records do not establish that an edit
+was executed, verified, or integrated.
 For provider mutations, `session_activity.interactions[].effect_target` also
 relates the exact preflight event to a bounded, operation-scoped checkout
 lock. The projection reports its checkout identity, acquisition, wait, and

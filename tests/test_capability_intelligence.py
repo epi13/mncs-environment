@@ -3853,6 +3853,79 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     ] == "invalid-event-observation"
 
 
+def test_proposal_preflight_records_local_only_scope_without_repository_rights(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_proposal_only_scope",
+        "ses_proposal_only_scope",
+        "cmp_proposal_only_scope",
+    )
+    session, _ = _session(tmp_path, [record])
+    event = {
+        "identity": "evt_proposal_only_scope",
+        "sequence": 12,
+        "type": "authority.proposal-eligible",
+        "session_id": session.session_id,
+        "producer": "environment",
+        "payload": {
+            "action": "write",
+            "repository": "mncs-language-service",
+            "scope": {
+                "kind": "worktree",
+                "repository": "mncs-language-service",
+                "branch": "campaign/proposal",
+                "checkout_identity": "checkout:language-proposal",
+                "exclusive": False,
+            },
+            "authorization_basis": (
+                capability_intelligence.authority_module
+                .PROPOSAL_ONLY_AUTHORIZATION_BASIS
+            ),
+            "eligibility_basis": (
+                capability_intelligence.authority_module
+                .PROPOSAL_WORKTREE_ELIGIBILITY
+            ),
+            "writable_scope_required_for_integration": True,
+            "repository_writable_scope_present": False,
+            "persistent_claim_required": False,
+            "operation_executed": False,
+            "coordination_only_claim_count": 0,
+            "coordination_only_claims": [],
+            "coordination_only_claims_truncated": False,
+            "campaign_id": "cmp_proposal_only_scope",
+            "work_intent_id": "int_proposal_only_scope",
+        },
+    }
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 1,
+        "events": [event][-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    assert activity["source"]["proposal_eligibility_records_invalid"] == 0
+    assert activity["proposal_eligibility_count"] == 1
+    proposal = activity["proposal_eligibility"][0]
+    assert proposal["authorization_basis"] == "isolated-proposal-scope"
+    assert proposal["writable_scope_required_for_integration"] is True
+    assert proposal["repository_writable_scope_present"] is False
+    assert proposal["writable_scope_observation_status"] == "recorded"
+    assert proposal["operation_executed"] is False
+    assert "merge and publish still require writable repository scope" in proposal[
+        "interpretation"
+    ]
+    compact = capability_intelligence._compact_projection(
+        capability_intelligence.project(session),
+        original_size=25_000,
+        max_result_bytes=10_000,
+    )
+    compact_proposal = compact["session_activity"]["proposal_eligibility"][0]
+    assert compact_proposal["writable_scope_required_for_integration"] is True
+    assert compact_proposal["repository_writable_scope_present"] is False
+
+
 def test_scoped_integration_preflight_projects_without_claim_or_success(
     tmp_path: Path,
 ) -> None:

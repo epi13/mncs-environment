@@ -402,23 +402,27 @@ protection, such as a fast-forward-only merge and a non-forcing push. The
 preflight does not reserve the scope or guarantee that the operation will
 succeed.
 
-Local development and verification can also proceed without a persistent
+Local proposal writes and verification can proceed without a persistent
 claim when the request identifies an exactly observed, attached non-main
-worktree separate from the repository root and the session has writable scope
-for its repository. When the request names the repository and the session has
-selected a checkout, Environment refreshes that selected checkout and uses it
-as the proposal scope; callers do not need to repeat an absolute worktree path
-or supply a claim ID. This makes the linked worktree a proposal surface while
-keeping the repository root protected by its existing clean-state or claim
-requirements. A repository-wide claim remains
-visible as coordination context but does not reserve every proposal branch;
-claims naming the same checkout, overlapping paths, or the same attached
-branch still block. Retiring a checkout remains claim-gated. Each accepted
-proposal preflight is recorded as `authority.proposal-eligible`; when an
-absolute target or selected proposal checkout is freshly inspected, the event
-also records bounded checkout identity, branch, HEAD, and working-tree status
-at preflight. This records eligibility and a local preimage, not an executed
-edit or its outcome.
+worktree separate from the repository root. An isolated proposal worktree can
+be used for local `write` or `mutate` even when the session has no
+repository-wide write scope. This eligibility does not authorize command
+execution, merge, or publish; merge and publish still require writable
+repository scope and an exact operation scope. When the request names the
+repository and the session has selected a checkout, Environment refreshes that
+selected checkout and uses it as the proposal scope; callers do not need to
+repeat an absolute worktree path or supply a claim ID. The repository root
+keeps its existing clean-state or claim requirements. A repository-wide claim
+remains visible as coordination context but does not reserve every proposal
+branch; claims naming the same checkout, overlapping paths, or the same
+attached branch still block. Retiring a checkout remains claim-gated. Each
+accepted proposal preflight is recorded as `authority.proposal-eligible`; when
+an absolute target or selected proposal checkout is freshly inspected, the
+event also records bounded checkout identity, branch, HEAD, and working-tree
+status at preflight. It records eligibility and a local preimage, not an
+executed edit or its outcome, and records whether repository write scope was
+present at proposal time. Merge and publish always require a fresh writable
+scope and exact operation preflight.
 
 For up to four unique recorded blocker claim IDs, the projection also performs
 a bounded targeted read of current claim records and exposes a separate

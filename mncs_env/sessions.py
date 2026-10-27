@@ -5362,6 +5362,14 @@ class Session:
                 ),
                 "eligibility_basis": authority_module.PROPOSAL_WORKTREE_ELIGIBILITY,
                 "persistent_claim_required": False,
+                "writable_scope_required_for_integration": verdict.get(
+                    "writable_scope_required_for_integration", True,
+                ),
+                **({"repository_writable_scope_present": verdict[
+                    "repository_writable_scope_present"
+                ]} if type(verdict.get(
+                    "repository_writable_scope_present",
+                )) is bool else {}),
                 "operation_executed": False,
                 "coordination_only_claim_count": verdict.get(
                     "coordination_only_claim_count", 0,

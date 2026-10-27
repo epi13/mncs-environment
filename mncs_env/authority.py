@@ -5,7 +5,9 @@ active coordination leases, and a requested action, it returns allow / deny /
 defer / escalate with a reason. A coordination defer is not an authority
 request; it means the operation needs a safer or more exact scope. Session
 code enforces the verdict; nothing here spawns processes or mutates state.
-Absence of a grant never becomes permission.
+Absence of a grant never becomes shared-state or integration permission. A
+freshly observed isolated proposal worktree may still be eligible for local
+write or mutation without repository-wide write scope.
 """
 
 from __future__ import annotations
@@ -55,6 +57,7 @@ EFFECT_ACTIONS = {
 MUTATING_ACTIONS = ("write", "mutate", "execute", "retire")
 PROPOSAL_WORKTREE_ACTIONS = frozenset({"write", "mutate", "execute", "verify"})
 PROPOSAL_WORKTREE_ELIGIBILITY = "registered-non-main-worktree-no-persistent-claim"
+PROPOSAL_ONLY_AUTHORIZATION_BASIS = "isolated-proposal-scope"
 
 # These are invariant user-approval gates. Claims remain coordination and
 # recovery evidence; they are not a persistent privilege required to integrate
@@ -383,11 +386,12 @@ def _is_proposal_worktree(
 ) -> bool:
     """Whether an operation names a currently observed, non-main checkout.
 
-    An exact worktree is an isolated proposal surface. Writable repository
-    scope plus a fresh checkout observation can make local development
-    eligible without turning a persistent claim into a required privilege.
-    Checkout-bound claims for the same checkout or attached branch are still
-    checked separately as concurrency evidence.
+    An exact worktree is an isolated proposal surface. Its fresh checkout
+    observation can make local write or verification proposals eligible
+    without repository-wide write scope or a persistent claim. Execution and
+    integration remain subject to their own authority checks. Checkout-bound
+    claims for the same checkout or attached branch are still checked
+    separately as concurrency evidence.
     """
     if not isinstance(scope, dict) or scope.get("kind") != "worktree":
         return False
@@ -426,7 +430,7 @@ def evaluate(
 ) -> dict[str, Any]:
     """Return allow, deny, defer, or escalate for one requested action.
 
-    Writable intent and explicit operation scope govern repository mutations.
+    Writable intent and explicit operation scope govern shared-state mutations.
     ``merge`` and ``publish`` require a writable repository and an exact scope
     observed or supplied for this operation. Missing observation or scope is
     a coordination defer, not an authority escalation. The current claim view is checked
@@ -434,13 +438,14 @@ def evaluate(
     repository write eligibility or integration eligibility. Repository
     operations must still use their native concurrency checks (for example,
     fast-forward-only merges and non-forcing reference updates). ``write``,
-    ``mutate``, ``execute``, and ``retire`` require writable scope before their
-    existing claim or clean-main checks. An exact observed non-main worktree is
-    a proposal surface: its session-writable repository scope is sufficient
-    for local development, and repository-wide or repository-relative path
-    claims remain visible as coordination context rather than reserving every
-    proposal branch. Checkout-scoped claims for the same checkout or a shared
-    attached branch still block. Branch names in separate Git common
+    ``execute`` and ``retire`` require writable scope. A fresh exact observation
+    of an attached non-main worktree makes local ``write`` and ``mutate``
+    eligible as proposed state even when the session has no repository-wide
+    write scope; it does not grant merge, publish, or general repository
+    authority. Repository-wide or repository-relative path claims remain
+    visible as coordination context rather than reserving every proposal
+    branch. Checkout-scoped claims for the same checkout or a shared attached
+    branch still block. Branch names in separate Git common
     directories do not identify shared refs. Protected, forbidden,
     and fenced scope denies. For merge and publish, overlap remains
     coordination evidence while the repository-native update resolves actual
@@ -519,16 +524,6 @@ def evaluate(
             "decision_domain": "protected-policy",
             "reason": f"{repo} is protected scope for this session",
         }
-    # A coordination claim cannot grant repository write eligibility. Check
-    # the session's writable scope before looking at claims so a stale or
-    # overlapping lease cannot obscure the actual authorization boundary.
-    if (action in MUTATING_ACTIONS or action in ("publish", "merge")) \
-            and repo not in context.get("writable", []):
-        return {
-            "verdict": "deny",
-            "decision_domain": "writable-scope-policy",
-            "reason": f"{repo} is outside this session's writable authority",
-        }
     holders = _holder_list(
         claims if claims is not None else context.get("claim_holders", {}), repo)
     others = [h for h in holders if h["session_id"] != session_id]
@@ -548,6 +543,19 @@ def evaluate(
         action in PROPOSAL_WORKTREE_ACTIONS
         and _is_proposal_worktree(requested, repo, repo_facts)
     )
+    writable_scope_present = repo in context.get("writable", [])
+    proposal_only_write = (
+        action in {"write", "mutate"}
+        and proposal_worktree
+        and not writable_scope_present
+    )
+    if ((action in MUTATING_ACTIONS or action in ("publish", "merge"))
+            and not writable_scope_present and not proposal_only_write):
+        return {
+            "verdict": "deny",
+            "decision_domain": "writable-scope-policy",
+            "reason": f"{repo} is outside this session's writable authority",
+        }
     nonblocking_coordination_claims: list[dict[str, Any]] = []
     nonblocking_coordination_claim_count = 0
     integration_coordination_overlaps: list[dict[str, Any]] = []
@@ -732,10 +740,15 @@ def evaluate(
             return {
                 "verdict": "allow",
                 "decision_domain": "eligibility",
-                "authorization_basis": "session-writable-scope",
+                "authorization_basis": (
+                    "session-writable-scope" if writable_scope_present
+                    else PROPOSAL_ONLY_AUTHORIZATION_BASIS
+                ),
                 "eligibility_basis": PROPOSAL_WORKTREE_ELIGIBILITY,
                 "coordination_status": "isolated-proposal-worktree",
                 "persistent_claim_required": False,
+                "writable_scope_required_for_integration": True,
+                "repository_writable_scope_present": writable_scope_present,
                 "operation_executed": False,
                 "coordination_only_claim_count": (
                     nonblocking_coordination_claim_count
@@ -788,10 +801,15 @@ def evaluate(
             return {
                 "verdict": "allow",
                 "decision_domain": "eligibility",
-                "authorization_basis": "session-writable-scope",
+                "authorization_basis": (
+                    "session-writable-scope" if writable_scope_present
+                    else PROPOSAL_ONLY_AUTHORIZATION_BASIS
+                ),
                 "eligibility_basis": PROPOSAL_WORKTREE_ELIGIBILITY,
                 "coordination_status": "isolated-proposal-worktree",
                 "persistent_claim_required": False,
+                "writable_scope_required_for_integration": True,
+                "repository_writable_scope_present": writable_scope_present,
                 "operation_executed": False,
                 "coordination_only_claim_count": (
                     nonblocking_coordination_claim_count

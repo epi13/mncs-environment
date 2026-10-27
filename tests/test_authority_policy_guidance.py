@@ -100,6 +100,125 @@ def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None
     assert "required_authorization" not in unscoped
 
 
+def test_unassigned_agent_can_propose_only_in_an_observed_non_main_worktree() -> None:
+    repository = "mncs-language-service"
+    root = "/workspace/mncs-language-service"
+    checkout = f"{root}/.worktrees/campaign/proposal"
+    scope = {
+        "kind": "worktree",
+        "repository": repository,
+        "checkout": checkout,
+        "branch": "campaign/proposal",
+        "checkout_identity": "checkout:proposal",
+        "git_common_directory_identity": "git-common:language-service",
+        "exclusive": False,
+    }
+    repo_facts = {
+        "mncs-language-service@campaign/proposal": {
+            **scope,
+            "path": checkout,
+            "repository_root_path": root,
+        },
+    }
+    context = _context()
+    context["writable"] = []
+
+    for action in ("write", "mutate"):
+        decision = authority.evaluate(
+            context,
+            action=action,
+            target=checkout,
+            session_id="ses_unassigned",
+            claims={},
+            repo_facts=repo_facts,
+            scope=scope,
+        )
+
+        assert decision["verdict"] == "allow"
+        assert decision["decision_domain"] == "eligibility"
+        assert decision["authorization_basis"] == (
+            authority.PROPOSAL_ONLY_AUTHORIZATION_BASIS
+        )
+        assert decision["eligibility_basis"] == (
+            authority.PROPOSAL_WORKTREE_ELIGIBILITY
+        )
+        assert decision["persistent_claim_required"] is False
+        assert decision["writable_scope_required_for_integration"] is True
+        assert decision["repository_writable_scope_present"] is False
+        assert decision["operation_executed"] is False
+
+    # Proposal eligibility does not authorize execution or integration.
+    for action in ("execute", "merge", "publish", "retire"):
+        decision = authority.evaluate(
+            context,
+            action=action,
+            target=checkout,
+            session_id="ses_unassigned",
+            claims={},
+            repo_facts=repo_facts,
+            scope=scope,
+        )
+        assert decision["verdict"] == "deny"
+        assert decision["decision_domain"] == "writable-scope-policy"
+
+    # A protected repository remains denied before proposal eligibility.
+    protected_context = {**context, "protected_repositories": [repository]}
+    protected = authority.evaluate(
+        protected_context,
+        action="write",
+        target=checkout,
+        session_id="ses_unassigned",
+        claims={},
+        repo_facts=repo_facts,
+        scope=scope,
+    )
+    assert protected["verdict"] == "deny"
+    assert protected["decision_domain"] == "protected-policy"
+
+    # A real shared-checkout lease remains a concurrency blocker.
+    conflict = authority.evaluate(
+        context,
+        action="write",
+        target=checkout,
+        session_id="ses_unassigned",
+        claims={repository: [{"session_id": "ses_other", "scope": scope}]},
+        repo_facts=repo_facts,
+        scope=scope,
+    )
+    assert conflict["verdict"] == "deny"
+    assert conflict["claim_conflict"]["decision_basis"][
+        "decision_domain"
+    ] == "coordination"
+
+    # A main checkout is not a proposal surface, even when observed exactly.
+    main_checkout = root
+    main_scope = {
+        "kind": "worktree",
+        "repository": repository,
+        "checkout": main_checkout,
+        "branch": "main",
+        "checkout_identity": "checkout:main",
+        "git_common_directory_identity": "git-common:language-service",
+        "exclusive": False,
+    }
+    main_facts = {repository: {
+        **main_scope,
+        "path": main_checkout,
+        "repository_root_path": main_checkout,
+    }}
+    main_decision = authority.evaluate(
+        context,
+        action="write",
+        target=main_checkout,
+        session_id="ses_unassigned",
+        claims={},
+        repo_facts=main_facts,
+        scope=main_scope,
+    )
+    assert main_decision["verdict"] == "deny"
+    assert main_decision["decision_domain"] == "writable-scope-policy"
+
+
 def test_owner_approval_remains_explicit_for_delete_escalation() -> None:
     decision = authority.evaluate(
         _context(),
