@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_activity_projection_readback_integrity_followup_20261027",
+  "captured_at": "2026-10-27T14:38:39Z",
+  "measurement_basis": "bounded-live-ECI-readback-of-source-integrity-corrected-evidence-page",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_da03d3381ed08cb3",
+    "campaign_evidence_count": 53
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --interpret environmental-capability --history-pages 1 --evidence-offset 51 --evidence-limit 2 --session-event-limit 1",
+      "campaign_state_checkpoint_id": "chk_da03d3381ed08cb3",
+      "evidence_offset": 51,
+      "evidence_limit": 2,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_identity": "eci_0237370f825dce1d",
+      "content_digest": "a525123f43341d7ccc8edd7084f063c7",
+      "status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 101140,
+      "campaign_evidence_count": 53,
+      "observation_count": 2,
+      "observation_records_verified": 2,
+      "improvement_relation_count": 1,
+      "improvement_relation_status": "validated",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status_before_readback_registration": "not-present-in-projection",
+      "source_pointer_count": 3,
+      "source_pointer_content_integrity_verified_count": 3,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "measurement_limits": [
+        "The selected evidence page is bounded and the overall projection response is partial and truncated.",
+        "Relation validation verifies identity and record integrity contracts; it does not establish service correctness or effectiveness.",
+        "The improvement effectiveness assessment remains not-assessed; agent burden and service opportunity denominators are unavailable."
+      ],
+      "interpretation": "The existing projection now validates the corrected improvement relation and verifies the three selected source pointers. This confirms evidence discoverability and integrity for the selected page, not longitudinal service effectiveness."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_trace_visibility",
+    "title": "Session evidence records ambient capability calls without the scheduler decisions that explain them",
+    "category": "environmental-service-accountability",
+    "subsystem": "mncs-environment entry and incremental coherence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded scheduled and skipped owner-pass decisions with measured pass duration in the entry response and the existing session activity projection, without adding a write for a quiet run."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_service_activity_context_pressure_20261027",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "b188de2720d4ef525457b49fe9eee565935c025b",
+      "path": "evidence/environmental-capability/ambient-service-activity-context-pressure-20261027.json",
+      "sha256": "ad15626d12bc6147a2b9e37df4fe258e038c247ea6b090200dfb2c6e19c83b0b"
+    },
+    {
+      "identity": "ev_environment_ambient_service_activity_verification_integrity_followup_20261027",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "7b3cac9fae5118f89ca4480a7f86f09473c46294",
+      "path": "evidence/environmental-capability/ambient-service-activity-verification-integrity-followup-20261027.json",
+      "sha256": "daa9a650faa0d3676e369cd145af870e845814d084f5f17314465f394c0ab84e"
+    },
+    {
+      "identity": "ev_environment_ambient_service_activity_improvement_integrity_followup_20261027",
+      "kind": "campaign-improvement-relation",
+      "repository": "mncs-environment",
+      "commit": "7b3cac9fae5118f89ca4480a7f86f09473c46294",
+      "path": "evidence/environmental-capability/ambient-service-activity-improvement-integrity-followup-20261027.json",
+      "sha256": "0123452a28e440e66098123196bdef597f296888976cca6ae57f8b109fce7a37"
+    }
+  ],
+  "not_measured": [
+    "whether the records are discovered or used by agents outside this campaign",
+    "whether the projection reduces repeated investigation or intervention burden",
+    "whether the original service pressure recurs in a later session",
+    "whether agent need or eligible service opportunities were present"
+  ]
+}
