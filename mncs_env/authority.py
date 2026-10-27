@@ -793,6 +793,14 @@ def evaluate(
         owned = any(
             _covers(h.get("scope") or {}, requested or {}) for h in own
         )
+        scoped_own_claim = next((
+            holder for holder in own
+            if _same_worktree_context(
+                holder.get("scope") or {}, requested or {},
+            )
+            and isinstance((holder.get("scope") or {}).get("paths"), list)
+            and not _covers(holder.get("scope") or {}, requested or {})
+        ), None)
         if proposal_worktree:
             return {
                 "verdict": "allow",
@@ -827,6 +835,37 @@ def evaluate(
             and target in context.get("writable", [])
         )
         if not owned and not pristine:
+            if scoped_own_claim is not None:
+                claim_scope = scoped_own_claim.get("scope") or {}
+                claim_paths = claim_scope.get("paths") or []
+                requested_paths = (requested or {}).get("paths")
+                requested_scope_text = (
+                    "the whole worktree" if requested_paths is None
+                    else f"{len(requested_paths)} requested path(s)"
+                )
+                claim_id = scoped_own_claim.get("claim_id")
+                return {
+                    "verdict": "defer",
+                    "decision_domain": "coordination",
+                    "authorization_basis": "session-writable-scope",
+                    "required_coordination": "exact-claim-scope-coverage",
+                    "coordination_status": (
+                        "own-claim-does-not-cover-requested-scope"
+                    ),
+                    "persistent_authority_required": False,
+                    "operation_executed": False,
+                    "next_step": (
+                        "narrow-operation-scope-or-extend-own-claim"
+                    ),
+                    "reason": (
+                        f"the current claim covers {len(claim_paths)} "
+                        f"repo-relative path(s), while this preflight requests "
+                        f"{requested_scope_text}; narrow the requested paths or "
+                        "extend the same session's claim"
+                    ),
+                    **({"claim_id": claim_id}
+                       if isinstance(claim_id, str) else {}),
+                }
             if not facts:
                 return {"verdict": "defer",
                         "required_coordination": "fresh-workspace-observation",
@@ -927,6 +966,29 @@ def _covers(held: dict[str, Any], requested: dict[str, Any]) -> bool:
     return all(
         any(w == h or w.startswith(h + "/") for h in held_paths) for w in wanted
     )
+
+
+def _same_worktree_context(
+    left: dict[str, Any], right: dict[str, Any],
+) -> bool:
+    """Whether two worktree scopes describe the same checkout and branch."""
+    if left.get("kind") != "worktree" or right.get("kind") != "worktree":
+        return False
+    left_checkout = left.get("checkout")
+    right_checkout = right.get("checkout")
+    if (not isinstance(left_checkout, str) or not isinstance(right_checkout, str)
+            or os.path.normpath(left_checkout) != os.path.normpath(right_checkout)):
+        return False
+    for key in (
+        "branch", "checkout_identity", "git_common_directory_identity",
+        "manifest_identity",
+    ):
+        left_value = left.get(key)
+        right_value = right.get(key)
+        if (isinstance(left_value, str) and isinstance(right_value, str)
+                and left_value != right_value):
+            return False
+    return True
 
 
 def required_action_for_effects(effects: list[str]) -> str:

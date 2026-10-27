@@ -193,6 +193,59 @@ class AuthorityTests(unittest.TestCase):
         self.assertEqual(verdict["coordination_status"], "scoped-mutation-lease-held")
         self.assertFalse(verdict["persistent_authority_required"])
 
+    def test_narrow_claim_explains_uncovered_worktree_write_scope(self) -> None:
+        checkout = "/workspace/mncs-atlas"
+        branch = "campaign/feature"
+        scoped_claim = {
+            "session_id": "ses_mine",
+            "claim_id": "claim:atlas:target-path",
+            "scope": {
+                "kind": "worktree",
+                "repository": "mncs-atlas",
+                "checkout": checkout,
+                "branch": branch,
+                "paths": ["src/target.mn"],
+            },
+        }
+        claims_by_repository = {"mncs-atlas": [scoped_claim]}
+        whole_worktree = authority.evaluate(
+            context_for(), action="write", target="mncs-atlas",
+            session_id="ses_mine", claims=claims_by_repository,
+            scope={
+                "kind": "worktree", "checkout": checkout, "branch": branch,
+            },
+        )
+
+        self.assertEqual(whole_worktree["verdict"], "defer")
+        self.assertEqual(
+            whole_worktree["coordination_status"],
+            "own-claim-does-not-cover-requested-scope",
+        )
+        self.assertEqual(
+            whole_worktree["required_coordination"],
+            "exact-claim-scope-coverage",
+        )
+        self.assertEqual(
+            whole_worktree["next_step"],
+            "narrow-operation-scope-or-extend-own-claim",
+        )
+        self.assertIn("requests the whole worktree", whole_worktree["reason"])
+        self.assertFalse(whole_worktree["persistent_authority_required"])
+        self.assertNotIn("required_authorization", whole_worktree)
+
+        exact_path = authority.evaluate(
+            context_for(), action="write", target="mncs-atlas",
+            session_id="ses_mine", claims=claims_by_repository,
+            scope={
+                "kind": "worktree", "checkout": checkout, "branch": branch,
+                "paths": ["src/target.mn"],
+            },
+        )
+        self.assertEqual(exact_path["verdict"], "allow")
+        self.assertEqual(
+            exact_path["coordination_status"], "scoped-mutation-lease-held",
+        )
+
     def test_claim_does_not_replace_writable_scope(self) -> None:
         verdict = authority.evaluate(
             {**context_for(), "writable": []},

@@ -459,17 +459,22 @@ repository scope and an exact operation scope. When the request names the
 repository and the session has selected a checkout, Environment refreshes that
 selected checkout and uses it as the proposal scope; callers do not need to
 repeat an absolute worktree path or supply a claim ID. The repository root
-keeps its existing clean-state or claim requirements. A repository-wide claim
-remains visible as coordination context but does not reserve every proposal
-branch; claims naming the same checkout, overlapping paths, or the same
-attached branch still block. Retiring a checkout remains claim-gated. Each
-accepted proposal preflight is recorded as `authority.proposal-eligible`; when
-an absolute target or selected proposal checkout is freshly inspected, the
-event also records bounded checkout identity, branch, HEAD, and working-tree
-status at preflight. It records eligibility and a local preimage, not an
-executed edit or its outcome, and records whether repository write scope was
-present at proposal time. Merge and publish always require a fresh writable
-scope and exact operation preflight.
+keeps its existing clean-state or claim requirements. A path-scoped claim only
+covers write preflights whose requested paths fall within that claim; a
+whole-checkout preflight is broader than a path-scoped claim. Environment
+reports that mismatch directly and recommends narrowing the operation scope or
+extending the same session's claim. This is a coordination defer, not a request
+for approval or a transfer. A repository-wide claim remains visible as
+coordination context but does not reserve every proposal branch; claims naming
+the same checkout, overlapping paths, or the same attached branch still
+block. Retiring a checkout remains claim-gated. Each accepted proposal
+preflight is recorded as `authority.proposal-eligible`; when an absolute target
+or selected proposal checkout is freshly inspected, the event also records
+bounded checkout identity, branch, HEAD, and working-tree status at preflight.
+It records eligibility and a local preimage, not an executed edit or its
+outcome, and records whether repository write scope was present at proposal
+time. Merge and publish always require a fresh writable scope and exact
+operation preflight.
 
 For a proposal in an unselected worktree, pass its explicit worktree scope
 without acquiring a claim:
