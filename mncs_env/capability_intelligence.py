@@ -3907,6 +3907,47 @@ def _compact_projection(
                 compact_item[key] = False
         if isinstance(item.get("scope"), dict):
             compact_item["scope"] = item["scope"]
+        raw_conflict = item.get("claim_conflict")
+        if isinstance(raw_conflict, dict):
+            compact_conflict = {
+                key: raw_conflict[key]
+                for key in ("repository", "conflict_reason")
+                if isinstance(raw_conflict.get(key), str)
+            }
+            requested_scope = _authority_conflict_scope(
+                raw_conflict.get("requested_scope"),
+                raw_conflict.get("repository"),
+            )
+            if requested_scope is not None:
+                compact_conflict["requested_scope"] = requested_scope
+            blocker = raw_conflict.get("blocking_claim")
+            if isinstance(blocker, dict):
+                compact_blocker = {
+                    key: _short_text(blocker[key], 160)
+                    for key in (
+                        "session_id", "claim_id",
+                        "claim_lifecycle_correlation_identity",
+                    )
+                    if isinstance(blocker.get(key), str)
+                }
+                blocker_scope = _authority_conflict_scope(
+                    blocker.get("scope"), raw_conflict.get("repository"),
+                )
+                if blocker_scope is not None:
+                    compact_blocker["scope"] = blocker_scope
+                compact_conflict["blocking_claim"] = compact_blocker
+            decision_basis = raw_conflict.get("decision_basis")
+            if isinstance(decision_basis, dict):
+                compact_conflict["decision_basis"] = {
+                    key: decision_basis[key]
+                    for key in (
+                        "authorization_status", "eligibility_status",
+                        "persistent_authority_required",
+                    )
+                    if key in decision_basis
+                }
+            if compact_conflict:
+                compact_item["claim_conflict"] = compact_conflict
         relation = item.get("later_eligibility_relation")
         if isinstance(relation, dict):
             compact_item["later_eligibility_status"] = _short_text(
@@ -4846,7 +4887,8 @@ def _compact_projection(
         and any(
             isinstance(reference, dict)
             and reference.get("kind") in {
-                "integration-eligibility", "proposal-eligibility",
+                "coordination-deferral", "integration-eligibility",
+                "proposal-eligibility",
             }
             for reference in (
                 correlation.get("related_session_activity")
@@ -4874,6 +4916,18 @@ def _compact_projection(
             if not isinstance(denial, dict):
                 continue
             conflict = denial.get("claim_conflict")
+            blocker = (
+                conflict.get("blocking_claim")
+                if isinstance(conflict, dict) else None
+            )
+            if (isinstance(blocker, dict)
+                    and blocker.get("claim_lifecycle_correlation_identity")
+                    == correlation_identity):
+                blocker.pop("claim_lifecycle_correlation_identity", None)
+        for deferral in activity_result.get("coordination_deferrals", []):
+            if not isinstance(deferral, dict):
+                continue
+            conflict = deferral.get("claim_conflict")
             blocker = (
                 conflict.get("blocking_claim")
                 if isinstance(conflict, dict) else None
@@ -12084,10 +12138,11 @@ def _session_claim_lifecycle_correlations(
     selected_events: list[dict[str, Any]], selected_event_count: int,
     selected_event_window_truncated: bool,
     denial_records: list[dict[str, Any]],
+    coordination_deferral_records: list[dict[str, Any]],
     integration_eligibility_records: list[dict[str, Any]],
     proposal_eligibility_records: list[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Correlate claim history with exact denial and proposal/preflight references."""
+    """Correlate claim history with exact denial, deferral, and preflight references."""
     relations: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
 
@@ -12140,6 +12195,17 @@ def _session_claim_lifecycle_correlations(
             add_relation(
                 conflict.get("repository"), blocker.get("session_id"),
                 blocker.get("claim_id"), "authority-denial", denial,
+            )
+    for deferral in coordination_deferral_records:
+        conflict = deferral.get("claim_conflict")
+        blocker = (
+            conflict.get("blocking_claim")
+            if isinstance(conflict, dict) else None
+        )
+        if isinstance(blocker, dict):
+            add_relation(
+                conflict.get("repository"), blocker.get("session_id"),
+                blocker.get("claim_id"), "coordination-deferral", deferral,
             )
     for eligibility in integration_eligibility_records:
         for overlap in eligibility.get("coordination_overlaps", []):
@@ -12328,6 +12394,19 @@ def _session_claim_lifecycle_correlations(
                 ),
             }
         for activity_record in denial_records:
+            conflict = activity_record.get("claim_conflict")
+            blocker = (
+                conflict.get("blocking_claim")
+                if isinstance(conflict, dict) else None
+            )
+            if (
+                isinstance(blocker, dict)
+                and conflict.get("repository") == repository
+                and blocker.get("session_id") == owner_session_id
+                and blocker.get("claim_id") == claim_id
+            ):
+                blocker["claim_lifecycle_correlation_identity"] = correlation_id
+        for activity_record in coordination_deferral_records:
             conflict = activity_record.get("claim_conflict")
             blocker = (
                 conflict.get("blocking_claim")
@@ -15060,6 +15139,7 @@ def _session_activity(
             selected_event_count=event_count,
             selected_event_window_truncated=event_window_truncated,
             denial_records=denial_records,
+            coordination_deferral_records=coordination_deferrals,
             integration_eligibility_records=integration_eligibility_records,
             proposal_eligibility_records=proposal_eligibility_records,
         )
@@ -15068,7 +15148,8 @@ def _session_activity(
         limits.append(
             "Claim lifecycle correlations match exact repository, owner-session, "
             "and claim identities across bounded event pages; shared identity "
-            "does not establish that a transition caused a denial or later preflight."
+            "does not establish that a transition caused a denial, deferral, "
+            "or later preflight."
         )
     if claim_lifecycle_correlation_source["status"] == "partial":
         if not status.startswith("partial"):

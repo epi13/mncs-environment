@@ -655,21 +655,22 @@ no recovery or ownership transfer; an eligible non-exclusive claim still
 requires a normal exact-scope acquisition to recheck current state atomically.
 
 `session_activity.claim_lifecycle_correlations` connects structured denial
-blockers, integration-preflight overlaps, and proposal-eligibility claim
-observations to claim transitions from the recorded owner session. A relation
-requires an exact repository, owner-session, and claim identity; related denial,
-preflight, and proposal rows carry the correlation identity. The projection
-reads at most four foreign session event
+blockers, coordination-deferral blockers, integration-preflight overlaps, and
+proposal-eligibility claim observations to claim transitions from the recorded
+owner session. A relation requires an exact repository, owner-session, and claim
+identity; related denial, deferral, preflight, and proposal rows carry the
+correlation identity. The projection reads at most four foreign session event
 pages, with at most 32 events per page and four lifecycle events per relation.
 It uses the existing bounded page/tail interfaces and never falls back to an
 unbounded event log. Owner snapshot availability, truncated tails, invalid
 records, and omitted relations remain explicit. A relation establishes that
-the records refer to the same claim; it does not establish why a denial
-occurred, that a preflight followed because of that denial, the claim's current
-state, or a successful integration. Current claim state remains a separate
-point-in-time observation. The compact view retains the latest lifecycle event
-reference and up to three related activity references in one relation, and
-reports when other relations or earlier matching transitions were omitted.
+the records refer to the same claim; it does not establish why a denial or
+deferral occurred, that a preflight followed because of either, the claim's
+current state, or a successful integration. Current claim state remains a
+separate point-in-time observation. The compact view retains the latest
+lifecycle event reference and up to three related activity references in one
+relation, and reports when other relations or earlier matching transitions were
+omitted.
 
 Environmental observation sources that retain authenticated session event
 identities are resolved against the bounded RPC, authority-denial,

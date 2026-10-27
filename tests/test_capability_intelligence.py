@@ -3780,7 +3780,6 @@ def test_coordination_deferral_followthrough_requires_exact_later_objective() ->
     assert relation["matches"][0]["event_reference"]["identity"] == (
         "evt_same_objective_later"
     )
-
     without_intent = {
         **deferral,
         "work_intent_id": None,
@@ -3790,6 +3789,117 @@ def test_coordination_deferral_followthrough_requires_exact_later_objective() ->
     )
     assert relation["status"] == "unavailable-exact-objective-reference"
     assert relation["matches"] == []
+
+
+def test_coordination_deferral_links_exact_blocker_session_lifecycle(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_coordination_blocker_lifecycle",
+        "ses_environment_coordination_blocker_lifecycle",
+        "cmp_environment_coordination_blocker_lifecycle",
+    )
+    session, _ = _session(tmp_path, [record])
+    claim_id = "claim:mncs-environment:paths:coordination"
+    owner_session_id = "ses_coordination_blocker"
+    repository_scope = {
+        "kind": "paths",
+        "repository": "mncs-environment",
+        "paths": ["mncs_env/sessions.py"],
+        "exclusive": False,
+    }
+    event = {
+        "identity": "evt_coordination_blocker_deferred",
+        "sequence": 12,
+        "type": "authority.coordination-deferred",
+        "session_id": session.session_id,
+        "payload": {
+            "action": "write",
+            "repository": "mncs-environment",
+            "required_coordination": "non-overlapping-operation-scope",
+            "coordination_status": "overlapping-scope-conflict",
+            "next_step": "select-an-exact-non-overlapping-operation-scope",
+            "decision_domain": "coordination",
+            "persistent_authority_required": False,
+            "operation_executed": False,
+            "campaign_id": session.snapshot["campaign"]["identity"],
+            "work_intent_id": session.snapshot["intent"]["identity"],
+            "scope": repository_scope,
+            "claim_conflict": {
+                "schema_version": (
+                    capability_intelligence.authority_module.CLAIM_CONFLICT_SCHEMA
+                ),
+                "repository": "mncs-environment",
+                "conflict_reason": "repository-relative paths overlap",
+                "requested_scope": repository_scope,
+                "blocking_claim": {
+                    "claim_id": claim_id,
+                    "session_id": owner_session_id,
+                    "scope": repository_scope,
+                },
+            },
+        },
+    }
+    owner_event = {
+        "identity": "evt_coordination_blocker_released",
+        "sequence": 8,
+        "type": "lease.released",
+        "payload": {
+            "repository": "mncs-environment",
+            "claim_id": claim_id,
+            "released": [claim_id],
+        },
+    }
+    owner_page_requests = []
+
+    def read_owner_page(session_id, *, limit, before_sequence=None):
+        owner_page_requests.append(session_id)
+        assert session_id == owner_session_id
+        return {
+            "events": [owner_event][-limit:],
+            "event_count": 1,
+            "truncated": False,
+            "next_before_sequence": None,
+        }
+
+    session.store = SimpleNamespace(
+        read_event_page=read_owner_page,
+        load_snapshot=lambda session_id: {
+            "session_id": session_id, "lifecycle": "active",
+        },
+    )
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 1, "events": [event],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    deferral = activity["coordination_deferrals"][0]
+    correlation = activity["claim_lifecycle_correlations"][0]
+    assert correlation["owner_session_id"] == owner_session_id
+    assert correlation["claim_id"] == claim_id
+    assert correlation["claim_lifecycle_events"][0]["event_reference"][
+        "identity"
+    ] == "evt_coordination_blocker_released"
+    assert correlation["related_session_activity"][0]["kind"] == (
+        "coordination-deferral"
+    )
+    assert deferral["claim_conflict"]["blocking_claim"][
+        "claim_lifecycle_correlation_identity"
+    ] == correlation["identity"]
+    assert owner_page_requests == [owner_session_id]
+
+    compact = capability_intelligence.project(
+        session, max_result_bytes=12_000,
+    )["session_activity"]
+    compact_deferral = compact["coordination_deferrals"][0]
+    compact_correlation = compact["claim_lifecycle_correlations"][0]
+    assert compact_deferral["claim_conflict"]["blocking_claim"][
+        "claim_lifecycle_correlation_identity"
+    ] == compact_correlation["identity"]
+    assert compact_correlation["related_session_activity"][0]["kind"] == (
+        "coordination-deferral"
+    )
 
 
 def test_claimless_proposal_worktree_preflight_is_projected_with_objective_context(
