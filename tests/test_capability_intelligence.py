@@ -4934,6 +4934,23 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     )
     assert without_scheduler is None
 
+    undeclared_with_scheduler = capability_intelligence._session_service_accountability(
+        {
+            "services": [],
+            "source": {"service_declaration_status": "not-recorded"},
+            "summary": {},
+        },
+        None,
+        session.snapshot,
+        activity["ambient_owner_pass_activity"],
+        activity["ambient_service_execution"],
+        observed_activity["source"],
+    )
+    assert undeclared_with_scheduler["status"] == "environment-execution-only"
+    assert undeclared_with_scheduler["observed_capability_activity"][
+        "groups"
+    ][0]["capability"] == "mncs-doc:documentation-projection"
+
     bounded_projection = capability_intelligence.project(
         session, max_result_bytes=8_000,
     )

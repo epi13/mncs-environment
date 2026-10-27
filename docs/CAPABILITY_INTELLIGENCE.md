@@ -74,18 +74,20 @@ opportunity, service failure, or reduced intervention. Its digest participates
 in the service-accountability projection identity, including when response-
 budget compaction retains only its summary.
 
-When readiness services are explicitly empty and the session records an
-Environment owner-pass execution, the same
-`service_accountability.observed_capability_activity` view joins selected-
-session capability calls lacking valid owner-pass context with the session
-objective, event-window identity, activity-projection digest, and bounded
-invocation/completion references. This makes otherwise separate activity and
-scheduler evidence inspectable together. The view does not infer that a call
-was manual, that a service opportunity existed, or that an agent received a
-result; attribution, causality, eligible opportunities, fulfillment, and
-intervention burden remain unestablished or unmeasured. A complete selected
-window only describes the available session event page, while paged or
-truncated windows retain those limitations explicitly.
+When readiness services are explicitly empty or no readiness declaration is
+recorded, the session records an Environment owner-pass execution, and the
+selected activity has no owner-pass-scoped calls, the same
+`service_accountability.observed_capability_activity` view joins capability
+calls lacking valid owner-pass context with the session objective, event-window
+identity, activity-projection digest, and bounded invocation/completion
+references. Mixed windows remain available in the ambient owner-pass activity
+projection, avoiding duplicate summaries that could displace scheduler
+evidence under response limits. The view does not infer that a call was manual,
+that a service opportunity existed, or that an agent received a result;
+attribution, causality, eligible opportunities, fulfillment, and intervention
+burden remain unestablished or unmeasured. A complete selected window only
+describes the available session event page, while paged or truncated windows
+retain those limitations explicitly.
 
 Under response pressure, `session_activity.service_accountability` retains
 scheduler totals, the source projection digest, and a few exact links to

@@ -17694,11 +17694,15 @@ def _session_service_accountability(
             isinstance(environment_execution, dict)
             and environment_execution.get("status") != "not-recorded-in-session"
         )
+        activity_has_no_scoped_calls = (
+            isinstance(ambient_owner_pass_activity, dict)
+            and ambient_owner_pass_activity.get("scoped_invocation_count") == 0
+        )
         observed_capability_activity = (
             _service_observed_capability_activity(
                 ambient_owner_pass_activity, event_window_source,
-            ) if declaration_status == "explicit-empty"
-            and has_environment_execution else None
+            ) if has_environment_execution and activity_has_no_scoped_calls
+            else None
         )
         snapshot = snapshot if isinstance(snapshot, dict) else {}
         campaign = snapshot.get("campaign")
