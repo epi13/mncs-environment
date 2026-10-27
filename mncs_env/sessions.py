@@ -3794,6 +3794,7 @@ class Session:
             "status": "unchanged",
             "composed": [],
             "retained": [],
+            "observed": [],
             "removed": [],
             "skipped": [],
             "base_intent_skipped": [],
@@ -3926,6 +3927,73 @@ class Session:
                     or len(checkout_paths) != 1
                     or len(stable_identity_sets) != 1
                     or (len(candidate_claims) > 1 and not identities_complete)):
+                # A released or not-yet-acquired claim must not erase useful
+                # checkout context from an otherwise valid base intent. Keep
+                # it as observation-only state when the same registered
+                # checkout can still be established from its prior stable
+                # identity. This path never adds an eligible repository and
+                # never adopts another session's claim; claim acquisition and
+                # mutation continue through their ordinary live-conflict and
+                # operation-specific checks.
+                if (not malformed_claim_scope and isinstance(prior, dict)
+                        and prior.get("source_ref") in {
+                            "authenticated-intent-claim",
+                            "observed-base-intent-checkout",
+                            "current-working-checkout",
+                            "authenticated-entry-selection",
+                            "explicit-workspace-selection",
+                        }):
+                    try:
+                        prior_path = prior.get("path")
+                        if (not isinstance(prior_path, str) or not prior_path
+                                or prior.get("repository", repository) != repository):
+                            raise ValueError("prior base checkout identity is incomplete")
+                        resolved_checkout, checkout_facts = _verified_scope_checkout(
+                            workspace_root, repository,
+                            {"repository": repository, "path": prior_path},
+                        )
+                        observed = workspace_module.inspect_repo(
+                            resolved_checkout, _refresh=True,
+                        )
+                        if (observed is None or observed.git_error or not observed.head
+                                or observed.head != checkout_facts.get("head")
+                                or (observed.branch or "")
+                                != (checkout_facts.get("branch") or "")):
+                            raise ValueError("base checkout observation is incomplete")
+                        current_identity = _repository_checkout_identity(
+                            workspace_root, repository, resolved_checkout,
+                        )
+                        if isinstance(checkout_facts.get("manifest_identity"), str):
+                            current_identity["manifest_identity"] = checkout_facts[
+                                "manifest_identity"
+                            ]
+                        for field in (
+                            "checkout_identity", "git_common_directory_identity",
+                        ):
+                            recorded = prior.get(field)
+                            if (not isinstance(recorded, str) or not recorded
+                                    or current_identity.get(field) != recorded):
+                                raise ValueError(
+                                    "prior base checkout stable identity changed"
+                                )
+                        recorded_manifest = prior.get("manifest_identity")
+                        if (isinstance(recorded_manifest, str)
+                                and current_identity.get("manifest_identity")
+                                != recorded_manifest):
+                            raise ValueError("prior base checkout manifest changed")
+                        additions[repository] = {
+                            "repository": repository,
+                            "path": str(resolved_checkout),
+                            "branch": observed.branch,
+                            "head": observed.head,
+                            "clean": not bool(observed.dirty),
+                            "source_ref": "observed-base-intent-checkout",
+                            **current_identity,
+                        }
+                        report["observed"].append(repository)
+                    except (OSError, RuntimeError, TypeError, ValueError,
+                            workspace_module.WorkspaceResolutionError):
+                        pass
                 report["base_intent_skipped"].append({
                     "repository": repository,
                     "reason": (
@@ -4529,6 +4597,7 @@ class Session:
                 "authenticated-scope-grant", "authenticated-intent-claim",
             }
             and repository not in eligible_repositories
+            and repository not in additions
         )
         updated_selected = dict(selected)
         for repository in removed:
@@ -4553,7 +4622,8 @@ class Session:
 
         if report["skipped"]:
             report["status"] = "unknown"
-        elif report["composed"] or report["retained"] or report["removed"]:
+        elif (report["composed"] or report["retained"] or report["observed"]
+              or report["removed"]):
             report["status"] = "ready"
         return report
 

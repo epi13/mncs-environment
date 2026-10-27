@@ -124,6 +124,17 @@ checks. If a selected checkout projection is missing, claim acquisition may
 reconstruct it from those live same-session claims through normal
 revalidation; the claims do not confer rights beyond their recorded scopes.
 
+When a base-intent checkout was previously composed from a live claim and that
+claim is released, Environment may retain the same freshly verified checkout
+as `observed-base-intent-checkout`. Its path, registered repository, and stable
+Git identities must still match the prior selection; branch and HEAD are
+refreshed from the live worktree. This keeps useful read context available and
+lets ordinary claim acquisition continue after a branch advance. The
+observation is not a claim, does not add mutation eligibility, and does not
+adopt a foreign claim. New claims and mutations still pass their normal live
+conflict, rights, and operation-specific checks. If stable identity cannot be
+established, Environment removes the prior composed selection.
+
 For a repository that is already writable in the campaign, `claims acquire`
 can target a registered linked worktree directly with `--worktree` and an
 optional `--paths` subset. This records ownership at that exact branch and
