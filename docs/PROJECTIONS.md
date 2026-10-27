@@ -1341,10 +1341,16 @@ contract-invalid target, a correction may supply a missing or invalid
 actionable recommendation, `observation.source_interface`,
 `observation.request`, or `observation.outcome`.
 These fields can only complete a contract-invalid target; they cannot rewrite
-a valid observation. The projection reapplies the complete record contract before it
-includes the corrected record in pressure analysis. It retains the original
-contract diagnostic, exact target pointer, and correction identity so the
-corrected projection does not make the original record appear complete.
+a valid observation. The exception is an actionable recommendation that
+conflicts with another definition of the same pressure: it may be reconciled
+only when its replacement exactly matches an integrity-verified `occurrence`
+in the same campaign with the same hypothesis identity, title, category,
+subsystem, and owner. The projection reports
+`corroborated-by-verified-occurrence` as the basis. Unsupported rewrites remain
+unverified. The projection reapplies the complete record contract before it
+includes a contract-invalid corrected record in pressure analysis. It retains
+the exact target pointer and correction identity so the effective value remains
+traceable to both the original record and its correction.
 A pressure hypothesis can have role `occurrence` or
 `supporting-context`. Records without an explicit role are unclassified and do
 not count toward recurrence. A verification or improvement record that repeats

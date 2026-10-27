@@ -3142,8 +3142,14 @@ def _compact_projection(
         compact_hypothesis = None
         if isinstance(hypothesis, dict):
             compact_hypothesis = {
-                key: _short_text(hypothesis.get(key), 256 if key == "title" else 160)
-                for key in ("identity", "title", "category", "subsystem", "owner")
+                key: _short_text(
+                    hypothesis.get(key),
+                    256 if key in {"title", "actionable_recommendation"} else 160,
+                )
+                for key in (
+                    "identity", "title", "category", "subsystem", "owner",
+                    "actionable_recommendation",
+                )
                 if hypothesis.get(key) is not None
             }
         improvement_identity = item.get("improvement_relation_identity")
@@ -3339,8 +3345,8 @@ def _compact_projection(
             compact_correction = {
                 key: _short_text(record_correction.get(key), 160)
                 for key in (
-                    "status", "correction_observation_identity", "target_identity",
-                    "reason",
+                    "status", "basis", "correction_observation_identity",
+                    "target_identity", "reason",
                 )
                 if isinstance(record_correction.get(key), str)
             }
@@ -10439,6 +10445,45 @@ def _apply_observation_correction_values(
         if field in fields:
             corrected[field] = replacements[field]
     return corrected
+
+
+def _verified_occurrence_supports_pressure_recommendation(
+    target: dict[str, Any], replacement: str,
+    records: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> bool:
+    """Require a matching verified occurrence before reconciling valid wording."""
+    target_hypothesis = target.get("pressure_hypothesis")
+    target_work = target.get("related_work")
+    if not isinstance(target_hypothesis, dict) or not isinstance(target_work, dict):
+        return False
+    campaign_id = target_work.get("campaign_id")
+    if not isinstance(campaign_id, str) or not campaign_id:
+        return False
+    matching_fields = ("identity", "title", "category", "subsystem", "owner")
+    target_definition = {
+        key: target_hypothesis.get(key) for key in matching_fields
+    }
+    if any(not isinstance(value, str) or not value
+           for value in target_definition.values()):
+        return False
+
+    for candidate, reference in records:
+        if (candidate.get("identity") == target.get("identity")
+                or reference.get("verification") != "verified"
+                or candidate.get("pressure_hypothesis_role") != "occurrence"):
+            continue
+        candidate_work = candidate.get("related_work")
+        candidate_hypothesis = candidate.get("pressure_hypothesis")
+        if (not isinstance(candidate_work, dict)
+                or candidate_work.get("campaign_id") != campaign_id
+                or not isinstance(candidate_hypothesis, dict)
+                or any(candidate_hypothesis.get(key) != value
+                       for key, value in target_definition.items())
+                or candidate_hypothesis.get("actionable_recommendation")
+                != replacement):
+            continue
+        return True
+    return False
 
 
 def _validate_evidence_reference_correction(
@@ -20140,6 +20185,7 @@ def project(
             unverified_record_correction_count += 1
             continue
         replacements_verified = True
+        correction_basis = None
         replacement_values = correction["replacement_values"]
         for field in correction["corrected_field_paths"]:
             replacement = replacement_values[field]
@@ -20163,7 +20209,18 @@ def project(
                     or not current
                     or len(current) > 512
                 )
-                if not target_is_contract_invalid or not invalid_pressure_value:
+                if target_is_contract_invalid and invalid_pressure_value:
+                    correction_basis = "contract-invalid-target-restoration"
+                elif (
+                    field == "pressure_hypothesis.actionable_recommendation"
+                    and isinstance(current, str)
+                    and current
+                    and _verified_occurrence_supports_pressure_recommendation(
+                        target_record, replacement, projected_records,
+                    )
+                ):
+                    correction_basis = "corroborated-by-verified-occurrence"
+                else:
                     replacements_verified = False
                     break
             elif field == "related_work":
@@ -20262,7 +20319,7 @@ def project(
             }
             unverified_record_correction_count += 1
             continue
-        correction_status_by_record[correction_record["identity"]] = {
+        correction_status = {
             "status": (
                 "applied-to-integrity-verified-contract-invalid-target"
                 if target_is_contract_invalid
@@ -20274,6 +20331,9 @@ def project(
             "replacement_values": replacement_values,
             "reason": correction["reason"],
         }
+        if correction_basis is not None:
+            correction_status["basis"] = correction_basis
+        correction_status_by_record[correction_record["identity"]] = correction_status
         correction_candidates.setdefault(target_identity, []).append((
             correction_record, correction, correction_reference,
         ))
@@ -20435,6 +20495,9 @@ def project(
         record_correction_summary = correction_status_by_record.get(
             record["identity"],
         )
+        effective_hypothesis = (
+            dict(hypothesis) if isinstance(hypothesis, dict) else None
+        )
         effective_sources = sources
         effective_work = work
         effective_measurement_limits = record.get("not_measured", [])
@@ -20455,6 +20518,14 @@ def project(
             correction_record, correction, correction_reference = correction_for_target
             corrected_fields = correction["corrected_field_paths"]
             replacement_values = correction["replacement_values"]
+            if (effective_hypothesis is not None
+                    and "pressure_hypothesis.actionable_recommendation"
+                    in corrected_fields):
+                effective_hypothesis["actionable_recommendation"] = (
+                    replacement_values[
+                        "pressure_hypothesis.actionable_recommendation"
+                    ]
+                )
             if "supporting_sources" in corrected_fields:
                 effective_sources = replacement_values["supporting_sources"]
             if "not_measured" in corrected_fields:
@@ -20471,6 +20542,9 @@ def project(
                     else "corrected-by-verified-record"
                 )
             if record_correction_summary is None:
+                applied_correction = correction_status_by_record.get(
+                    correction_record["identity"],
+                )
                 record_correction_summary = {
                     "status": (
                         "completed-by-append-only-record"
@@ -20481,6 +20555,10 @@ def project(
                     "corrected_field_paths": corrected_fields,
                     "replacement_values": replacement_values,
                     "reason": correction["reason"],
+                    **({"basis": applied_correction["basis"]}
+                       if isinstance(applied_correction, dict)
+                       and isinstance(applied_correction.get("basis"), str)
+                       else {}),
                     "correction_evidence_reference": {
                         key: correction_reference[key]
                         for key in ("identity", "repository", "commit", "path", "sha256")
@@ -20652,15 +20730,15 @@ def project(
             **({"session_activity_relation": session_activity_relation}
                if session_activity_relation is not None else {}),
             "pressure_hypothesis": ({
-                key: hypothesis.get(key)
+                key: effective_hypothesis.get(key)
                 for key in ("identity", "title", "category", "subsystem", "owner",
                             "basis", "recurrence", "actionable_recommendation",
                             "not_measured")
-                if hypothesis.get(key) is not None
-            } if hypothesis is not None else None),
+                if effective_hypothesis.get(key) is not None
+            } if effective_hypothesis is not None else None),
             **({
                 "pressure_hypothesis_role": effective_pressure_hypothesis_role,
-            } if (hypothesis is not None
+            } if (effective_hypothesis is not None
                   and isinstance(effective_pressure_hypothesis_role, str)
                   and effective_pressure_hypothesis_role
                   in PRESSURE_HYPOTHESIS_ROLES) else {}),
@@ -20674,7 +20752,7 @@ def project(
                 "pressure_hypothesis_recurrence_classification": (
                     pressure_hypothesis_recurrence_classification
                 ),
-            } if (hypothesis is not None
+            } if (effective_hypothesis is not None
                   and effective_pressure_hypothesis_role
                   != pressure_hypothesis_recurrence_classification) else {}),
             "supporting_sources": [
