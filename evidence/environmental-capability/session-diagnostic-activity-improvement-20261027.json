@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_diagnostic_activity_improvement_20261027",
+  "captured_at": "2026-10-27T21:48:19Z",
+  "measurement_basis": "implementation-verification-and-post-commit-live-ECI-readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_session_diagnostic_activity_not_projected_20261027",
+      "implementation_commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "verification_observation_identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_session_diagnostic_activity_live_readback_20261027"
+    },
+    "outcome": {
+      "implementation_scope": "Bounded projection of session diagnostic history summaries, exact validated same-session evidence references, and current session snapshot context through the existing ECI session_activity view.",
+      "implementation_change": "Added diagnostic_activity only when the session snapshot contains a diagnostic history or epoch. The projection retains up to four newest summaries, checks immutable Store identity shape and session ownership, validates the known session-file artifact form, links the current epoch to the latest history reference, and preserves exact references in response-budget compaction. It does not copy diagnostic witness details or assert WorkIntent-at-diagnosis, causality, service fulfillment, or agent burden.",
+      "verified_change": "The capability-intelligence test module passed 166 tests after the final bounded elapsed-value refinement. The full repository suite passed 1173 tests with 46 skipped before that small refinement; the focused module was rerun afterward. The Environment vertical proof passed after the final change. A post-commit live ECI readback exposed the authentic stored diagnostic summary and exact same-session evidence reference together with the existing correlated resource sample under a partial, response-truncated projection.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The projection makes existing diagnostic evidence queryable and traceable through ECI. There is no independent later agent activity demonstrating reduced intervention or improved diagnostic service quality."
+    },
+    "improvement_relation": {
+      "identity": "im_environment_session_diagnostic_activity_projection_20261027",
+      "addresses_hypothesis_identity": "ph_environment_session_diagnostic_activity_not_projected_20261027",
+      "implementation_reference": {
+        "identity": "mncs_environment_session_diagnostic_activity_fd8fb8c",
+        "repository": "mncs-environment",
+        "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+      },
+      "verification_observation_identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_session_diagnostic_activity_live_readback_20261027",
+      "basis": "The baseline implementation source contains no session diagnostic history projection path. The final implementation and bounds passed focused tests and the Environment vertical proof. The live ECI readback links authentic session diagnostic and resource evidence through existing projection relationships, while retaining explicit response and attribution limits.",
+      "effectiveness_assessment": "not-assessed",
+      "not_measured": [
+        "agent discovery, receipt, or usability across different runtimes and models",
+        "whether an agent would otherwise have performed a separate diagnostic query",
+        "intervention time, token use, or resource cost saved",
+        "cross-session recurrence and generality of diagnostic-history shapes",
+        "future evidence that the projection changes diagnostic service quality"
+      ]
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_d671f289469b0eec",
+    "campaign_evidence_count_before_recording": 93
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_session_diagnostic_activity_pressure_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "subsequent-observation",
+      "identity": "ev_environment_session_diagnostic_activity_live_readback_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_diagnostic_activity_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+    }
+  ],
+  "measurement_limits": [
+    "The live readback comes from the implementing campaign session, not an independent agent session.",
+    "The recorded effectiveness remains not-assessed until subsequent independent activity supports an assessment.",
+    "The implementation does not fetch or integrity-check diagnostic payloads; the existing immutable evidence reader remains the inspection path."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

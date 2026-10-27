@@ -1,0 +1,88 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+  "captured_at": "2026-10-27T21:48:19Z",
+  "measurement_basis": "capability-intelligence-tests-full-repository-suite-vertical-proof-and-lint",
+  "observation": {
+    "kind": "environmental-projection-verification",
+    "source_interface": "MNCS Environment capability-intelligence tests and vertical proof",
+    "request": {
+      "implementation_commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "focused_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "focused_passed_after_final_elapsed_bound": 166,
+      "focused_failed": 0,
+      "full_repository_command": "python3 -m pytest tests/ -q",
+      "full_repository_passed": 1173,
+      "full_repository_skipped": 46,
+      "full_repository_failed": 0,
+      "full_repository_elapsed_seconds": 934.03,
+      "full_suite_change_note": "The complete suite ran after the projection structure and compaction changes. A subsequent finite elapsed-value upper bound and measurement-limit wording refinement was followed by a complete rerun of the capability-intelligence module.",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py",
+      "vertical_proof_status_after_final_change": "passed",
+      "lint_command": "ruff check mncs_env/capability_intelligence.py tests/test_capability_intelligence.py --ignore SIM114,C400,F841",
+      "lint_status": "passed",
+      "diff_check_status": "passed"
+    },
+    "outcome": {
+      "verified_properties": [
+        "No diagnostic activity field is added when the session has no diagnostic history or epoch, preserving existing low-budget ECI behavior.",
+        "Newest session diagnostic summaries remain bounded, same-session immutable references are validated, and diagnostic witness payloads are not copied.",
+        "The current diagnostic epoch is related to the latest history reference without claiming event-window causality.",
+        "Response-budget compaction retains the diagnostic summary and an exact validated evidence reference.",
+        "A cross-session evidence reference is rejected and its foreign session identity is not exposed.",
+        "The Environment vertical proof still completes real provider invocation, protected-scope denial, checkpoint, process restart, handoff, and completion."
+      ],
+      "result": "passed",
+      "interpretation_limit": "Tests establish projection structure, bounds, reference validation, and existing Environment integration behavior; they do not establish that agents discovered or benefited from the new projection."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_d671f289469b0eec",
+    "campaign_evidence_count_before_recording": 93
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_diagnostic_activity_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+    },
+    {
+      "kind": "test-source",
+      "identity": "mncs_environment_session_diagnostic_activity_tests_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "08566317280dcdfe11efae5746e82658320658d79b41cffde19c727015c29f63"
+    },
+    {
+      "kind": "projection-documentation-source",
+      "identity": "mncs_environment_session_diagnostic_activity_docs_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "02c5baf318ca088664715d0846b408e799d0f589e6c55f11421ce5bcfd5de9fe"
+    }
+  ],
+  "measurement_limits": [
+    "The full repository suite was followed by a focused complete rerun of the capability-intelligence module after the final numeric-bound refinement; the full suite was not rerun after that small refinement.",
+    "The vertical proof is independent verification of existing Environment session composition, not evidence of long-term diagnostic service quality.",
+    "No independent later agent activity establishes reduced intervention, successful agent receipt, or long-term burden reduction."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

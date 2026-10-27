@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_diagnostic_activity_pressure_20261027",
+  "captured_at": "2026-10-27T21:48:19Z",
+  "measurement_basis": "baseline-source-inspection-correlated-with-authentic-session-diagnostic-evidence",
+  "observation": {
+    "kind": "environmental-integration-pressure",
+    "source_interface": "MNCS Environment capability-intelligence projection and session diagnostic evidence",
+    "request": {
+      "baseline_commit": "80278d874e2d289e69f374fe9204a996b10ed8d1",
+      "baseline_capability_intelligence_sha256": "e9ed1333d63a54e7bce145745edeef72ba4d3f9b8246c474874990eb61fb163a",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "diagnostic_history_record_count": 1,
+      "diagnostic_evidence_reference": "mncs-store:ses_a752e1c55fb4ca6f:diagnostics:01d4b7791191e40e06923a04693561370b50890fe8d37f8d949ff105f2ecef54",
+      "diagnostic_recorded_at": "2026-10-27T08:43:03+00:00",
+      "diagnostic_failure_count": 0,
+      "diagnostic_elapsed_seconds": 0.38
+    },
+    "outcome": {
+      "limitation": "At the baseline Environment commit, the capability-intelligence projection had no path from the session diagnostic_history or diagnostic_epoch fields to session_activity. The selected persistent session already contained one diagnostic summary and an immutable same-session evidence reference, so an agent using ECI could not inspect that evidence through the environmental capability view.",
+      "basis": "The missing projection path was established by source inspection of the baseline commit. The diagnostic record and its stored reference are authentic session evidence; no historical ECI response was fabricated.",
+      "recurrence": "One recorded diagnostic history entry in one campaign session; recurrence across sessions is not established."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_diagnostic_activity_not_projected_20261027",
+    "title": "Session diagnostic evidence was not discoverable through environmental capability analysis",
+    "category": "environmental-service-accountability-and-discoverability",
+    "subsystem": "mncs-environment session activity and diagnostics",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded session diagnostic history summaries and validated same-session evidence references through the existing capability-intelligence projection, while preserving session context, response budgets, and limits on causal and agent-burden claims."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_d671f289469b0eec",
+    "campaign_evidence_count_before_recording": 93
+  },
+  "supporting_sources": [
+    {
+      "kind": "session-diagnostic-immutable-evidence-reference",
+      "identity": "ses_a752e1c55fb4ca6f:diagnostics:01d4b7791191e40e06923a04693561370b50890fe8d37f8d949ff105f2ecef54",
+      "schema": "mncs.session-evidence/1",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "baseline-implementation-source",
+      "identity": "mncs_environment_capability_intelligence_80278d8",
+      "repository": "mncs-environment",
+      "commit": "80278d874e2d289e69f374fe9204a996b10ed8d1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e9ed1333d63a54e7bce145745edeef72ba4d3f9b8246c474874990eb61fb163a"
+    }
+  ],
+  "measurement_limits": [
+    "The baseline omission is established by implementation-source inspection, not a captured pre-change ECI response.",
+    "The diagnostic summary is historical and belongs to one session; it does not establish current verification health or cross-session recurrence.",
+    "Agent receipt, intervention, time or tokens saved, root cause, and downstream service benefit were not measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

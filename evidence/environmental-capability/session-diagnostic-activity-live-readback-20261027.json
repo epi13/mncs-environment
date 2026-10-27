@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_diagnostic_activity_live_readback_20261027",
+  "captured_at": "2026-10-27T21:48:19Z",
+  "measurement_basis": "post-commit-live-ECI-readback-with-authentic-session-diagnostic-and-resource-records",
+  "observation": {
+    "kind": "environmental-capability-live-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --interpret environmental-capability --evidence-limit 4 --session-event-limit 256",
+      "implementation_commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "projection_identity": "eci_c8b84607cf329c30",
+      "content_digest": "2eefcd9369c696c630b3f300205ec907",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "environment_id": "renv_6b644a59c2867246",
+      "response_truncated": true
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "diagnostic_activity_status": "recorded",
+      "diagnostic_history_record_count": 1,
+      "diagnostic_history_identity": "dgh_452c26ca0fa418ad",
+      "diagnostic_recorded_at": "2026-10-27T08:43:03+00:00",
+      "diagnostic_mode": "ambient",
+      "diagnostic_depth": "minimal",
+      "diagnostic_failure_count": 0,
+      "diagnostic_captured_count": 0,
+      "diagnostic_elapsed_seconds": 0.38,
+      "diagnostic_evidence_reference": "mncs-store:ses_a752e1c55fb4ca6f:diagnostics:01d4b7791191e40e06923a04693561370b50890fe8d37f8d949ff105f2ecef54",
+      "diagnostic_current_epoch_relation": "matches-latest-history-record",
+      "diagnostic_identity_basis": "session, campaign, WorkIntent, Environment, and definition identities are current session snapshot context; they are not asserted as the context recorded when the diagnosis ran.",
+      "resource_samples": {
+        "status": "available",
+        "observation_count": 1,
+        "identity": "rsm_80969f7af6f1e4f5",
+        "event_correlation_status": "matched-by-provider-request-id",
+        "invocation_event": "evt_82d1758976bccf24",
+        "completion_event": "evt_36d8fb8ba07e2e6a",
+        "artifact_reference": "mncs-store:ses_a752e1c55fb4ca6f:capability-invocation-artifacts:63402cb6c26fd34ef023f54c2bf312284caf4443eafebdce8b799aa1b99a7472",
+        "memory_available_bytes": 23959818240,
+        "memory_total_bytes": 33411571712,
+        "load_average": [0.9, 0.98, 0.96],
+        "cpu_utilization": null
+      },
+      "readback_result": "The same bounded ECI response preserved the diagnostic history and exact evidence reference alongside a separately correlated resource sample, even though the overall response was partial and truncated."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_d671f289469b0eec",
+    "campaign_evidence_count_before_recording": 93
+  },
+  "supporting_sources": [
+    {
+      "kind": "session-diagnostic-immutable-evidence-reference",
+      "identity": "ses_a752e1c55fb4ca6f:diagnostics:01d4b7791191e40e06923a04693561370b50890fe8d37f8d949ff105f2ecef54",
+      "schema": "mncs.session-evidence/1",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "resource-sample-capability-artifact",
+      "identity": "mncs-store:ses_a752e1c55fb4ca6f:capability-invocation-artifacts:63402cb6c26fd34ef023f54c2bf312284caf4443eafebdce8b799aa1b99a7472",
+      "schema": "mncs.system-monitor.resource-sample.v1",
+      "repository": "mncs-system-monitor"
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_diagnostic_activity_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+    }
+  ],
+  "measurement_limits": [
+    "The ECI result is partial and response-truncated; the retained diagnostic and resource records are exact, but unreturned activity is not inferred absent.",
+    "The diagnostic record is from 08:43 UTC and the resource sample from 21:02 UTC in one session; their co-occurrence does not establish temporal causality or a shared event window.",
+    "The host resource sample does not attribute consumption to an agent or process; CPU utilization was unavailable.",
+    "This readback is from the implementing campaign session and does not establish agent receipt, independent-session recurrence, or reduced intervention."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
