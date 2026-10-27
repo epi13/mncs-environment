@@ -1,0 +1,114 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_occurrence_retention_live_readback_20261027",
+  "captured_at": "2026-10-27T19:16:16Z",
+  "measurement_basis": "same-checkpoint bounded live projection before and after compact-path correction",
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment capability_intelligence.project using the canonical session Store",
+    "request": {
+      "implementation_commit": "b0e940545c74b12d7b334699b5f5e62daa10bcc5",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "campaign_state_checkpoint_id": "chk_14569fe85f3492c9",
+      "campaign_evidence_count": 85,
+      "max_result_bytes": 8000,
+      "evidence_offset": 77,
+      "evidence_limit": 8,
+      "history_pages": 4,
+      "session_event_before_sequence": 896,
+      "session_event_limit": 64,
+      "projection_identity": "eci_0f62053fa9e84439",
+      "content_digest": "a6a1f2e935710f065207578a2be47336"
+    },
+    "outcome": {
+      "encoded_response_bytes": 7797,
+      "response_status": "partial",
+      "pressure_occurrence_identity": "ev_environment_eci_campaign_evidence_retention_growth_pressure_20261027",
+      "pressure_occurrence_role": "occurrence",
+      "pressure_hypothesis_identity": "ph_environment_eci_campaign_evidence_not_preserved_at_small_response_budgets_20261027",
+      "improvement_relation_identity": "im_environment_eci_campaign_growth_robust_evidence_priority_response_20261027",
+      "improvement_effectiveness_assessment": "not-assessed",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "source_pointer_content_integrity_verified_count": 15,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "observation_records_verified": 15,
+      "observation_records_unavailable": 1,
+      "unavailable_observation": {
+        "identity": "ev_environment_eci_campaign_evidence_retention_pressure_20261027",
+        "verification": "observation-contract-invalid",
+        "diagnostic": "missing-observation-request"
+      },
+      "full_budget_selection": {
+        "encoded_response_bytes": 73625,
+        "history_page_offsets": [77, 69, 61, 53],
+        "observation_read_budgets_by_page": [5, 4, 4, 3],
+        "newest_page_selected_identities": [
+          "ev_environment_eci_campaign_evidence_retention_growth_pressure_20261027",
+          "ev_environment_eci_campaign_growth_compaction_verification_20261027",
+          "ev_environment_eci_campaign_growth_compaction_live_readback_20261027",
+          "ev_environment_eci_campaign_growth_compaction_improvement_20261027",
+          "ev_environment_eci_campaign_growth_publication_readback_20261027"
+        ]
+      },
+      "before_correction": {
+        "implementation_commit": "19d4414f789fecbc8e0662ff04bfa7fde37e16ed",
+        "encoded_response_bytes": 7835,
+        "retained_observation_identity": "ev_environment_eci_campaign_growth_publication_readback_20261027",
+        "retained_observation_role": "supporting-context"
+      },
+      "interpretation_limit": "The same-checkpoint readback confirms the compact view now preserves the source occurrence instead of a later supporting-context record. It does not establish that agents received or used the projection, that intervention burden fell, or that the pressure is empirically eliminated."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_campaign_evidence_not_preserved_at_small_response_budgets_20261027",
+    "title": "Campaign growth can erase linked ECI evidence under a tight response budget",
+    "category": "environmental-observation-and-resource-pressure",
+    "subsystem": "MNCS Environment capability-intelligence response compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain the exact occurrence that establishes a pressure when compacting its linked improvement path, even when later supporting-context observations share the hypothesis identity."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_14569fe85f3492c9",
+    "campaign_evidence_count_before_recording": 85
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_campaign_evidence_retention_growth_pressure_20261027",
+      "kind": "verified-pressure-occurrence-source",
+      "repository": "mncs-environment",
+      "commit": "5577ed2f281cb9116147d24982c30db6d70df560",
+      "path": "evidence/environmental-capability/eci-linked-evidence-growth-pressure-20261027.json",
+      "sha256": "cb5b496cc4abf97b642225ea396b2105dec93b7dab52a1775486a04616ee97e6"
+    },
+    {
+      "identity": "mncs_environment_occurrence_compaction_b0e9405",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "b0e940545c74b12d7b334699b5f5e62daa10bcc5",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "79de13f3283f3ddc0403f40585ccb66d7b0b2d15554de553e4071e7a28fef080"
+    }
+  ],
+  "measurement_limits": [
+    "This record uses authentic campaign evidence and a live current-session read, but it is not itself a campaign checkpoint publication.",
+    "Agent receipt, agent intervention burden, time saved, and long-term recurrence remain unmeasured.",
+    "The single older malformed record remains immutable and unavailable to this projection until an authorized append-only correction is recorded.",
+    "The change's effectiveness remains not-assessed pending subsequent independent activity."
+  ]
+}

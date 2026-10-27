@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_occurrence_retention_verification_20261027",
+  "captured_at": "2026-10-27T19:16:16Z",
+  "measurement_basis": "focused capability-intelligence regression suite and source checks",
+  "observation": {
+    "kind": "environmental-capability-projection-verification",
+    "source_interface": "MNCS Environment capability-intelligence test module",
+    "request": {
+      "implementation_commit": "b0e940545c74b12d7b334699b5f5e62daa10bcc5",
+      "test_command": "python -m pytest -q tests/test_capability_intelligence.py",
+      "test_passed": 163,
+      "test_failed": 0,
+      "targeted_regression": "test_projection_enforces_tight_budget_for_session_service_history",
+      "py_compile": "passed",
+      "git_diff_check": "passed"
+    },
+    "outcome": {
+      "verified_properties": [
+        "The compact evidence path selects a verified occurrence matching the improvement relation and hypothesis.",
+        "A later supporting-context record with the same hypothesis identity cannot replace the occurrence in the compact path.",
+        "The compact response retains exact observation, implementation, verification, and subsequent-observation references within its requested byte limit.",
+        "The relation effectiveness remains not-assessed without later independent evidence."
+      ],
+      "interpretation_limit": "This verifies projection selection and provenance behavior, not agent receipt, reduced intervention burden, or long-term effectiveness."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_campaign_evidence_not_preserved_at_small_response_budgets_20261027",
+    "title": "Campaign growth can erase linked ECI evidence under a tight response budget",
+    "category": "environmental-observation-and-resource-pressure",
+    "subsystem": "MNCS Environment capability-intelligence response compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Keep the verified occurrence that establishes a pressure distinct from later supporting-context records when compacting a linked improvement path."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS capability intelligence from real development evidence.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_14569fe85f3492c9",
+    "campaign_evidence_count_before_recording": 85
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_occurrence_compaction_b0e9405",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "b0e940545c74b12d7b334699b5f5e62daa10bcc5",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "79de13f3283f3ddc0403f40585ccb66d7b0b2d15554de553e4071e7a28fef080"
+    },
+    {
+      "identity": "mncs_environment_occurrence_compaction_tests_b0e9405",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "b0e940545c74b12d7b334699b5f5e62daa10bcc5",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "2675dd54d984fdfd540612a8bbf9e7c9bfb5484bd04778510ea7419d792fee48"
+    },
+    {
+      "identity": "mncs_environment_occurrence_compaction_docs_b0e9405",
+      "kind": "documentation-source",
+      "repository": "mncs-environment",
+      "commit": "b0e940545c74b12d7b334699b5f5e62daa10bcc5",
+      "path": "docs/CAPABILITY_INTELLIGENCE.md",
+      "sha256": "e0b4d133c2e16104ea81c9630632be4ca9b2bf5ce6b7ef0943e4dbcc5840b49e"
+    }
+  ],
+  "measurement_limits": [
+    "Agent receipt or use of the projection was not measured.",
+    "Agent intervention burden, time saved, and longer-term recurrence were not measured.",
+    "The improvement's effectiveness remains not-assessed until subsequent independent activity supports an assessment."
+  ]
+}
