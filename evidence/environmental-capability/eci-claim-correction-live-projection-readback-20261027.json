@@ -1,0 +1,157 @@
+{
+  "captured_at": "2026-10-27T10:47:40Z",
+  "identity": "ev_environment_eci_claim_correction_live_projection_readback_20261027",
+  "measurement_basis": "bounded live MNCS Environment environmental-capability projection readback; exact source records and correction pointers retained",
+  "not_measured": [
+    "whether similar invalid observation records recur across sessions or campaigns",
+    "whether later agents can discover and use the restored attribution through this compact view",
+    "whether the correction mechanism measurably reduces agent intervention or improves development outcomes",
+    "long-term projection response-size distribution and omitted-context consequences"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "outcome": {
+      "append_only_corrections": {
+        "applied": 3,
+        "corrected_context_is_constrained_to_recorded_sources": true,
+        "original_source_records_preserved": true,
+        "recorded": 3,
+        "targets": [
+          {
+            "correction_identity": "ev_environment_claim_record_correction_1_20261027",
+            "correction_status": "completed-by-append-only-record",
+            "identity": "ev_environment_claim_cli_live_branch_refresh_projection_readback_20261027",
+            "original_diagnostics": [
+              "missing-related-work-object",
+              "invalid-pressure-hypothesis-role"
+            ]
+          },
+          {
+            "correction_identity": "ev_environment_claim_record_correction_2_20261027",
+            "correction_status": "completed-by-append-only-record",
+            "identity": "ev_environment_claim_rejection_event_improvement_20261027",
+            "original_diagnostics": [
+              "invalid-pressure-hypothesis-role"
+            ]
+          },
+          {
+            "correction_identity": "ev_environment_claim_record_correction_3_20261027",
+            "correction_status": "completed-by-append-only-record",
+            "identity": "ev_environment_claim_rejection_event_verification_20261027",
+            "original_diagnostics": [
+              "invalid-pressure-hypothesis-role"
+            ]
+          }
+        ],
+        "unsupported_roles_removed_without_pressure_recurrence": true,
+        "unverified": 0
+      },
+      "interpretation_limit": "The selected evidence page applied all three corrections, but the broader projection remains partial and compacted; this result does not establish recurrence, reduced agent burden, or long-term effectiveness.",
+      "projection_status": "partial",
+      "response_compaction": {
+        "compacted_response_bytes": 64186,
+        "original_serialized_bytes": 214971,
+        "response_truncated": true
+      },
+      "selected_evidence": {
+        "campaign_evidence_count": 24,
+        "observation_records_considered": 16,
+        "observation_records_skipped_by_page_budget": 0,
+        "observation_records_unavailable": 0,
+        "observation_records_verified": 16,
+        "page_limit": 16,
+        "page_offset": 8
+      }
+    },
+    "request": {
+      "campaign_id": "cmp_7f550d193225b7be",
+      "campaign_state_checkpoint_id": "chk_16b8d6620802a648",
+      "command": "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --consumer mncs-environment-capability-campaign --interpret environmental-capability --history-pages 1 --evidence-offset 8 --evidence-limit 16 --session-event-limit 32",
+      "operation": "environmental_capability_projection",
+      "projection_identity": "eci_e703ea3919c5a16e",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "326c800001c9abb5468171fd3a736c848bcf3f58",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "86cfc3a3bc0e87c9ec87b80a2ff547ad8c3ddb27a8ee8d391df70cd82763f6f5"
+    },
+    {
+      "commit": "326c800001c9abb5468171fd3a736c848bcf3f58",
+      "kind": "committed-regression-test",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "ad73ab1a28a5fc2ec4cde2eaf20f6cc5f7a5b8758cfdece3d2087d70e7dcefe7"
+    },
+    {
+      "commit": "326c800001c9abb5468171fd3a736c848bcf3f58",
+      "identity": "ev_environment_claim_record_correction_1_20261027",
+      "kind": "append-only-observation-correction",
+      "path": "evidence/environmental-capability/claim-cli-live-branch-readback-correction-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "9e84fa85bb5b9429a47ddd913e9085a4789a5caa822f51381ebbdbfd9d22b05e"
+    },
+    {
+      "commit": "326c800001c9abb5468171fd3a736c848bcf3f58",
+      "identity": "ev_environment_claim_record_correction_2_20261027",
+      "kind": "append-only-observation-correction",
+      "path": "evidence/environmental-capability/claim-rejection-improvement-role-correction-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "10057a184c765d2e12bed29161202411374565d789a81aa39e765ff7df64439f"
+    },
+    {
+      "commit": "326c800001c9abb5468171fd3a736c848bcf3f58",
+      "identity": "ev_environment_claim_record_correction_3_20261027",
+      "kind": "append-only-observation-correction",
+      "path": "evidence/environmental-capability/claim-rejection-verification-role-correction-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "c45fe3bb6a8d4a662b38e4182b747320eccbbb9a1110b59843fe832b1baa388a"
+    },
+    {
+      "commit": "342155dddb0291b960071cea627b0c36bb9f0b2e",
+      "identity": "ev_environment_claim_cli_live_branch_refresh_projection_readback_20261027",
+      "kind": "original-corrected-observation",
+      "path": "evidence/environmental-capability/claim-cli-live-branch-refresh-projection-readback-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "a023813609d76e0012a74db341c06404b3e0c9ac5374bb381410f511c96da75d"
+    },
+    {
+      "commit": "874305237ece4e29ef5bc43ee804b3839ec142e2",
+      "identity": "ev_environment_claim_rejection_event_improvement_20261027",
+      "kind": "original-corrected-observation",
+      "path": "evidence/environmental-capability/claim-acquisition-rejection-improvement-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "016e3579b0c8e743c80cf43c47bc34d0994e8346e63cf69fdbcbdac85475e8e9"
+    },
+    {
+      "commit": "874305237ece4e29ef5bc43ee804b3839ec142e2",
+      "identity": "ev_environment_claim_rejection_event_verification_20261027",
+      "kind": "original-corrected-observation",
+      "path": "evidence/environmental-capability/claim-acquisition-rejection-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "090906131aa99586a4045987007f2f727ca051a4b11427fbbb16e7d684ecd151"
+    }
+  ]
+}
