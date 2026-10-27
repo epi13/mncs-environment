@@ -1063,6 +1063,19 @@ digests for the selected session's readiness and accountability views, and
 includes them in projection identity so snapshot changes remain distinguishable
 even when the event tail and binding inventory are unchanged. These digests
 identify derived input state; they do not verify service correctness.
+Each declared probe also includes `ambient_owner_pass_activity`, which relates
+the exact probe capability and current binding to scoped invocation records
+that ran inside a recorded ambient owner pass. It preserves bounded references
+to the pass trace and invocation/completion events. Calls without valid owner
+pass context are surfaced as unclassified or invalid-context use, rather than
+being silently treated as ambient execution. This relationship establishes
+recorded execution context only; it does not establish that the service was
+needed, that an agent received the result, or that the pass fulfilled its
+responsibility. The selected event-window status is included so an absent call
+is not confused with complete-history evidence when the window is partial. If
+bounded owner-pass or capability groups were omitted, the probe relation marks
+its activity projection incomplete instead of treating the omitted rows as no
+observed invocation.
 
 `session_activity.ambient_service_execution` exposes the latest recorded
 incremental owner-pass scheduler trace from the same session snapshot. Entry

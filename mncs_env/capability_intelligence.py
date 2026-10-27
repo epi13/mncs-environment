@@ -219,6 +219,8 @@ SYSTEM_RESOURCE_SAMPLE_STATUSES = frozenset({
 MAX_SESSION_ACTIVITY_INTERACTIONS = 32
 MAX_AMBIENT_OWNER_PASS_EXECUTIONS = 16
 MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES = 4
+MAX_AMBIENT_OWNER_PASS_CAPABILITIES = 12
+MAX_AMBIENT_UNCLASSIFIED_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_BINDINGS = 32
 MAX_SESSION_ACTIVITY_BINDING_SCAN = 512
@@ -14518,9 +14520,180 @@ def _session_service_readiness(
     return result
 
 
+def _service_ambient_owner_pass_observation(
+    capability: Any, bindings: list[dict[str, Any]],
+    ambient_activity: Any, event_window_status: str,
+) -> dict[str, Any]:
+    """Relate a declared probe to explicitly scoped owner-pass calls."""
+    if not isinstance(capability, str) or not capability:
+        return {
+            "status": "probe-capability-not-recorded",
+            "scope": "selected-session-event-window",
+            "event_window_status": event_window_status,
+            "scoped_invocation_count": 0,
+            "scoped_completion_count": 0,
+            "unclassified_invocation_count": 0,
+            "invalid_context_invocation_count": 0,
+            "owner_pass_executions": [],
+            "supporting_events": [],
+            "causal_status": "not-established",
+            "observation_completeness_status": (
+                "not-applicable-probe-capability-unavailable"
+            ),
+        }
+    if (not isinstance(ambient_activity, dict)
+            or ambient_activity.get("status") == "unavailable"):
+        return {
+            "status": "session-activity-unavailable",
+            "scope": "selected-session-event-window",
+            "event_window_status": "not-available",
+            "scoped_invocation_count": 0,
+            "scoped_completion_count": 0,
+            "unclassified_invocation_count": 0,
+            "invalid_context_invocation_count": 0,
+            "owner_pass_executions": [],
+            "supporting_events": [],
+            "causal_status": "not-established",
+            "observation_completeness_status": "unavailable",
+        }
+
+    scoped_rows: list[dict[str, Any]] = []
+    owner_pass_executions: list[dict[str, Any]] = []
+    supporting_events: list[dict[str, Any]] = []
+    supporting_events_truncated = False
+    execution_groups = ambient_activity.get("execution_groups", [])
+    execution_groups = execution_groups if isinstance(execution_groups, list) else []
+    projected_activity_incomplete = (
+        type(ambient_activity.get("execution_groups_omitted_count")) is int
+        and ambient_activity["execution_groups_omitted_count"] > 0
+    )
+    for execution in execution_groups:
+        if not isinstance(execution, dict):
+            continue
+        if (type(execution.get("capabilities_omitted_count")) is int
+                and execution["capabilities_omitted_count"] > 0):
+            projected_activity_incomplete = True
+        for row in execution.get("capabilities", []):
+            if (not isinstance(row, dict)
+                    or row.get("capability") != capability):
+                continue
+            binding_identity = row.get("binding_identity")
+            exact_binding = (
+                isinstance(binding_identity, dict)
+                and binding_identity.get("status") == "complete"
+                and any(all(
+                    binding.get(field) == binding_identity.get(field)
+                    for field in ("provider", "binding_id", "contract_revision")
+                ) for binding in bindings)
+            )
+            scoped_rows.append({"row": row, "execution": execution,
+                                "exact_binding": exact_binding})
+            execution_reference = {
+                key: execution[key]
+                for key in (
+                    "owner_pass", "service_execution_id", "latest_trace_relation",
+                )
+                if isinstance(execution.get(key), str)
+            }
+            if execution_reference and execution_reference not in owner_pass_executions:
+                owner_pass_executions.append(execution_reference)
+            for reference in row.get("supporting_events", []):
+                if (isinstance(reference, dict)
+                        and reference not in supporting_events):
+                    supporting_events.append(reference)
+            supporting_events_truncated = (
+                supporting_events_truncated
+                or row.get("supporting_events_truncated") is True
+            )
+
+    unclassified_rows = [
+        row for row in ambient_activity.get(
+            "unclassified_capability_activity", [],
+        )
+        if isinstance(row, dict) and row.get("capability") == capability
+    ]
+    unclassified_omitted_count = ambient_activity.get(
+        "unclassified_capability_activity_omitted_count", 0,
+    )
+    if type(unclassified_omitted_count) is int and unclassified_omitted_count > 0:
+        projected_activity_incomplete = True
+    unclassified_invocation_count = sum(
+        row.get("invocation_count", 0) for row in unclassified_rows
+        if type(row.get("invocation_count")) is int
+        and row.get("context_status") == "not-recorded"
+    )
+    invalid_context_invocation_count = sum(
+        row.get("invocation_count", 0) for row in unclassified_rows
+        if type(row.get("invocation_count")) is int
+        and row.get("context_status") == "invalid"
+    )
+    if any(item["exact_binding"] for item in scoped_rows):
+        status = "exact-current-probe-binding-invocation-observed"
+        binding_attribution = "exact-current-session-binding"
+    elif scoped_rows:
+        status = "probe-capability-invocation-observed-binding-not-attributed"
+        binding_attribution = (
+            "ambiguous-current-bindings" if len(bindings) > 1
+            else "not-matched-to-current-binding"
+        )
+    elif unclassified_invocation_count:
+        status = "unclassified-probe-capability-invocation-observed"
+        binding_attribution = "not-correlated-to-owner-pass"
+    elif invalid_context_invocation_count:
+        status = "probe-capability-invocation-has-invalid-context"
+        binding_attribution = "invalid-owner-pass-context"
+    elif projected_activity_incomplete:
+        status = "probe-capability-activity-projection-incomplete"
+        binding_attribution = "not-established-activity-omitted"
+    else:
+        status = "no-scoped-probe-invocation-observed-in-selected-window"
+        binding_attribution = "not-applicable-no-scoped-invocation-observed"
+
+    return {
+        "status": status,
+        "scope": "selected-session-event-window-ambient-owner-pass-invocations",
+        "event_window_status": event_window_status,
+        "probe_capability_attribution_status": (
+            "exact-declared-probe-capability-name"
+        ),
+        "binding_attribution_status": binding_attribution,
+        "scoped_invocation_count": sum(
+            row["row"].get("invocation_count", 0)
+            for row in scoped_rows
+            if type(row["row"].get("invocation_count")) is int
+        ),
+        "scoped_completion_count": sum(
+            row["row"].get("completion_count", 0)
+            for row in scoped_rows
+            if type(row["row"].get("completion_count")) is int
+        ),
+        "unclassified_invocation_count": unclassified_invocation_count,
+        "invalid_context_invocation_count": invalid_context_invocation_count,
+        "owner_pass_executions": owner_pass_executions[:4],
+        "owner_pass_executions_omitted_count": max(
+            0, len(owner_pass_executions) - 4,
+        ),
+        "supporting_events": supporting_events[:MAX_CAPABILITY_SUPPORTING_EVENTS],
+        "supporting_events_omitted_count": max(
+            0, len(supporting_events) - MAX_CAPABILITY_SUPPORTING_EVENTS,
+        ),
+        "supporting_events_truncated": supporting_events_truncated,
+        "causal_status": "not-established",
+        "observation_completeness_status": (
+            "partial-bounded-activity-projection"
+            if projected_activity_incomplete
+            else "complete-for-projected-activity"
+        ),
+        "interpretation_limit": (
+            "An exact scoped invocation links a capability call to an owner-pass execution and current binding; it does not establish that the service was needed, fulfilled an agent opportunity, or reduced intervention burden."
+        ),
+    }
+
+
 def _session_service_accountability(
     service_readiness: Any, capability_delivery: Any,
     snapshot: dict[str, Any] | None = None,
+    ambient_owner_pass_activity: Any = None,
 ) -> dict[str, Any] | None:
     """Relate declared services to their exact session capability evidence."""
     if not isinstance(service_readiness, dict):
@@ -14541,6 +14714,17 @@ def _session_service_accountability(
         and delivery.get("binding_records_invalid", 0) == 0
         and delivery.get("bindings_omitted", 0) == 0
     )
+    event_window_complete = delivery_source.get("complete_history") is True
+    if event_window_complete:
+        ambient_event_window_status = "complete-session-history"
+    elif delivery_source:
+        ambient_event_window_status = (
+            "truncated-selected-session-event-window"
+            if delivery_source.get("truncated") is True
+            else "selected-session-event-window"
+        )
+    else:
+        ambient_event_window_status = "not-available"
     candidates_by_service: dict[str, dict[str, Any]] = {}
     raw_candidates = service_readiness.get("candidates")
     raw_candidates = raw_candidates if isinstance(raw_candidates, list) else []
@@ -14556,6 +14740,7 @@ def _session_service_accountability(
     available_binding_count = 0
     exact_binding_use_count = 0
     capability_name_use_count = 0
+    ambient_probe_use_relation_counts: dict[str, int] = {}
     for service in raw_services[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
         if not isinstance(service, dict):
             continue
@@ -14661,6 +14846,15 @@ def _session_service_accountability(
         }
         if isinstance(capability, str) and capability:
             projected["capability"] = capability
+        ambient_probe_activity = _service_ambient_owner_pass_observation(
+            capability, matches, ambient_owner_pass_activity,
+            ambient_event_window_status,
+        )
+        projected["ambient_owner_pass_activity"] = ambient_probe_activity
+        ambient_status = ambient_probe_activity["status"]
+        ambient_probe_use_relation_counts[ambient_status] = (
+            ambient_probe_use_relation_counts.get(ambient_status, 0) + 1
+        )
         candidate = candidates_by_service.get(identity)
         if isinstance(candidate, dict):
             projected["investigation_candidate"] = {
@@ -14685,7 +14879,6 @@ def _session_service_accountability(
     declared_service_count = readiness_summary.get("declared_service_count")
     if type(declared_service_count) is not int or declared_service_count < 0:
         declared_service_count = len(raw_services)
-    event_window_complete = delivery_source.get("complete_history") is True
     summary = {
         "declared_service_count": declared_service_count,
         "projected_service_count": len(services),
@@ -14695,6 +14888,9 @@ def _session_service_accountability(
         "available_service_capability_binding_count": available_binding_count,
         "exact_binding_use_observed_count": exact_binding_use_count,
         "capability_name_use_observed_count": capability_name_use_count,
+        "ambient_probe_use_relation_status_counts": dict(sorted(
+            ambient_probe_use_relation_counts.items(),
+        )),
         "eligible_service_opportunity_count": None,
         "ambient_fulfillment_status": "not-measured",
         "agent_intervention_burden_status": "not-measured",
@@ -15342,6 +15538,7 @@ def _session_ambient_owner_pass_activity(
             trace_rows.setdefault(row["service_execution_id"], []).append(row)
 
     groups: dict[tuple[str, str], dict[str, Any]] = {}
+    unclassified_capabilities: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
     unclassified_invocation_count = 0
     invalid_context_event_count = 0
     completion_context_mismatch_count = 0
@@ -15350,12 +15547,42 @@ def _session_ambient_owner_pass_activity(
     for record in records:
         context = record.get("context")
         if not isinstance(context, dict):
+            capability = record.get("capability")
+            binding_identity = record.get("binding_identity")
+            binding_identity = (
+                binding_identity if isinstance(binding_identity, dict) else {}
+            )
+            context_status = record.get("context_status")
             if record.get("context_status") == "invalid":
                 invalid_context_event_count += 1
             else:
                 unclassified_invocation_count += 1
             if record.get("completion_context_status") == "invalid":
                 invalid_context_event_count += 1
+            if isinstance(capability, str) and capability:
+                identity_key = tuple(
+                    binding_identity.get(key, "")
+                    if isinstance(binding_identity.get(key), str) else ""
+                    for key in ("provider", "binding_id", "contract_revision")
+                )
+                key = (capability, str(context_status), *identity_key)
+                call_group = unclassified_capabilities.setdefault(key, {
+                    "capability": capability,
+                    "context_status": context_status,
+                    "binding_identity": binding_identity,
+                    "invocation_count": 0,
+                    "supporting_events": [],
+                    "_first_sequence": 0,
+                })
+                call_group["invocation_count"] += 1
+                reference = record.get("invocation_event")
+                sequence = reference.get("sequence") if isinstance(reference, dict) else None
+                if type(sequence) is int:
+                    call_group["_first_sequence"] = max(
+                        call_group["_first_sequence"], sequence,
+                    )
+                if isinstance(reference, dict):
+                    call_group["supporting_events"].append(reference)
             continue
 
         execution_id = context["service_execution_id"]
@@ -15372,6 +15599,7 @@ def _session_ambient_owner_pass_activity(
             "completion_context_mismatch_count": 0,
             "invalid_context_event_count": 0,
             "supporting_events": [],
+            "_capabilities": {},
             "_first_sequence": 0,
         })
         group["invocation_count"] += 1
@@ -15384,6 +15612,33 @@ def _session_ambient_owner_pass_activity(
             group["_first_sequence"] = max(group["_first_sequence"], sequence)
         if isinstance(invocation_reference, dict):
             group["supporting_events"].append(invocation_reference)
+
+        capability = record.get("capability")
+        binding_identity = record.get("binding_identity")
+        binding_identity = (
+            binding_identity if isinstance(binding_identity, dict) else {}
+        )
+        capability_group = None
+        if isinstance(capability, str) and capability:
+            binding_key = tuple(
+                binding_identity.get(key, "")
+                if isinstance(binding_identity.get(key), str) else ""
+                for key in ("provider", "binding_id", "contract_revision")
+            )
+            capability_key = (capability, *binding_key)
+            capability_group = group["_capabilities"].setdefault(
+                capability_key, {
+                    "capability": capability,
+                    "binding_identity": binding_identity,
+                    "invocation_count": 0,
+                    "completion_count": 0,
+                    "outcome_status_counts": {},
+                    "supporting_events": [],
+                },
+            )
+            capability_group["invocation_count"] += 1
+            if isinstance(invocation_reference, dict):
+                capability_group["supporting_events"].append(invocation_reference)
 
         completion = record.get("completion_event")
         if not isinstance(completion, dict):
@@ -15410,6 +15665,39 @@ def _session_ambient_owner_pass_activity(
             if type(returncode) is int and returncode != 0:
                 group["nonzero_returncode_count"] += 1
             group["supporting_events"].append(completion)
+            if capability_group is not None:
+                capability_group["completion_count"] += 1
+                if isinstance(outcome_status, str):
+                    outcomes = capability_group["outcome_status_counts"]
+                    outcomes[outcome_status] = outcomes.get(outcome_status, 0) + 1
+                capability_group["supporting_events"].append(completion)
+
+    projected_unclassified_capabilities = []
+    ordered_unclassified_capabilities = sorted(
+        unclassified_capabilities.values(),
+        key=lambda item: item["_first_sequence"], reverse=True,
+    )
+    for call_group in ordered_unclassified_capabilities[
+        :MAX_AMBIENT_UNCLASSIFIED_CAPABILITIES
+    ]:
+        binding_identity = call_group.get("binding_identity")
+        projected_unclassified_capabilities.append({
+            "capability": call_group["capability"],
+            "context_status": call_group["context_status"],
+            "invocation_count": call_group["invocation_count"],
+            "binding_identity": binding_identity,
+            "supporting_events": [
+                {key: reference[key] for key in ("identity", "sequence", "type")}
+                for reference in call_group["supporting_events"][
+                    :MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
+                ]
+                if isinstance(reference, dict)
+            ],
+            "supporting_events_truncated": (
+                len(call_group["supporting_events"])
+                > MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
+            ),
+        })
 
     ordered_groups = sorted(
         groups.values(), key=lambda item: item["_first_sequence"], reverse=True,
@@ -15429,8 +15717,37 @@ def _session_ambient_owner_pass_activity(
         else:
             trace_relation = "exact-latest-trace-match"
         item = {
-            key: value for key, value in group.items() if not key.startswith("_")
+            key: value for key, value in group.items()
+            if not key.startswith("_") and key != "supporting_events"
         }
+        capability_groups = sorted(
+            group["_capabilities"].values(),
+            key=lambda row: row["invocation_count"], reverse=True,
+        )
+        item["capability_invocation_count"] = sum(
+            row["invocation_count"] for row in capability_groups
+        )
+        item["capabilities"] = [{
+            "capability": row["capability"],
+            "binding_identity": row["binding_identity"],
+            "invocation_count": row["invocation_count"],
+            "completion_count": row["completion_count"],
+            "outcome_status_counts": row["outcome_status_counts"],
+            "supporting_events": [
+                {key: reference[key] for key in ("identity", "sequence", "type")}
+                for reference in row["supporting_events"][
+                    :MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
+                ]
+                if isinstance(reference, dict)
+            ],
+            "supporting_events_truncated": (
+                len(row["supporting_events"])
+                > MAX_AMBIENT_OWNER_PASS_EVENT_REFERENCES
+            ),
+        } for row in capability_groups[:MAX_AMBIENT_OWNER_PASS_CAPABILITIES]]
+        item["capabilities_omitted_count"] = max(
+            0, len(capability_groups) - len(item["capabilities"]),
+        )
         item["latest_trace_relation"] = trace_relation
         item["supporting_events"] = [
             {key: reference[key] for key in ("identity", "sequence", "type")}
@@ -15463,6 +15780,12 @@ def _session_ambient_owner_pass_activity(
         "context_bearing_completion_count": context_bearing_completion_count,
         "completion_context_missing_count": completion_context_missing_count,
         "completion_context_mismatch_count": completion_context_mismatch_count,
+        "unclassified_capability_activity": projected_unclassified_capabilities,
+        "unclassified_capability_activity_omitted_count": max(
+            0,
+            len(unclassified_capabilities)
+            - len(projected_unclassified_capabilities),
+        ),
         "execution_group_count": len(groups),
         "execution_groups": projected_groups,
         "execution_groups_truncated": len(groups) > len(projected_groups),
@@ -15905,6 +16228,10 @@ def _session_activity(
         ambient_owner_pass_records.append({
             "context": owner_pass_context,
             "context_status": owner_pass_context_status,
+            "capability": (
+                _short_text(capability, 160) if isinstance(capability, str) else None
+            ),
+            "binding_identity": _invocation_binding_identity(payload),
             "completion_context": completion_owner_pass_context,
             "completion_context_status": completion_owner_pass_context_status,
             "completion_event": completion_reference,
@@ -16241,8 +16568,19 @@ def _session_activity(
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,
     )
+    ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
+        ambient_owner_pass_records, len(invocation_events),
+        ambient_service_execution,
+    )
+    ambient_owner_pass_activity_digest = (
+        digest_hex(ambient_owner_pass_activity)
+        if (ambient_owner_pass_activity.get("scoped_invocation_count", 0)
+            or ambient_owner_pass_activity.get("invalid_context_event_count", 0))
+        else None
+    )
     service_accountability = _session_service_accountability(
         service_readiness, capability_delivery, snapshot,
+        ambient_owner_pass_activity,
     )
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
@@ -17810,16 +18148,6 @@ def _session_activity(
         if isinstance(value, str) and value
     }
     resource_samples = _session_resource_samples(session, snapshot, events)
-    ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
-        ambient_owner_pass_records, len(invocation_events),
-        ambient_service_execution,
-    )
-    ambient_owner_pass_activity_digest = (
-        digest_hex(ambient_owner_pass_activity)
-        if (ambient_owner_pass_activity.get("scoped_invocation_count", 0)
-            or ambient_owner_pass_activity.get("invalid_context_event_count", 0))
-        else None
-    )
     return {
         "status": status,
         "context": context,

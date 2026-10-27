@@ -3608,6 +3608,12 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     language_service = "mncs-language-service:resident-workspace"
     forge_service = "mncs-forge:resident-workspace"
     language_probe = "mncs-language-service:ready"
+    service_execution_id = "ase_" + "c" * 32
+    owner_pass_context = {
+        "schema_version": "mncs.environment.ambient-owner-pass-context/1",
+        "owner_pass": "doctor",
+        "service_execution_id": service_execution_id,
+    }
     private_path = "/home/private/workspace/.bootstrap/secret"
     session.snapshot.update({
         "snapshot_sequence": 37,
@@ -3681,6 +3687,25 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             "observed_at": "2026-10-26T18:10:19.900Z",
         },
     }]
+    session.snapshot["coherence"] = {"last_trace": {
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "event_count": 1,
+        "elapsed_seconds": 0.1,
+        "scheduled": [{
+            "pass": "doctor",
+            "owner": "doctor",
+            "disposition": 1,
+            "wave": 0,
+            "service_execution_id": service_execution_id,
+            "owner_reused": False,
+            "timer_or_lifecycle_due": False,
+            "run_elapsed_seconds": 0.1,
+            "inputs": ["source.changed"],
+        }],
+        "skipped": [],
+        "owner_failures": [],
+    }}
     request_id = "req_service_readiness_probe"
     events = [
         {
@@ -3695,6 +3720,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
                 "binding_id": "cap_language_service_ready",
                 "contract_revision": "2",
                 "provider_request_id": request_id,
+                "ambient_owner_pass_context": owner_pass_context,
             },
         },
         {
@@ -3711,6 +3737,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
                 "provider_request_id": request_id,
                 "status": "ok",
                 "returncode": 0,
+                "ambient_owner_pass_context": owner_pass_context,
             },
         },
     ]
@@ -3822,6 +3849,64 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert language_accountability["bindings"][0]["supporting_events"][0][
         "identity"
     ] == "evt_service_readiness_invoked"
+    ambient_probe_activity = language_accountability[
+        "ambient_owner_pass_activity"
+    ]
+    assert ambient_probe_activity["status"] == (
+        "exact-current-probe-binding-invocation-observed"
+    )
+    assert ambient_probe_activity["event_window_status"] == (
+        "complete-session-history"
+    )
+    assert ambient_probe_activity["scoped_invocation_count"] == 1
+    assert ambient_probe_activity["scoped_completion_count"] == 1
+    assert ambient_probe_activity["owner_pass_executions"] == [{
+        "owner_pass": "doctor",
+        "service_execution_id": service_execution_id,
+        "latest_trace_relation": "exact-latest-trace-match",
+    }]
+    assert ambient_probe_activity["supporting_events"] == [
+        {
+            "identity": "evt_service_readiness_invoked",
+            "sequence": 1,
+            "type": "capability.invoked",
+        },
+        {
+            "identity": "evt_service_readiness_completed",
+            "sequence": 2,
+            "type": "invocation.completed",
+        },
+    ]
+    assert ambient_probe_activity["causal_status"] == "not-established"
+    assert language_accountability["ambient_fulfillment_status"] == (
+        "not-established-no-eligible-opportunity-recorded"
+    )
+    assert accountability["summary"][
+        "agent_intervention_burden_status"
+    ] == "not-measured"
+    assert accountability["summary"][
+        "ambient_probe_use_relation_status_counts"
+    ]["exact-current-probe-binding-invocation-observed"] == 1
+    invocation_context = events[0]["payload"].pop(
+        "ambient_owner_pass_context",
+    )
+    completion_context = events[1]["payload"].pop(
+        "ambient_owner_pass_context",
+    )
+    unclassified_result = capability_intelligence.project(session)
+    unclassified_activity = unclassified_result["session_activity"][
+        "service_accountability"
+    ]["services"][0]["ambient_owner_pass_activity"]
+    assert unclassified_activity["status"] == (
+        "unclassified-probe-capability-invocation-observed"
+    )
+    assert unclassified_activity["scoped_invocation_count"] == 0
+    assert unclassified_activity["unclassified_invocation_count"] == 1
+    assert unclassified_activity["binding_attribution_status"] == (
+        "not-correlated-to-owner-pass"
+    )
+    events[0]["payload"]["ambient_owner_pass_context"] = invocation_context
+    events[1]["payload"]["ambient_owner_pass_context"] = completion_context
     assert accountable_services[forge_service]["capability_relation_status"] == (
         "capability-not-present-in-current-binding-snapshot"
     )
@@ -4412,6 +4497,35 @@ def test_ambient_owner_pass_mismatched_completion_context_is_not_joined(
     assert activity["execution_groups"][0][
         "completion_context_mismatch_count"
     ] == 1
+
+
+def test_service_probe_observation_preserves_bounded_projection_uncertainty() -> None:
+    observation = capability_intelligence._service_ambient_owner_pass_observation(
+        "mncs-language-service:ready",
+        [],
+        {
+            "status": "observed",
+            "execution_groups": [],
+            "execution_groups_truncated": True,
+            "execution_groups_omitted_count": 1,
+            "unclassified_capability_activity": [],
+            "unclassified_capability_activity_omitted_count": 0,
+        },
+        "truncated-selected-session-event-window",
+    )
+
+    assert observation["status"] == (
+        "probe-capability-activity-projection-incomplete"
+    )
+    assert observation["binding_attribution_status"] == (
+        "not-established-activity-omitted"
+    )
+    assert observation["observation_completeness_status"] == (
+        "partial-bounded-activity-projection"
+    )
+    assert observation["event_window_status"] == (
+        "truncated-selected-session-event-window"
+    )
 
 
 def test_live_entry_trace_gap_evidence_projects_without_claiming_causality(
