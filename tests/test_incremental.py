@@ -75,6 +75,7 @@ def test_warm_tick_has_zero_processes_and_writes(participant):
     counts, owned = runners()
     _, initial_trace = coherence.tick(participant, {}, owned)
     assert initial_trace["trace_persistence_status"] == "session-snapshot"
+    assert initial_trace["owner_failures"] == []
     execution_ids = [
         row["service_execution_id"] for row in initial_trace["scheduled"]
     ]
@@ -92,6 +93,35 @@ def test_warm_tick_has_zero_processes_and_writes(participant):
     assert trace["trace_persistence_status"] == "entry-response-only"
     assert set(counts.values()) == {1}
     assert participant.saves == saves
+
+
+def test_recovery_scan_records_owner_failure_coverage_without_native_automation(
+    tmp_path, monkeypatch,
+):
+    monkeypatch.setenv("MNCS_AUTOMATION_ROOT", str(tmp_path / "unavailable"))
+    session = Participant(tmp_path / "state", repository(tmp_path))
+    _, owned = runners()
+
+    _, successful_trace = coherence.tick(session, {}, owned)
+    assert successful_trace["mode"] == "recovery_scan"
+    assert successful_trace["owner_failures"] == []
+    successful_projection = coherence.project_trace(successful_trace)
+    assert successful_projection["owner_failure_observation_status"] == "complete"
+    assert all(
+        row["owner_outcome_status"] == "no-failure-reported"
+        for row in successful_projection["scheduled_passes"]
+    )
+
+    owned["verification"] = lambda: {"operation_status": "retry"}
+    _, failed_trace = coherence.tick(session, {}, owned)
+    assert failed_trace["owner_failures"] == ["verification"]
+    failed_projection = coherence.project_trace(failed_trace)
+    verification = next(
+        row for row in failed_projection["scheduled_passes"]
+        if row["owner"] == "verification"
+    )
+    assert verification["owner_outcome_status"] == "failure-reported"
+    assert verification["verification_status"] == "not-established"
 
 
 def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillment():
@@ -124,7 +154,15 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     assert projected["skipped_pass_count"] == 1
     assert projected["declared_owner_pass_count"] == 7
     assert projected["owner_pass_decision_coverage"] == "partial"
+    assert projected["owner_failure_observation_status"] == "complete"
+    assert projected["owner_failure_count"] == 0
     assert projected["scheduled_passes"][0]["run_elapsed_seconds"] == 0.125
+    assert projected["scheduled_passes"][0]["owner_outcome_status"] == (
+        "no-failure-reported"
+    )
+    assert projected["scheduled_passes"][0]["verification_status"] == (
+        "not-established"
+    )
     assert projected["scheduled_passes"][0]["service_execution_id"] == (
         "ase_" + "a" * 32
     )
@@ -135,6 +173,55 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     assert projected["ambient_fulfillment"] == "not-established"
     assert projected["agent_need_opportunity_denominator"] == "not-recorded"
     assert private_path not in json.dumps(projected)
+
+
+def test_project_trace_preserves_missing_and_reported_owner_outcomes():
+    scheduled = [{
+        "pass": "verification",
+        "disposition": 1,
+        "run_elapsed_seconds": 0.1,
+    }]
+    reported_failure = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": scheduled,
+        "skipped": [],
+        "owner_failures": ["verification"],
+    })
+    assert reported_failure["owner_failure_observation_status"] == "complete"
+    assert reported_failure["owner_failure_count"] == 1
+    assert reported_failure["scheduled_passes"][0]["owner_outcome_status"] == (
+        "failure-reported"
+    )
+    assert reported_failure["scheduled_passes"][0]["verification_status"] == (
+        "not-established"
+    )
+
+    missing_failure_list = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": scheduled,
+        "skipped": [],
+    })
+    assert missing_failure_list["owner_failure_observation_status"] == (
+        "not-recorded"
+    )
+    assert missing_failure_list["owner_failure_count"] is None
+    assert missing_failure_list["scheduled_passes"][0][
+        "owner_outcome_status"
+    ] == "unknown"
+
+    malformed_failure_list = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": scheduled,
+        "skipped": [],
+        "owner_failures": ["undeclared-owner"],
+    })
+    assert malformed_failure_list["owner_failure_observation_status"] == (
+        "partial"
+    )
+    assert malformed_failure_list["owner_failure_records_invalid"] == 1
+    assert malformed_failure_list["scheduled_passes"][0][
+        "owner_outcome_status"
+    ] == "unknown"
 
 
 @pytest.mark.parametrize('path,expected', [

@@ -142,14 +142,41 @@ def project_trace(value: dict) -> dict | None:
 
     raw_failures = value.get("owner_failures")
     failures = []
+    invalid_failure_count = 0
+    omitted_failure_count = 0
     if isinstance(raw_failures, list):
-        for raw in raw_failures:
+        omitted_failure_count = max(
+            0, len(raw_failures) - MAX_TRACE_OWNER_ROWS,
+        )
+        for raw in raw_failures[:MAX_TRACE_OWNER_ROWS]:
             owner = safe_identity(raw)
-            if (owner is not None and owner in declared_passes
-                    and owner not in failures):
-                failures.append(owner)
-            if len(failures) == MAX_TRACE_OWNER_ROWS:
-                break
+            if owner is None or owner not in declared_passes:
+                invalid_failure_count += 1
+                continue
+            if owner in failures:
+                invalid_failure_count += 1
+                continue
+            failures.append(owner)
+    if isinstance(raw_failures, list):
+        failure_observation_status = (
+            "complete" if not invalid_failure_count and not omitted_failure_count
+            else "partial"
+        )
+    elif "owner_failures" in value:
+        failure_observation_status = "invalid"
+    else:
+        failure_observation_status = "not-recorded"
+    for row in scheduled:
+        owner = row["owner"]
+        row["owner_outcome_status"] = (
+            "failure-reported" if owner in failures else
+            "no-failure-reported"
+            if failure_observation_status == "complete" else
+            "unknown"
+        )
+        # The scheduler observes completion envelopes, not independent
+        # correctness. A returned owner pass is not verification evidence.
+        row["verification_status"] = "not-established"
     decided_owners = [
         item["owner"] for item in (*scheduled, *skipped)
         if isinstance(item.get("owner"), str)
@@ -187,7 +214,12 @@ def project_trace(value: dict) -> dict | None:
         "owner_pass_decision_coverage": decision_coverage,
         "scheduled_passes": scheduled,
         "skipped_passes": skipped,
-        "owner_failure_count": len(failures),
+        "owner_failure_observation_status": failure_observation_status,
+        "owner_failure_count": (
+            len(failures)
+            if failure_observation_status in {"complete", "partial"}
+            else None
+        ),
         "owner_failures": failures,
         "ambient_fulfillment": "not-established",
         "agent_need_opportunity_denominator": "not-recorded",
@@ -218,6 +250,10 @@ def project_trace(value: dict) -> dict | None:
         result["scheduled_pass_records_invalid"] = invalid_scheduled_count
     if invalid_skipped_count:
         result["skipped_pass_records_invalid"] = invalid_skipped_count
+    if invalid_failure_count:
+        result["owner_failure_records_invalid"] = invalid_failure_count
+    if omitted_failure_count:
+        result["owner_failure_records_omitted"] = omitted_failure_count
     return result
 
 
@@ -780,7 +816,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             "reason": "native coherence provider unavailable",
             "scheduled": scheduled,
             "skipped": [],
-            **({"owner_failures": owner_failures} if owner_failures else {}),
+            "owner_failures": owner_failures,
             "elapsed_seconds": round(time.monotonic() - scheduler_started, 3),
         }
     now_ms = int(time.time() * 1000) if now_ms is None else now_ms
@@ -907,8 +943,10 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     owner_failures = sorted(
         name for name in scheduled if _owner_result_failed(results.get(name))
     )
-    if owner_failures:
-        report["owner_failures"] = owner_failures
+    # Persist explicit empty coverage too, so projections can distinguish a
+    # completed pass with no classified owner failure from an older trace
+    # that never recorded this outcome field.
+    report["owner_failures"] = owner_failures
     if store_reset is not None and (scheduled != set(names) or owner_failures):
         after_known = False
         report["store_replay"]["disposition"] = "reconciliation_incomplete_or_store_advanced"

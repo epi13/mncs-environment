@@ -125,6 +125,16 @@ records the mode, invalidating events, scheduled/skipped passes, derived events,
 enumerated checkouts, metadata path count and pending races. Quiet ticks do not
 write trace history or add another context block.
 
+Each new trace records `owner_failures`, including an explicit empty list when
+no owner failure was classified. The session projection relates that evidence
+to each scheduled owner pass and marks older traces without the field as
+unknown. An exact invocation-to-execution-ID join carries the owner outcome,
+failure-observation coverage, and measured pass duration into the existing
+service-accountability projection. Unmatched events remain unlinked. A returned
+pass without a reported owner failure is still not independent verification or
+evidence that an agent need was fulfilled; the projection keeps correctness
+verification and the opportunity denominator unestablished.
+
 Selectivity currently operates at declared pass/category and selected-workspace
 boundaries. Semantic subject/obligation-level subscriptions, stream-reset routing,
 provider-owned repair receipts and one resident scheduling path remain work for

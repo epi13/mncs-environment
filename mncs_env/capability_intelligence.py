@@ -5281,6 +5281,10 @@ def _compact_projection(
                     "service_execution_id", "owner_pass",
                     "invocation_count", "completion_count",
                     "nonzero_returncode_count", "latest_trace_relation",
+                    "latest_trace_owner_outcome_status",
+                    "latest_trace_verification_status",
+                    "latest_trace_failure_observation_status",
+                    "latest_trace_run_elapsed_seconds",
                     "completion_context_missing_count",
                     "completion_context_mismatch_count",
                 )
@@ -15296,9 +15300,16 @@ def _service_ambient_owner_pass_observation(
             execution_reference = {
                 key: execution[key]
                 for key in (
-                    "owner_pass", "service_execution_id", "latest_trace_relation",
+                    "owner_pass", "service_execution_id",
+                    "latest_trace_relation",
+                    "latest_trace_owner_outcome_status",
+                    "latest_trace_verification_status",
+                    "latest_trace_failure_observation_status",
+                    "latest_trace_run_elapsed_seconds",
                 )
                 if isinstance(execution.get(key), str)
+                or (key == "latest_trace_run_elapsed_seconds"
+                    and type(execution.get(key)) in (int, float))
             }
             if execution_reference:
                 if execution_reference not in owner_pass_executions:
@@ -16622,6 +16633,36 @@ def _session_ambient_owner_pass_activity(
             key: value for key, value in group.items()
             if not key.startswith("_") and key != "supporting_events"
         }
+        if trace_relation == "exact-latest-trace-match":
+            trace_row = matches[0]
+            owner_outcome_status = trace_row.get("owner_outcome_status")
+            item["latest_trace_owner_outcome_status"] = (
+                owner_outcome_status
+                if isinstance(owner_outcome_status, str)
+                and owner_outcome_status in {
+                    "failure-reported", "no-failure-reported", "unknown",
+                } else "unknown"
+            )
+            verification_status = trace_row.get("verification_status")
+            item["latest_trace_verification_status"] = (
+                verification_status
+                if verification_status == "not-established" else "unknown"
+            )
+            failure_observation_status = execution.get(
+                "owner_failure_observation_status",
+            )
+            item["latest_trace_failure_observation_status"] = (
+                failure_observation_status
+                if isinstance(failure_observation_status, str)
+                and failure_observation_status in {
+                    "complete", "partial", "invalid", "not-recorded",
+                } else "not-recorded"
+            )
+            elapsed = trace_row.get("run_elapsed_seconds")
+            if type(elapsed) in (int, float) and elapsed >= 0:
+                item["latest_trace_run_elapsed_seconds"] = round(
+                    float(elapsed), 3,
+                )
         capability_groups = sorted(
             group["_capabilities"].values(),
             key=lambda row: row["invocation_count"], reverse=True,

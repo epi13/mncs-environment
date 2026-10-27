@@ -4065,11 +4065,19 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "owner_pass": "doctor",
         "service_execution_id": service_execution_id,
         "latest_trace_relation": "exact-latest-trace-match",
+        "latest_trace_owner_outcome_status": "no-failure-reported",
+        "latest_trace_verification_status": "not-established",
+        "latest_trace_failure_observation_status": "complete",
+        "latest_trace_run_elapsed_seconds": 0.1,
     }]
     assert ambient_probe_activity["probe_calls"] == [{
         "owner_pass": "doctor",
         "service_execution_id": service_execution_id,
         "latest_trace_relation": "exact-latest-trace-match",
+        "latest_trace_owner_outcome_status": "no-failure-reported",
+        "latest_trace_verification_status": "not-established",
+        "latest_trace_failure_observation_status": "complete",
+        "latest_trace_run_elapsed_seconds": 0.1,
         "probe_binding_attribution_status": "exact-current-session-binding",
         "binding_identity": {
             "status": "complete",
@@ -4120,16 +4128,24 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     ]["exact-current-probe-binding-invocation-observed"] == 1
     events[1]["payload"]["status"] = "failed"
     events[1]["payload"]["returncode"] = 7
+    session.snapshot["coherence"]["last_trace"]["owner_failures"] = [
+        "doctor",
+    ]
     failed_probe = capability_intelligence.project(session)["session_activity"][
         "service_accountability"
     ]["services"][0]["ambient_owner_pass_activity"]["probe_calls"][0]
     assert failed_probe["outcome_status_counts"] == {"failed": 1}
     assert failed_probe["nonzero_returncode_count"] == 1
+    assert failed_probe["latest_trace_owner_outcome_status"] == (
+        "failure-reported"
+    )
+    assert failed_probe["latest_trace_failure_observation_status"] == "complete"
     assert failed_probe["supporting_events"][-1]["identity"] == (
         "evt_service_readiness_completed"
     )
     events[1]["payload"]["status"] = "ok"
     events[1]["payload"]["returncode"] = 0
+    session.snapshot["coherence"]["last_trace"]["owner_failures"] = []
     invocation_context = events[0]["payload"].pop(
         "ambient_owner_pass_context",
     )
@@ -4896,6 +4912,13 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert view["execution"]["scheduled_pass_count"] == 1
     assert view["execution"]["skipped_pass_count"] == 1
     assert view["execution"]["scheduled_passes"][0]["run_elapsed_seconds"] == 0.2
+    assert view["execution"]["owner_failure_observation_status"] == "complete"
+    assert view["execution"]["scheduled_passes"][0][
+        "owner_outcome_status"
+    ] == "no-failure-reported"
+    assert view["execution"]["scheduled_passes"][0][
+        "verification_status"
+    ] == "not-established"
     assert view["execution"]["ambient_fulfillment"] == "not-established"
     assert view["execution"]["agent_need_opportunity_denominator"] == "not-recorded"
     assert projection["source"]["session_ambient_service_execution_digest"]
@@ -4915,6 +4938,21 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     compact_view = compact["session_activity"]["ambient_service_execution"]
     assert compact["source"]["response_truncated"] is True
     assert compact_view["execution"]["scheduled_pass_count"] == 1
+
+    session.snapshot["coherence"]["last_trace"]["owner_failures"] = [
+        "verification",
+    ]
+    failed_projection = capability_intelligence.project(session)
+    failed_execution = failed_projection["session_activity"][
+        "ambient_service_execution"
+    ]["execution"]
+    assert failed_execution["owner_failure_observation_status"] == "complete"
+    assert failed_execution["scheduled_passes"][0][
+        "owner_outcome_status"
+    ] == "failure-reported"
+    assert failed_execution["scheduled_passes"][0][
+        "verification_status"
+    ] == "not-established"
 
 
 def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path) -> None:
@@ -5001,6 +5039,10 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert group["service_execution_id"] == execution_id
     assert group["owner_pass"] == "verification"
     assert group["latest_trace_relation"] == "exact-latest-trace-match"
+    assert group["latest_trace_owner_outcome_status"] == "no-failure-reported"
+    assert group["latest_trace_verification_status"] == "not-established"
+    assert group["latest_trace_failure_observation_status"] == "complete"
+    assert group["latest_trace_run_elapsed_seconds"] == 0.1
     assert group["invocation_count"] == 1
     assert group["completion_count"] == 1
     assert group["outcome_status_counts"] == {"ok": 1}
@@ -5015,6 +5057,9 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert compact_activity["execution_groups"][0]["latest_trace_relation"] == (
         "exact-latest-trace-match"
     )
+    assert compact_activity["execution_groups"][0][
+        "latest_trace_owner_outcome_status"
+    ] == "no-failure-reported"
     assert compact["source"]["session_ambient_owner_pass_activity_digest"]
 
 
