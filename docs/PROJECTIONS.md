@@ -426,12 +426,13 @@ sanitized repository scope, objective references, and source event. It omits
 absolute checkout paths and free-form reasons. The record says
 `persistent_authority_required: false` and `operation_executed: false`; it does
 not establish that the proposed work is invalid or that the coordination
-condition persisted. Repeated events with the same repository, action, and
-coordination requirement in one selected session window produce a
-`candidate-needs-investigation` pressure candidate; it records one-session
-recurrence only and does not determine whether the concurrency constraint is
-unnecessary. True policy denials and owner-approval escalations retain their
-separate event types.
+condition persisted. A `candidate-needs-investigation` pressure candidate
+requires repeated events in one selected session window with the same
+repository, action, coordination requirement and status, next step, and
+requested scope/conflict class. The candidate records one-session recurrence
+only and does not determine whether the concurrency constraint is unnecessary.
+True policy denials and owner-approval escalations retain their separate event
+types.
 Each deferral also exposes `later_eligibility_relation` when exact campaign and
 WorkIntent references are recorded. It joins only a later eligibility event
 with the same repository and action, and retains that event's provenance.

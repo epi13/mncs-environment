@@ -3511,6 +3511,19 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
         "identity": "evt_coordination_deferred_41",
         "sequence": 41,
     })
+    events.append({
+        **events[0],
+        "identity": "evt_coordination_deferred_other_scope",
+        "sequence": 40,
+        "payload": {
+            **events[0]["payload"],
+            "scope": {
+                **events[0]["payload"]["scope"],
+                "branch": "campaign/other-scope",
+                "checkout_identity": "checkout:other-scope",
+            },
+        },
+    })
     events.extend([
         {
             "identity": "evt_unrelated_proposal_eligible",
@@ -3575,9 +3588,9 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     }
 
     activity = capability_intelligence.project(session)["session_activity"]
-    assert activity["source"]["coordination_deferral_events_considered"] == 2
+    assert activity["source"]["coordination_deferral_events_considered"] == 3
     assert activity["source"]["coordination_deferral_records_invalid"] == 0
-    assert activity["coordination_deferral_count"] == 2
+    assert activity["coordination_deferral_count"] == 3
     deferred = activity["coordination_deferrals"][0]
     assert deferred["action"] == "write"
     assert deferred["work_intent_id"] == "int_environment_coordination_defer"
@@ -3601,6 +3614,17 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     candidate = activity["coordination_deferral_candidates"][0]
     assert candidate["status"] == "candidate-needs-investigation"
     assert candidate["occurrence_count"] == 2
+    assert candidate["recurrence_basis"] == (
+        "same-repository-action-prerequisite-and-requested-scope"
+    )
+    assert candidate["next_step"] == (
+        "select-or-create-an-observed-proposal-worktree"
+    )
+    assert {
+        reference["identity"] for reference in candidate["supporting_events"]
+    } == {
+        "evt_coordination_deferred_41", "evt_coordination_deferred_42",
+    }
     assert candidate["causal_claim"] == "not-established"
     assert candidate["later_eligibility_summary"][
         "deferrals_with_later_preflight_count"
@@ -3614,12 +3638,16 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     compact = capability_intelligence.project(
         session, max_result_bytes=8_000,
     )["session_activity"]
-    assert compact["coordination_deferrals"][0]["event_reference"]["identity"] == (
-        "evt_coordination_deferred_42"
+    assert any(
+        item["event_reference"]["identity"] == "evt_coordination_deferred_42"
+        for item in compact["coordination_deferrals"]
     )
     assert compact["coordination_deferral_candidates"][0][
         "causal_claim"
     ] == "not-established"
+    assert compact["coordination_deferral_candidates"][0]["next_step"] == (
+        "select-or-create-an-observed-proposal-worktree"
+    )
     assert compact["coordination_deferrals"][0][
         "later_eligibility_status"
     ] == "later-same-objective-eligibility-observed"

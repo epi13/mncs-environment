@@ -3939,7 +3939,8 @@ def _compact_projection(
             key: _short_text(item.get(key), 160)
             for key in (
                 "identity", "status", "subsystem", "repository", "action",
-                "required_coordination", "recurrence_scope", "causal_claim",
+                "required_coordination", "coordination_status", "next_step",
+                "recurrence_basis", "recurrence_scope", "causal_claim",
             )
             if isinstance(item.get(key), str)
         }
@@ -14271,15 +14272,35 @@ def _session_activity(
         0, valid_coordination_deferral_count - len(coordination_deferrals),
     )
     coordination_deferral_groups: dict[
-        tuple[str, str, str], list[dict[str, Any]],
+        tuple[str, str, str, str], list[dict[str, Any]],
     ] = {}
     for item in coordination_deferrals:
+        conflict = item.get("claim_conflict")
+        recurrence_context = {
+            "coordination_status": item.get("coordination_status"),
+            "next_step": item.get("next_step"),
+            "conflict_reason": (
+                conflict.get("conflict_reason")
+                if isinstance(conflict, dict) else None
+            ),
+            "requested_scope": (
+                conflict.get("requested_scope")
+                if isinstance(conflict, dict) else item.get("scope")
+            ),
+        }
+        recurrence_context_identity = digest_hex(
+            recurrence_context, length=16,
+        )
         coordination_deferral_groups.setdefault((
             str(item["repository"]), str(item["action"]),
             str(item["required_coordination"]),
+            recurrence_context_identity,
         ), []).append(item)
     coordination_deferral_candidates = []
-    for (repository, action, required_coordination), group in sorted(
+    coordination_deferral_candidate_groups = {}
+    for (
+        repository, action, required_coordination, recurrence_context_identity,
+    ), group in sorted(
         coordination_deferral_groups.items(),
     ):
         if len(group) < 2:
@@ -14290,18 +14311,24 @@ def _session_activity(
                 "repository": repository,
                 "action": action,
                 "required_coordination": required_coordination,
+                "recurrence_context_identity": recurrence_context_identity,
             }, length=16),
             "status": "candidate-needs-investigation",
             "subsystem": "coordination-and-work-scope",
             "repository": repository,
             "action": action,
             "required_coordination": required_coordination,
+            "coordination_status": group[0].get("coordination_status"),
+            "next_step": group[0].get("next_step"),
+            "recurrence_basis": (
+                "same-repository-action-prerequisite-and-requested-scope"
+            ),
             "occurrence_count": len(group),
             "distinct_session_count": 1,
             "recurrence_scope": "same-session-selected-event-window",
             "causal_claim": "not-established",
             "interpretation": (
-                "This coordination prerequisite recurred in one selected "
+                "This scoped coordination condition recurred in one selected "
                 "session window. It may protect a real shared-state invariant "
                 "or reveal avoidable environmental friction; cause and "
                 "appropriateness remain unestablished."
@@ -14313,6 +14340,7 @@ def _session_activity(
                 )[:8]
             ],
         }
+        coordination_deferral_candidate_groups[candidate["identity"]] = group
         coordination_deferral_candidates.append(candidate)
         if len(coordination_deferral_candidates) >= (
             MAX_SESSION_ACTIVITY_AUTHORITY_PRESSURE_CANDIDATES
@@ -14697,12 +14725,9 @@ def _session_activity(
             )
         )
     for candidate in coordination_deferral_candidates:
-        group_key = (
-            candidate.get("repository"),
-            candidate.get("action"),
-            candidate.get("required_coordination"),
+        group = coordination_deferral_candidate_groups.get(
+            candidate.get("identity"), [],
         )
-        group = coordination_deferral_groups.get(group_key, [])
         relations = [
             item.get("later_eligibility_relation")
             for item in group
