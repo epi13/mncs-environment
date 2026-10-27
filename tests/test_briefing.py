@@ -6,6 +6,58 @@ from mncs_env.briefing import build_capsule, classify_event
 
 
 class EnvironmentRpcBriefTests(unittest.TestCase):
+    def test_coordination_deferral_is_actionable_and_excludes_raw_reason(self) -> None:
+        event = {
+            "session_id": "ses_example",
+            "sequence": 8,
+            "type": "authority.coordination-deferred",
+            "observed_at": "2026-10-26T11:00:00+00:00",
+            "payload": {
+                "action": "execute",
+                "repository": "mncs-atlas",
+                "target": "/private/workspace/mncs-atlas/src/shared.mn",
+                "reason": (
+                    "/private/workspace/mncs-atlas/src/shared.mn overlaps a live claim"
+                ),
+                "decision_domain": "coordination",
+                "coordination_status": "overlapping-scope-conflict",
+                "required_coordination": (
+                    "non-overlapping-operation-scope-or-isolated-worktree"
+                ),
+                "next_step": "select-or-create-an-isolated-worktree",
+                "persistent_authority_required": False,
+                "operation_executed": False,
+            },
+        }
+
+        class Session:
+            session_id = "ses_example"
+            snapshot = {
+                "lifecycle": "active",
+                "intent": {"goal": "advance the compiler"},
+            }
+
+            @staticmethod
+            def _log() -> list[dict[str, object]]:
+                return [event]
+
+        capsule = build_capsule(Session(), store=None)
+        self.assertEqual(len(capsule["items"]), 1)
+        item = capsule["items"][0]
+        self.assertEqual(item["category"], "coordination")
+        self.assertEqual(item["subject"], "mncs-atlas")
+        self.assertEqual(item["action"], "execute")
+        self.assertEqual(
+            item["summary"],
+            "Operation deferred; next step: select-or-create-an-isolated-worktree",
+        )
+        self.assertEqual(
+            item["next_step"], "select-or-create-an-isolated-worktree",
+        )
+        self.assertFalse(item["persistent_authority_required"])
+        self.assertFalse(item["operation_executed"])
+        self.assertNotIn("/private/workspace", str(item))
+
     def test_read_observation_flows_into_the_bounded_capsule(self) -> None:
         event = {
             "session_id": "ses_example",

@@ -9407,11 +9407,16 @@ def test_session_event_reference_resolution_includes_claim_recoveries() -> None:
 
 def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path) -> None:
     session, _state = _session(tmp_path, [])
-    denial_event = {
-        "identity": "evt_operation_claim_denial",
+    decision_event = {
+        "identity": "evt_operation_claim_coordination_deferral",
         "sequence": 1,
-        "type": "authority.denied",
-        "payload": {"action": "write", "target": "mncs-environment"},
+        "type": "authority.coordination-deferred",
+        "payload": {
+            "action": "write", "target": "mncs-environment",
+            "decision_domain": "coordination",
+            "persistent_authority_required": False,
+            "operation_executed": False,
+        },
     }
     recovery_event = {
         "identity": "evt_operation_claim_recovery",
@@ -9427,10 +9432,10 @@ def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path)
                 "branch": "main",
                 "exclusive": False,
             },
-            "authority_denial_event": {
-                "identity": denial_event["identity"],
-                "sequence": denial_event["sequence"],
-                "type": denial_event["type"],
+            "authority_decision_event": {
+                "identity": decision_event["identity"],
+                "sequence": decision_event["sequence"],
+                "type": decision_event["type"],
             },
             "recovered_count": 1,
             "recovered_from": [{
@@ -9442,7 +9447,7 @@ def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path)
             "operation_effect_started": False,
         },
     }
-    events = [denial_event, recovery_event]
+    events = [decision_event, recovery_event]
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events),
         "events": events[-limit:],
@@ -9458,7 +9463,7 @@ def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path)
     recovery = activity["operation_claim_recoveries"][0]
     assert recovery["status"] == "stale-claims-superseded-for-one-operation"
     assert recovery["recovered_from"][0]["owner_session"] == "ses_quiet_owner"
-    assert recovery["authority_denial_event"]["identity"] == denial_event["identity"]
+    assert recovery["authority_decision_event"]["identity"] == decision_event["identity"]
     assert recovery["event_reference"]["identity"] == recovery_event["identity"]
 
     resolved = capability_intelligence._authenticated_session_event_reference_resolution(
@@ -9486,8 +9491,8 @@ def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path)
     assert compact_recovery["event_reference"]["identity"] == (
         recovery_event["identity"]
     )
-    assert compact_recovery["authority_denial_event"]["identity"] == (
-        denial_event["identity"]
+    assert compact_recovery["authority_decision_event"]["identity"] == (
+        decision_event["identity"]
     )
     assert compact_recovery["recovered_from"][0]["claim_id"] == (
         recovery["recovered_from"][0]["claim_id"]
@@ -9497,8 +9502,8 @@ def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path)
         **recovery_event,
         "payload": {
             **recovery_event["payload"],
-            "authority_denial_event": {
-                **recovery_event["payload"]["authority_denial_event"],
+            "authority_decision_event": {
+                **recovery_event["payload"]["authority_decision_event"],
                 "sequence": recovery_event["sequence"],
             },
         },
@@ -9506,6 +9511,36 @@ def test_operation_stale_claim_recovery_projects_causal_evidence(tmp_path: Path)
     assert capability_intelligence._operation_claim_recovery_event_projection(
         reordered, session.session_id,
     ) is None
+
+    # Historical recovery events remain projectable through the old field.
+    legacy_recovery = {
+        **recovery_event,
+        "payload": {
+            **{
+                key: value
+                for key, value in recovery_event["payload"].items()
+                if key != "authority_decision_event"
+            },
+            "authority_denial_event": {
+                "identity": "evt_legacy_authority_denial",
+                "sequence": 1,
+                "type": "authority.denied",
+            },
+        },
+    }
+    legacy_projection = (
+        capability_intelligence._operation_claim_recovery_event_projection(
+            legacy_recovery, session.session_id,
+        )
+    )
+    assert legacy_projection is not None
+    assert legacy_projection["authority_decision_event"]["identity"] == (
+        "evt_legacy_authority_denial"
+    )
+    assert legacy_projection["authority_denial_event"]["identity"] == (
+        "evt_legacy_authority_denial"
+    )
+
 
 def test_improvement_record_does_not_count_as_another_pressure_occurrence(
     tmp_path: Path,

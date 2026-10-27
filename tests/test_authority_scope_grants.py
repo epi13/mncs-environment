@@ -2426,7 +2426,12 @@ def test_exact_declared_nested_provider_checkout_is_claimable_and_authorized(
                 "manifest_identity": claim["scope"]["manifest_identity"],
             },
         )
-        assert mismatched_identity["verdict"] == "escalate"
+        assert mismatched_identity["verdict"] == "defer"
+        assert mismatched_identity["decision_domain"] == "coordination"
+        assert mismatched_identity["persistent_authority_required"] is False
+        assert mismatched_identity["next_step"] == (
+            "refresh-workspace-or-select-an-observed-proposal-worktree"
+        )
 
         lookalike = (
             compiler_root / ".worktrees" / "unbound-lookalike" / "mncs-forge"

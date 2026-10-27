@@ -412,10 +412,12 @@ def recover_stale_conflicts_for_operation(
         )
         or type(cause_event_reference.get("sequence")) is not int
         or cause_event_reference["sequence"] < 1
-        or cause_event_reference.get("type") != "authority.denied"
+        or cause_event_reference.get("type") not in {
+            "authority.denied", "authority.coordination-deferred",
+        }
     ):
         raise ValueError(
-            "operation claim recovery requires its exact authority denial event"
+            "operation claim recovery requires its exact authority decision event"
         )
     for _ in range(16):
         generation = store.claim_generation()

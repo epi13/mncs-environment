@@ -5894,7 +5894,7 @@ class Session:
                     target=provider,
                     scope=effect_check_scope,
                 )
-            if effect_verdict["verdict"] == "deny":
+            if effect_verdict["verdict"] in {"deny", "defer"}:
                 claim_conflict = effect_verdict.get("claim_conflict")
                 current_claim_state = (
                     claim_conflict.get("current_claim_state")
@@ -5916,15 +5916,20 @@ class Session:
                     and decision_basis.get("authorization_status") == "eligible"
                     and decision_basis.get("persistent_authority_required") is False
                 ):
-                    denial_reference = effect_verdict.get("event_reference")
+                    decision_reference = effect_verdict.get("event_reference")
+                    expected_decision_type = (
+                        "authority.denied"
+                        if effect_verdict["verdict"] == "deny"
+                        else "authority.coordination-deferred"
+                    )
                     if not (
-                        isinstance(denial_reference, dict)
-                        and isinstance(denial_reference.get("identity"), str)
-                        and type(denial_reference.get("sequence")) is int
-                        and denial_reference.get("type") == "authority.denied"
+                        isinstance(decision_reference, dict)
+                        and isinstance(decision_reference.get("identity"), str)
+                        and type(decision_reference.get("sequence")) is int
+                        and decision_reference.get("type") == expected_decision_type
                     ):
                         raise LifecycleError(
-                            "recoverable authority denial lacks its event reference"
+                            "recoverable coordination decision lacks its event reference"
                         )
                     recovery_attempt_succeeded = False
                     try:
@@ -5941,7 +5946,7 @@ class Session:
                                     "Environment provider effect recovered "
                                     "liveness-classified stale coordination claims"
                                 ),
-                                cause_event_reference=denial_reference,
+                                cause_event_reference=decision_reference,
                             )
                         )
                         recovery_attempt_succeeded = True
@@ -5966,7 +5971,7 @@ class Session:
                                 "action": required,
                                 "repository": checked_effect_repository,
                                 "scope": claim_conflict.get("requested_scope"),
-                                "authority_denial_event": denial_reference,
+                                "authority_decision_event": decision_reference,
                                 "recovered_count": len(recovered_from),
                                 "recovered_from": recovered_from,
                                 "operation_effect_started": False,

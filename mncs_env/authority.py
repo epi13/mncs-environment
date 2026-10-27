@@ -645,8 +645,24 @@ def evaluate(
                         "overlap_reason": conflict,
                     })
                 continue
+            next_step = {
+                "same checkout with overlapping paths": (
+                    "select-or-create-an-isolated-worktree"
+                ),
+                "shared branch with overlapping paths across checkouts": (
+                    "refresh-against-current-branch-or-select-a-distinct-branch"
+                ),
+            }.get(conflict, "select-an-exact-non-overlapping-operation-scope")
             return {
-                "verdict": "deny",
+                "verdict": "defer",
+                "decision_domain": "coordination",
+                "required_coordination": (
+                    "non-overlapping-operation-scope-or-isolated-worktree"
+                ),
+                "coordination_status": "overlapping-scope-conflict",
+                "persistent_authority_required": False,
+                "operation_executed": False,
+                "next_step": next_step,
                 "reason": (f"{target} overlaps scope claimed by another session "
                            f"({other['session_id']}): {conflict}"),
                 "claim_conflict": {

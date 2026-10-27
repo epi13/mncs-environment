@@ -15,6 +15,7 @@ never moves backward or jumps silently past the log end.
 from __future__ import annotations
 
 import math
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -49,6 +50,9 @@ PRIORITY = {
 EVENT_CLASSES = {
     "authority.denied": ("safety", "an authority denial names this session"),
     "authority.escalated": ("safety", "an escalation needs a decision"),
+    "authority.coordination-deferred": (
+        "coordination", "an operation needs a coordination prerequisite",
+    ),
     "lease.acquired": ("ownership", "claim ownership changed"),
     "lease.recovered-and-acquired": ("ownership", "stale claim safely recovered"),
     "lease.released": ("ownership", "claim ownership changed"),
@@ -133,6 +137,28 @@ def classify_event(event: dict[str, Any]) -> dict[str, Any] | None:
                 item["measurement_scope"] = (
                     "includes Environment session queue wait; not total agent execution duration"
                 )
+    if kind == "authority.coordination-deferred":
+        # Deferral reasons can contain raw targets. Keep the capsule actionable
+        # by exposing only bounded machine-readable coordination guidance.
+        for key in (
+            "action", "coordination_status", "required_coordination", "next_step",
+        ):
+            candidate = payload.get(key)
+            if (isinstance(candidate, str) and len(candidate) <= 160
+                    and re.fullmatch(
+                        r"[a-z0-9]+(?:-[a-z0-9]+){0,31}", candidate,
+                    )):
+                item[key] = candidate
+        next_step = item.get("next_step")
+        item["summary"] = (
+            f"Operation deferred; next step: {next_step}"
+            if isinstance(next_step, str)
+            else "Operation deferred for coordination"
+        )
+        if payload.get("persistent_authority_required") is False:
+            item["persistent_authority_required"] = False
+        if payload.get("operation_executed") is False:
+            item["operation_executed"] = False
     if kind in ("authority.denied", "session.failed") or status == "failed":
         item["priority"] = PRIORITY["safety"] if kind == "authority.denied" else PRIORITY["diagnostics"]
         item["category"] = "safety" if kind == "authority.denied" else "diagnostics"

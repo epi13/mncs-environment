@@ -392,17 +392,15 @@ reason class, and the source event reference. Raw target paths and free-form
 reason text are omitted. Repeated denial patterns in one session window appear
 as `authority_denial_candidates`; they identify an interaction to inspect but
 do not establish that a denial was inappropriate or that the environment
-caused it. New overlapping-claim denials also include bounded
-`claim_conflict` evidence: the blocking claim and session identities, the
-conflict rule, and both repository-relative scopes. Absolute checkout paths
-are omitted. Historical overlapping-claim events without this evidence report
-`claim_conflict_evidence_status: not-recorded`; the projection does not infer
-the missing claim or scope. New overlapping-claim records include a validated
-`decision_basis` that separates eligible writable session scope from the
-coordination lease conflict; repeated-denial candidates summarize this split
-while retaining missing and invalid historical coverage. This does not
-establish that a lease was necessary or what happened after the denial. New
-authority denials and integration preflights
+caused it. Historical overlapping-claim denials retain their structured
+`claim_conflict` evidence where recorded; missing historical blockers and
+scopes remain `not-recorded` and are not inferred. New overlapping-claim
+conflicts are recorded as coordination deferrals, with bounded blocker and
+repository-relative scope evidence plus an actionable `next_step`. They appear
+in `session_activity.coordination_deferrals`, not as policy denials. Neither
+the historical denial records nor new deferrals establish that a concurrency
+condition was unnecessary or what happened after the decision. New authority
+denials and integration preflights
 include campaign and WorkIntent identities when available; projections retain
 these references without copying objective prose. Older records remain
 explicitly unlinked rather than being assigned the current objective. Absolute

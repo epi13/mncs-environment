@@ -393,7 +393,8 @@ class AuthorityTests(unittest.TestCase):
             repo_facts=facts, scope=scope,
         )
 
-        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(verdict["verdict"], "defer", verdict)
+        self.assertEqual(verdict["next_step"], "select-or-create-an-isolated-worktree")
         self.assertEqual(
             verdict["claim_conflict"]["conflict_reason"],
             "same checkout with overlapping paths",
@@ -456,7 +457,7 @@ class AuthorityTests(unittest.TestCase):
             claims=holders,
             repo_facts=facts, scope=scope,
         )
-        self.assertEqual(ref_changing["verdict"], "deny", ref_changing)
+        self.assertEqual(ref_changing["verdict"], "defer", ref_changing)
         self.assertEqual(
             ref_changing["claim_conflict"]["conflict_reason"],
             "shared branch with overlapping paths across checkouts",
@@ -504,7 +505,7 @@ class AuthorityTests(unittest.TestCase):
             scope=scope,
         )
 
-        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(verdict["verdict"], "defer", verdict)
         self.assertEqual(
             verdict["claim_conflict"]["conflict_reason"],
             "shared branch with overlapping paths across checkouts",
@@ -552,7 +553,7 @@ class AuthorityTests(unittest.TestCase):
             authority.PROPOSAL_WORKTREE_ELIGIBILITY,
         )
 
-    def test_non_main_branch_in_repository_root_still_requires_claim(self) -> None:
+    def test_non_main_branch_in_repository_root_requires_nonoverlapping_scope(self) -> None:
         checkout = "/workspace/mncs-atlas"
         target = checkout + "/src/shared.mn"
         scope = {
@@ -578,15 +579,15 @@ class AuthorityTests(unittest.TestCase):
             repo_facts=facts, scope=scope,
         )
 
-        self.assertEqual(verdict["verdict"], "deny", verdict)
+        self.assertEqual(verdict["verdict"], "defer", verdict)
         self.assertEqual(verdict["claim_conflict"]["conflict_reason"],
                          "repository-wide scope overlaps every checkout")
 
-    def test_competing_claim_denies(self) -> None:
+    def test_competing_claim_defers_for_coordination(self) -> None:
         verdict = authority.evaluate(
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",
             claims={"mncs-atlas": "ses_other"}, repo_facts=CLEAN_FACTS)
-        self.assertEqual(verdict["verdict"], "deny")
+        self.assertEqual(verdict["verdict"], "defer")
         self.assertEqual(
             verdict["claim_conflict"]["blocking_claim"]["session_id"],
             "ses_other",
@@ -634,7 +635,7 @@ class AuthorityTests(unittest.TestCase):
 
         self.assertEqual(verdict["verdict"], "allow", verdict)
 
-    def test_competing_claim_denial_records_bounded_scope_evidence(self) -> None:
+    def test_competing_claim_deferral_records_bounded_scope_evidence(self) -> None:
         target_checkout = "/private/workspace/mncs-atlas/.worktrees/target"
         requested = {
             "kind": "worktree",
@@ -662,7 +663,7 @@ class AuthorityTests(unittest.TestCase):
             scope=requested,
         )
 
-        self.assertEqual(verdict["verdict"], "deny")
+        self.assertEqual(verdict["verdict"], "defer")
         conflict = verdict["claim_conflict"]
         self.assertEqual(
             conflict["schema_version"], authority.CLAIM_CONFLICT_SCHEMA,
@@ -705,9 +706,9 @@ class AuthorityTests(unittest.TestCase):
                     repo_facts=DIRTY_FACTS,
                 )
 
-            self.assertEqual(verdict["verdict"], "deny")
+            self.assertEqual(verdict["verdict"], "defer")
             event = session._log()[-1]
-            self.assertEqual(event["type"], "authority.denied")
+            self.assertEqual(event["type"], "authority.coordination-deferred")
             self.assertEqual(
                 event["payload"]["claim_conflict"]["blocking_claim"]["claim_id"],
                 "claim:mncs-atlas:paths:shared",
@@ -717,6 +718,20 @@ class AuthorityTests(unittest.TestCase):
                     "authorization_status"
                 ],
                 "eligible",
+            )
+            self.assertEqual(
+                event["payload"]["next_step"],
+                "select-an-exact-non-overlapping-operation-scope",
+            )
+            activity = capability_intelligence.project(session)["session_activity"]
+            self.assertEqual(activity["authority_denial_count"], 0)
+            self.assertEqual(activity["coordination_deferral_count"], 1)
+            deferral = activity["coordination_deferrals"][0]
+            self.assertEqual(deferral["action"], "write")
+            self.assertEqual(deferral["work_intent_id"], session.snapshot["intent"]["identity"])
+            self.assertEqual(
+                deferral["claim_conflict"]["blocking_claim"]["claim_id"],
+                "claim:mncs-atlas:paths:shared",
             )
 
     def test_session_check_records_claimless_proposal_preflight(self) -> None:
@@ -1097,7 +1112,7 @@ class AuthorityTests(unittest.TestCase):
                     scope={"kind": "paths", "paths": ["src/shared.mn"]},
                 )
 
-                self.assertEqual(verdict["verdict"], "deny")
+                self.assertEqual(verdict["verdict"], "defer")
                 conflict = verdict["claim_conflict"]
                 current = conflict["current_claim_state"]
                 self.assertEqual(current["claim_version"], claim["version"])
@@ -1175,7 +1190,7 @@ class AuthorityTests(unittest.TestCase):
                     scope={"kind": "paths", "paths": ["src/checked.mn"]},
                 )
 
-                self.assertEqual(verdict["verdict"], "deny")
+                self.assertEqual(verdict["verdict"], "defer")
                 self.assertEqual(
                     verdict["claim_conflict"]["current_claim_state"]["claim_version"],
                     claim["version"],
@@ -1192,7 +1207,7 @@ class AuthorityTests(unittest.TestCase):
         before = authority.evaluate(
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",
             claims={"mncs-atlas": "ses_other"}, repo_facts=CLEAN_FACTS)
-        self.assertEqual(before["verdict"], "deny")
+        self.assertEqual(before["verdict"], "defer")
         after = authority.evaluate(
             context_for(), action="write", target="mncs-atlas", session_id="ses_mine",
             claims={}, repo_facts=CLEAN_FACTS)
@@ -1297,7 +1312,7 @@ class AuthorityTests(unittest.TestCase):
                     "writable-repository-rights",
                 )
 
-    def test_integration_claim_overlaps_are_advisory_and_other_writes_still_block(self) -> None:
+    def test_integration_claim_overlaps_are_advisory_and_other_writes_defer(self) -> None:
         context = context_for()
         destination = {
             "kind": "worktree", "repository": "mncs-atlas",
@@ -1379,7 +1394,7 @@ class AuthorityTests(unittest.TestCase):
             session_id="ses_mine", claims=overlapping_foreign_only,
             repo_facts=observed_facts, scope=destination,
         )
-        self.assertEqual(ordinary_write["verdict"], "deny")
+        self.assertEqual(ordinary_write["verdict"], "defer")
 
     def test_merge_and_publish_need_writable_exact_scope_but_not_a_claim(self) -> None:
         context = context_for()
@@ -1471,7 +1486,7 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertEqual(allowed["verdict"], "allow")
 
-    def test_retire_denies_competing_claim_and_preserves_delete_escalation(self) -> None:
+    def test_retire_defers_competing_claim_and_preserves_delete_escalation(self) -> None:
         scope = {"kind": "worktree", "checkout": "/repo/.worktrees/x"}
         competing = authority.evaluate(
             context_for(), action="retire", target="mncs-atlas",
@@ -1480,7 +1495,7 @@ class AuthorityTests(unittest.TestCase):
                 "session_id": "ses_other", "scope": {**scope, "repository": "mncs-atlas"},
             }]},
         )
-        self.assertEqual(competing["verdict"], "deny")
+        self.assertEqual(competing["verdict"], "defer")
 
         delete_context = context_for(denied=[], escalation_required=["delete"])
         delete = authority.evaluate(
@@ -8247,20 +8262,20 @@ class SessionTests(unittest.TestCase):
                 if event.get("type") == "lease.recovered-for-operation"
             ]
             self.assertEqual(len(recovery_events), 1)
-            denial_events = [
+            decision_events = [
                 event for event in events_for_session
-                if event.get("type") == "authority.denied"
+                if event.get("type") == "authority.coordination-deferred"
                 and isinstance(event.get("payload", {}).get("claim_conflict"), dict)
             ]
-            self.assertEqual(len(denial_events), 1)
+            self.assertEqual(len(decision_events), 1)
             recovery = recovery_events[0]
             self.assertEqual(
-                recovery["payload"]["authority_denial_event"]["identity"],
-                denial_events[0]["identity"],
+                recovery["payload"]["authority_decision_event"]["identity"],
+                decision_events[0]["identity"],
             )
             self.assertEqual(
                 latest_claim["provenance"]["operation_cause_event_reference"],
-                recovery["payload"]["authority_denial_event"],
+                recovery["payload"]["authority_decision_event"],
             )
             self.assertFalse(recovery["payload"]["operation_effect_started"])
             self.assertEqual(recovery["payload"]["recovered_count"], 1)

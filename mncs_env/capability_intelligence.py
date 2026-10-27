@@ -3618,7 +3618,10 @@ def _compact_projection(
             ]
             if len(recovered_from) > 4:
                 compact_item["recovered_from_truncated"] = True
-        for key in ("authority_denial_event", "event_reference"):
+        for key in (
+            "authority_decision_event", "authority_denial_event",
+            "event_reference",
+        ):
             reference = item.get(key)
             if isinstance(reference, dict):
                 compact_item[key] = {
@@ -11706,7 +11709,10 @@ def _operation_claim_recovery_event_projection(
         if _is_repository_identity(repository)
         and isinstance(payload.get("scope"), dict) else None
     )
-    denial = _event_reference(payload.get("authority_denial_event"))
+    decision = _event_reference(
+        payload.get("authority_decision_event")
+        or payload.get("authority_denial_event")
+    )
     recovered = payload.get("recovered_from")
     recovered_count = payload.get("recovered_count")
     identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
@@ -11717,9 +11723,11 @@ def _operation_claim_recovery_event_projection(
         or scope is None
         or scope.get("kind") != "worktree"
         or scope.get("exclusive") is not False
-        or denial is None
-        or denial.get("type") != "authority.denied"
-        or denial.get("sequence", reference["sequence"])
+        or decision is None
+        or decision.get("type") not in {
+            "authority.denied", "authority.coordination-deferred",
+        }
+        or decision.get("sequence", reference["sequence"])
         >= reference["sequence"]
         or type(recovered_count) is not int
         or not 1 <= recovered_count <= 16
@@ -11749,7 +11757,7 @@ def _operation_claim_recovery_event_projection(
             "superseded_version": superseded,
             "owner_session": owner,
         })
-    return {
+    row = {
         "identity": "opclmrec_" + digest_hex({
             "session_id": session_id,
             "event": reference["identity"],
@@ -11760,7 +11768,7 @@ def _operation_claim_recovery_event_projection(
         "scope": scope,
         "recovered_count": recovered_count,
         "recovered_from": recovered_from,
-        "authority_denial_event": denial,
+        "authority_decision_event": decision,
         "event_reference": reference,
         "interpretation": (
             "The Environment superseded only liveness-classified recoverable "
@@ -11770,6 +11778,10 @@ def _operation_claim_recovery_event_projection(
         ),
         **_authority_event_objective_context(payload),
     }
+    # Preserve the former projection field for historical denial-linked rows.
+    if decision.get("type") == "authority.denied":
+        row["authority_denial_event"] = decision
+    return row
 
 
 def _claim_coordination_event_projection(

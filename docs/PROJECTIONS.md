@@ -391,31 +391,36 @@ remain visible in the separate invalid count.
 The selected page can also expose bounded `authority_denials`: action,
 observed repository when resolvable, normalized reason class, and the exact
 source event reference. The projection omits raw target paths and free-form
-reason text. New overlapping-claim denials also carry `claim_conflict` evidence
-with the blocking claim and session identities, conflict rule, and bounded
-repository-relative requested and blocking scopes. Absolute checkout paths
-are omitted. Older overlapping-claim events without structured evidence are
-marked `claim_conflict_evidence_status: not-recorded`; their missing blocker
-and scopes are not reconstructed. Repeated patterns remain investigation
-candidates scoped to the selected session window. They do not establish that a
-denial was inappropriate, that the environment caused it, or that the pattern
-recurs across sessions. For absolute targets, repository attribution uses
-observed checkout paths. Merge and publish decisions use writable repository
-authority, an exact operation scope, and the refreshed overlap observation.
+reason text. Historical overlapping-claim denials retain their recorded
+`claim_conflict` evidence and are marked `claim_conflict_evidence_status:
+not-recorded` when that structure was absent; missing blockers and scopes are
+not reconstructed. New overlapping-claim conflicts are coordination deferrals,
+not authority denials. Their `session_activity.coordination_deferrals` records
+carry the bounded blocker, conflict rule, repository-relative requested and
+blocking scopes, and an actionable `next_step`; absolute checkout paths are
+omitted. Repeated patterns remain investigation candidates scoped to the
+selected session window. Neither historical denial patterns nor new deferrals
+establish that a concurrency condition was unnecessary, that the environment
+caused it, or that it recurs across sessions. For absolute targets, repository
+attribution uses observed checkout paths. Merge and publish decisions use
+writable repository authority, an exact operation scope, and the refreshed
+overlap observation.
 Claims describe coordination but do not grant or deny integration eligibility.
 An overlap is retained as advisory coordination evidence instead of persistent
 exclusive control, and a claim need not be held by the acting agent.
-For repeated overlapping-claim denials, `decision_claim_state_summary` counts
-the validated event-time blocker status, recovery verdict, and freshness among
-structured denials; it separately counts missing, invalid, and legacy state.
+For historical repeated overlapping-claim denials,
+`decision_claim_state_summary` counts the validated event-time blocker status,
+recovery verdict, and freshness among structured denials; it separately counts
+missing, invalid, and legacy state.
 Compact summaries preserve blocker-status and recovery-verdict counts while
 omitting freshness from each count group. The candidate's supporting event
 references allow inspection of the underlying decisions. These counts describe
 what the checks observed; they do not establish that each denial was necessary
 or identify a cause.
-Operations that need an exact coordination scope or a scoped shared-state
-lease return `verdict: defer` and emit `authority.coordination-deferred`, rather
-than asking for owner approval. `session_activity.coordination_deferrals`
+Operations blocked by an overlapping claim or requiring an exact coordination
+scope return `verdict: defer` and emit `authority.coordination-deferred`, rather
+than reporting an authority denial or asking for owner approval.
+`session_activity.coordination_deferrals`
 validates these events and exposes the required coordination, next step,
 sanitized repository scope, objective references, and source event. It omits
 absolute checkout paths and free-form reasons. The record says

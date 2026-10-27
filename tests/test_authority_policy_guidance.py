@@ -185,7 +185,11 @@ def test_unassigned_agent_can_propose_only_in_an_observed_non_main_worktree() ->
         repo_facts=repo_facts,
         scope=scope,
     )
-    assert conflict["verdict"] == "deny"
+    assert conflict["verdict"] == "defer"
+    assert conflict["decision_domain"] == "coordination"
+    assert conflict["persistent_authority_required"] is False
+    assert conflict["operation_executed"] is False
+    assert conflict["next_step"] == "select-or-create-an-isolated-worktree"
     assert conflict["claim_conflict"]["decision_basis"][
         "decision_domain"
     ] == "coordination"
