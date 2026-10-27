@@ -84,6 +84,13 @@ the diagnostic adds no authority and does not invoke or modify the provider.
 If no matching provider diagnostic was recorded, the record says so instead
 of inferring a cause.
 
+When a projection output diverges from its accepted state, `output_diagnostic`
+records the relative target, owned scope, classification, current owned-content
+digest, candidate render digest, and prior accepted digest when available. It
+contains no file contents. The result remains deferred and records that
+automatic writing was withheld, so the agent can inspect the exact conflict
+while authored bytes stay protected.
+
 Each result retains up to eight compact verification observations with the
 obligation, evidence identity, verdict, method, and bounded reason. An omitted
 count preserves awareness when a declaration has more observations. This lets

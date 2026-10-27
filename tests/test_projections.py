@@ -769,8 +769,8 @@ class DegradedProviderTests(ProjectionFixture):
 @NEED_MNCS
 class RegionTests(ProjectionFixture):
     def test_manual_projected_region_edit_is_protected(self):
-        code, _ = self.enter('protected-region')
-        self.assertEqual(code, 0)
+        code, first = self.enter('protected-region')
+        self.assertEqual(code, 0, first)
         target = self.target_region / 'README.md'
         original = target.read_bytes()
         edited = original.replace(b'RENDER:', b'authored replacement:')
@@ -778,6 +778,40 @@ class RegionTests(ProjectionFixture):
         code, result = self.enter('protected-region')
         self.assertEqual(code, 0, result)
         self.assertIn('target-region:index', self.projection_summary(result)['pending_ids'])
+        self.assertEqual(target.read_bytes(), edited)
+
+        code, evidence = self.run_cli(
+            'projections', first['session_id'], '--evidence',
+        )
+        self.assertEqual(code, 0, evidence)
+        row = next(
+            item for item in evidence['evidence']['results']
+            if item.get('projection') == 'target-region:index'
+        )
+        begin = b'<!-- MNCS:generated:begin -->'
+        end = b'<!-- MNCS:generated:end -->'
+
+        def owned_region(document):
+            start = document.index(begin) + len(begin)
+            return document[start:document.index(end)]
+
+        def digest(data):
+            return 'sha256:' + hashlib.sha256(data).hexdigest()
+
+        self.assertEqual(
+            row['output_diagnostic'],
+            {
+                'target': 'README.md',
+                'ownership_scope': 'generated-region',
+                'classification': 'manual-divergence',
+                'observed_owned_digest': digest(owned_region(edited)),
+                'candidate_render_bytes_digest': digest(
+                    fixture_bytes(self.target_region / 'docs' / 'rfcs'),
+                ),
+                'previously_accepted_digest': digest(owned_region(original)),
+                'automatic_write': 'withheld',
+            },
+        )
         self.assertEqual(target.read_bytes(), edited)
 
     def test_authored_edit_is_preserved_byte_for_byte(self):

@@ -1584,6 +1584,35 @@ def _reconcile_one(session, declaration: dict[str, Any],
         preimage = (checkout / str(declaration["output"])).read_bytes()
     except OSError:
         preimage = None
+    if output_code == OUTPUT_DIVERGED:
+        prior_source = shared.get("source")
+        prior_source = prior_source if isinstance(prior_source, dict) else {}
+        pending_source = shared.get("pending")
+        pending_source = pending_source if isinstance(pending_source, dict) else {}
+        prior_owned_digest = (
+            pending_source.get("owned_digest")
+            or prior_source.get("owned_digest")
+        )
+        if declaration.get("output_kind", "whole-file") != "region":
+            prior_owned_digest = shared.get("rendered_digest")
+        record["output_diagnostic"] = {
+            "target": declaration["output"],
+            "ownership_scope": (
+                "generated-region"
+                if declaration.get("output_kind") == "region"
+                else "whole-file"
+            ),
+            "classification": output_detail,
+            "observed_owned_digest": semantic_sources.output_identity(
+                checkout, declaration,
+            ),
+            "candidate_render_bytes_digest": bytes_digest(fresh),
+            "previously_accepted_digest": (
+                prior_owned_digest if isinstance(prior_owned_digest, str)
+                else None
+            ),
+            "automatic_write": "withheld",
+        }
     if declaration.get('schema_version') == semantic_sources.SCHEMA:
         previous_renderer = (shared.get('source') or {}).get('renderer')
         health = diagnose_projection(session, declaration,
