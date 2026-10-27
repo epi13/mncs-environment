@@ -24,6 +24,7 @@ from typing import Any
 from . import authority as authority_module
 from . import claims as claims_module
 from . import invocation_artifacts as invocation_artifacts_module
+from . import readiness as readiness_module
 from . import workspace as workspace_module
 from .identity import digest_hex
 from .sessions import (
@@ -233,6 +234,8 @@ MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
 MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS = 8
 MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS = 8
+MAX_SESSION_SERVICE_READINESS_RECORDS = 16
+MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -3900,6 +3903,15 @@ def _compact_projection(
                 compact_item[key] = False
         if isinstance(item.get("scope"), dict):
             compact_item["scope"] = item["scope"]
+        relation = item.get("later_eligibility_relation")
+        if isinstance(relation, dict):
+            compact_item["later_eligibility_status"] = _short_text(
+                relation.get("status"), 80,
+            )
+            if type(relation.get("matching_preflight_count")) is int:
+                compact_item["later_eligibility_match_count"] = relation[
+                    "matching_preflight_count"
+                ]
         reference = item.get("event_reference")
         if isinstance(reference, dict):
             compact_item["event_reference"] = {
@@ -3941,6 +3953,39 @@ def _compact_projection(
                 for reference in references[:4]
                 if isinstance(reference, dict)
             ]
+        follow_through = item.get("later_eligibility_summary")
+        if isinstance(follow_through, dict):
+            compact_follow_through = {
+                key: follow_through[key]
+                for key in (
+                    "status", "operation_execution_status", "causal_claim",
+                )
+                if key in follow_through
+            }
+            for key in (
+                "deferrals_with_later_preflight_count",
+                "deferrals_without_exact_objective_reference_count",
+                "matching_preflight_count",
+                "supporting_preflight_events_omitted_count",
+            ):
+                if type(follow_through.get(key)) is int:
+                    compact_follow_through[key] = follow_through[key]
+            preflight_events = follow_through.get("supporting_preflight_events")
+            if isinstance(preflight_events, list):
+                compact_follow_through["supporting_preflight_events"] = [
+                    {
+                        "kind": event.get("kind"),
+                        "event_reference": {
+                            key: event["event_reference"][key]
+                            for key in ("identity", "sequence", "type")
+                            if key in event["event_reference"]
+                        },
+                    }
+                    for event in preflight_events[:2]
+                    if isinstance(event, dict)
+                    and isinstance(event.get("event_reference"), dict)
+                ]
+            compact_item["later_eligibility_summary"] = compact_follow_through
         compact_coordination_deferral_candidates.append(compact_item)
     compact_integration_eligibility = []
     raw_integration_eligibility = activity.get("integration_eligibility")
@@ -4295,6 +4340,11 @@ def _compact_projection(
             len(raw_interactions) > len(compact_activity_interactions)
         ),
     }
+    raw_service_readiness = activity.get("service_readiness")
+    if isinstance(raw_service_readiness, dict):
+        # _session_service_readiness already returns a bounded, sanitized
+        # projection, so retain that reusable record without rebuilding it.
+        compact_activity["service_readiness"] = raw_service_readiness
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity["operation_deferral_count"] = activity.get(
             "operation_deferral_count", 0,
@@ -4948,6 +4998,9 @@ def _compact_projection(
         elif result["session_activity"].get("authority_denial_candidates"):
             result["session_activity"]["authority_denial_candidates"].pop()
             result["session_activity"]["authority_denial_candidates_truncated"] = True
+        elif result["session_activity"].get("coordination_deferrals"):
+            result["session_activity"]["coordination_deferrals"].pop()
+            result["session_activity"]["coordination_deferrals_truncated"] = True
         elif result["session_activity"].get(
             "coordination_deferral_candidates",
         ):
@@ -4957,15 +5010,25 @@ def _compact_projection(
             result["session_activity"][
                 "coordination_deferral_candidates_truncated"
             ] = True
-        elif result["session_activity"].get("coordination_deferrals"):
-            result["session_activity"]["coordination_deferrals"].pop()
-            result["session_activity"]["coordination_deferrals_truncated"] = True
         elif result["session_activity"].get("authority_denials"):
             result["session_activity"]["authority_denials"].pop()
             result["session_activity"]["authority_denials_truncated"] = True
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
+        elif result["session_activity"].get("service_readiness", {}).get("candidates"):
+            readiness = result["session_activity"]["service_readiness"]
+            readiness["candidates"].pop()
+            readiness["candidates_truncated"] = True
+            summary = readiness.get("summary")
+            if isinstance(summary, dict):
+                summary["investigation_candidates_omitted"] = (
+                    summary.get("investigation_candidates_omitted", 0) + 1
+                )
+        elif result["session_activity"].get("service_readiness", {}).get("services"):
+            readiness = result["session_activity"]["service_readiness"]
+            readiness["services"].pop()
+            readiness["services_truncated"] = True
         elif (isinstance(result.get("implementation_accountability"), dict)
               and result["implementation_accountability"].get("samples")):
             accountability = result["implementation_accountability"]
@@ -10833,6 +10896,81 @@ def _repository_ref_preflight_relation(
     }
 
 
+def _coordination_deferral_follow_through(
+    deferral: dict[str, Any], *,
+    integration_records: list[dict[str, Any]],
+    proposal_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Relate a deferral to later eligibility for the same recorded objective."""
+    deferral_reference = deferral.get("event_reference")
+    deferral_sequence = (
+        deferral_reference.get("sequence")
+        if isinstance(deferral_reference, dict) else None
+    )
+    campaign_id = deferral.get("campaign_id")
+    work_intent_id = deferral.get("work_intent_id")
+    if type(deferral_sequence) is not int:
+        status = "unavailable-deferral-event-reference"
+    elif not isinstance(campaign_id, str) or not isinstance(work_intent_id, str):
+        status = "unavailable-exact-objective-reference"
+    else:
+        status = "no-later-match-in-returned-eligibility-records"
+
+    matches: list[dict[str, Any]] = []
+    if status == "no-later-match-in-returned-eligibility-records":
+        for kind, records in (
+            ("integration-eligibility", integration_records),
+            ("proposal-eligibility", proposal_records),
+        ):
+            for record in records:
+                reference = record.get("event_reference")
+                sequence = (
+                    reference.get("sequence")
+                    if isinstance(reference, dict) else None
+                )
+                if (
+                    type(sequence) is not int
+                    or sequence <= deferral_sequence
+                    or record.get("repository") != deferral.get("repository")
+                    or record.get("action") != deferral.get("action")
+                    or record.get("campaign_id") != campaign_id
+                    or record.get("work_intent_id") != work_intent_id
+                ):
+                    continue
+                matches.append({
+                    "kind": kind,
+                    "action": record["action"],
+                    "persistent_claim_required": False,
+                    "operation_executed": False,
+                    "match_basis": (
+                        "later-event-same-repository-action-campaign-and-work-intent"
+                    ),
+                    "event_reference": reference,
+                })
+        matches.sort(key=lambda item: (
+            item["event_reference"]["sequence"], item["kind"],
+        ))
+        if matches:
+            status = "later-same-objective-eligibility-observed"
+
+    return {
+        "status": status,
+        "evidence_scope": "selected-session-window-and-returned-eligibility-records",
+        "matching_preflight_count": len(matches),
+        "matches": matches[:4],
+        "matches_truncated": len(matches) > 4,
+        "causal_status": "not-established",
+        "interpretation": (
+            "A later eligibility preflight with the same recorded campaign, "
+            "work intent, repository, and action was observed in this session "
+            "window. Eligibility does not establish that the operation ran, "
+            "that the deferral was resolved, or that the deferral caused the "
+            "later preflight. A missing match does not establish that no later "
+            "preflight occurred outside the returned bounded records."
+        ),
+    }
+
+
 def _authority_decision_claim_state(
     value: Any,
     *,
@@ -12330,6 +12468,283 @@ def _session_resource_samples(
     }
 
 
+def _session_service_readiness(
+    session: Any, snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Project bounded service readiness and dependency evidence."""
+    identity_pattern = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$")
+    code_pattern = re.compile(r"^[a-z][a-z0-9.-]{0,79}$")
+    timestamp_pattern = re.compile(
+        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$"
+    )
+    service_statuses = {"ready", "degraded", "unavailable", "unknown"}
+    operation_statuses = {
+        "ok", "failed", "suppressed", "deferred", "not-attempted",
+        "pending-escalation", "unknown",
+    }
+
+    def identity(value: Any) -> str | None:
+        return value if isinstance(value, str) and identity_pattern.fullmatch(value) else None
+
+    def code(value: Any) -> str | None:
+        return value if isinstance(value, str) and code_pattern.fullmatch(value) else None
+
+    session_id = identity(getattr(session, "session_id", None))
+    environment_id = identity(snapshot.get("environment_id"))
+    sequence = snapshot.get("snapshot_sequence")
+    sequence = sequence if type(sequence) is int and sequence >= 0 else None
+    reconciled_at = snapshot.get("last_reconciled_at")
+    if not isinstance(reconciled_at, str) or not timestamp_pattern.fullmatch(reconciled_at):
+        reconciled_at = None
+
+    requirements = snapshot.get("requirements")
+    requirements = requirements if isinstance(requirements, dict) else {}
+    declared = requirements.get("services")
+    declared = declared if isinstance(declared, list) else []
+    raw_observations = snapshot.get("service_observations")
+    raw_observations = raw_observations if isinstance(raw_observations, list) else []
+    raw_operations = snapshot.get("service_operations")
+    raw_operations = raw_operations if isinstance(raw_operations, list) else []
+    has_records = bool(declared or raw_observations or raw_operations)
+    source = {
+        "kind": "current-session-snapshot",
+        "session_id": session_id,
+        "environment_id": environment_id,
+        "snapshot_sequence": sequence,
+        "last_reconciled_at": reconciled_at,
+        "declared_service_count": len(declared),
+        "service_observation_count": len(raw_observations),
+        "service_operation_count": len(raw_operations),
+        "service_scan_limit": MAX_SESSION_SERVICE_READINESS_RECORDS,
+        "declared_services_truncated": len(declared) > MAX_SESSION_SERVICE_READINESS_RECORDS,
+        "observations_truncated": len(raw_observations) > MAX_SESSION_SERVICE_READINESS_RECORDS,
+        "operations_truncated": len(raw_operations) > MAX_SESSION_SERVICE_READINESS_RECORDS,
+        "provenance_status": (
+            "identified" if session_id and environment_id and sequence is not None
+            else "incomplete"
+        ),
+    }
+    try:
+        readiness = readiness_module.summarize(snapshot).get("status")
+    except (KeyError, TypeError, ValueError):
+        readiness = None
+    readiness = (
+        readiness
+        if isinstance(readiness, str)
+        and readiness in {"ready", "degraded", "blocked"}
+        else "unknown"
+    )
+
+    observations_by_id: dict[str, list[dict[str, Any]]] = {}
+    for item in raw_observations[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+        if isinstance(item, dict) and (service_id := identity(item.get("identity"))):
+            observations_by_id.setdefault(service_id, []).append(item)
+    operations_by_id: dict[str, list[dict[str, Any]]] = {}
+    for item in raw_operations[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+        if isinstance(item, dict) and (service_id := identity(item.get("identity"))):
+            operations_by_id.setdefault(service_id, []).append(item)
+
+    services = []
+    candidates = []
+    status_counts = {status: 0 for status in (*service_statuses, "not-observed")}
+    invalid_observations = invalid_operations = 0
+    ambiguous_observations = ambiguous_operations = 0
+    candidate_count = 0
+    declarations = declared[:MAX_SESSION_SERVICE_READINESS_RECORDS]
+    for declaration in declarations:
+        if not isinstance(declaration, dict):
+            continue
+        service_id = identity(declaration.get("identity"))
+        if service_id is None or any(row["identity"] == service_id for row in services):
+            continue
+        matching = observations_by_id.get(service_id, [])
+        observation = matching[0] if len(matching) == 1 else None
+        if len(matching) > 1:
+            ambiguous_observations += 1
+            status = "unknown"
+        elif observation is None:
+            status = "not-observed"
+        else:
+            raw_status = observation.get("status")
+            status = (
+                raw_status if isinstance(raw_status, str) and raw_status in service_statuses
+                else "unknown"
+            )
+            invalid_observations += (
+                not isinstance(raw_status, str)
+                or raw_status not in service_statuses
+            )
+        status_counts[status] += 1
+
+        matching_operations = operations_by_id.get(service_id, [])
+        operation = matching_operations[0] if len(matching_operations) == 1 else None
+        if len(matching_operations) > 1:
+            ambiguous_operations += 1
+            operation_status = "ambiguous"
+        elif operation is None:
+            operation_status = "not-recorded"
+        else:
+            raw_status = operation.get("status")
+            operation_status = (
+                raw_status
+                if isinstance(raw_status, str) and raw_status in operation_statuses
+                else "unknown"
+            )
+            invalid_operations += (
+                not isinstance(raw_status, str)
+                or raw_status not in operation_statuses
+            )
+
+        dependencies = []
+        dependencies_not_ready = []
+        dependency_status_by_id = {}
+        references = declaration.get("environment_from_service")
+        if isinstance(references, dict):
+            for reference in references.values():
+                dependency_id = (
+                    identity(reference.get("service"))
+                    if isinstance(reference, dict) else None
+                )
+                if dependency_id is None or dependency_id in dependencies:
+                    continue
+                dependencies.append(dependency_id)
+                matches = observations_by_id.get(dependency_id, [])
+                dependency = matches[0] if len(matches) == 1 else None
+                dependency_status = (
+                    dependency.get("status") if isinstance(dependency, dict) else None
+                )
+                if (not isinstance(dependency_status, str)
+                        or dependency_status not in service_statuses):
+                    dependency_status = "unknown"
+                dependency_status_by_id[dependency_id] = dependency_status
+                if dependency_status != "ready":
+                    dependencies_not_ready.append(dependency_id)
+
+        reference = {
+            "kind": "current-session-snapshot-service",
+            "session_id": session_id,
+            "environment_id": environment_id,
+            "snapshot_sequence": sequence,
+            "service_identity": service_id,
+        }
+        row = {
+            "identity": service_id,
+            "required": (
+                declaration.get("required")
+                if type(declaration.get("required")) is bool else True
+            ),
+            "status": status,
+            "operation_status": operation_status,
+            "causal_status": "not-established",
+            "source_reference": reference,
+        }
+        probe = declaration.get("probe")
+        capability = identity(probe.get("capability")) if isinstance(probe, dict) else None
+        if capability:
+            row["capability"] = capability
+        if observation is not None:
+            observed_code = code(observation.get("code"))
+            observed_at = observation.get("observed_at")
+            if observed_code:
+                row["observation_code"] = observed_code
+            if isinstance(observed_at, str) and timestamp_pattern.fullmatch(observed_at):
+                row["observed_at"] = observed_at
+        if operation is not None and (operation_code := code(operation.get("code"))):
+            row["operation_code"] = operation_code
+        if dependencies:
+            row["dependencies"] = [
+                {
+                    "service_identity": dependency_id,
+                    "observed_status": dependency_status_by_id[dependency_id],
+                    "relationship": "declared-environment-input",
+                    "causal_status": "not-established",
+                }
+                for dependency_id in dependencies[:MAX_SESSION_SERVICE_READINESS_RECORDS]
+            ]
+        services.append(row)
+
+        basis = []
+        if status == "not-observed" and row["required"]:
+            basis.append("required-service-observation-missing")
+        elif status in {"degraded", "unavailable"}:
+            basis.append("service-observation-not-ready")
+        elif status == "unknown":
+            basis.append("service-observation-incomplete")
+        if operation_status == "ambiguous":
+            basis.append("reconciliation-operation-ambiguous")
+        elif operation_status not in {"ok", "not-recorded"}:
+            basis.append("reconciliation-operation-not-successful")
+        if dependencies_not_ready:
+            basis.append("declared-dependency-not-ready")
+        if not basis:
+            continue
+        candidate_count += 1
+        if len(candidates) >= MAX_SESSION_SERVICE_READINESS_CANDIDATES:
+            continue
+        candidate = {
+            "identity": "srci_" + digest_hex({
+                "session_id": session_id,
+                "snapshot_sequence": sequence,
+                "service_identity": service_id,
+                "basis": basis,
+            }, length=16),
+            "kind": "service-readiness-investigation-candidate",
+            "status": "candidate-needs-investigation",
+            "service_identity": service_id,
+            "basis": basis,
+            "causal_status": "not-established",
+            "source_reference": reference,
+        }
+        if dependencies_not_ready:
+            candidate["supporting_dependency_identities"] = dependencies_not_ready[:16]
+        objective = {}
+        campaign = snapshot.get("campaign")
+        campaign = campaign if isinstance(campaign, dict) else {}
+        intent = snapshot.get("intent")
+        intent = intent if isinstance(intent, dict) else {}
+        for key, value in (("campaign_id", campaign.get("identity")),
+                           ("work_intent_id", intent.get("identity"))):
+            if (objective_id := identity(value)) is not None:
+                objective[key] = objective_id
+        if objective:
+            candidate["objective_context"] = objective
+        candidates.append(candidate)
+
+    result = {
+        "status": "observed" if has_records else "not-captured-in-session",
+        "readiness_status": readiness,
+        "source": source,
+        "summary": {
+            "declared_service_count": len(declared),
+            "projected_service_count": len(services),
+            "status_counts": status_counts,
+            "investigation_candidate_count": candidate_count,
+            "investigation_candidates_omitted": max(0, candidate_count - len(candidates)),
+            "invalid_observation_count": invalid_observations,
+            "invalid_operation_count": invalid_operations,
+            "ambiguous_observation_count": ambiguous_observations,
+            "ambiguous_operation_count": ambiguous_operations,
+        },
+        "services": services,
+        "candidates": candidates,
+        "measurement_limits": [
+            "Readiness and reconciliation results are co-observed in this current snapshot; causality is not established.",
+            "Provider prose, raw responses, and workspace paths are omitted.",
+            "A non-ready service or unsuccessful operation is an investigation candidate, not proof of an environmental defect.",
+            "Earlier readiness history is not reconstructed by this view.",
+        ],
+    }
+    if has_records and (
+        source["provenance_status"] != "identified"
+        or source["declared_services_truncated"]
+        or source["observations_truncated"]
+        or source["operations_truncated"]
+        or (not declared and (raw_observations or raw_operations))
+    ):
+        result["status"] = "partial"
+    return result
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -12348,6 +12763,17 @@ def _session_activity(
         "The Store page reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
         "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves.",
     ]
+    service_readiness = _session_service_readiness(session, snapshot)
+    raw_readiness_requirements = snapshot.get("requirements")
+    raw_readiness_requirements = (
+        raw_readiness_requirements
+        if isinstance(raw_readiness_requirements, dict) else {}
+    )
+    has_service_readiness = any((
+        raw_readiness_requirements.get("services"),
+        snapshot.get("service_observations"),
+        snapshot.get("service_operations"),
+    ))
     if not callable(reader):
         resource_samples = _session_resource_samples(session, snapshot, [])
         return {
@@ -12367,6 +12793,8 @@ def _session_activity(
             "rpc_failure_candidates": [],
             "capabilities": [],
             "resource_samples": resource_samples,
+            **({"service_readiness": service_readiness}
+               if has_service_readiness else {}),
             "measurement_limits": [
                 *limits,
                 "The session event page interface is unavailable.",
@@ -12401,6 +12829,8 @@ def _session_activity(
             "interactions": [],
             "capabilities": [],
             "resource_samples": resource_samples,
+            **({"service_readiness": service_readiness}
+               if has_service_readiness else {}),
             "measurement_limits": [
                 *limits,
                 "The session event tail could not be read or did not match its declared shape.",
@@ -13700,6 +14130,109 @@ def _session_activity(
         0,
         valid_proposal_eligibility_count - len(proposal_eligibility_records),
     )
+    for deferral in coordination_deferrals:
+        deferral["later_eligibility_relation"] = (
+            _coordination_deferral_follow_through(
+                deferral,
+                integration_records=integration_eligibility_records,
+                proposal_records=proposal_eligibility_records,
+            )
+        )
+    for candidate in coordination_deferral_candidates:
+        group_key = (
+            candidate.get("repository"),
+            candidate.get("action"),
+            candidate.get("required_coordination"),
+        )
+        group = coordination_deferral_groups.get(group_key, [])
+        relations = [
+            item.get("later_eligibility_relation")
+            for item in group
+            if isinstance(item.get("later_eligibility_relation"), dict)
+        ]
+        matched_deferrals = sum(
+            relation.get("status")
+            == "later-same-objective-eligibility-observed"
+            for relation in relations
+        )
+        unmatched_deferrals = sum(
+            relation.get("status")
+            == "no-later-match-in-returned-eligibility-records"
+            for relation in relations
+        )
+        missing_objective_reference_deferrals = sum(
+            relation.get("status") == "unavailable-exact-objective-reference"
+            for relation in relations
+        )
+        missing_event_reference_deferrals = sum(
+            relation.get("status") == "unavailable-deferral-event-reference"
+            for relation in relations
+        )
+        supporting_preflights: dict[str, dict[str, Any]] = {}
+        for relation in relations:
+            matches = relation.get("matches")
+            if not isinstance(matches, list):
+                continue
+            for match in matches:
+                reference = (
+                    match.get("event_reference")
+                    if isinstance(match, dict) else None
+                )
+                if not isinstance(reference, dict):
+                    continue
+                identity = reference.get("identity")
+                sequence = reference.get("sequence")
+                if (not isinstance(identity, str)
+                        or type(sequence) is not int):
+                    continue
+                supporting_preflights.setdefault(identity, {
+                    "kind": match.get("kind"),
+                    "event_reference": {
+                        key: reference[key]
+                        for key in ("identity", "sequence", "type")
+                        if key in reference
+                    },
+                })
+        supporting_preflight_events = sorted(
+            supporting_preflights.values(),
+            key=lambda item: item["event_reference"]["sequence"],
+        )
+        candidate["later_eligibility_summary"] = {
+            "status": (
+                "later-preflight-observed-for-some-deferrals"
+                if matched_deferrals
+                else "no-later-preflight-observed-in-returned-records"
+                if unmatched_deferrals
+                else "deferrals-not-correlatable-to-later-preflight"
+            ),
+            "deferrals_with_later_preflight_count": matched_deferrals,
+            "deferrals_without_later_preflight_match_in_returned_records_count": (
+                unmatched_deferrals
+            ),
+            "deferrals_without_exact_objective_reference_count": (
+                missing_objective_reference_deferrals
+            ),
+            "deferrals_without_event_reference_count": (
+                missing_event_reference_deferrals
+            ),
+            "matching_preflight_count": sum(
+                relation.get("matching_preflight_count", 0)
+                for relation in relations
+                if type(relation.get("matching_preflight_count")) is int
+            ),
+            "supporting_preflight_events": supporting_preflight_events[:4],
+            "supporting_preflight_events_omitted_count": max(
+                0, len(supporting_preflight_events) - 4,
+            ),
+            "operation_execution_status": "not-recorded-by-eligibility-events",
+            "causal_claim": "not-established",
+            "interpretation": (
+                "Counts relate only exact same-objective, repository, action, "
+                "and later-sequence eligibility events in this session window. "
+                "They do not establish that an operation executed, a deferral "
+                "was resolved, or a coordination rule was unnecessary."
+            ),
+        }
     repository_ref_transition_records: list[dict[str, Any]] = []
     invalid_repository_ref_transition_event_count = 0
     invalid_repository_ref_transition_record_count = 0
@@ -14069,6 +14602,8 @@ def _session_activity(
         "status": status,
         "context": context,
         "resource_samples": resource_samples,
+        **({"service_readiness": service_readiness}
+           if has_service_readiness else {}),
         "source": {
             "event_count": event_count,
             "event_window_limit": event_limit,
@@ -15754,6 +16289,11 @@ def project(
             activity.get("rpc_failure_candidates", [])
         ) + len(activity.get("authority_denial_candidates", [])) + len(
             activity.get("coordination_deferral_candidates", [])
+        ) + (
+            activity.get("service_readiness", {})
+            .get("summary", {})
+            .get("investigation_candidate_count", 0)
+            if isinstance(activity.get("service_readiness"), dict) else 0
         ),
         "improvement_relation_count": len(improvement_relations),
         "pressure_hypotheses": hypotheses,

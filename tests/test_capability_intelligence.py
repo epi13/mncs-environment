@@ -3137,6 +3137,123 @@ def test_session_resource_sample_distinguishes_missing_and_failed_invocations(
     assert "sample" not in failed["observations"][0]
 
 
+def test_session_service_readiness_correlates_snapshot_dependencies_safely(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    language_service = "mncs-language-service:resident-workspace"
+    forge_service = "mncs-forge:resident-workspace"
+    private_path = "/home/private/workspace/.bootstrap/secret"
+    session.snapshot.update({
+        "snapshot_sequence": 37,
+        "last_reconciled_at": "2026-10-26T18:10:20.123Z",
+        "campaign": {"identity": "cmp_service_readiness"},
+        "intent": {
+            "identity": "int_service_readiness",
+            "goal": "make readiness evidence useful",
+        },
+        "requirements": {
+            "services": [
+                {
+                    "identity": language_service,
+                    "required": True,
+                    "probe": {"capability": "mncs-language-service:ready"},
+                    "ready_when": {"/ready": True},
+                },
+                {
+                    "identity": forge_service,
+                    "required": False,
+                    "probe": {"capability": "mncs-forge:ready"},
+                    "ready_when": {"/ready": True},
+                    "environment_from_service": {
+                        "MNCS_LANGUAGE_WORKSPACE": {
+                            "service": language_service,
+                            "pointer": "/selected/workspace",
+                        },
+                    },
+                },
+            ],
+        },
+        "service_observations": [
+            {
+                "identity": language_service,
+                "required": True,
+                "capability": "mncs-language-service:ready",
+                "status": "degraded",
+                "code": "service-not-ready",
+                "reason": f"provider could not open {private_path}",
+                "observed_at": "2026-10-26T18:10:20.100Z",
+                "provider_detail": private_path,
+                "observation": {"/ready": False},
+            },
+            {
+                "identity": forge_service,
+                "required": False,
+                "capability": "mncs-forge:ready",
+                "status": "unavailable",
+                "code": "service-binding-missing",
+                "reason": f"provider probe missing at {private_path}",
+                "observed_at": "2026-10-26T18:10:20.101Z",
+            },
+        ],
+        "service_operations": [
+            {
+                "identity": forge_service,
+                "status": "failed",
+                "reason": f"cannot start from {private_path}",
+                "provider_response": {"detail": private_path},
+            },
+        ],
+    })
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    readiness = activity["service_readiness"]
+    assert readiness["status"] == "observed"
+    assert readiness["readiness_status"] == "blocked"
+    assert readiness["source"]["kind"] == "current-session-snapshot"
+    assert readiness["source"]["snapshot_sequence"] == 37
+    assert readiness["source"]["last_reconciled_at"] == (
+        "2026-10-26T18:10:20.123Z"
+    )
+    assert readiness["summary"]["investigation_candidate_count"] == 2
+    services = {item["identity"]: item for item in readiness["services"]}
+    assert services[language_service]["status"] == "degraded"
+    assert services[forge_service]["dependencies"] == [{
+        "service_identity": language_service,
+        "observed_status": "degraded",
+        "relationship": "declared-environment-input",
+        "causal_status": "not-established",
+    }]
+    forge_candidate = next(
+        item for item in readiness["candidates"]
+        if item["service_identity"] == forge_service
+    )
+    assert forge_candidate["status"] == "candidate-needs-investigation"
+    assert forge_candidate["causal_status"] == "not-established"
+    assert forge_candidate["supporting_dependency_identities"] == [
+        language_service,
+    ]
+    assert forge_candidate["objective_context"] == {
+        "campaign_id": "cmp_service_readiness",
+        "work_intent_id": "int_service_readiness",
+    }
+    assert result["session_activity_pressure_candidate_count"] == 2
+    assert private_path not in json.dumps(result)
+    assert "provider_detail" not in json.dumps(result)
+    assert "cannot start from" not in json.dumps(result)
+
+    compact = capability_intelligence.project(session, max_result_bytes=8_000)
+    compact_readiness = compact["session_activity"]["service_readiness"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_readiness["source"]["snapshot_sequence"] == 37
+    assert any(
+        item["service_identity"] == forge_service
+        for item in compact_readiness["candidates"]
+    )
+    assert private_path not in json.dumps(compact)
+
+
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
     record = _observation(
         "ev_environment_authority_denial_activity",
@@ -3281,6 +3398,64 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
         "identity": "evt_coordination_deferred_41",
         "sequence": 41,
     })
+    events.extend([
+        {
+            "identity": "evt_unrelated_proposal_eligible",
+            "sequence": 43,
+            "type": "authority.proposal-eligible",
+            "session_id": session.session_id,
+            "payload": {
+                "action": "write",
+                "repository": "mncs-environment",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-environment",
+                    "branch": "campaign/unrelated",
+                    "exclusive": False,
+                },
+                "authorization_basis": "session-writable-scope",
+                "eligibility_basis": (
+                    capability_intelligence.authority_module
+                    .PROPOSAL_WORKTREE_ELIGIBILITY
+                ),
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": 0,
+                "coordination_only_claims": [],
+                "coordination_only_claims_truncated": False,
+                "campaign_id": "cmp_other_campaign",
+                "work_intent_id": "int_environment_coordination_defer",
+            },
+        },
+        {
+            "identity": "evt_same_objective_proposal_eligible",
+            "sequence": 44,
+            "type": "authority.proposal-eligible",
+            "session_id": session.session_id,
+            "payload": {
+                "action": "write",
+                "repository": "mncs-environment",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-environment",
+                    "branch": "campaign/proposal",
+                    "exclusive": False,
+                },
+                "authorization_basis": "session-writable-scope",
+                "eligibility_basis": (
+                    capability_intelligence.authority_module
+                    .PROPOSAL_WORKTREE_ELIGIBILITY
+                ),
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": 0,
+                "coordination_only_claims": [],
+                "coordination_only_claims_truncated": False,
+                "campaign_id": "cmp_environment_coordination_defer",
+                "work_intent_id": "int_environment_coordination_defer",
+            },
+        },
+    ])
     session.recent_events = lambda *, limit, before_sequence=None: {
         "event_count": len(events), "events": events[-limit:],
         "truncated": False, "next_before_sequence": None,
@@ -3298,11 +3473,28 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     assert deferred["event_reference"]["type"] == (
         "authority.coordination-deferred"
     )
+    follow_through = deferred["later_eligibility_relation"]
+    assert follow_through["status"] == (
+        "later-same-objective-eligibility-observed"
+    )
+    assert follow_through["matching_preflight_count"] == 1
+    assert follow_through["matches"][0]["kind"] == "proposal-eligibility"
+    assert follow_through["matches"][0]["event_reference"]["identity"] == (
+        "evt_same_objective_proposal_eligible"
+    )
+    assert follow_through["matches"][0]["operation_executed"] is False
+    assert follow_through["causal_status"] == "not-established"
     assert activity["authority_denial_count"] == 0
     candidate = activity["coordination_deferral_candidates"][0]
     assert candidate["status"] == "candidate-needs-investigation"
     assert candidate["occurrence_count"] == 2
     assert candidate["causal_claim"] == "not-established"
+    assert candidate["later_eligibility_summary"][
+        "deferrals_with_later_preflight_count"
+    ] == 2
+    assert candidate["later_eligibility_summary"][
+        "operation_execution_status"
+    ] == "not-recorded-by-eligibility-events"
     assert private_checkout not in json.dumps(activity)
     assert "private-checkout-detail" not in json.dumps(activity)
 
@@ -3315,7 +3507,76 @@ def test_coordination_deferrals_project_without_becoming_authority_escalations(
     assert compact["coordination_deferral_candidates"][0][
         "causal_claim"
     ] == "not-established"
+    assert compact["coordination_deferrals"][0][
+        "later_eligibility_status"
+    ] == "later-same-objective-eligibility-observed"
+    compact_summary = compact["coordination_deferral_candidates"][0][
+        "later_eligibility_summary"
+    ]
+    assert compact_summary["supporting_preflight_events"][0][
+        "event_reference"
+    ]["identity"] == (
+        "evt_same_objective_proposal_eligible"
+    )
+    assert compact["coordination_deferral_candidates"][0][
+        "later_eligibility_summary"
+    ]["deferrals_with_later_preflight_count"] == 2
     assert private_checkout not in json.dumps(compact)
+
+
+def test_coordination_deferral_followthrough_requires_exact_later_objective() -> None:
+    deferral = {
+        "repository": "mncs-environment",
+        "action": "write",
+        "campaign_id": "cmp_campaign",
+        "work_intent_id": "int_objective",
+        "event_reference": {"identity": "evt_defer", "sequence": 10},
+    }
+
+    def eligibility(identity: str, sequence: int, **changes: object) -> dict:
+        return {
+            "repository": "mncs-environment",
+            "action": "write",
+            "campaign_id": "cmp_campaign",
+            "work_intent_id": "int_objective",
+            "event_reference": {"identity": identity, "sequence": sequence},
+            **changes,
+        }
+
+    unrelated_or_earlier = [
+        eligibility("evt_before", 9),
+        eligibility("evt_other_campaign", 11, campaign_id="cmp_other"),
+        eligibility("evt_other_intent", 12, work_intent_id="int_other"),
+        eligibility("evt_other_action", 13, action="merge"),
+        eligibility("evt_other_repository", 14, repository="mncs-compiler"),
+    ]
+    relation = capability_intelligence._coordination_deferral_follow_through(
+        deferral, integration_records=[], proposal_records=unrelated_or_earlier,
+    )
+    assert relation["status"] == (
+        "no-later-match-in-returned-eligibility-records"
+    )
+    assert relation["matching_preflight_count"] == 0
+    assert relation["causal_status"] == "not-established"
+
+    later = eligibility("evt_same_objective_later", 15)
+    relation = capability_intelligence._coordination_deferral_follow_through(
+        deferral, integration_records=[later], proposal_records=unrelated_or_earlier,
+    )
+    assert relation["status"] == "later-same-objective-eligibility-observed"
+    assert relation["matches"][0]["event_reference"]["identity"] == (
+        "evt_same_objective_later"
+    )
+
+    without_intent = {
+        **deferral,
+        "work_intent_id": None,
+    }
+    relation = capability_intelligence._coordination_deferral_follow_through(
+        without_intent, integration_records=[later], proposal_records=[],
+    )
+    assert relation["status"] == "unavailable-exact-objective-reference"
+    assert relation["matches"] == []
 
 
 def test_claimless_proposal_worktree_preflight_is_projected_with_objective_context(

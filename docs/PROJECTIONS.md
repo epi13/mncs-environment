@@ -427,6 +427,16 @@ coordination requirement in one selected session window produce a
 recurrence only and does not determine whether the concurrency constraint is
 unnecessary. True policy denials and owner-approval escalations retain their
 separate event types.
+Each deferral also exposes `later_eligibility_relation` when exact campaign and
+WorkIntent references are recorded. It joins only a later eligibility event
+with the same repository and action, and retains that event's provenance.
+Repeated-deferral candidates summarize these joins and deduplicate the
+supporting preflight references. The relation establishes only that a matching
+preflight was observed in the selected, returned records: eligibility records
+`operation_executed: false`, so this does not establish execution, resolution,
+or causation. A missing match is not evidence of absence beyond those bounded
+records. Compact projections retain the aggregate candidate and its supporting
+preflight reference before dropping individual deferral detail.
 When a current `Session.check` observes a mutation or verification conflict,
 it attaches a separate `current_claim_state` with the claim version and
 bounded owner liveness, and whether safe recovery is eligible on a normal
@@ -854,6 +864,23 @@ usage, model identity, execution duration, or resource consumption unless
 another authoritative source records those measurements. An empty truncated
 window is reported as `partial-no-invocations-in-selected-window`; it does not
 assert that the full session history contains no capability calls.
+
+`session_activity.service_readiness` projects the selected session's declared
+services, recorded readiness observations, `environment_from_service`
+dependency edges, and reconciliation outcomes from its current snapshot. Its
+source identifies the session, environment, snapshot sequence, and latest
+reconciliation time; `Session.inspect` exposes the same sequence so an agent
+can confirm which session revision the projection used. Service rows and
+investigation candidates retain that reference and, when present, the campaign
+and work-intent identities. Candidates are derived from non-ready or missing
+required observations, non-successful reconciliation outcomes, and declared
+dependencies whose observed state is not ready. They identify work to
+investigate, not established defects or causes. Probe and operation status
+codes are retained, while provider prose, raw responses, and workspace paths
+are omitted. The view is bounded to sixteen service records and eight
+candidates; it represents current recorded state and does not reconstruct
+earlier readiness history. Co-occurrence of a failed operation and a
+non-ready service does not establish causation.
 
 The compact view also relates the current session binding snapshot to observed
 capability calls. `capability_delivery.bindings` reports each bounded binding's

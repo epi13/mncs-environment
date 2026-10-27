@@ -10048,6 +10048,7 @@ class Session:
         ]
         return {
             "session_id": self.session_id,
+            "snapshot_sequence": self.snapshot.get("snapshot_sequence"),
             "lifecycle": self.snapshot.get("lifecycle"),
             "consumer_id": self.snapshot.get("consumer_id"),
             "consumer_kind": self.snapshot.get("consumer_kind"),

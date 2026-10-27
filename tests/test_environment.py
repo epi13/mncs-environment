@@ -9154,7 +9154,11 @@ class SessionTests(unittest.TestCase):
             session = make_session(state)
             count = len(session._log())
             opened = sessions.Session.open(state_dir=state, session_id=session.session_id, **FAST)
-            opened.inspect()
+            inspected = opened.inspect()
+            self.assertEqual(
+                inspected["snapshot_sequence"],
+                opened.snapshot["snapshot_sequence"],
+            )
             opened.inspect()["bindings"]
             opened.inspect()["authority"]
             opened.inspect()["latest_events"]
