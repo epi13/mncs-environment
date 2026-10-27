@@ -94,7 +94,7 @@ fallback preserves evidence links without claiming that omitted work failed or
 was fulfilled; agents can query the session activity projection for the full
 bounded detail.
 
-For an unusually small 7–8 KiB response, if a verified observation, its
+For an unusually small 7–8 KiB response, if a verified occurrence, its
 pressure hypothesis, and an improvement relation share the same identity and
 one reduced path fits within the budget, the projection retains that single
 observation-to-improvement path, preferring the newest complete path in

@@ -4768,6 +4768,14 @@ def test_projection_enforces_tight_budget_for_session_service_history(
         "ses_environment_budget_latest", "cmp_environment_budget",
     )
     _drop_pressure_hypothesis(latest_followup)
+    latest_supporting_context = _observation(
+        "ev_environment_budget_supporting_context_latest",
+        "ses_environment_budget_latest", "cmp_environment_budget",
+    )
+    latest_supporting_context["pressure_hypothesis"]["identity"] = (
+        "ph_budget_pressure_latest"
+    )
+    latest_supporting_context["pressure_hypothesis_role"] = "supporting-context"
     latest_change["improvement_relation"] = {
         "identity": "im_budget_pressure_latest",
         "addresses_hypothesis_identity": "ph_budget_pressure_latest",
@@ -4782,7 +4790,7 @@ def test_projection_enforces_tight_budget_for_session_service_history(
         [
             pressure, change, verification, followup,
             latest_pressure, latest_change,
-            latest_verification, latest_followup,
+            latest_verification, latest_followup, latest_supporting_context,
         ],
         extra_refs=[implementation],
     )
@@ -4980,6 +4988,8 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     )
     assert observation["evidence_reference"]["commit"]
     assert observation["evidence_reference"]["sha256"]
+    assert observation["identity"] == latest_pressure["identity"]
+    assert observation["pressure_hypothesis_role"] == "occurrence"
     assert observation["pressure_hypothesis"]["identity"] == (
         hypothesis["identity"]
     ) == relation["addresses_hypothesis_identity"] == "ph_budget_pressure_latest"

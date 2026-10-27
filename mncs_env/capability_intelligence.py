@@ -3141,13 +3141,17 @@ def _compact_campaign_evidence_priority_rows(
     observations = observations if isinstance(observations, list) else []
     hypotheses = hypotheses if isinstance(hypotheses, list) else []
     relations = relations if isinstance(relations, list) else []
-    if not (observations or hypotheses or relations):
+    if not (observations and hypotheses and relations):
         return False
 
     relation = None
     hypothesis_identity = None
+    observation = None
+    hypothesis = None
     # Evidence rows preserve campaign append order, so prefer the newest
-    # complete path when several improvements address observed pressure.
+    # complete path when several improvements address observed pressure. The
+    # observation must be an occurrence; later supporting context for the same
+    # hypothesis cannot stand in for the event that established the pressure.
     for candidate in reversed(relations):
         if not isinstance(candidate, dict):
             continue
@@ -3163,59 +3167,23 @@ def _compact_campaign_evidence_priority_rows(
             ),
             None,
         )
-        if matching_observation is not None:
-            relation = candidate
-            hypothesis_identity = candidate_hypothesis
-            break
-    if hypothesis_identity is None:
-        occurrence = next(
+        matching_hypothesis = next(
             (
-                item for item in reversed(observations)
+                item for item in hypotheses
                 if isinstance(item, dict)
-                and item.get("pressure_hypothesis_role") == "occurrence"
-                and isinstance(item.get("pressure_hypothesis"), dict)
-                and isinstance(
-                    item["pressure_hypothesis"].get("identity"), str,
-                )
+                and item.get("identity") == candidate_hypothesis
             ),
             None,
         )
-        if occurrence is not None:
-            hypothesis_identity = occurrence["pressure_hypothesis"]["identity"]
-    if relation is None and relations:
-        relation = next(
-            (item for item in reversed(relations) if isinstance(item, dict)),
-            None,
-        )
-        if (hypothesis_identity is None and isinstance(relation, dict)
-                and isinstance(
-                    relation.get("addresses_hypothesis_identity"), str,
-                )):
-            hypothesis_identity = relation["addresses_hypothesis_identity"]
-
-    observation = next(
-        (
-            item for item in reversed(observations)
-            if isinstance(item, dict)
-            and (hypothesis_identity is None
-                 or (isinstance(item.get("pressure_hypothesis"), dict)
-                     and item["pressure_hypothesis"].get("identity")
-                     == hypothesis_identity))
-        ),
-        next(
-            (item for item in reversed(observations) if isinstance(item, dict)),
-            None,
-        ),
-    )
-    hypothesis = next(
-        (
-            item for item in hypotheses
-            if isinstance(item, dict)
-            and (hypothesis_identity is None
-                 or item.get("identity") == hypothesis_identity)
-        ),
-        None,
-    )
+        if matching_observation is not None and matching_hypothesis is not None:
+            relation = candidate
+            hypothesis_identity = candidate_hypothesis
+            observation = matching_observation
+            hypothesis = matching_hypothesis
+            break
+    if (relation is None or observation is None or hypothesis is None
+            or not isinstance(hypothesis_identity, str)):
+        return False
 
     def retain_pointer(value: Any) -> dict[str, Any] | None:
         if not isinstance(value, dict):
