@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_pressure_definition_correction_improvement_20261027",
+  "captured_at": "2026-10-27T13:50:13Z",
+  "measurement_basis": "committed-corroborated-correction-implementation-linked-to-regression-and-live-ECI-readback",
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability correction projection and pressure analysis",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_corroborated_pressure_recommendation_correction_20261027",
+      "implementation_commit": "12882a807779943f7c8b2ea20c6fa0c330b6613f",
+      "verification_observation_identity": "ev_environment_ambient_pressure_definition_correction_verification_20261027",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The projection now permits a valid actionable-recommendation correction only when it exactly matches an integrity-verified occurrence in the same campaign with the same hypothesis identity, title, category, subsystem, and owner. The corrected recommendation is used in pressure analysis, the applied basis is exposed, and compact observations retain actionable recommendation text.",
+      "immediate_behavior_verified": true,
+      "effectiveness_assessment": "not-assessed",
+      "analysis_limit": "The live projection applies both recorded corrections and produces one consistent pressure definition. This validates the narrow evidence-reconciliation behavior, not the correctness of every pressure interpretation or a reduction in future agent intervention."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_corroborated_pressure_recommendation_correction_20261027",
+    "title": "A valid conflicting pressure recommendation could not be reconciled by the append-only correction projection",
+    "category": "environmental-evidence-reconciliation",
+    "subsystem": "mncs-environment capability-intelligence observation correction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Allow a valid actionable-recommendation correction only when it exactly matches an integrity-verified occurrence for the same hypothesis definition and campaign; preserve rejection of unsupported rewrites."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_corroborated_pressure_definition_correction_20261027",
+    "addresses_hypothesis_identity": "ph_environment_corroborated_pressure_recommendation_correction_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_corroborated_pressure_correction_12882a8",
+      "repository": "mncs-environment",
+      "commit": "12882a807779943f7c8b2ea20c6fa0c330b6613f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "451f5ed3c203d3547294c8071718100d3b0bad50da5f429009c2bedaff9dce8d",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_ambient_pressure_definition_correction_verification_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The exact target and correction records are integrity-verified. The replacement must match a separate verified occurrence in the same campaign and match every other pressure-definition field; the live ECI readback applies both corrections with that basis, while existing tests continue to reject unsupported rewrites.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "future recurrence of conflicting pressure definitions",
+      "agent intervention reduction or useful reuse of the corrected projection",
+      "long-term outcome quality or correctness of each occurrence interpretation",
+      "projection-version identity semantics"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_corroborated_pressure_correction_12882a8",
+      "repository": "mncs-environment",
+      "commit": "12882a807779943f7c8b2ea20c6fa0c330b6613f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "451f5ed3c203d3547294c8071718100d3b0bad50da5f429009c2bedaff9dce8d",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_corroborated_pressure_correction_tests_12882a8",
+      "repository": "mncs-environment",
+      "commit": "12882a807779943f7c8b2ea20c6fa0c330b6613f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "62f51a84c7dd0235e3209a21799fd58204cbfceaaf33a47bebc7733daeb7391b",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "identity": "ev_environment_ambient_pressure_definition_correction_verification_20261027",
+      "kind": "verification-observation"
+    }
+  ],
+  "not_measured": [
+    "whether later sessions encounter fewer valid recommendation conflicts",
+    "agent time, token use, and intervention burden",
+    "cross-project applicability to other correction fields or pressure dimensions"
+  ]
+}

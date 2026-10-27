@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_pressure_definition_correction_verification_20261027",
+  "captured_at": "2026-10-27T13:50:13Z",
+  "measurement_basis": "same-campaign-ECI-page-readback-before-and-after-committed-correction-behavior",
+  "related_work": {
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246"
+  },
+  "observation": {
+    "kind": "ambient-pressure-definition-correction-verification",
+    "source_interface": "MNCS Environment environmental-capability projection and append-only observation correction",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_fd7c3a3fe591b76e",
+      "projection_identity": "eci_0d35a6e04a2d378e",
+      "implementation_commit": "12882a807779943f7c8b2ea20c6fa0c330b6613f",
+      "verification_command": "python3 -m pytest tests/test_capability_intelligence.py -q"
+    },
+    "outcome": {
+      "before_implementation": {
+        "record_corrections_applied": 0,
+        "record_corrections_unverified": 2,
+        "correction_status": "replacement-values-unverified-or-unchanged",
+        "pressure_definition_status": "conflicting-recorded-definitions"
+      },
+      "after_implementation": {
+        "record_corrections_applied": 2,
+        "record_corrections_unverified": 0,
+        "correction_basis": "corroborated-by-verified-occurrence",
+        "pressure_definition_status": "consistent",
+        "actionable_recommendation": "Select the existing mncs-automation checkout in the capability-observation profile, then verify a standard resident entry uses that selected provider without an invocation-specific root override.",
+        "recurrence_status": "not-established",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "projection_identity": {
+        "before": "eci_0d35a6e04a2d378e",
+        "after": "eci_0d35a6e04a2d378e",
+        "response_status": "partial",
+        "response_truncated": true
+      },
+      "regression_verification": {
+        "tests_passed": 159,
+        "tests_failed": 0,
+        "duration_seconds": 5.88,
+        "module": "tests/test_capability_intelligence.py"
+      },
+      "interpretation_limit": "The selected page and session inputs remained unchanged while the correction result changed with the committed projection behavior. The unchanged projection identity is recorded as observed behavior; whether that identity should include projection implementation version has not been assessed."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_corroborated_pressure_recommendation_correction_20261027",
+    "title": "A valid conflicting pressure recommendation could not be reconciled by the append-only correction projection",
+    "category": "environmental-evidence-reconciliation",
+    "subsystem": "mncs-environment capability-intelligence observation correction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Allow a valid actionable-recommendation correction only when it exactly matches an integrity-verified occurrence for the same hypothesis definition and campaign; preserve rejection of unsupported rewrites."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "kind": "direct-pre-implementation-ECI-readback",
+      "projection_identity": "eci_0d35a6e04a2d378e",
+      "record_corrections_applied": 0,
+      "record_corrections_unverified": 2,
+      "pressure_definition_status": "conflicting-recorded-definitions"
+    },
+    {
+      "kind": "committed-correction-observation",
+      "identity": "ev_environment_ambient_native_router_verification_recommendation_correction_20261027",
+      "repository": "mncs-environment",
+      "commit": "0f3329f21f90cbfc108a2ca51c0ff1a35b69b2e6",
+      "path": "evidence/environmental-capability/ambient-native-router-verification-recommendation-correction-20261027.json",
+      "sha256": "30b1d775720fe91b8563788044ccdd2dbd0f9d1bcf3683aaab912481b9e2cf24"
+    },
+    {
+      "kind": "committed-correction-observation",
+      "identity": "ev_environment_ambient_native_router_improvement_recommendation_correction_20261027",
+      "repository": "mncs-environment",
+      "commit": "0f3329f21f90cbfc108a2ca51c0ff1a35b69b2e6",
+      "path": "evidence/environmental-capability/ambient-native-router-improvement-recommendation-correction-20261027.json",
+      "sha256": "6bb4c2977f82445116981892d2b164711a65971362c6433c42025faf494ce8e1"
+    }
+  ],
+  "not_measured": [
+    "Agent time or cognitive burden avoided by reconciling valid pressure definitions.",
+    "Whether the same correction limitation recurs across other campaigns or pressure types.",
+    "Independent correctness of the supporting occurrence recommendation.",
+    "Long-term pressure recurrence or improvement effectiveness.",
+    "Whether projection identity should include implementation or environmental version."
+  ]
+}
