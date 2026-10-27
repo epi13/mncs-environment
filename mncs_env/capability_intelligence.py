@@ -2541,6 +2541,8 @@ def _compact_service_accountability_overview(
         "owner_pass_observation_status", "owner_pass_observation_count",
         "owner_pass_outcome_disposition_counts",
         "owner_pass_outcome_reason_counts",
+        "owner_pass_service_availability_counts",
+        "owner_pass_service_availability_reason_counts",
         "readiness_probe_observation_record_count",
         "readiness_probe_observation_missing_count",
         "readiness_probe_observation_ambiguous_count",
@@ -2564,6 +2566,8 @@ def _compact_service_accountability_overview(
         "ambient_probe_use_relation_status_counts",
         "owner_pass_outcome_disposition_counts",
         "owner_pass_outcome_reason_counts",
+        "owner_pass_service_availability_counts",
+        "owner_pass_service_availability_reason_counts",
     ):
         counts = summary.get(key)
         if isinstance(counts, dict):
@@ -2604,6 +2608,8 @@ def _compact_service_accountability_overview(
                 "owner_pass_result_record_count",
                 "owner_pass_outcome_disposition_counts",
                 "owner_pass_outcome_reason_counts",
+                "owner_pass_service_availability_counts",
+                "owner_pass_service_availability_reason_counts",
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
             )
@@ -2625,6 +2631,8 @@ def _compact_service_accountability_overview(
         for key in (
             "owner_pass_outcome_disposition_counts",
             "owner_pass_outcome_reason_counts",
+            "owner_pass_service_availability_counts",
+            "owner_pass_service_availability_reason_counts",
         ):
             counts = execution_summary.get(key)
             if isinstance(counts, dict):
@@ -2730,6 +2738,8 @@ def _compact_ambient_service_execution_overview(
                         "source_reference_status", "source_reference",
                         "outcome_disposition", "outcome_reason_code",
                         "agent_response_emitted",
+                        "service_availability_status",
+                        "service_availability_reason_code",
                     ) if key in row
                 }
                 for row in results[:2] if isinstance(row, dict)
@@ -2747,6 +2757,119 @@ def _compact_ambient_service_execution_overview(
         "response_budget_summary_only": True,
         "measurement_limits": [
             "Per-pass decisions were omitted by the response budget; use the projection digest and session snapshot context to request the bounded trace again.",
+        ],
+    }
+
+
+def _compact_family_ambient_observation(value: Any) -> dict[str, Any] | None:
+    """Retain the latest bounded Family result as distinct snapshot evidence."""
+    if (not isinstance(value, dict)
+            or value.get("scope")
+            != "latest-current-session-family-ambient-pass-summary"):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "kind", "session_id", "environment_id", "snapshot_sequence",
+            "observation_epoch_key", "summary_digest",
+        )
+        if isinstance(source.get(key), str)
+        or (key == "snapshot_sequence"
+            and type(source.get(key)) is int and source[key] >= 0)
+    }
+    raw_summary = value.get("summary")
+    raw_summary = raw_summary if isinstance(raw_summary, dict) else {}
+    summary: dict[str, int | float | bool] = {}
+    for key in (
+        "observed_changes", "relevant", "reconciled", "deferred",
+        "escalated", "contributors",
+    ):
+        count = raw_summary.get(key)
+        if type(count) is int and 0 <= count <= 1_000_000:
+            summary[key] = count
+    elapsed = raw_summary.get("elapsed_seconds")
+    if (type(elapsed) in (int, float) and math.isfinite(elapsed)
+            and 0 <= elapsed <= 86400):
+        summary["elapsed_seconds"] = elapsed
+    if type(raw_summary.get("epoch_reused")) is bool:
+        summary["epoch_reused"] = raw_summary["epoch_reused"]
+    if not summary:
+        return None
+    expected_statuses = {
+        "ambient_fulfillment_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "verification_status": "not-established",
+    }
+    result = {
+        "status": "observed",
+        "scope": "latest-current-session-family-ambient-pass-summary",
+        "source": compact_source,
+        "summary": summary,
+        **expected_statuses,
+        "measurement_limits": [
+            "The summary is the latest persisted Family ambient pass in this session snapshot; earlier passes and unobserved service opportunities are not included.",
+            "The owner-reported elapsed time is not agent end-to-end duration; verification and agent intervention burden remain unestablished.",
+            "A zero relevant-work count applies to this pass and selected inputs; it does not establish that no agent need or Family pressure exists.",
+        ],
+    }
+    return result
+
+
+def _session_family_ambient_observation(
+    session: Any, snapshot: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Project the latest persisted Family pass without inferring fulfillment."""
+    raw_summary = snapshot.get("family_last_summary")
+    if not isinstance(raw_summary, dict):
+        return None
+    summary: dict[str, int | float | bool] = {}
+    for key in (
+        "observed_changes", "relevant", "reconciled", "deferred",
+        "escalated", "contributors",
+    ):
+        count = raw_summary.get(key)
+        if type(count) is int and 0 <= count <= 1_000_000:
+            summary[key] = count
+    elapsed = raw_summary.get("elapsed_seconds")
+    if (type(elapsed) in (int, float) and math.isfinite(elapsed)
+            and 0 <= elapsed <= 86400):
+        summary["elapsed_seconds"] = elapsed
+    if type(raw_summary.get("epoch_reused")) is bool:
+        summary["epoch_reused"] = raw_summary["epoch_reused"]
+    if not summary:
+        return None
+    epoch = snapshot.get("family_epoch")
+    epoch = epoch if isinstance(epoch, dict) else {}
+    epoch_key = epoch.get("key")
+    source: dict[str, Any] = {
+        "kind": "current-session-snapshot",
+        "session_id": getattr(session, "session_id", None),
+        "summary_digest": digest_hex(summary, length=16),
+    }
+    for key in ("environment_id",):
+        value = snapshot.get(key)
+        if isinstance(value, str) and value:
+            source[key] = value[:160]
+    sequence = snapshot.get("snapshot_sequence")
+    if type(sequence) is int and sequence >= 0:
+        source["snapshot_sequence"] = sequence
+    if (isinstance(epoch_key, str)
+            and re.fullmatch(r"[0-9a-f]{64}", epoch_key)):
+        source["observation_epoch_key"] = epoch_key
+    return {
+        "status": "observed",
+        "scope": "latest-current-session-family-ambient-pass-summary",
+        "source": source,
+        "summary": summary,
+        "ambient_fulfillment_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "verification_status": "not-established",
+        "measurement_limits": [
+            "The summary is the latest persisted Family ambient pass in this session snapshot; earlier passes and unobserved service opportunities are not included.",
+            "The owner-reported elapsed time is not agent end-to-end duration; verification and agent intervention burden remain unestablished.",
+            "A zero relevant-work count applies to this pass and selected inputs; it does not establish that no agent need or Family pressure exists.",
         ],
     }
 
@@ -2779,6 +2902,7 @@ def _compact_session_activity_budget_overview(
             key: source[key]
             for key in (
                 "event_count", "ambient_service_execution_digest",
+                "family_ambient_observation_digest",
             )
             if (isinstance(source.get(key), str)
                 or type(source.get(key)) in (int, bool))
@@ -2789,6 +2913,17 @@ def _compact_session_activity_budget_overview(
     )
     if diagnostic_activity is not None:
         result["diagnostic_activity"] = diagnostic_activity
+    family_observation_source = activity.get("family_ambient_observation")
+    if (not isinstance(family_observation_source, dict)
+            and isinstance(source_activity, dict)):
+        family_observation_source = source_activity.get(
+            "family_ambient_observation",
+        )
+    family_observation = _compact_family_ambient_observation(
+        family_observation_source,
+    )
+    if family_observation is not None:
+        result["family_ambient_observation"] = family_observation
 
     readiness = activity.get("service_readiness")
     if isinstance(readiness, dict):
@@ -3250,7 +3385,10 @@ def _compact_session_activity_evidence_priority_overview(
     if isinstance(source, dict):
         result["source"] = {
             key: source[key]
-            for key in ("event_count", "ambient_service_execution_digest")
+            for key in (
+                "event_count", "ambient_service_execution_digest",
+                "family_ambient_observation_digest",
+            )
             if key in source
         }
 
@@ -3927,6 +4065,7 @@ def _compact_projection(
                     "session_service_accountability_digest",
                     "session_projection_coherence_digest",
                     "session_ambient_service_execution_digest",
+                    "session_family_ambient_observation_digest",
                     "session_ambient_owner_pass_activity_digest",
                     "observation_records_considered",
                     "observation_records_verified",
@@ -4884,6 +5023,7 @@ def _compact_projection(
             "invocation_events_considered", "invocation_records_omitted",
             "resource_sample_identity_digest",
             "ambient_service_execution_digest",
+            "family_ambient_observation_digest",
             "ambient_owner_pass_activity_digest",
             "claim_coordination_events_considered",
             "claim_coordination_records_returned",
@@ -6689,6 +6829,13 @@ def _compact_projection(
             compact_activity["diagnostic_activity"] = (
                 compact_diagnostic_activity
             )
+    compact_family_observation = _compact_family_ambient_observation(
+        activity.get("family_ambient_observation"),
+    )
+    if compact_family_observation is not None:
+        compact_activity["family_ambient_observation"] = (
+            compact_family_observation
+        )
     raw_service_accountability = activity.get("service_accountability")
     if isinstance(raw_service_accountability, dict):
         # The session projection already bounds and sanitizes this join.
@@ -17827,6 +17974,8 @@ def _environment_service_execution_accountability(
         result_status_counts: dict[str, int] = {}
         outcome_disposition_counts: dict[str, int] = {}
         outcome_reason_counts: dict[str, int] = {}
+        service_availability_counts: dict[str, int] = {}
+        service_availability_reason_counts: dict[str, int] = {}
         for item in results:
             if isinstance(item, dict) and isinstance(item.get("result_status"), str):
                 status = item["result_status"]
@@ -17843,6 +17992,22 @@ def _environment_service_execution_accountability(
                     outcome_reason_counts[reason_code] = (
                         outcome_reason_counts.get(reason_code, 0) + 1
                     )
+                availability = item.get("service_availability_status")
+                availability_reason = item.get(
+                    "service_availability_reason_code",
+                )
+                if (item.get("owner") == "family"
+                        and availability == "unavailable"
+                        and availability_reason
+                        == "family-vocabulary-unavailable"):
+                    service_availability_counts[availability] = (
+                        service_availability_counts.get(availability, 0) + 1
+                    )
+                    service_availability_reason_counts[availability_reason] = (
+                        service_availability_reason_counts.get(
+                            availability_reason, 0,
+                        ) + 1
+                    )
         if type(owner_results.get("result_record_count")) is int:
             summary["owner_pass_result_record_count"] = owner_results[
                 "result_record_count"
@@ -17858,6 +18023,14 @@ def _environment_service_execution_accountability(
         if outcome_reason_counts:
             summary["owner_pass_outcome_reason_counts"] = dict(
                 sorted(outcome_reason_counts.items()),
+            )
+        if service_availability_counts:
+            summary["owner_pass_service_availability_counts"] = dict(
+                sorted(service_availability_counts.items()),
+            )
+        if service_availability_reason_counts:
+            summary["owner_pass_service_availability_reason_counts"] = dict(
+                sorted(service_availability_reason_counts.items()),
             )
         scheduled = execution.get("scheduled_passes")
         scheduled = scheduled if isinstance(scheduled, list) else []
@@ -17918,6 +18091,8 @@ def _environment_service_execution_accountability(
                     "source_reference", "operation_status", "result_code",
                     "result_reused", "outcome_disposition",
                     "outcome_reason_code", "agent_response_emitted",
+                    "service_availability_status",
+                    "service_availability_reason_code",
                 ):
                     value = result.get(key)
                     if isinstance(value, str) or type(value) is bool:
@@ -20123,6 +20298,9 @@ def _session_activity(
         service_readiness, None, snapshot,
         ambient_service_execution=ambient_service_execution,
     )
+    family_ambient_observation = _session_family_ambient_observation(
+        session, snapshot,
+    )
     doctor_health_history = _session_doctor_health_history(
         session, snapshot, doctor_gap_limit=doctor_gap_limit,
     )
@@ -20151,6 +20329,10 @@ def _session_activity(
     ambient_service_execution_digest = (
         digest_hex(ambient_service_execution)
         if has_ambient_service_execution else None
+    )
+    family_ambient_observation_digest = (
+        digest_hex(family_ambient_observation)
+        if isinstance(family_ambient_observation, dict) else None
     )
     if has_service_readiness and has_doctor_health_history:
         readiness_source = service_readiness.get("source", {})
@@ -20205,6 +20387,9 @@ def _session_activity(
                 ),
                 **({"ambient_service_execution_digest": ambient_service_execution_digest}
                    if ambient_service_execution_digest is not None else {}),
+                **({"family_ambient_observation_digest": (
+                    family_ambient_observation_digest
+                )} if family_ambient_observation_digest is not None else {}),
             },
             "interaction_count": 0,
             "interactions": [],
@@ -20219,6 +20404,8 @@ def _session_activity(
                if has_service_readiness else {}),
             **({"service_accountability": service_accountability}
                if service_accountability is not None else {}),
+            **({"family_ambient_observation": family_ambient_observation}
+               if family_ambient_observation is not None else {}),
             **({"doctor_health_history": doctor_health_history}
                if has_doctor_health_history else {}),
             **({"projection_coherence_history": projection_coherence_history}
@@ -20264,6 +20451,9 @@ def _session_activity(
                 ),
                 **({"ambient_service_execution_digest": ambient_service_execution_digest}
                    if ambient_service_execution_digest is not None else {}),
+                **({"family_ambient_observation_digest": (
+                    family_ambient_observation_digest
+                )} if family_ambient_observation_digest is not None else {}),
             },
             "interaction_count": 0,
             "interactions": [],
@@ -20275,6 +20465,8 @@ def _session_activity(
                if has_service_readiness else {}),
             **({"service_accountability": service_accountability}
                if service_accountability is not None else {}),
+            **({"family_ambient_observation": family_ambient_observation}
+               if family_ambient_observation is not None else {}),
             **({"doctor_health_history": doctor_health_history}
                if has_doctor_health_history else {}),
             **({"projection_coherence_history": projection_coherence_history}
@@ -22544,6 +22736,8 @@ def _session_activity(
            if has_service_readiness else {}),
         **({"service_accountability": service_accountability}
            if service_accountability is not None else {}),
+        **({"family_ambient_observation": family_ambient_observation}
+           if family_ambient_observation is not None else {}),
         **({"doctor_health_history": doctor_health_history}
            if has_doctor_health_history else {}),
         **({"projection_coherence_history": projection_coherence_history}
@@ -22567,6 +22761,9 @@ def _session_activity(
             ],
             **({"ambient_service_execution_digest": ambient_service_execution_digest}
                if ambient_service_execution_digest is not None else {}),
+            **({"family_ambient_observation_digest": (
+                family_ambient_observation_digest
+            )} if family_ambient_observation_digest is not None else {}),
             **({"ambient_owner_pass_activity_digest": (
                 ambient_owner_pass_activity_digest
             )} if ambient_owner_pass_activity_digest is not None else {}),
@@ -24308,6 +24505,10 @@ def project(
         digest_hex(activity["ambient_service_execution"])
         if isinstance(activity.get("ambient_service_execution"), dict) else None
     )
+    session_family_ambient_observation_digest = (
+        digest_hex(activity["family_ambient_observation"])
+        if isinstance(activity.get("family_ambient_observation"), dict) else None
+    )
     session_ambient_owner_pass_activity_digest = (
         digest_hex(activity["ambient_owner_pass_activity"])
         if (isinstance(activity.get("ambient_owner_pass_activity"), dict)
@@ -24395,6 +24596,11 @@ def project(
                 ),
             } if session_ambient_service_execution_digest is not None else {}),
             **({
+                "session_family_ambient_observation_digest": (
+                    session_family_ambient_observation_digest
+                ),
+            } if session_family_ambient_observation_digest is not None else {}),
+            **({
                 "session_ambient_owner_pass_activity_digest": (
                     session_ambient_owner_pass_activity_digest
                 ),
@@ -24472,6 +24678,11 @@ def project(
                     session_ambient_service_execution_digest
                 ),
             } if session_ambient_service_execution_digest is not None else {}),
+            **({
+                "session_family_ambient_observation_digest": (
+                    session_family_ambient_observation_digest
+                ),
+            } if session_family_ambient_observation_digest is not None else {}),
             **({
                 "session_ambient_owner_pass_activity_digest": (
                     session_ambient_owner_pass_activity_digest

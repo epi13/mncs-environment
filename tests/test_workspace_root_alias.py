@@ -177,6 +177,58 @@ class ControlWorkspaceAliasTests(unittest.TestCase):
         self.assertEqual(claim["scope"]["checkout"], str(self.repository))
         self.assertEqual(claim["scope"]["branch"], "main")
 
+    def test_case_insensitive_workspace_selection_uses_discovered_checkout_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            commons = root / "MNCS-Commons"
+            (commons / ".mncs").mkdir(parents=True)
+            (commons / ".mncs" / "project.json").write_text(
+                json.dumps({
+                    "schema_version": "mncs.project/1",
+                    "repository": "mncs-commons",
+                }) + "\n",
+                encoding="utf-8",
+            )
+            (commons / "README.md").write_text("Commons test checkout\n")
+            self._git(commons, "init", "-b", "main")
+            self._git(commons, "config", "user.name", "MNCS Environment Test")
+            self._git(
+                commons, "config", "user.email", "environment-test@example.invalid"
+            )
+            self._git(commons, "add", ".mncs/project.json", "README.md")
+            self._git(commons, "commit", "-m", "Create case-variant checkout")
+
+            state = root / "state"
+            store = open_store(state, "file", verify_on_open=False)
+            try:
+                environment = sessions.resolve_environment(
+                    definition={
+                        "name": "case-insensitive-workspace-selection",
+                        "workspace_scope": {
+                            "kind": "workspace",
+                            "repositories": ["mncs-commons"],
+                        },
+                        "intent": {
+                            "goal": "select Commons through its canonical project identity",
+                            "repositories": ["mncs-commons"],
+                        },
+                    },
+                    workspace_root=root,
+                    state_dir=state,
+                    consumer_id="case-variant-test",
+                    backend="file",
+                    store=store,
+                )
+            finally:
+                close = getattr(store, "close", None)
+                if callable(close):
+                    close()
+
+            selected = environment["selected_checkouts"]["mncs-commons"]
+            self.assertEqual(Path(selected["path"]), commons.resolve())
+            self.assertEqual(selected["branch"], "main")
+            self.assertEqual(selected["source_ref"], "explicit-workspace-selection")
+
     def test_only_exact_control_mount_alias_is_accepted(self) -> None:
         with self._control_mount():
             self.assertEqual(

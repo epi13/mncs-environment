@@ -1286,6 +1286,18 @@ prove service fulfillment, or measure agent receipt or intervention burden.
 Entry-only traces can show a result summary but do not claim a durable result
 reference.
 
+When a Family ambient pass persists `family_last_summary`, ECI exposes it as
+`session_activity.family_ambient_observation`, with the selected session,
+Environment, snapshot sequence, an observation-epoch key when recorded, and a
+digest of the bounded summary. This is a separate current-snapshot observation,
+not a rewrite of the scheduler's exact owner-pass result. It carries only
+bounded counts, elapsed time, and epoch reuse state; verification,
+agent-need fulfillment, and intervention burden remain not established or not
+measured. The summary is not linked to a specific scheduler execution unless
+the scheduler trace itself supplies that relation, so do not use its presence
+to reinterpret an earlier owner-pass result. Its digest participates in ECI
+projection identity and survives response-budget compaction.
+
 When an ambient adapter completes without emitting an entry block, it records
 a compact reason-coded result such as `no-diagnostic-findings`,
 `no-verification-obligations`, or `disabled-by-definition`. The normal entry

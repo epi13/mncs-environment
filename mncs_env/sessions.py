@@ -2290,8 +2290,25 @@ def resolve_environment(
     provisioned = bool(selected_roots)
     if repository_selection is not None:
         for name in repository_selection:
-            path = resolved_root / name
-            record = next(repo for repo in workspace_view["repositories"] if Path(repo["path"]) == path)
+            matches = [
+                repo for repo in workspace_view["repositories"]
+                if isinstance(repo, dict)
+                and isinstance(repo.get("path"), str)
+                and Path(repo["path"]).parent == resolved_root
+                and Path(repo["path"]).name.casefold() == name.casefold()
+            ]
+            if len(matches) != 1:
+                raise workspace_module.WorkspaceResolutionError(
+                    "selected checkout did not resolve to one discovered repository",
+                    diagnostics={
+                        "code": "workspace-selected-checkout-unavailable",
+                        "repository": name,
+                        "workspace_root": str(resolved_root),
+                        "discovered_match_count": len(matches),
+                    },
+                )
+            record = matches[0]
+            path = Path(record["path"])
             selected_roots[name] = path
             selected_facts[name] = {"repository": name, "path": str(path), "head": record.get("head"),
                                     "branch": record.get("branch"), "clean": not record.get("dirty"),

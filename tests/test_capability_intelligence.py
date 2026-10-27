@@ -6261,6 +6261,18 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
         "snapshot_sequence": 52,
         "campaign": {"identity": "cmp_ambient_service_trace"},
         "intent": {"identity": "int_ambient_service_trace"},
+        "family_epoch": {"key": "c" * 64},
+        "family_last_summary": {
+            "observed_changes": 0,
+            "relevant": 0,
+            "reconciled": 0,
+            "deferred": 0,
+            "escalated": 0,
+            "contributors": 12,
+            "epoch_reused": False,
+            "elapsed_seconds": 13.767,
+            "attention": [{"change": "must-not-be-exposed"}],
+        },
         "coherence": {"last_trace": {
             "mode": "targeted_update",
             "trace_persistence_status": "session-snapshot",
@@ -6323,6 +6335,29 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     ] == "not-established"
     assert view["execution"]["ambient_fulfillment"] == "not-established"
     assert view["execution"]["agent_need_opportunity_denominator"] == "not-recorded"
+    family_observation = projection["session_activity"][
+        "family_ambient_observation"
+    ]
+    assert family_observation["status"] == "observed"
+    assert family_observation["scope"] == (
+        "latest-current-session-family-ambient-pass-summary"
+    )
+    assert family_observation["source"]["observation_epoch_key"] == "c" * 64
+    assert family_observation["summary"]["contributors"] == 12
+    assert family_observation["summary"]["elapsed_seconds"] == 13.767
+    assert "attention" not in family_observation["summary"]
+    assert family_observation["ambient_fulfillment_status"] == (
+        "not-established"
+    )
+    assert family_observation["agent_intervention_burden_status"] == (
+        "not-measured"
+    )
+    family_digest = projection["session_activity"]["source"][
+        "family_ambient_observation_digest"
+    ]
+    assert projection["source"][
+        "session_family_ambient_observation_digest"
+    ] == family_digest
     owner_results = view["execution"]["owner_pass_results"]
     assert owner_results["status"] == "recorded"
     assert owner_results["result_record_count"] == 1
@@ -6364,6 +6399,13 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     original_event_digest = projection["session_activity"]["source"][
         "event_window_identity_digest"
     ]
+    session.snapshot["family_last_summary"]["contributors"] = 13
+    family_changed = capability_intelligence.project(session)
+    assert family_changed["identity"] != original_identity
+    assert family_changed["session_activity"]["source"][
+        "event_window_identity_digest"
+    ] == original_event_digest
+    session.snapshot["family_last_summary"]["contributors"] = 12
     session.snapshot["coherence"]["last_trace"]["elapsed_seconds"] = 0.5
     changed = capability_intelligence.project(session)
     assert changed["identity"] != original_identity
@@ -6372,10 +6414,21 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     ] == original_event_digest
     compact = capability_intelligence.project(session, max_result_bytes=8_000)
     assert compact["source"]["response_truncated"] is True
+    assert compact["source"][
+        "session_family_ambient_observation_digest"
+    ] == family_digest
     compact_activity = compact["session_activity"]
+    assert compact_activity["family_ambient_observation"]["status"] == (
+        "observed"
+    )
+    assert compact_activity["source"][
+        "family_ambient_observation_digest"
+    ] == family_digest
     compact_execution = compact_activity["service_accountability"][
         "environment_service_execution"
     ]
+    assert compact_activity["family_ambient_observation"][
+        "summary"]["elapsed_seconds"] == 13.767
     assert compact_execution["summary"][
         "owner_pass_outcome_reason_counts"
     ] == {"no-verification-obligations": 1}
@@ -6395,6 +6448,79 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert failed_execution["scheduled_passes"][0][
         "verification_status"
     ] == "not-established"
+
+
+def test_environment_service_execution_surfaces_family_availability_reason() -> None:
+    execution_id = "ase_" + "a" * 32
+    trace = {
+        "status": "observed",
+        "source": {"owner_pass_decision_coverage": "complete"},
+        "execution": {
+            "mode": "targeted_update",
+            "decision_record_status": "recorded",
+            "owner_pass_decision_coverage": "complete",
+            "scheduled_passes": [{
+                "owner": "family",
+                "service_execution_id": execution_id,
+                "verification_status": "not-established",
+            }],
+            "skipped_passes": [],
+            "owner_pass_results": {
+                "result_record_count": 1,
+                "results": [{
+                    "owner": "family",
+                    "service_execution_id": execution_id,
+                    "result_status": "result-recorded",
+                    "verification_status": "not-established",
+                    "service_availability_status": "unavailable",
+                    "service_availability_reason_code": (
+                        "family-vocabulary-unavailable"
+                    ),
+                }],
+            },
+        },
+    }
+
+    accountability = (
+        capability_intelligence._environment_service_execution_accountability(
+            trace, include_owner_pass_observations=True,
+        )
+    )
+    assert accountability["summary"][
+        "owner_pass_service_availability_counts"
+    ] == {"unavailable": 1}
+    assert accountability["summary"][
+        "owner_pass_service_availability_reason_counts"
+    ] == {"family-vocabulary-unavailable": 1}
+    assert accountability["summary"]["verification_status"] == (
+        "not-established"
+    )
+    observation = accountability["owner_pass_observations"]["items"][0]
+    assert observation["service_availability_status"] == "unavailable"
+    assert observation["service_availability_reason_code"] == (
+        "family-vocabulary-unavailable"
+    )
+    assert observation["verification_status"] == "not-established"
+
+    compact = capability_intelligence._compact_service_accountability_overview(
+        {
+            "status": "environment-execution-only",
+            "source": {},
+            "summary": {},
+            "services": [],
+            "environment_service_execution": accountability,
+        },
+        trace,
+    )
+    compact_summary = compact["summary"]["environment_service_execution"][
+        "summary"
+    ]
+    assert compact_summary[
+        "owner_pass_service_availability_counts"
+    ] == {"unavailable": 1}
+    assert compact_summary[
+        "owner_pass_service_availability_reason_counts"
+    ] == {"family-vocabulary-unavailable": 1}
 
 
 def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path) -> None:

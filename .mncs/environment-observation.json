@@ -9,7 +9,8 @@
       "mncs-store",
       "mncs-rights-provenance",
       "mncs-system-monitor",
-      "mncs-automation"
+      "mncs-automation",
+      "mncs-commons"
     ]
   },
   "required_capabilities": [],

@@ -24,6 +24,22 @@ COMMONS_WORKTREE = Path("/home/epi13/Documents/Projects/MNCS-Commons/.worktrees/
 COMMONS_MAIN = Path("/home/epi13/Documents/Projects/MNCS-Commons")
 
 
+def test_find_commons_root_accepts_canonical_repository_alias() -> None:
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as directory:
+        commons = Path(directory) / "MNCS-Commons"
+        (commons / "src" / "mncs_commons").mkdir(parents=True)
+        session = SimpleNamespace(snapshot={
+            "selected_checkouts": {
+                "mncs-commons": {"path": str(commons)},
+            },
+        })
+        with patch.dict(os.environ, {"MNCS_COMMONS_ROOT": ""}):
+            assert family_module.find_commons_root(session) == commons
+
+
 def _commons_with_family() -> Path | None:
     for root in (Path(os.environ.get("MNCS_COMMONS_ROOT", COMMONS_WORKTREE)), COMMONS_MAIN):
         if (root / "src/mncs_commons/family_change.py").is_file():

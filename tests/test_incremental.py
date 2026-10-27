@@ -293,6 +293,64 @@ def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference
     assert "not exposed" not in json.dumps(projected)
 
 
+def test_family_vocabulary_availability_is_projected_as_allowlisted_reason():
+    session_id = "ses_family_availability_fixture"
+    execution_id = "ase_" + "d" * 32
+    block = {
+        "reused": False,
+        "summary": {
+            "relevant": 0,
+            "detail": "vocabulary-unavailable",
+        },
+    }
+    rows = coherence._owner_pass_results(
+        SimpleNamespace(session_id=session_id),
+        [{"owner": "family", "service_execution_id": execution_id}],
+        {"family": block},
+        None,
+        persisted=False,
+    )
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": [{
+            "owner": "family",
+            "service_execution_id": execution_id,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": rows,
+    }, session_id=session_id)["owner_pass_results"]["results"][0]
+
+    assert projected["service_availability_status"] == "unavailable"
+    assert projected["service_availability_reason_code"] == (
+        "family-vocabulary-unavailable"
+    )
+    assert "detail" not in projected.get("summary", {})
+    assert projected["verification_status"] == "not-established"
+
+    block["summary"]["detail"] = "/private/workspace/source.mncs"
+    unsafe_rows = coherence._owner_pass_results(
+        SimpleNamespace(session_id=session_id),
+        [{"owner": "family", "service_execution_id": execution_id}],
+        {"family": block},
+        None,
+        persisted=False,
+    )
+    unsafe = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": [{
+            "owner": "family",
+            "service_execution_id": execution_id,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": unsafe_rows,
+    }, session_id=session_id)["owner_pass_results"]["results"][0]
+    assert "service_availability_status" not in unsafe
+    assert "service_availability_reason_code" not in unsafe
+    assert "/private/workspace" not in json.dumps(unsafe)
+
+
 def test_owner_pass_result_reference_mismatch_is_not_exposed(tmp_path):
     session = SimpleNamespace(
         session_id="ses_incremental_fixture",

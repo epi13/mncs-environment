@@ -5,6 +5,14 @@ accountability and native capability observations through the ordinary
 `mncs-env projections` interface. It derives links in memory; it does not add a
 second telemetry store or capability registry.
 
+When the latest Family ambient pass has persisted a summary, the same
+projection exposes its bounded counts and owner-reported elapsed time at
+`session_activity.family_ambient_observation`. The observation is scoped to
+the selected session snapshot and its digest participates in ECI identity,
+including compact responses. It remains separate from the scheduler's exact
+owner-pass result, so a later domain pass does not rewrite an earlier failure;
+verification, agent need, and intervention reduction are not inferred.
+
 ```sh
 ./scripts/mncs-env projections <session-id> \
   --interpret environmental-capability \

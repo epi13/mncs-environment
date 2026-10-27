@@ -38,6 +38,9 @@ OWNER_PASS_QUIET_REASONS = frozenset({
     "no-relevant-family-work",
     "no-verification-obligations",
 })
+OWNER_PASS_SERVICE_AVAILABILITY_CODES = {
+    ("family", "vocabulary-unavailable"): "family-vocabulary-unavailable",
+}
 
 
 def quiet_owner_pass_result(reason_code: str, *, disabled: bool = False) -> dict:
@@ -410,6 +413,18 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
                         break
                 if summary:
                     row["summary"] = summary
+            availability_status = item.get("service_availability_status")
+            availability_reason = item.get(
+                "service_availability_reason_code",
+            )
+            if (availability_status == "unavailable"
+                    and availability_reason
+                    in OWNER_PASS_SERVICE_AVAILABILITY_CODES.values()
+                    and OWNER_PASS_SERVICE_AVAILABILITY_CODES.get(
+                        (owner, "vocabulary-unavailable"),
+                    ) == availability_reason):
+                row["service_availability_status"] = availability_status
+                row["service_availability_reason_code"] = availability_reason
             projected_owner_results.append(row)
         result["owner_pass_results"] = {
             "status": (
@@ -1050,6 +1065,12 @@ def _owner_pass_results(session, scheduled: list[dict], results: dict,
                     break
             if summary:
                 row["summary"] = summary
+            availability_code = OWNER_PASS_SERVICE_AVAILABILITY_CODES.get(
+                (owner, raw_summary.get("detail")),
+            )
+            if availability_code is not None:
+                row["service_availability_status"] = "unavailable"
+                row["service_availability_reason_code"] = availability_code
         outcome = _validated_owner_pass_outcome(block)
         if outcome is not None:
             row.update({

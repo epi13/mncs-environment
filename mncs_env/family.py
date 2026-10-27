@@ -110,8 +110,12 @@ def find_commons_root(session=None) -> Path | None:
         return Path(override)
     if session is not None:
         paths = _selected_checkout_paths(session)
-        if paths.get("MNCS-Commons"):
-            candidate = Path(paths["MNCS-Commons"])
+        selected = [
+            path for name, path in paths.items()
+            if name.casefold() == "mncs-commons"
+        ]
+        if len(selected) == 1:
+            candidate = Path(selected[0])
             if (candidate / "src" / "mncs_commons").is_dir():
                 return candidate
     return None
