@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-27T10:42:06Z",
+  "identity": "ev_environment_claim_record_correction_1_20261027",
+  "measurement_basis": "append-only correction from the exact integrity-verified campaign observation reference",
+  "not_measured": [
+    "whether the underlying operational condition recurs in later sessions",
+    "whether the correction changes agent intervention or development outcomes"
+  ],
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "outcome": {
+      "append_only": true,
+      "reason": "The readback was recorded during this campaign and its request and recorder preserve the session identity, work intent, environment, and definition. Restore that recorded context and remove the unsupported role because this readback carries no pressure-hypothesis object.",
+      "replacement_values": {
+        "pressure_hypothesis_role": null,
+        "related_work": {
+          "campaign_id": "cmp_7f550d193225b7be",
+          "definition_id": "env_712fb160746dea51",
+          "environment_id": "renv_6b644a59c2867246",
+          "session_id": "ses_a752e1c55fb4ca6f",
+          "work_intent_id": "int_e9a2959ffe2e952c"
+        }
+      },
+      "status": "correction-recorded"
+    },
+    "request": {
+      "corrected_field_paths": [
+        "related_work",
+        "pressure_hypothesis_role"
+      ],
+      "operation": "correct_campaign_observation_contract",
+      "target_observation_identity": "ev_environment_claim_cli_live_branch_refresh_projection_readback_20261027"
+    },
+    "source_interface": "MNCS Environment observation-correction contract"
+  },
+  "record_correction": {
+    "corrected_field_paths": [
+      "related_work",
+      "pressure_hypothesis_role"
+    ],
+    "reason": "The readback was recorded during this campaign and its request and recorder preserve the session identity, work intent, environment, and definition. Restore that recorded context and remove the unsupported role because this readback carries no pressure-hypothesis object.",
+    "replacement_values": {
+      "pressure_hypothesis_role": null,
+      "related_work": {
+        "campaign_id": "cmp_7f550d193225b7be",
+        "definition_id": "env_712fb160746dea51",
+        "environment_id": "renv_6b644a59c2867246",
+        "session_id": "ses_a752e1c55fb4ca6f",
+        "work_intent_id": "int_e9a2959ffe2e952c"
+      }
+    },
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "commit": "342155dddb0291b960071cea627b0c36bb9f0b2e",
+      "identity": "ev_environment_claim_cli_live_branch_refresh_projection_readback_20261027",
+      "path": "evidence/environmental-capability/claim-cli-live-branch-refresh-projection-readback-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "a023813609d76e0012a74db341c06404b3e0c9ac5374bb381410f511c96da75d"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "342155dddb0291b960071cea627b0c36bb9f0b2e",
+      "identity": "ev_environment_claim_cli_live_branch_refresh_projection_readback_20261027",
+      "kind": "corrected-observation-target",
+      "path": "evidence/environmental-capability/claim-cli-live-branch-refresh-projection-readback-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "a023813609d76e0012a74db341c06404b3e0c9ac5374bb381410f511c96da75d"
+    }
+  ]
+}

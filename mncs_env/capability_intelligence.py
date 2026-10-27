@@ -3130,11 +3130,26 @@ def _compact_projection(
                 replacement_role = replacement_values.get(
                     "pressure_hypothesis_role",
                 )
-                if (isinstance(replacement_role, str)
+                if (replacement_role is None
+                        and "pressure_hypothesis_role" in replacement_values):
+                    compact_replacements["pressure_hypothesis_role"] = None
+                elif (isinstance(replacement_role, str)
                         and replacement_role in PRESSURE_HYPOTHESIS_ROLES):
                     compact_replacements["pressure_hypothesis_role"] = (
                         replacement_role
                     )
+                replacement_work = replacement_values.get("related_work")
+                if isinstance(replacement_work, dict):
+                    compact_replacements["related_work"] = {
+                        key: _short_text(value, 128)
+                        for key, value in replacement_work.items()
+                        if key in {
+                            "campaign_id", "session_id", "work_intent_id",
+                            "work_intent_goal", "environment_id", "definition_id",
+                            "environment_version",
+                        }
+                        and isinstance(value, str) and value
+                    }
                 recommendation = replacement_values.get(
                     "pressure_hypothesis.actionable_recommendation",
                 )
@@ -9992,6 +10007,7 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                 or field not in {
                     "supporting_sources", "not_measured",
                     "pressure_hypothesis_role",
+                    "related_work",
                     "observation.source_interface", "observation.request",
                     "observation.outcome",
                     "pressure_hypothesis.actionable_recommendation",
@@ -10018,11 +10034,33 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                 or any(not isinstance(item, str) or not item or len(item) > 512
                        for item in limits)):
             return None
-    if ("pressure_hypothesis_role" in fields
-            and (not isinstance(replacements["pressure_hypothesis_role"], str)
-                 or replacements["pressure_hypothesis_role"]
-                 not in PRESSURE_HYPOTHESIS_ROLES)):
-        return None
+    if "pressure_hypothesis_role" in fields:
+        replacement_role = replacements["pressure_hypothesis_role"]
+        if (replacement_role is not None
+                and (not isinstance(replacement_role, str)
+                     or replacement_role not in PRESSURE_HYPOTHESIS_ROLES)):
+            return None
+    if "related_work" in fields:
+        replacement_work = replacements["related_work"]
+        allowed_work_fields = {
+            "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
+            "environment_id", "definition_id", "environment_version",
+        }
+        if (not isinstance(replacement_work, dict)
+                or set(replacement_work) - allowed_work_fields
+                or any(
+                    not isinstance(replacement_work.get(field), str)
+                    or not replacement_work[field]
+                    or len(replacement_work[field]) > 512
+                    for field in ("campaign_id", "session_id")
+                )
+                or any(
+                    value is not None
+                    and (not isinstance(value, str) or not value or len(value) > 512)
+                    for field, value in replacement_work.items()
+                    if field not in {"campaign_id", "session_id"}
+                )):
+            return None
     if ("pressure_hypothesis.actionable_recommendation" in fields
             and (not isinstance(
                     replacements["pressure_hypothesis.actionable_recommendation"],
@@ -10088,6 +10126,7 @@ def _apply_observation_correction_values(
         }
     for field in (
         "supporting_sources", "not_measured", "pressure_hypothesis_role",
+        "related_work",
     ):
         if field in fields:
             corrected[field] = replacements[field]
@@ -19692,6 +19731,50 @@ def project(
                 if not target_is_contract_invalid or not invalid_pressure_value:
                     replacements_verified = False
                     break
+            elif field == "related_work":
+                replacement_work = replacement
+                recorder = target_record.get("recorder")
+                recorder = recorder if isinstance(recorder, dict) else {}
+                observation = target_record.get("observation")
+                observation = observation if isinstance(observation, dict) else {}
+                request = observation.get("request")
+                request = request if isinstance(request, dict) else {}
+                source_context = observation.get("source_session_context")
+                source_context = (
+                    source_context if isinstance(source_context, dict) else {}
+                )
+                context_fields = {
+                    "campaign_id", "session_id", "work_intent_id",
+                    "work_intent_goal", "environment_id", "definition_id",
+                    "environment_version",
+                }
+                authoritative_contexts = [
+                    {
+                        key: value for key, value in context.items()
+                        if key in context_fields
+                        and isinstance(value, str) and value
+                    }
+                    for context in (recorder, source_context, request)
+                ]
+                authoritative_contexts = [
+                    context for context in authoritative_contexts if context
+                ]
+                current = target_record.get(field)
+                if (not isinstance(replacement_work, dict)
+                        or any(
+                            not any(key in context for context in authoritative_contexts)
+                            or any(
+                                context[key] != value
+                                for context in authoritative_contexts
+                                if key in context
+                            )
+                            for key, value in replacement_work.items()
+                        )
+                        or not {"campaign_id", "session_id"}.issubset(
+                            replacement_work
+                        )):
+                    replacements_verified = False
+                    break
             else:
                 current = target_record.get(field)
             if current == replacement:
@@ -19918,6 +20001,7 @@ def project(
             record["identity"],
         )
         effective_sources = sources
+        effective_work = work
         effective_measurement_limits = record.get("not_measured", [])
         effective_pressure_hypothesis_role = record.get(
             "pressure_hypothesis_role",
@@ -19940,12 +20024,16 @@ def project(
                 effective_sources = replacement_values["supporting_sources"]
             if "not_measured" in corrected_fields:
                 effective_measurement_limits = replacement_values["not_measured"]
+            if "related_work" in corrected_fields:
+                effective_work = replacement_values["related_work"]
             if "pressure_hypothesis_role" in corrected_fields:
                 effective_pressure_hypothesis_role = replacement_values[
                     "pressure_hypothesis_role"
                 ]
                 effective_pressure_hypothesis_role_status = (
-                    "corrected-by-verified-record"
+                    "corrected-to-not-recorded"
+                    if effective_pressure_hypothesis_role is None
+                    else "corrected-by-verified-record"
                 )
             if record_correction_summary is None:
                 record_correction_summary = {
@@ -20103,12 +20191,12 @@ def project(
                 } if source_session_context is not None else {}),
             },
             "related_work": {
-                key: work.get(key)
+                key: effective_work.get(key)
                 for key in ("campaign_id", "session_id", "work_intent_id",
                             "work_intent_goal", "campaign_objective", "environment_id",
                             "definition_id", "environment_version", "lifecycle", "latest_checkpoint",
                             "campaign_evidence_count", "claim_ids")
-                if work.get(key) is not None
+                if effective_work.get(key) is not None
             },
             "recording_context": _recording_context(recorder),
             "improvement_relation_identity": (
@@ -20142,19 +20230,18 @@ def project(
                   and effective_pressure_hypothesis_role
                   in PRESSURE_HYPOTHESIS_ROLES) else {}),
             **({
-                **({
-                    "pressure_hypothesis_role_status": (
-                        effective_pressure_hypothesis_role_status
-                    ),
-                } if effective_pressure_hypothesis_role_status != "recorded"
-                   else {}),
-                **({
-                    "pressure_hypothesis_recurrence_classification": (
-                        pressure_hypothesis_recurrence_classification
-                    ),
-                } if (effective_pressure_hypothesis_role
-                      != pressure_hypothesis_recurrence_classification) else {}),
-            } if hypothesis is not None else {}),
+                "pressure_hypothesis_role_status": (
+                    effective_pressure_hypothesis_role_status
+                ),
+            } if effective_pressure_hypothesis_role_status != "recorded"
+               else {}),
+            **({
+                "pressure_hypothesis_recurrence_classification": (
+                    pressure_hypothesis_recurrence_classification
+                ),
+            } if (hypothesis is not None
+                  and effective_pressure_hypothesis_role
+                  != pressure_hypothesis_recurrence_classification) else {}),
             "supporting_sources": [
                 {
                     **_source_status(source, references),

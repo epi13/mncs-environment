@@ -1725,6 +1725,156 @@ def test_append_only_pressure_role_correction_does_not_count_context_as_recurren
     }
 
 
+def test_append_only_correction_restores_work_context_and_removes_orphan_role(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_orphan_role_missing_work_context",
+        "ses_missing_work_context",
+        "cmp_missing_work_context",
+    )
+    target.pop("related_work")
+    target.pop("pressure_hypothesis")
+    target["pressure_hypothesis_role"] = "supporting-context"
+    target["recorder"] = {
+        "campaign_id": "cmp_missing_work_context",
+        "session_id": "ses_missing_work_context",
+        "environment_id": "renv_missing_work_context",
+        "definition_id": "env_missing_work_context",
+    }
+    target["observation"]["request"]["work_intent_id"] = (
+        "int_missing_work_context"
+    )
+    session, state = _session(tmp_path, [target])
+
+    correction = _observation(
+        "ev_environment_orphan_role_work_context_correction",
+        "ses_missing_work_context_correction",
+        "cmp_missing_work_context",
+    )
+    _drop_pressure_hypothesis(correction)
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": ["related_work", "pressure_hypothesis_role"],
+        "replacement_values": {
+            "related_work": {
+                "campaign_id": "cmp_missing_work_context",
+                "session_id": "ses_missing_work_context",
+                "work_intent_id": "int_missing_work_context",
+                "environment_id": "renv_missing_work_context",
+                "definition_id": "env_missing_work_context",
+            },
+            "pressure_hypothesis_role": None,
+        },
+        "reason": (
+            "Restore attribution from the target recorder and request, and remove "
+            "a role unsupported by a pressure hypothesis."
+        ),
+    }
+    relative = "evidence/environmental-capability/orphan-role-correction.json"
+    correction_bytes = json.dumps(
+        correction, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    correction_path = checkout / relative
+    correction_path.parent.mkdir(parents=True, exist_ok=True)
+    correction_path.write_bytes(correction_bytes)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "append contextual correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(correction_bytes).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    corrected = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert corrected["related_work"] == correction["record_correction"][
+        "replacement_values"
+    ]["related_work"]
+    assert corrected["pressure_hypothesis_role_status"] == (
+        "corrected-to-not-recorded"
+    )
+    assert "pressure_hypothesis_role" not in corrected
+    assert corrected["record_correction"]["status"] == (
+        "completed-by-append-only-record"
+    )
+    assert result["pressure_hypotheses"] == []
+
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 24_000,
+    )
+    compact_target = next(
+        item for item in compact["observations"]
+        if item["identity"] == target["identity"]
+    )
+    replacement_values = compact_target["record_correction"][
+        "replacement_values"
+    ]
+    assert replacement_values["pressure_hypothesis_role"] is None
+    assert replacement_values["related_work"] == correction[
+        "record_correction"
+    ]["replacement_values"]["related_work"]
+
+    mismatch_root = tmp_path / "mismatched-context"
+    mismatch_target = json.loads(json.dumps(target))
+    mismatch_session, mismatch_state = _session(
+        mismatch_root, [mismatch_target],
+    )
+    mismatch_correction = json.loads(json.dumps(correction))
+    mismatch_correction["identity"] = (
+        "ev_environment_orphan_role_mismatched_work_context_correction"
+    )
+    mismatch_correction["record_correction"]["target_reference"] = dict(
+        mismatch_state["evidence"][0]
+    )
+    mismatch_correction["record_correction"]["replacement_values"][
+        "related_work"
+    ]["campaign_id"] = "cmp_unrelated"
+    mismatch_checkout = Path(mismatch_session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    mismatch_path = mismatch_checkout / relative
+    mismatch_bytes = json.dumps(
+        mismatch_correction, sort_keys=True, separators=(",", ":"),
+    ).encode()
+    mismatch_path.parent.mkdir(parents=True, exist_ok=True)
+    mismatch_path.write_bytes(mismatch_bytes)
+    _git(mismatch_checkout, "add", relative)
+    _git(mismatch_checkout, "commit", "--quiet", "-m", "mismatched correction")
+    mismatch_state["evidence"].append({
+        "identity": mismatch_correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(mismatch_checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(mismatch_bytes).hexdigest(),
+    })
+    mismatch_state["evidence_count"] = len(mismatch_state["evidence"])
+    mismatched = capability_intelligence.project(mismatch_session)
+    assert mismatched["source"]["record_corrections_applied_count"] == 0
+    assert mismatched["source"]["record_corrections_unverified_count"] == 1
+    mismatch_correction_row = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == mismatch_correction["identity"]
+    )
+    assert mismatch_correction_row["record_correction"]["status"] == (
+        "replacement-does-not-complete-observation-contract"
+    )
+
+
 def test_unclassified_pressure_evidence_does_not_establish_recurrence(
     tmp_path: Path,
 ) -> None:

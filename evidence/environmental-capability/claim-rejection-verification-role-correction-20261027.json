@@ -1,0 +1,71 @@
+{
+  "captured_at": "2026-10-27T10:42:06Z",
+  "identity": "ev_environment_claim_record_correction_3_20261027",
+  "measurement_basis": "append-only correction from the exact integrity-verified campaign observation reference",
+  "not_measured": [
+    "whether the underlying operational condition recurs in later sessions",
+    "whether the correction changes agent intervention or development outcomes"
+  ],
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "outcome": {
+      "append_only": true,
+      "reason": "This verification record supports the linked improvement but has no pressure-hypothesis object of its own. Remove the unsupported role so the source occurrence remains singular and the verification stays attached through the improvement relation.",
+      "replacement_values": {
+        "pressure_hypothesis_role": null
+      },
+      "status": "correction-recorded"
+    },
+    "request": {
+      "corrected_field_paths": [
+        "pressure_hypothesis_role"
+      ],
+      "operation": "correct_campaign_observation_contract",
+      "target_observation_identity": "ev_environment_claim_rejection_event_verification_20261027"
+    },
+    "source_interface": "MNCS Environment observation-correction contract"
+  },
+  "record_correction": {
+    "corrected_field_paths": [
+      "pressure_hypothesis_role"
+    ],
+    "reason": "This verification record supports the linked improvement but has no pressure-hypothesis object of its own. Remove the unsupported role so the source occurrence remains singular and the verification stays attached through the improvement relation.",
+    "replacement_values": {
+      "pressure_hypothesis_role": null
+    },
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "commit": "874305237ece4e29ef5bc43ee804b3839ec142e2",
+      "identity": "ev_environment_claim_rejection_event_verification_20261027",
+      "path": "evidence/environmental-capability/claim-acquisition-rejection-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "090906131aa99586a4045987007f2f727ca051a4b11427fbbb16e7d684ecd151"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "874305237ece4e29ef5bc43ee804b3839ec142e2",
+      "identity": "ev_environment_claim_rejection_event_verification_20261027",
+      "kind": "corrected-observation-target",
+      "path": "evidence/environmental-capability/claim-acquisition-rejection-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "090906131aa99586a4045987007f2f727ca051a4b11427fbbb16e7d684ecd151"
+    }
+  ]
+}

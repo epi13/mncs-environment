@@ -1291,7 +1291,8 @@ a transcription or relation needs correction. A later record can use the
 `mncs.environment.observation-correction/1` contract to point to the exact
 target evidence reference, name corrected fields, and provide their replacement
 values. One correction may name up to three supported fields, including
-`supporting_sources`, `not_measured`, `pressure_hypothesis_role`, and
+`supporting_sources`, `not_measured`, `related_work`,
+`pressure_hypothesis_role`, and
 `pressure_hypothesis.actionable_recommendation`. On an integrity-verified
 contract-invalid target, a correction may supply a missing or invalid
 actionable recommendation, `observation.source_interface`,
@@ -1309,7 +1310,15 @@ validated improvement relation is also treated as supporting context in the
 recurrence view. Projected observation rows distinguish a recorded role, a
 verified append-only role correction, and a role that was not recorded. An
 append-only correction can fix a previously published role while preserving the
-original record and its pointer.
+original record and its pointer. A correction may set the role to `null` to
+remove an unsupported role; the projection reports `corrected-to-not-recorded`
+and does not count that record as a pressure occurrence or supporting context.
+This is useful when a record has no pressure-hypothesis object to support its
+role. A correction may also restore a missing `related_work` object from the
+target's recorded campaign/session context and request or source-session
+context. Each restored identifier must match that recorded context; the
+correction cannot invent attribution. These additions let the projection
+repair incomplete immutable evidence without rewriting its source.
 Each replacement source must have verified content integrity. A source may
 already be registered in the selected campaign evidence window, or a
 non-observation source may be read through the bounded, read-only workspace
