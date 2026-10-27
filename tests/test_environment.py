@@ -6592,7 +6592,7 @@ class SessionTests(unittest.TestCase):
             with self.assertRaises(sessions.LifecycleError):
                 session.complete(outcome="too late")
 
-    def test_escalate_never_executes(self) -> None:
+    def test_unobserved_mutation_scope_defers_without_executing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
             session = make_session(state)
@@ -6605,7 +6605,10 @@ class SessionTests(unittest.TestCase):
             session.snapshot["bindings"].append(binding)
             session.snapshot["repo_facts"] = {}
             result = session.invoke("canary", ["-c", f"echo planted > {canary}"])
-            self.assertEqual(result["status"], "pending-escalation")
+            self.assertEqual(result["status"], "deferred-coordination")
+            self.assertEqual(
+                result["coordination_status"], "workspace-scope-not-observed",
+            )
             self.assertFalse(canary.exists())
 
     def test_deny_never_executes(self) -> None:
@@ -10563,7 +10566,7 @@ class EntryFrictionTests(unittest.TestCase):
             "repository": "mncs-compiler",
             "session_id": "ses_claim_owner",
             "status": "held",
-            "acquired_at": "2026-10-20T00:00:00+00:00",
+            "acquired_at": claims.utcnow(),
             "expires_at": "2030-01-01T00:00:00+00:00",
             "scope": {
                 "kind": "worktree",

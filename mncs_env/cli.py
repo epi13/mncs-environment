@@ -787,10 +787,44 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
 
 
 def cmd_authority(args: argparse.Namespace) -> int:
+    claim_id = getattr(args, "claim_id", None)
+    scope_json = getattr(args, "scope_json", None)
+    scope = None
+    if claim_id and scope_json is not None:
+        return fail(
+            "--claim-id and --scope-json are mutually exclusive",
+            diagnostics={"code": "authority-scope-input-conflict"},
+        )
+    if scope_json is not None:
+        if not args.action:
+            return fail(
+                "--scope-json requires --action",
+                diagnostics={"code": "authority-scope-requires-action"},
+            )
+        if not isinstance(scope_json, str):
+            return fail(
+                "--scope-json must contain a JSON object",
+                diagnostics={"code": "invalid-authority-scope"},
+            )
+        if len(scope_json.encode("utf-8")) > 4096:
+            return fail(
+                "--scope-json exceeds the 4096-byte input limit",
+                diagnostics={"code": "authority-scope-input-too-large"},
+            )
+        try:
+            scope = json.loads(scope_json)
+        except (TypeError, json.JSONDecodeError) as error:
+            return fail(
+                f"--scope-json must contain a JSON object: {error}",
+                diagnostics={"code": "invalid-authority-scope"},
+            )
+        if not isinstance(scope, dict):
+            return fail(
+                "--scope-json must contain a JSON object",
+                diagnostics={"code": "invalid-authority-scope"},
+            )
     session = _open(args)
     result = session.inspect()["authority"]
-    claim_id = getattr(args, "claim_id", None)
-    scope = None
     if claim_id:
         if not args.action:
             return fail("--claim-id requires --action")
@@ -2497,9 +2531,17 @@ def build_parser() -> argparse.ArgumentParser:
     authority = session_parser("authority", "show authority or evaluate an action")
     authority.add_argument("--action", default=None)
     authority.add_argument("--target", default=None)
-    authority.add_argument(
+    authority_scope = authority.add_mutually_exclusive_group()
+    authority_scope.add_argument(
         "--claim-id", default=None,
         help="evaluate against this live claim owned by the selected session",
+    )
+    authority_scope.add_argument(
+        "--scope-json", default=None, metavar="OBJECT",
+        help=(
+            "evaluate against an explicit operation scope without acquiring a "
+            "claim; grants no repository rights"
+        ),
     )
     authority.set_defaults(func=cmd_authority)
 

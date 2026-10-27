@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from argparse import Namespace
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -335,3 +336,85 @@ def test_authority_cli_rechecks_with_the_exact_owned_claim_scope() -> None:
         "--target", scope["checkout"], "--claim-id", claim_id,
     ])
     assert parsed.claim_id == claim_id
+
+
+def test_authority_cli_accepts_explicit_unowned_scope_as_an_operation_proposal() -> None:
+    session_id = "ses_unassigned"
+    scope = _scope()
+    calls = {}
+    foreign_holder = {
+        "session_id": "ses_existing",
+        "claim_id": "claim:mncs-environment:worktree:existing",
+        "scope": scope,
+    }
+    repo_facts = {"mncs-environment": {
+        **scope,
+        "path": scope["checkout"],
+        "repository_root_path": "/workspace/mncs-environment",
+        "repository": "mncs-environment",
+    }}
+
+    def check(**kwargs):
+        calls.update(kwargs)
+        return authority.evaluate(
+            _context(),
+            session_id=session_id,
+            claims={"mncs-environment": [foreign_holder]},
+            repo_facts=repo_facts,
+            **kwargs,
+        )
+
+    fake_session = SimpleNamespace(
+        session_id=session_id,
+        inspect=lambda: {"authority": {
+            "claim_holders": {"mncs-environment": [foreign_holder]},
+        }},
+        check=check,
+    )
+    args = Namespace(
+        session=session_id,
+        action="merge",
+        target="mncs-environment",
+        claim_id=None,
+        scope_json=json.dumps(scope),
+    )
+
+    with patch.object(cli, "_open", return_value=fake_session), patch.object(
+        cli, "out",
+    ) as output:
+        assert cli.cmd_authority(args) == 0
+
+    assert calls == {
+        "action": "merge",
+        "target": "mncs-environment",
+        "scope": scope,
+    }
+    result = output.call_args.args[0]
+    assert "scope_claim_id" not in result
+    assert result["evaluation"]["verdict"] == "allow"
+    assert result["evaluation"]["persistent_claim_required"] is False
+    assert result["evaluation"]["coordination_overlap_count"] == 1
+    parsed = cli.build_parser().parse_args([
+        "authority", session_id, "--action", "merge",
+        "--target", "mncs-environment", "--scope-json", json.dumps(scope),
+    ])
+    assert parsed.scope_json == json.dumps(scope)
+    assert parsed.claim_id is None
+
+
+def test_authority_cli_rejects_malformed_explicit_scope_before_opening_session() -> None:
+    args = Namespace(
+        session="ses_unassigned",
+        action="merge",
+        target="mncs-environment",
+        claim_id=None,
+        scope_json="[]",
+    )
+    with patch.object(cli, "_open") as open_session, patch.object(
+        cli, "fail", return_value=2,
+    ) as failure:
+        assert cli.cmd_authority(args) == 2
+
+    open_session.assert_not_called()
+    failure.assert_called_once()
+    assert "JSON object" in failure.call_args.args[0]

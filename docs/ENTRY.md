@@ -467,6 +467,19 @@ checkout, evaluate the operation directly:
   --target "$CHECKOUT"
 ```
 
+To evaluate a different registered destination while addressing the repository
+by its logical name, pass the exact operation scope directly:
+
+```sh
+./scripts/mncs-env authority "$SESSION" --action merge \
+  --target mncs-environment \
+  --scope-json '{"kind":"worktree","checkout":"/workspace/mncs-environment/.worktrees/change","branch":"campaign/change","exclusive":false}'
+```
+
+`--scope-json` and `--claim-id` are mutually exclusive. The explicit scope is
+revalidated against the registered checkout and branch; it neither creates a
+claim nor changes writable repository authority.
+
 When the target is the repository name, Environment resolves its destination
 from the session's selected checkout or a unique matching workspace root. If
 neither is projected, it may use the registered checkout containing the
