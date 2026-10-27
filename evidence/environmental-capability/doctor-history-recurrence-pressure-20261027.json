@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_history_recurrence_pressure_20261027",
+  "captured_at": "2026-10-27T22:30:55Z",
+  "measurement_basis": "authentic-Doctor-history-and-ECI-baseline-readback",
+  "observation": {
+    "kind": "environmental-evidence-continuity-pressure",
+    "source_interface": "MNCS Environment Doctor evidence and environmental-capability projection",
+    "request": {
+      "baseline_commit": "a5426fef986e1831d85ca6e0652a542d768ef50d",
+      "baseline_capability_intelligence_sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06",
+      "campaign_evidence_count": 104,
+      "doctor_history_record_count": 8,
+      "doctor_history_per_pass_reference_count": 0,
+      "current_doctor_classified_gap_record_count": 22,
+      "matching_unavailable_digest_history_record_count": 1,
+      "baseline_projection_identity": "eci_592c53ba3a2b768d",
+      "baseline_projection_content_digest": "5a6417c623eab34d3ff8c286aa9277c0",
+      "current_doctor_evidence_reference": "ses_a752e1c55fb4ca6f:doctor:85d468ce81f7e724ad445188d7e6ec0a4d08c9d21f8d6f415383a633dbe894c5"
+    },
+    "outcome": {
+      "limitation": "The selected campaign session had eight bounded Doctor health-history rows and one current immutable Doctor artifact with 22 classified provider gaps. The history rows had no individual evidence references, so the projection could not inspect prior classifications or establish whether those gaps recurred. One matching unavailable-set digest is not classification recurrence.",
+      "basis": "A live environmental-capability projection verified the current Doctor artifact and explicitly reported zero per-pass history references. The older rows remain summary-only; no classifications were reconstructed from their digests.",
+      "recurrence": "Same-session classification recurrence was not established; cross-session recurrence was not established."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_doctor_history_evidence_not_linked_20261027",
+    "title": "Doctor history summaries could not expose recurring classified service gaps",
+    "category": "environmental-service-accountability-and-evidence-continuity",
+    "subsystem": "MNCS Environment Doctor and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain each Store-backed Doctor pass's existing immutable artifact reference in bounded history and, on explicit request, verify historical artifact identity and epoch binding before projecting same-session recurrence. Keep legacy history unavailable rather than inferring prior detail."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06",
+    "campaign_evidence_count_before_recording": 104
+  },
+  "supporting_sources": [
+    {
+      "kind": "doctor-immutable-evidence-reference",
+      "identity": "ses_a752e1c55fb4ca6f:doctor:85d468ce81f7e724ad445188d7e6ec0a4d08c9d21f8d6f415383a633dbe894c5",
+      "schema": "mncs.environment.doctor-evidence/1",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "content_integrity_status": "verified",
+      "epoch_binding_status": "matched"
+    },
+    {
+      "kind": "direct-environmental-capability-projection",
+      "identity": "eci_592c53ba3a2b768d",
+      "content_digest": "5a6417c623eab34d3ff8c286aa9277c0",
+      "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06"
+    },
+    {
+      "kind": "baseline-implementation-source",
+      "identity": "mncs_environment_doctor_history_baseline_a5426fe",
+      "repository": "mncs-environment",
+      "commit": "a5426fef986e1831d85ca6e0652a542d768ef50d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+    }
+  ],
+  "measurement_limits": [
+    "The eight history summaries and current classified gaps belong to one campaign session; recurrence across sessions is not established.",
+    "Provider-invocation-undeclared is a Doctor classification, not proof that every declaration needs an executable adapter or that an agent experienced a service failure.",
+    "Agent receipt, intervention, time or tokens saved, and downstream burden reduction were not measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

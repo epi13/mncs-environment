@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_history_recurrence_live_readback_20261027",
+  "captured_at": "2026-10-27T22:30:55Z",
+  "measurement_basis": "post-implementation-Doctor-pass-and-live-ECI-readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06",
+    "campaign_evidence_count_before_recording": 104
+  },
+  "observation": {
+    "kind": "environmental-capability-linked-live-readback",
+    "source_interface": "mncs-env doctor and mncs-env projections --interpret environmental-capability --doctor-gap-limit 12",
+    "request": {
+      "implementation_commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "doctor_command": "./scripts/mncs-env doctor ses_a752e1c55fb4ca6f",
+      "doctor_epoch_digest": "f78c8dea2ed48300",
+      "doctor_evidence_reference": "ses_a752e1c55fb4ca6f:doctor:fa9164c345b1d933e6186b82b5a2b827a46b4183cc0f1d76549fc28bca0fa430",
+      "doctor_elapsed_seconds": 10.852,
+      "doctor_summary": {
+        "blockers": 0,
+        "degraded": 23,
+        "reconciled": 1,
+        "repaired": 0
+      },
+      "doctor_remaining_count": 0,
+      "projection_identity": "eci_c129aa3fcc573741",
+      "projection_content_digest": "fdc689f328e18ad4ac912688bb3a0d58",
+      "projection_snapshot_sequence": 1032
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "doctor_history_record_count": 9,
+      "doctor_history_records_projected": 8,
+      "doctor_history_per_pass_reference_count": 1,
+      "doctor_history_verified_record_count": 1,
+      "unreferenced_legacy_history_rows": 7,
+      "historical_coverage_status": "partial",
+      "classified_gap_code": "provider-invocation-undeclared",
+      "current_classified_gap_record_count": 23,
+      "verified_pass_count_for_gap_code": 1,
+      "recurrence_status": "not-established",
+      "cross_session_recurrence_status": "not-established",
+      "improvement_relation_identity": "im_environment_doctor_history_evidence_not_linked_20261027",
+      "effectiveness_assessment": "not-assessed",
+      "actionable_result": "The current Doctor pass is now directly inspectable from its bounded history row, and the projection verifies its immutable content and epoch binding. Seven older rows remain summary-only, so neither same-session recurrence nor resolution is inferred."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "direct-environmental-capability-projection",
+      "identity": "eci_c129aa3fcc573741",
+      "content_digest": "fdc689f328e18ad4ac912688bb3a0d58",
+      "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06"
+    },
+    {
+      "kind": "doctor-immutable-evidence-reference",
+      "identity": "ses_a752e1c55fb4ca6f:doctor:fa9164c345b1d933e6186b82b5a2b827a46b4183cc0f1d76549fc28bca0fa430",
+      "schema": "mncs.environment.doctor-evidence/1",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "content_integrity_status": "verified",
+      "epoch_binding_status": "matched"
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_doctor_history_recurrence_f2d12d4",
+      "repository": "mncs-environment",
+      "commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e2a8dc4a751089d4ef059b28e5904ff557fed437714b642626a067835090d15c"
+    }
+  ],
+  "measurement_limits": [
+    "The post-change readback verifies one new pass and seven older rows without per-pass references; recurrence is not established.",
+    "The Doctor classification is a provider-declaration investigation candidate, not proof that every declaration is callable or defective.",
+    "The projection is partial and this campaign session does not establish independent agent receipt, reduced intervention, or long-term effectiveness.",
+    "Doctor reported zero blockers and no remaining actionable IDs while the degraded count was 23; these health counts do not establish service fulfillment."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

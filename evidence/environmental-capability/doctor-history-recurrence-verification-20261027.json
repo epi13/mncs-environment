@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_history_recurrence_verification_20261027",
+  "captured_at": "2026-10-27T22:30:55Z",
+  "measurement_basis": "targeted-Doctor-and-capability-intelligence-regression-verification",
+  "observation": {
+    "kind": "environmental-projection-verification",
+    "source_interface": "MNCS Environment Doctor Store evidence and capability-intelligence projection",
+    "request": {
+      "implementation_commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "focused_commands": [
+        {
+          "command": "python -m pytest -q tests/test_capability_intelligence.py",
+          "passed": 167,
+          "failed": 0
+        },
+        {
+          "command": "python -m pytest -q tests/test_doctor.py",
+          "passed": 47,
+          "failed": 0
+        },
+        {
+          "command": "python -m pytest -q tests/test_capability_intelligence.py -k 'doctor_gap'",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "command": "python -m pytest -q tests/test_doctor.py -k 'store_doctor_evidence_is_immutable_and_sidecar_free'",
+          "passed": 1,
+          "failed": 0
+        }
+      ],
+      "compileall_command": "python -m compileall -q mncs_env",
+      "compileall_status": "passed",
+      "lint_command": "ruff check --ignore SIM114,C400,BLE001,UP012,SIM102,F841,PLW1510,RUF059,SIM117 mncs_env/doctor.py mncs_env/capability_intelligence.py tests/test_doctor.py tests/test_capability_intelligence.py",
+      "lint_status": "passed",
+      "diff_check_status": "passed",
+      "full_repository_suite_status": "not-run"
+    },
+    "outcome": {
+      "verified_properties": [
+        "Store-backed Doctor epoch recording retains the exact immutable artifact reference on its matching bounded history row while preserving the current top-level reference.",
+        "Default history projection performs no additional Doctor artifact reads; --doctor-gap-limit enables the strict, demand-driven path.",
+        "Historical recurrence counts only distinct records whose content identity, session identity, epoch digest, timestamp, and summary match the history row.",
+        "Legacy rows without per-pass references remain unavailable, and response-budget compaction retains recurrence status and provenance references.",
+        "Historical analysis is limited to eight recent entries and 512 gap rows per artifact; omissions and incomplete coverage remain explicit."
+      ],
+      "result": "passed",
+      "interpretation_limit": "Regression fixtures establish bounds, provenance checks, and partial-history handling. The separate live readback establishes one authentic post-change Doctor pass; this verification does not establish independent agent receipt or burden reduction."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06",
+    "campaign_evidence_count_before_recording": 104
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_doctor_history_recurrence_f2d12d4",
+      "repository": "mncs-environment",
+      "commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e2a8dc4a751089d4ef059b28e5904ff557fed437714b642626a067835090d15c"
+    },
+    {
+      "kind": "test-source",
+      "identity": "mncs_environment_doctor_history_recurrence_tests_f2d12d4",
+      "repository": "mncs-environment",
+      "commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "254c79e5539e94a85a70ce676174d8d5222cef2848492018e61b8c7ff60a5690"
+    },
+    {
+      "kind": "Doctor-store-history-test-source",
+      "identity": "mncs_environment_doctor_history_persistence_tests_f2d12d4",
+      "repository": "mncs-environment",
+      "commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "path": "tests/test_doctor.py",
+      "sha256": "cf307e3b046a5fb3e055a7836af2ae1fd331193369e04db619897da3162e3285"
+    },
+    {
+      "kind": "projection-documentation-source",
+      "identity": "mncs_environment_doctor_history_docs_f2d12d4",
+      "repository": "mncs-environment",
+      "commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "5ec2eabb32d5db18d4b724c2b74f5a11f6d43fa0ae9a8473aae923f34ef75024"
+    }
+  ],
+  "measurement_limits": [
+    "The full repository suite was not run for this bounded change.",
+    "Ruff verification excluded the listed pre-existing repository findings; the changed lines introduced no remaining Ruff finding.",
+    "Passing tests do not establish independent agent discovery, service fulfillment for unrecorded needs, or reduced agent intervention."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

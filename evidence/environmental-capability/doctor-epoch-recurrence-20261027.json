@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_history_recurrence_improvement_20261027",
+  "captured_at": "2026-10-27T22:30:55Z",
+  "measurement_basis": "verified-Store-history-link-and-demand-driven-recurrence-projection",
+  "observation": {
+    "kind": "environmental-improvement-link",
+    "source_interface": "MNCS Environment Doctor history and capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_doctor_history_evidence_not_linked_20261027",
+      "verification_observation_identity": "ev_environment_doctor_history_recurrence_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_doctor_history_recurrence_live_readback_20261027",
+      "implementation_commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf"
+    },
+    "outcome": {
+      "implementation_scope": "mncs_env/doctor.py; mncs_env/capability_intelligence.py; Doctor and capability-intelligence regression tests; Doctor and projection documentation",
+      "implementation_change": "Store-backed Doctor recording places the exact immutable evidence reference in its corresponding bounded history row. The demand-driven ECI Doctor-gap projection verifies up to eight recent per-pass artifacts, correlates classified gaps by pass and capability, and reports missing or unverifiable history without reconstructing it.",
+      "verified_change": "The Store persistence and projection tests passed. A live Doctor pass wrote one history reference, and ECI verified its content identity and epoch binding while identifying seven earlier summary-only rows as unavailable.",
+      "effectiveness_assessment": "not-assessed"
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_doctor_history_evidence_not_linked_20261027",
+    "addresses_hypothesis_identity": "ph_environment_doctor_history_evidence_not_linked_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_doctor_history_recurrence_f2d12d4",
+      "repository": "mncs-environment",
+      "commit": "f2d12d4790826d72ba847bc8b171fc4a432b6cdf",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e2a8dc4a751089d4ef059b28e5904ff557fed437714b642626a067835090d15c"
+    },
+    "verification_observation_identity": "ev_environment_doctor_history_recurrence_verification_20261027",
+    "subsequent_observation_identity": "ev_environment_doctor_history_recurrence_live_readback_20261027",
+    "basis": "The implementation is covered by targeted persistence, strict-reference, recurrence, partial-history, and response-budget checks. The live follow-up verifies one authentic post-change Doctor artifact; it does not establish recurrence because seven older rows have no artifact reference.",
+    "not_measured": [
+      "Independent agent discovery or receipt of the projection",
+      "Reduced agent intervention, elapsed effort, tool calls, tokens, or resource cost",
+      "Cross-session recurrence or causal attribution of the provider classifications",
+      "Long-term effectiveness or empirical elimination of the observed gap"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_fc936ff8eb242c06",
+    "campaign_evidence_count_before_recording": 104
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_doctor_history_recurrence_pressure_20261027"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_doctor_history_recurrence_verification_20261027"
+    },
+    {
+      "kind": "subsequent-live-observation",
+      "identity": "ev_environment_doctor_history_recurrence_live_readback_20261027"
+    },
+    {
+      "kind": "Doctor-immutable-evidence-reference",
+      "identity": "ses_a752e1c55fb4ca6f:doctor:fa9164c345b1d933e6186b82b5a2b827a46b4183cc0f1d76549fc28bca0fa430",
+      "schema": "mncs.environment.doctor-evidence/1"
+    }
+  ],
+  "measurement_limits": [
+    "The change adds evidence continuity; it does not repair or alter the provider declarations classified by Doctor.",
+    "The follow-up is from the implementing campaign session and verifies one pass only; long-term agent burden and recurrence remain unmeasured.",
+    "File-backed debug sessions do not gain per-pass immutable references, and older Store-backed rows are not backfilled."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
