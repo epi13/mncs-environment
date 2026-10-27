@@ -4171,6 +4171,44 @@ def _compact_projection(
                 for key in ("identity", "sequence", "type")
                 if key in reference
             }
+        invocation_observation = item.get("invocation_observation")
+        if isinstance(invocation_observation, dict):
+            observation_status = invocation_observation.get("status")
+            if observation_status == "matched-provider-invocation":
+                compact_observation = {
+                    key: _short_text(invocation_observation.get(key), 256)
+                    for key in (
+                        "status", "identity", "capability", "outcome_status",
+                        "causal_status", "project_change_status",
+                    )
+                    if isinstance(invocation_observation.get(key), str)
+                }
+                for key in ("correlation_status", "returncode"):
+                    value = invocation_observation.get(key)
+                    if isinstance(value, str) or type(value) is int:
+                        compact_observation[key] = value
+                for key in ("invocation_event", "completion_event"):
+                    invocation_reference = invocation_observation.get(key)
+                    if isinstance(invocation_reference, dict):
+                        compact_observation[key] = {
+                            field: invocation_reference[field]
+                            for field in ("identity", "sequence", "type")
+                            if field in invocation_reference
+                        }
+                compact_item["invocation_observation"] = compact_observation
+            else:
+                compact_status = {
+                    "no-matching-environment-invocation-in-selected-window": (
+                        "no-match-complete-window"
+                    ),
+                    "invocation-not-established-in-partial-window": (
+                        "unresolved-partial-window"
+                    ),
+                    "preflight-reference-conflict": "preflight-reference-conflict",
+                    "invalid-proposal-reference": "invalid-proposal-reference",
+                }.get(observation_status)
+                if compact_status is not None:
+                    compact_item["invocation_observation_status"] = compact_status
         compact_proposal_eligibility.append(compact_item)
     compact_authority_candidates = []
     raw_authority_candidates = activity.get("authority_denial_candidates")
@@ -9394,6 +9432,113 @@ def _invocation_effect_target(
     return result
 
 
+def _proposal_invocation_observation(
+    proposal_reference: dict[str, Any], repository: str,
+    interactions: list[dict[str, Any]], *,
+    event_window_truncated: bool,
+    invocation_records_omitted: int,
+) -> dict[str, Any]:
+    """Relate a proposal preflight to an exact later Environment invocation.
+
+    This records invocation and provider-completion evidence only. It does not
+    establish that an edit changed repository state, passed independent
+    verification, was integrated, or improved the environment.
+    """
+    expected = {
+        key: proposal_reference.get(key)
+        for key in ("identity", "sequence", "type")
+    }
+    if (
+        not isinstance(repository, str) or not repository
+        or not isinstance(expected["identity"], str)
+        or type(expected["sequence"]) is not int
+        or not isinstance(expected["type"], str)
+    ):
+        return {
+            "status": "invalid-proposal-reference",
+            "causal_status": "not-established",
+            "project_change_status": "not-measured-by-invocation-events",
+        }
+
+    same_identity: list[dict[str, Any]] = []
+    matching: list[dict[str, Any]] = []
+    for interaction in interactions:
+        effect_target = interaction.get("effect_target")
+        if not isinstance(effect_target, dict):
+            continue
+        reference = effect_target.get("preflight_event")
+        if not isinstance(reference, dict):
+            continue
+        if reference.get("identity") != expected["identity"]:
+            continue
+        same_identity.append(interaction)
+        invocation_reference = interaction.get("invocation_event")
+        invocation_sequence = (
+            invocation_reference.get("sequence")
+            if isinstance(invocation_reference, dict) else None
+        )
+        if (
+            all(reference.get(key) == expected[key] for key in expected)
+            and effect_target.get("repository") == repository
+            and type(invocation_sequence) is int
+            and invocation_sequence > expected["sequence"]
+        ):
+            matching.append(interaction)
+
+    if len(matching) == 1 and len(same_identity) == 1:
+        interaction = matching[0]
+        result: dict[str, Any] = {
+            "status": "matched-provider-invocation",
+            "relation_basis": (
+                "exact-preflight-event-reference-and-repository"
+            ),
+            "matching_invocation_count": 1,
+            "causal_status": "not-established",
+            "project_change_status": "not-measured-by-invocation-events",
+        }
+        for key in (
+            "identity", "capability", "correlation_status", "outcome_status",
+        ):
+            value = interaction.get(key)
+            if isinstance(value, str):
+                result[key] = value
+        for key in ("invocation_event", "completion_event"):
+            reference = interaction.get(key)
+            if isinstance(reference, dict):
+                result[key] = {
+                    field: reference[field]
+                    for field in ("identity", "sequence", "type")
+                    if field in reference
+                }
+        if type(interaction.get("returncode")) is int:
+            result["returncode"] = interaction["returncode"]
+        return result
+
+    if same_identity:
+        return {
+            "status": "preflight-reference-conflict",
+            "reference_conflict_count": len(same_identity),
+            "causal_status": "not-established",
+            "project_change_status": "not-measured-by-invocation-events",
+        }
+
+    search_complete = (
+        not event_window_truncated and invocation_records_omitted == 0
+    )
+    return {
+        "status": (
+            "no-matching-environment-invocation-in-selected-window"
+            if search_complete else "invocation-not-established-in-partial-window"
+        ),
+        "search_completeness_status": (
+            "complete-for-selected-session-window" if search_complete
+            else "partial-selected-session-window"
+        ),
+        "causal_status": "not-established",
+        "project_change_status": "not-measured-by-invocation-events",
+    }
+
+
 def _context_response_binding_inclusion(
     binding: dict[str, Any], response_summaries: list[dict[str, Any]],
     context_supporting_events: list[dict[str, Any]], *,
@@ -13684,9 +13829,10 @@ def _session_activity(
         )
     if proposal_eligibility_events:
         limits.append(
-            "Proposal-worktree eligibility records show a writable-scope and "
-            "checkout decision only; they do not establish that an edit or "
-            "verification was executed, accepted, or beneficial."
+            "Proposal-worktree eligibility records are preflights; an exact "
+            "event reference may link one to a later Environment provider "
+            "invocation. Provider completion status does not establish a "
+            "repository change, independent verification, integration, or benefit."
         )
     if repository_ref_transition_events:
         limits.append(
@@ -14442,6 +14588,15 @@ def _session_activity(
             ),
             "event_reference": reference,
         })
+        proposal_eligibility_records[-1]["invocation_observation"] = (
+            _proposal_invocation_observation(
+                reference,
+                repository,
+                interactions,
+                event_window_truncated=event_window_truncated,
+                invocation_records_omitted=invocations_omitted,
+            )
+        )
         if preflight_state is not None:
             proposal_eligibility_records[-1]["proposal_preflight_state"] = (
                 preflight_state

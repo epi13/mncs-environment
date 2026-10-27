@@ -497,7 +497,13 @@ observed worktree scope, whether repository write scope was present at the
 proposal preflight, and repository-wide or repository-relative path claims
 treated as coordination-only. Merge and publish always require a fresh
 writable-scope preflight. Eligibility records do not establish that an edit
-was executed, verified, or integrated.
+was executed, verified, or integrated. When a later Environment invocation
+names the exact proposal event as its effect preflight, the record also exposes
+that invocation and its provider completion status. This relation does not
+establish a repository change, independent verification, integration, or
+benefit; a missing match is limited to the selected session event window. In
+compact output, matched invocation evidence retains its event references while
+non-matches are summarized as complete-window or partial-window observations.
 For provider mutations, `session_activity.interactions[].effect_target` also
 relates the exact preflight event to a bounded, operation-scoped checkout
 lock. The projection reports its checkout identity, acquisition, wait, and

@@ -3926,6 +3926,193 @@ def test_proposal_preflight_records_local_only_scope_without_repository_rights(
     assert compact_proposal["repository_writable_scope_present"] is False
 
 
+def test_proposal_preflight_links_exact_provider_invocation_without_claiming_change(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_proposal_invocation_link",
+        "ses_proposal_invocation_link",
+        "cmp_proposal_invocation_link",
+    )
+    session, _ = _session(tmp_path, [record])
+    proposal_reference = {
+        "identity": "evt_proposal_invocation_preflight",
+        "sequence": 10,
+        "type": "authority.proposal-eligible",
+    }
+    request_id = "req_proposal_invocation_link"
+    events = [
+        {
+            **proposal_reference,
+            "session_id": session.session_id,
+            "producer": "environment",
+            "payload": {
+                "action": "write",
+                "repository": "mncs-language-service",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-language-service",
+                    "branch": "campaign/proposal",
+                    "checkout_identity": "checkout:proposal",
+                    "exclusive": False,
+                },
+                "authorization_basis": "isolated-proposal-scope",
+                "eligibility_basis": (
+                    capability_intelligence.authority_module
+                    .PROPOSAL_WORKTREE_ELIGIBILITY
+                ),
+                "writable_scope_required_for_integration": True,
+                "repository_writable_scope_present": False,
+                "persistent_claim_required": False,
+                "operation_executed": False,
+                "coordination_only_claim_count": 0,
+                "coordination_only_claims": [],
+                "coordination_only_claims_truncated": False,
+                "campaign_id": "cmp_proposal_invocation_link",
+                "work_intent_id": "int_proposal_invocation_link",
+            },
+        },
+        {
+            "identity": "evt_proposal_invocation_started",
+            "sequence": 11,
+            "type": "capability.invoked",
+            "producer": "local-agent",
+            "payload": {
+                "capability": "mncs-language-service:write",
+                "provider_request_id": request_id,
+                "effect_target": {
+                    "kind": "worktree",
+                    "repository": "mncs-language-service",
+                    "branch": "campaign/proposal",
+                    "checkout_identity": "checkout:proposal",
+                    "preflight_event": proposal_reference,
+                },
+            },
+        },
+        {
+            "identity": "evt_proposal_invocation_completed",
+            "sequence": 12,
+            "type": "invocation.completed",
+            "producer": "mncs-language-service",
+            "payload": {
+                "provider_request_id": request_id,
+                "status": "succeeded",
+                "returncode": 0,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events),
+        "events": events[-limit:],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    proposal = activity["proposal_eligibility"][0]
+    observation = proposal["invocation_observation"]
+    assert observation["status"] == "matched-provider-invocation"
+    assert observation["relation_basis"] == (
+        "exact-preflight-event-reference-and-repository"
+    )
+    assert observation["identity"] == activity["interactions"][0]["identity"]
+    assert observation["capability"] == "mncs-language-service:write"
+    assert observation["correlation_status"] == "matched-by-provider-request-id"
+    assert observation["outcome_status"] == "succeeded"
+    assert observation["returncode"] == 0
+    assert observation["invocation_event"]["identity"] == (
+        "evt_proposal_invocation_started"
+    )
+    assert observation["completion_event"]["identity"] == (
+        "evt_proposal_invocation_completed"
+    )
+    assert observation["causal_status"] == "not-established"
+    assert observation["project_change_status"] == (
+        "not-measured-by-invocation-events"
+    )
+
+    compact = capability_intelligence._compact_projection(
+        result, original_size=25_000, max_result_bytes=10_000,
+    )
+    compact_observation = compact["session_activity"][
+        "proposal_eligibility"
+    ][0]["invocation_observation"]
+    assert compact_observation["status"] == "matched-provider-invocation"
+    assert compact_observation["completion_event"]["identity"] == (
+        "evt_proposal_invocation_completed"
+    )
+    assert compact_observation["causal_status"] == "not-established"
+
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": 1,
+        "events": [events[0]],
+        "truncated": False,
+        "next_before_sequence": None,
+    }
+    no_invocation_result = capability_intelligence.project(session)
+    no_invocation = no_invocation_result["session_activity"][
+        "proposal_eligibility"
+    ][0]["invocation_observation"]
+    assert no_invocation["status"] == (
+        "no-matching-environment-invocation-in-selected-window"
+    )
+    assert no_invocation["search_completeness_status"] == (
+        "complete-for-selected-session-window"
+    )
+    assert no_invocation["causal_status"] == "not-established"
+    compact_no_invocation = capability_intelligence._compact_projection(
+        no_invocation_result, original_size=25_000, max_result_bytes=10_000,
+    )["session_activity"]["proposal_eligibility"][0]
+    assert compact_no_invocation["invocation_observation_status"] == (
+        "no-match-complete-window"
+    )
+
+
+def test_proposal_invocation_link_keeps_conflicts_and_partial_windows() -> None:
+    reference = {
+        "identity": "evt_proposal_relation_bound",
+        "sequence": 20,
+        "type": "authority.proposal-eligible",
+    }
+    mismatched_repository = capability_intelligence._proposal_invocation_observation(
+        reference,
+        "mncs-language-service",
+        [{
+            "identity": "act_wrong_repository",
+            "invocation_event": {
+                "identity": "evt_other_repo_invoked",
+                "sequence": 21,
+                "type": "capability.invoked",
+            },
+            "effect_target": {
+                "repository": "mncs-compiler",
+                "preflight_event": reference,
+            },
+        }],
+        event_window_truncated=False,
+        invocation_records_omitted=0,
+    )
+    assert mismatched_repository["status"] == "preflight-reference-conflict"
+    assert mismatched_repository["reference_conflict_count"] == 1
+    assert mismatched_repository["causal_status"] == "not-established"
+
+    partial = capability_intelligence._proposal_invocation_observation(
+        reference,
+        "mncs-language-service",
+        [],
+        event_window_truncated=True,
+        invocation_records_omitted=0,
+    )
+    assert partial["status"] == (
+        "invocation-not-established-in-partial-window"
+    )
+    assert partial["search_completeness_status"] == (
+        "partial-selected-session-window"
+    )
+    assert partial["causal_status"] == "not-established"
+
+
 def test_scoped_integration_preflight_projects_without_claim_or_success(
     tmp_path: Path,
 ) -> None:
