@@ -1,0 +1,113 @@
+{
+  "captured_at": "2026-10-27T23:20:00Z",
+  "identity": "ev_environment_quiet_owner_pass_live_projection_verification_20261027",
+  "measurement_basis": "read-only capability_intelligence.project output over four digest-linked campaign evidence pages",
+  "not_measured": [
+    "service opportunities, agent receipt, ambient fulfillment, or intervention burden",
+    "whether future sessions produce fewer unexplained quiet outcomes",
+    "longitudinal effectiveness of the new service projection"
+  ],
+  "observation": {
+    "kind": "environmental-capability-live-projection-readback",
+    "outcome": {
+      "campaign_evidence_count": 119,
+      "effectiveness_assessment": "not-assessed",
+      "history_checkpoint_consistent": true,
+      "improvement_relation_identity": "im_environment_quiet_owner_pass_reason_accountability_20261027",
+      "improvement_relation_status": "validated",
+      "interpretation_limit": "The projection establishes evidence integrity and relationship visibility. It does not show later service behavior, agent need, or reduced intervention.",
+      "observation_records_considered": 16,
+      "observation_records_unavailable": 0,
+      "observation_records_verified": 11,
+      "partial_basis": "The projection deliberately read four bounded pages from a 119-reference history; the history chain across those pages was consistent but older pages remain outside this view.",
+      "pressure_hypothesis_identity": "ph_environment_quiet_owner_pass_reason_coverage_20261027",
+      "pressure_occurrence_count": 1,
+      "projection_status": "partial",
+      "record_corrections_applied": 2,
+      "record_corrections_unverified": 0,
+      "subsequent_observation_status": "not-recorded",
+      "verification_record_status": "record-integrity-verified-in-projection"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3bde28e86effadc8",
+      "history_pages_requested": 4,
+      "operation": "project current campaign evidence and verify source-correction application",
+      "page_offsets": [
+        115,
+        111,
+        107,
+        103
+      ],
+      "projection_identity": "eci_87a8c9b7d1396f48"
+    },
+    "source_interface": "mncs_env.capability_intelligence.project"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "ec0fdb790a08fd885dbadd26e63ccd9512b684e2",
+      "identity": "ev_environment_quiet_owner_pass_reason_pressure_20261027",
+      "kind": "pressure-observation",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "4a7c38fa96ceb5cfc6465179d22b99c2045e7f6cdd6f632d908d0a69c7d922aa"
+    },
+    {
+      "commit": "ec0fdb790a08fd885dbadd26e63ccd9512b684e2",
+      "identity": "ev_environment_quiet_owner_pass_reason_verification_20261027",
+      "kind": "verification-observation",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "f3f37064c48bc3f04ab6deb972d59725316f1c494f41eb1deb432ec26842a27b"
+    },
+    {
+      "commit": "ec0fdb790a08fd885dbadd26e63ccd9512b684e2",
+      "identity": "ev_environment_quiet_owner_pass_reason_improvement_20261027",
+      "kind": "improvement-relation",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-improvement-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "0a28bc0af43849948e923fe78f82cfe12def0604d4fc55301a0cbbff7b02890e"
+    },
+    {
+      "commit": "13cdf1f9dfb64133c6563c07793c110170a68d44",
+      "identity": "ev_environment_quiet_owner_pass_supporting_sources_correction_improvement_20261027",
+      "kind": "append-only-source-correction",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-source-correction-improvement-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "49bf0aef3ff422b0d8ebada14816fb30114e5a0111969299bd5253bd19b2305a"
+    },
+    {
+      "commit": "13cdf1f9dfb64133c6563c07793c110170a68d44",
+      "identity": "ev_environment_quiet_owner_pass_supporting_sources_correction_readback_20261027",
+      "kind": "append-only-source-correction",
+      "path": "evidence/environmental-capability/ambient-pass-outcome-accountability-source-correction-readback-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "95917dfdce4624117b56faf75fa31f965cee3e19df2b04f29a778492565b5894"
+    },
+    {
+      "commit": "f359ab0fb8d72cf364f9d357fc18d26e44cc0e53",
+      "identity": "ev_environment_ambient_owner_pass_result_trace_20261027",
+      "kind": "historical-operational-evidence",
+      "path": "evidence/environmental-capability/ambient-owner-pass-result-trace-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "73f638e25e5cb940b006856dc6c3e23425c375d337844a2ace71e635d697bd2b"
+    }
+  ]
+}
