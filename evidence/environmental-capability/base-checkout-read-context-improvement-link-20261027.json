@@ -1,0 +1,119 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_base_checkout_read_context_improvement_link_20261027",
+  "captured_at": "2026-10-27T11:31:20Z",
+  "measurement_basis": "verified-implementation-reference-linked-to-authentic-pressure-context-and-regression-evidence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection and authority-scope regression suite",
+    "request": {
+      "operation": "relate base-intent checkout continuity pressure to verified implementation",
+      "pressure_hypothesis_identity": "ph_environment_base_intent_checkout_lost_before_claim_refresh_20261027",
+      "implementation_commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "verification_observation_identity": "ev_environment_base_checkout_read_context_20261027"
+    },
+    "outcome": {
+      "implemented_behavior": "A previously composed base-intent checkout can remain available as identity-verified observation context across claim release and branch/HEAD refresh. The projection reports it as observed and leaves claim eligibility to the existing rights and live-conflict checks.",
+      "verification": {
+        "command": "python -m pytest -q tests/test_authority_scope_grants.py",
+        "passed": 58,
+        "failed": 0,
+        "duration_seconds": 176.86,
+        "head_advance_reacquisition": "passed",
+        "foreign_overlapping_claim": "not-adopted; acquisition remains denied"
+      },
+      "effectiveness_assessment": "Implementation and immediate regression behavior are verified; longitudinal intervention reduction remains unmeasured.",
+      "source_relationship_basis": "This record links the exact committed implementation, independently executable regression file, and the campaign observation that records the pressure and resulting behavior."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_base_intent_checkout_lost_before_claim_refresh_20261027",
+    "title": "A valid base-intent checkout can disappear between claim release and safe reacquisition",
+    "category": "coordination-and-continuity",
+    "subsystem": "Environment checkout composition and worktree claim acquisition",
+    "basis": "The prior composition path required a live same-session claim to retain a base-intent checkout. Claim refresh can trigger revalidation after branch or HEAD drift before the next claim exists.",
+    "actionable_recommendation": "Retain a prior base-intent checkout as observation-only context after claim release when its registered path and stable checkout identities still match; refresh branch and HEAD, keep it out of claim eligibility, and preserve ordinary rights and live-conflict checks.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "frequency across sessions and repositories",
+      "agent time or tool calls avoided over subsequent work",
+      "whether later agents discover the retained read context without additional guidance"
+    ]
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_base_checkout_read_context_link_20261027",
+    "addresses_hypothesis_identity": "ph_environment_base_intent_checkout_lost_before_claim_refresh_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_base_checkout_read_context_b3e4cbb",
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "mncs_env/sessions.py",
+      "sha256": "ac0cc717a1894cb73ba1cdef2dc63f03d7ec454c79ea999e6c63147fba9754e6",
+      "kind": "committed-implementation"
+    },
+    "verification_observation_identity": "ev_environment_base_checkout_read_context_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The exact implementation commit retains verified read context without adding claim eligibility. The full authority-scope regression suite verifies HEAD refresh and successful claim reacquisition while preserving rejection of a foreign overlapping claim. The original campaign observation and its append-only correction preserve the source context and limitations.",
+    "effectiveness_assessment": "single-session-path-verified; longitudinal-effectiveness-not-assessed",
+    "not_measured": [
+      "cross-session recurrence reduction",
+      "agent intervention or total tool-call reduction",
+      "long-term outcomes after later sessions use the updated mechanism"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_base_checkout_read_context_b3e4cbb",
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "mncs_env/sessions.py",
+      "sha256": "ac0cc717a1894cb73ba1cdef2dc63f03d7ec454c79ea999e6c63147fba9754e6",
+      "kind": "committed-implementation"
+    },
+    {
+      "identity": "mncs_environment_base_checkout_read_context_tests_b3e4cbb",
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "tests/test_authority_scope_grants.py",
+      "sha256": "77f0bf8d1a594cf621d9e3e3e97234e8d37ece240d629bf8cae93b5a3a084ab4",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "identity": "ev_environment_base_checkout_read_context_20261027",
+      "repository": "mncs-environment",
+      "commit": "20a0f87fb9d0800d946bf3aa564185206c81378d",
+      "path": "evidence/environmental-capability/base-checkout-read-context-20261027.json",
+      "sha256": "957a27abac13d5d09cfeeac6447912b5c04f5650c124802e30e178362988ad7a",
+      "kind": "source-observation"
+    },
+    {
+      "identity": "ev_environment_base_checkout_read_context_contract_correction_20261027",
+      "repository": "mncs-environment",
+      "commit": "b1650019c65d5d1388a43c097fca480106e384c5",
+      "path": "evidence/environmental-capability/base-checkout-read-context-correction-20261027.json",
+      "sha256": "64a42e2bf1f2b7f82bf553bb165764a21c6928e2e41d14ce8e24ea428951ef73",
+      "kind": "append-only-observation-correction"
+    }
+  ],
+  "not_measured": [
+    "whether this improvement reduces environmental intervention in later real sessions",
+    "whether the issue recurs in other base-intent repositories or checkout layouts",
+    "whether this change measurably affects MNCS-language adoption or unrelated environmental services"
+  ]
+}
