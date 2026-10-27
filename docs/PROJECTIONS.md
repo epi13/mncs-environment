@@ -886,6 +886,10 @@ relation reports which recorded field supplied the declaration, checks the
 campaign, session, Work Intent, artifact digest, and invocation/completion
 correlation, and surfaces conflicting declarations. A matched host snapshot
 still does not establish agent-attributed resource use, pressure, or causation.
+For compacted observations, an exact `outcome.event_reference` identity,
+sequence, and type are retained beside the source pointer. Agents can correlate
+that reference with the session-activity projection without reconstructing it
+from the details digest.
 When an observation fails the record contract, its bounded
 `observation_reference_diagnostics[].contract_diagnostics` names missing or
 invalid fields such as `missing-observation-source-interface`,

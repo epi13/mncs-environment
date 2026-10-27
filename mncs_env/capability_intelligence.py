@@ -2541,6 +2541,24 @@ def _compact_projection(
             compact_observation["observation"]["request_summary"] = (
                 request_summary
             )
+        outcome = observation.get("outcome")
+        outcome = outcome if isinstance(outcome, dict) else {}
+        event_reference = outcome.get("event_reference")
+        if isinstance(event_reference, dict):
+            compact_event_reference = {}
+            identity = event_reference.get("identity")
+            event_type = event_reference.get("type")
+            sequence = event_reference.get("sequence")
+            if isinstance(identity, str) and identity:
+                compact_event_reference["identity"] = _short_text(identity, 160)
+            if isinstance(event_type, str) and event_type:
+                compact_event_reference["type"] = _short_text(event_type, 96)
+            if type(sequence) is int and sequence >= 0:
+                compact_event_reference["sequence"] = sequence
+            if compact_event_reference:
+                compact_observation["observation"]["event_reference"] = (
+                    compact_event_reference
+                )
         pressure_hypothesis_role = item.get("pressure_hypothesis_role")
         if (isinstance(pressure_hypothesis_role, str)
                 and pressure_hypothesis_role in PRESSURE_HYPOTHESIS_ROLES):
