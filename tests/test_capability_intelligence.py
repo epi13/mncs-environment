@@ -3254,6 +3254,119 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert private_path not in json.dumps(compact)
 
 
+def test_session_doctor_health_history_is_bounded_and_revision_linked(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_doctor_history", "ses_projection_reader",
+        "cmp_doctor_history",
+    )
+    session, _ = _session(tmp_path, [record])
+    private_path = "/home/private/workspace/.state/doctor-detail"
+    epoch_digest = "a" * 16
+    session.snapshot.update({
+        "snapshot_sequence": 25,
+        "environment_id": "renv_projection_reader",
+        "campaign": {"identity": "cmp_doctor_history"},
+        "intent": {"identity": "int_doctor_history", "goal": "inspect health history"},
+        "requirements": {"services": [{
+            "identity": "mncs-environment:health-probe",
+            "required": True,
+            "probe": {"capability": "mncs-environment:health-probe:ready"},
+        }]},
+        "service_observations": [{
+            "identity": "mncs-environment:health-probe",
+            "status": "degraded",
+            "code": "service-not-ready",
+            "observed_at": "2026-10-26T18:10:20.100Z",
+        }],
+        "doctor": {
+            "schema_version": "mncs.environment.doctor/2",
+            "epoch": {
+                "schema_version": "mncs.environment.doctor-epoch/2",
+                "digest": epoch_digest,
+                "validated_at": "2026-10-26T18:10:20.123Z",
+                "snapshot_sequence": 22,
+                "readiness": "degraded",
+                "summary": {
+                    "repaired": 1, "reconciled": 2,
+                    "degraded": 3, "blockers": 1,
+                },
+                "unavailable": {"count": 3, "digest": "b" * 16},
+                "remaining": [private_path],
+                "inputs": {"workspace_root": private_path},
+            },
+            "history": [
+                {
+                    "digest": f"{index:016x}",
+                    "validated_at": f"2026-10-26T18:10:{index:02d}.123Z",
+                    "summary": {
+                        "repaired": index, "reconciled": 1,
+                        "degraded": 2, "blockers": 0,
+                    },
+                    "unavailable": {"count": 2, "digest": "c" * 16},
+                    "reused": index % 2 == 0,
+                    "remaining": [private_path],
+                }
+                for index in range(10)
+            ],
+            "evidence_ref": {
+                "schema": "mncs.environment.doctor-evidence/1",
+                "identity": f"ses_projection_reader:doctor:{'d' * 64}",
+            },
+        },
+    })
+
+    projection = capability_intelligence.project(session)
+    activity = projection["session_activity"]
+    history = activity["doctor_health_history"]
+    assert history["status"] == "partial"
+    assert history["source"]["session_id"] == "ses_projection_reader"
+    assert history["source"]["snapshot_sequence"] == 25
+    assert history["source"]["campaign_id"] == "cmp_doctor_history"
+    assert history["source"]["work_intent_id"] == "int_doctor_history"
+    assert history["source"]["history_record_count"] == 10
+    assert history["source"]["history_records_projected"] == 8
+    assert history["source"]["history_records_omitted"] == 2
+    assert history["current_epoch"]["snapshot_relation"] == (
+        "earlier-snapshot-revision"
+    )
+    assert history["current_epoch"]["readiness"] == "degraded"
+    assert history["current_epoch"]["evidence_reference"] == {
+        "kind": "doctor-immutable-evidence-record",
+        "schema": "mncs.environment.doctor-evidence/1",
+        "identity": f"ses_projection_reader:doctor:{'d' * 64}",
+    }
+    assert history["service_readiness_co_observation"] == {
+        "status": "same-current-session-snapshot",
+        "relationship": "co-present-in-current-session-snapshot",
+        "service_readiness_status": "blocked",
+        "investigation_candidate_count": 1,
+        "doctor_epoch_snapshot_relation": "earlier-snapshot-revision",
+        "causal_status": "not-established",
+    }
+    assert history["history"][0]["digest"] == f"{9:016x}"
+    assert history["history"][0]["ordinal_from_newest"] == 1
+    assert history["history"][0]["evidence_reference_status"] == (
+        "not-recorded-per-history-entry"
+    )
+    assert private_path not in json.dumps(projection)
+    assert "inputs" not in json.dumps(history)
+    assert "remaining" not in json.dumps(history)
+
+    compact = capability_intelligence.project(session, max_result_bytes=8_000)
+    compact_history = compact["session_activity"]["doctor_health_history"]
+    assert compact["source"]["response_truncated"] is True
+    assert compact_history["current_epoch"]["evidence_reference"]["identity"] == (
+        f"ses_projection_reader:doctor:{'d' * 64}"
+    )
+    assert compact_history["service_readiness_co_observation"]["causal_status"] == (
+        "not-established"
+    )
+    assert len(compact_history["history"]) == 8
+    assert private_path not in json.dumps(compact)
+
+
 def test_authority_denials_are_sanitized_correlated_and_actionable(tmp_path: Path) -> None:
     record = _observation(
         "ev_environment_authority_denial_activity",

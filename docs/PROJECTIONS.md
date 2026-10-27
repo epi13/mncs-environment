@@ -882,6 +882,24 @@ candidates; it represents current recorded state and does not reconstruct
 earlier readiness history. Co-occurrence of a failed operation and a
 non-ready service does not establish causation.
 
+`session_activity.doctor_health_history` exposes the current Doctor epoch and
+the newest eight entries from the session snapshot's bounded Doctor history.
+The epoch and history are linked to the session, Environment, snapshot
+revision, campaign, and work intent when those identities are available. The
+current epoch's snapshot sequence is compared with the inspected session
+revision, and its session-bound immutable evidence record reference is
+retained when its shape is valid. This view does not fetch or integrity-check
+that evidence record.
+When service readiness is also recorded in that exact session snapshot, the
+projection exposes the shared snapshot relationship, readiness status, and
+candidate count alongside the Doctor epoch revision relation; it explicitly
+leaves causality unestablished.
+History rows do not contain per-entry evidence references, so the projection
+does not invent them. It omits Doctor inputs, blocker identifiers, and
+workspace paths. Summaries are broader health evidence: they do not establish
+a service-specific cause or improvement, and an epoch recorded at an earlier
+snapshot revision does not prove that health remains unchanged.
+
 The compact view also relates the current session binding snapshot to observed
 capability calls. `capability_delivery.bindings` reports each bounded binding's
 recorded substrate availability, verification class, observed invocations and

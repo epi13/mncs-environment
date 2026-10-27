@@ -201,6 +201,7 @@ CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
 })
 MAX_SESSION_EVENT_WINDOW = 256
+MAX_SESSION_DOCTOR_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
 MAX_RESOURCE_SAMPLE_BYTES = 64 * 1024
@@ -4345,6 +4346,10 @@ def _compact_projection(
         # _session_service_readiness already returns a bounded, sanitized
         # projection, so retain that reusable record without rebuilding it.
         compact_activity["service_readiness"] = raw_service_readiness
+    raw_doctor_history = activity.get("doctor_health_history")
+    if isinstance(raw_doctor_history, dict):
+        # Doctor's snapshot history is already bounded and sanitized here.
+        compact_activity["doctor_health_history"] = raw_doctor_history
     if activity_source.get("operation_deferral_events_considered", 0):
         compact_activity["operation_deferral_count"] = activity.get(
             "operation_deferral_count", 0,
@@ -12745,6 +12750,236 @@ def _session_service_readiness(
     return result
 
 
+def _session_doctor_health_history(
+    session: Any, snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Project bounded Doctor epochs and summaries from the session snapshot."""
+    identity_pattern = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$")
+    digest_pattern = re.compile(r"^[0-9a-f]{16}$")
+    evidence_digest_pattern = re.compile(r"^[0-9a-f]{64}$")
+    timestamp_pattern = re.compile(
+        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$"
+    )
+
+    def identity(value: Any) -> str | None:
+        return value if isinstance(value, str) and identity_pattern.fullmatch(value) else None
+
+    def summary(value: Any) -> dict[str, int] | None:
+        if not isinstance(value, dict):
+            return None
+        counts = {
+            key: value[key]
+            for key in ("repaired", "reconciled", "degraded", "blockers")
+            if type(value.get(key)) is int and value[key] >= 0
+        }
+        return counts if len(counts) == 4 else None
+
+    def unavailable(value: Any) -> dict[str, Any] | None:
+        if not isinstance(value, dict):
+            return None
+        count = value.get("count")
+        digest = value.get("digest")
+        result: dict[str, Any] = {}
+        if type(count) is int and count >= 0:
+            result["count"] = count
+        if isinstance(digest, str) and digest_pattern.fullmatch(digest):
+            result["digest"] = digest
+        return result if len(result) == 2 else None
+
+    def timestamp(value: Any) -> str | None:
+        return value if isinstance(value, str) and timestamp_pattern.fullmatch(value) else None
+
+    session_id = identity(getattr(session, "session_id", None))
+    environment_id = identity(snapshot.get("environment_id"))
+    snapshot_sequence = snapshot.get("snapshot_sequence")
+    snapshot_sequence = (
+        snapshot_sequence
+        if type(snapshot_sequence) is int and snapshot_sequence >= 0 else None
+    )
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    raw_doctor = snapshot.get("doctor")
+    doctor = raw_doctor if isinstance(raw_doctor, dict) else {}
+    raw_epoch = doctor.get("epoch")
+    invalid_epoch_shape = "epoch" in doctor and not isinstance(raw_epoch, dict)
+    epoch = raw_epoch if isinstance(raw_epoch, dict) else None
+    raw_history_value = doctor.get("history")
+    invalid_history_container = (
+        "history" in doctor and not isinstance(raw_history_value, list)
+    )
+    raw_history = raw_history_value
+    raw_history = raw_history if isinstance(raw_history, list) else []
+    raw_evidence_reference = doctor.get("evidence_ref")
+    invalid_evidence_reference_shape = (
+        "evidence_ref" in doctor and not isinstance(raw_evidence_reference, dict)
+    )
+    has_records = any(key in doctor for key in ("epoch", "history", "evidence_ref"))
+    invalid_doctor_schema = (
+        has_records
+        and doctor.get("schema_version") != "mncs.environment.doctor/2"
+    )
+    selected_history = raw_history[-MAX_SESSION_DOCTOR_HISTORY:]
+    invalid_history_count = int(invalid_history_container)
+    history = []
+    for offset, item in enumerate(reversed(selected_history), start=1):
+        if not isinstance(item, dict):
+            invalid_history_count += 1
+            continue
+        digest = item.get("digest")
+        validated_at = timestamp(item.get("validated_at"))
+        counts = summary(item.get("summary"))
+        unavailable_counts = unavailable(item.get("unavailable"))
+        if (not isinstance(digest, str) or not digest_pattern.fullmatch(digest)
+                or validated_at is None or counts is None):
+            invalid_history_count += 1
+            continue
+        if (
+            ("unavailable" in item and unavailable_counts is None)
+            or ("reused" in item and type(item.get("reused")) is not bool)
+        ):
+            invalid_history_count += 1
+        record = {
+            "ordinal_from_newest": offset,
+            "digest": digest,
+            "validated_at": validated_at,
+            "summary": counts,
+            "evidence_reference_status": "not-recorded-per-history-entry",
+        }
+        if unavailable_counts is not None:
+            record["unavailable"] = unavailable_counts
+        if type(item.get("reused")) is bool:
+            record["reused"] = item["reused"]
+        history.append(record)
+
+    current_epoch = None
+    invalid_epoch = invalid_epoch_shape or bool(
+        epoch is not None
+        and epoch.get("schema_version") != "mncs.environment.doctor-epoch/2"
+    )
+    if epoch is not None:
+        digest = epoch.get("digest")
+        validated_at = timestamp(epoch.get("validated_at"))
+        counts = summary(epoch.get("summary"))
+        epoch_sequence = epoch.get("snapshot_sequence")
+        if type(epoch_sequence) is not int or epoch_sequence < 0:
+            epoch_sequence = None
+        if (not isinstance(digest, str) or not digest_pattern.fullmatch(digest)
+                or validated_at is None or counts is None):
+            invalid_epoch = True
+        else:
+            readiness = epoch.get("readiness")
+            valid_readiness = readiness in {"ready", "degraded", "blocked"}
+            invalid_epoch = invalid_epoch or not valid_readiness
+            current_epoch = {
+                "digest": digest,
+                "validated_at": validated_at,
+                "summary": counts,
+                "readiness": (
+                    readiness if isinstance(readiness, str) and valid_readiness
+                    else "unknown"
+                ),
+                "snapshot_sequence": epoch_sequence,
+            }
+            unavailable_counts = unavailable(epoch.get("unavailable"))
+            if unavailable_counts is not None:
+                current_epoch["unavailable"] = unavailable_counts
+            else:
+                invalid_epoch = True
+            if epoch_sequence is None:
+                invalid_epoch = True
+            if epoch_sequence is None or snapshot_sequence is None:
+                current_epoch["snapshot_relation"] = "snapshot-revision-unavailable"
+            elif epoch_sequence == snapshot_sequence:
+                current_epoch["snapshot_relation"] = "same-snapshot-revision"
+            elif epoch_sequence < snapshot_sequence:
+                current_epoch["snapshot_relation"] = "earlier-snapshot-revision"
+            else:
+                current_epoch["snapshot_relation"] = (
+                    "future-or-inconsistent-snapshot-revision"
+                )
+
+    evidence_reference = None
+    evidence_reference_status = "not-recorded"
+    if isinstance(raw_evidence_reference, dict):
+        reference_schema = raw_evidence_reference.get("schema")
+        reference_identity = raw_evidence_reference.get("identity")
+        expected_prefix = f"{session_id}:doctor:" if session_id else None
+        if (reference_schema == "mncs.environment.doctor-evidence/1"
+                and isinstance(reference_identity, str)
+                and len(reference_identity) <= 256
+                and expected_prefix is not None
+                and reference_identity.startswith(expected_prefix)
+                and evidence_digest_pattern.fullmatch(
+                    reference_identity[len(expected_prefix):],
+                )):
+            evidence_reference = {
+                "kind": "doctor-immutable-evidence-record",
+                "schema": reference_schema,
+                "identity": reference_identity,
+            }
+            evidence_reference_status = "reference-identified"
+        else:
+            evidence_reference_status = "reference-invalid-or-unmatched"
+    elif invalid_evidence_reference_shape:
+        evidence_reference_status = "reference-invalid-or-unmatched"
+    if current_epoch is not None and evidence_reference is not None:
+        current_epoch["evidence_reference"] = evidence_reference
+    elif current_epoch is not None:
+        current_epoch["evidence_reference_status"] = evidence_reference_status
+
+    history_omitted = max(0, len(raw_history) - len(selected_history))
+    provenance_status = (
+        "identified" if session_id and environment_id and snapshot_sequence is not None
+        else "incomplete"
+    )
+    source = {
+        "kind": "current-session-snapshot",
+        "session_id": session_id,
+        "environment_id": environment_id,
+        "snapshot_sequence": snapshot_sequence,
+        "campaign_id": identity(campaign.get("identity")),
+        "work_intent_id": identity(intent.get("identity")),
+        "doctor_schema_version": (
+            doctor.get("schema_version")
+            if isinstance(doctor.get("schema_version"), str)
+            and len(doctor["schema_version"]) <= 96 else None
+        ),
+        "history_record_count": len(raw_history),
+        "history_records_projected": len(history),
+        "history_records_omitted": history_omitted,
+        "history_limit": MAX_SESSION_DOCTOR_HISTORY,
+        "invalid_history_record_count": invalid_history_count,
+        "evidence_reference_status": evidence_reference_status,
+        "provenance_status": provenance_status,
+    }
+    if raw_doctor is not None and not isinstance(raw_doctor, dict):
+        status = "partial"
+    elif not has_records:
+        status = "not-recorded-in-session"
+    elif (
+        provenance_status != "identified" or history_omitted
+        or invalid_history_count or invalid_epoch or invalid_doctor_schema
+        or evidence_reference_status == "reference-invalid-or-unmatched"
+    ):
+        status = "partial"
+    else:
+        status = "observed"
+    return {
+        "status": status,
+        "source": source,
+        "current_epoch": current_epoch,
+        "history": history,
+        "measurement_limits": [
+            "Doctor history contains bounded health summaries; history entries do not carry individual immutable evidence references.",
+            "The current epoch evidence reference identifies detailed Doctor evidence, but a health summary does not establish a service-specific cause or improvement.",
+            "The current epoch evidence reference is structurally identified but is not fetched or integrity-verified by this projection.",
+            "Snapshot revision relation identifies which session revision the epoch recorded; it does not prove that health remains unchanged afterward.",
+        ],
+    }
+
+
 def _session_activity(
     session: Any, snapshot: dict[str, Any], *,
     event_before_sequence: int | None = None,
@@ -12764,6 +12999,7 @@ def _session_activity(
         "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves.",
     ]
     service_readiness = _session_service_readiness(session, snapshot)
+    doctor_health_history = _session_doctor_health_history(session, snapshot)
     raw_readiness_requirements = snapshot.get("requirements")
     raw_readiness_requirements = (
         raw_readiness_requirements
@@ -12774,6 +13010,42 @@ def _session_activity(
         snapshot.get("service_observations"),
         snapshot.get("service_operations"),
     ))
+    has_doctor_health_history = (
+        doctor_health_history["status"] != "not-recorded-in-session"
+    )
+    if has_service_readiness and has_doctor_health_history:
+        readiness_source = service_readiness.get("source", {})
+        doctor_source = doctor_health_history.get("source", {})
+        current_epoch = doctor_health_history.get("current_epoch")
+        if not isinstance(readiness_source, dict):
+            readiness_source = {}
+        if not isinstance(doctor_source, dict):
+            doctor_source = {}
+        if isinstance(current_epoch, dict):
+            same_snapshot_context = all(
+                readiness_source.get(key) == doctor_source.get(key)
+                and readiness_source.get(key) is not None
+                for key in ("session_id", "environment_id", "snapshot_sequence")
+            )
+            service_summary = service_readiness.get("summary", {})
+            service_summary = service_summary if isinstance(service_summary, dict) else {}
+            doctor_health_history["service_readiness_co_observation"] = {
+                "status": (
+                    "same-current-session-snapshot"
+                    if same_snapshot_context else "snapshot-context-incomplete-or-different"
+                ),
+                "relationship": "co-present-in-current-session-snapshot",
+                "service_readiness_status": service_readiness.get(
+                    "readiness_status", "unknown",
+                ),
+                "investigation_candidate_count": service_summary.get(
+                    "investigation_candidate_count", 0,
+                ),
+                "doctor_epoch_snapshot_relation": current_epoch.get(
+                    "snapshot_relation", "snapshot-revision-unavailable",
+                ),
+                "causal_status": "not-established",
+            }
     if not callable(reader):
         resource_samples = _session_resource_samples(session, snapshot, [])
         return {
@@ -12795,6 +13067,8 @@ def _session_activity(
             "resource_samples": resource_samples,
             **({"service_readiness": service_readiness}
                if has_service_readiness else {}),
+            **({"doctor_health_history": doctor_health_history}
+               if has_doctor_health_history else {}),
             "measurement_limits": [
                 *limits,
                 "The session event page interface is unavailable.",
@@ -12831,6 +13105,8 @@ def _session_activity(
             "resource_samples": resource_samples,
             **({"service_readiness": service_readiness}
                if has_service_readiness else {}),
+            **({"doctor_health_history": doctor_health_history}
+               if has_doctor_health_history else {}),
             "measurement_limits": [
                 *limits,
                 "The session event tail could not be read or did not match its declared shape.",
@@ -14604,6 +14880,8 @@ def _session_activity(
         "resource_samples": resource_samples,
         **({"service_readiness": service_readiness}
            if has_service_readiness else {}),
+        **({"doctor_health_history": doctor_health_history}
+           if has_doctor_health_history else {}),
         "source": {
             "event_count": event_count,
             "event_window_limit": event_limit,
