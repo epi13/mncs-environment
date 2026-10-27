@@ -1,0 +1,146 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_unowned_scope_resource_sample_correction_20261027",
+  "captured_at": "2026-10-27T04:51:30Z",
+  "measurement_basis": "append-only correction prepared from campaign-state and environmental-capability projection readbacks",
+  "observation": {
+    "kind": "observation-context-and-source-correction",
+    "source_interface": "MNCS Environment observation-correction contract and environmental-capability projection",
+    "request": {
+      "operation": "repair-context-for-exact-integration-preflight-observation",
+      "target_observation_identity": "ev_environment_unowned_scope_integration_observation_20261027",
+      "target_content_sha256": "28ec4b5ce98ebe3309b739fec35adae1811f1c75724936364e015efe1f495493",
+      "session_id": "ses_8d2eedabac6a6feb",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "source_event_identities": [
+        "evt_42d6d3270180172a",
+        "evt_53821ce9df85fe7a",
+        "evt_0bea59eea1d1c8a7"
+      ],
+      "preflight_action": "publish",
+      "preflight_operation_executed": false
+    },
+    "outcome": {
+      "correction": "Add the source interface and exact event, session, and work-intent context, and supply content-addressed implementation, verification, and projection sources.",
+      "reason": "The original record is authentic but was contract-invalid because its observation omitted source_interface and request. The correction preserves its original bytes and supplies only independently verified context and source pointers.",
+      "interpretation_limit": "The recorded integration eligibility was a preflight only; it does not establish that a Git operation executed, that all overlapping claims were live, or that host resources were consumed by the agent."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_5bcc3b1ffafbd162",
+    "campaign_evidence_count_before_recording": 6
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_unowned_scope_integration_observation_20261027",
+      "repository": "mncs-environment",
+      "commit": "710f10a3dcd771631a603fac7bc04f56e6e65872",
+      "path": "evidence/environmental-capability/unowned-scope-integration-observation-20261027.json",
+      "sha256": "28ec4b5ce98ebe3309b739fec35adae1811f1c75724936364e015efe1f495493"
+    },
+    "corrected_field_paths": [
+      "observation.source_interface",
+      "observation.request",
+      "supporting_sources"
+    ],
+    "replacement_values": {
+      "observation.source_interface": "MNCS Environment Session.check integration preflight and environmental-capability projection",
+      "observation.request": {
+        "operation": "inspect-authority-integration-preflight",
+        "repository": "mncs-environment",
+        "session_id": "ses_8d2eedabac6a6feb",
+        "work_intent_id": "int_e9a2959ffe2e952c",
+        "source_event_identities": [
+          "evt_42d6d3270180172a",
+          "evt_53821ce9df85fe7a",
+          "evt_0bea59eea1d1c8a7"
+        ],
+        "action": "publish",
+        "operation_executed": false
+      },
+      "supporting_sources": [
+        {
+          "identity": "mncs_environment_unowned_scope_cli_observation_source_a2812468",
+          "kind": "implementation-source",
+          "repository": "mncs-environment",
+          "commit": "a28124688e7b1360e4e6f77a8ee61ad2ee9520ef",
+          "path": "mncs_env/cli.py",
+          "sha256": "76a540b62ac27d304a352f592ffc644ac3a411ea6c6b66f5b677e924a22f28fc"
+        },
+        {
+          "identity": "mncs_environment_unowned_scope_cli_test_source_a2812468",
+          "kind": "verification-source",
+          "repository": "mncs-environment",
+          "commit": "a28124688e7b1360e4e6f77a8ee61ad2ee9520ef",
+          "path": "tests/test_authority_policy_guidance.py",
+          "sha256": "b50b50eb64959cde412ed3d36f437540e1ab6fae49eb4face4471ac1c5c9ac8e"
+        },
+        {
+          "identity": "mncs_environment_resource_sample_relation_implementation_1dbd4fd",
+          "kind": "implementation-source",
+          "repository": "mncs-environment",
+          "commit": "1dbd4fd073c412c93cc559d1a6d91d2ab6997e1e",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "8c82f43d7e97dd3b21c4cb4c21617df64feffd6b291c47b968edbcf97f3e3f07"
+        },
+        {
+          "identity": "mncs_environment_resource_sample_relation_tests_1dbd4fd",
+          "kind": "verification-source",
+          "repository": "mncs-environment",
+          "commit": "1dbd4fd073c412c93cc559d1a6d91d2ab6997e1e",
+          "path": "tests/test_capability_intelligence.py",
+          "sha256": "d3b81c6537b6bc4c160154f3de1afe1048316a9f231d7c71b8ebb55e5a5f1359"
+        },
+        {
+          "identity": "mncs_environment_resource_sample_relation_contract_1dbd4fd",
+          "kind": "projection-documentation-source",
+          "repository": "mncs-environment",
+          "commit": "1dbd4fd073c412c93cc559d1a6d91d2ab6997e1e",
+          "path": "docs/PROJECTIONS.md",
+          "sha256": "44b2a988704c910b0f69681359fa661ae8eedde2a8a12d7e0400f3cd7d73404e"
+        }
+      ]
+    },
+    "reason": "The target observation is immutable and its exact bytes are verified. The replacements restore the source interface and measured preflight context, with exact source files for the authority operation and the new resource-sample relationship."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_observation_correction_and_resource_relation_1dbd4fd",
+      "kind": "existing-append-only-correction-and-resource-sample-implementation",
+      "repository": "mncs-environment",
+      "commit": "1dbd4fd073c412c93cc559d1a6d91d2ab6997e1e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "8c82f43d7e97dd3b21c4cb4c21617df64feffd6b291c47b968edbcf97f3e3f07"
+    },
+    {
+      "identity": "mncs_environment_observation_correction_regression_1dbd4fd",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "1dbd4fd073c412c93cc559d1a6d91d2ab6997e1e",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "d3b81c6537b6bc4c160154f3de1afe1048316a9f231d7c71b8ebb55e5a5f1359"
+    }
+  ],
+  "not_measured": [
+    "actual Git merge or remote push execution for the recorded preflight",
+    "liveness of every overlapping claim record",
+    "agent-attributed CPU or memory consumption",
+    "whether the recorded host resource sample represents pressure",
+    "causal effect of the eligibility decision on resource use or development outcome"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

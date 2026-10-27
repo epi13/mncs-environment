@@ -89,6 +89,19 @@ executed edit. A focused fixture covers the case where the earlier workspace
 projection omitted the worktree; a later independent agent's adoption and any
 reduction in coordination overhead remain unmeasured.
 
+The authentic `authority.integration-eligible` event in
+[`unowned-scope-integration-observation-20261027.json`](../evidence/environmental-capability/unowned-scope-integration-observation-20261027.json)
+is linked to its exact session resource-sample identity by the projection. The
+link checks the sample identity, campaign, session, Work Intent, stored artifact
+digest, and invocation/completion event references. Its append-only context
+repair is recorded in
+[`unowned-scope-resource-sample-correction-20261027.json`](../evidence/environmental-capability/unowned-scope-resource-sample-correction-20261027.json).
+The sample is a host snapshot captured around the operation; it is not
+agent-attributed resource consumption, a pressure finding, or evidence that the
+preflight executed a Git operation. The readback keeps coordination overlap
+visible beside eligibility without treating the overlap as a persistent
+ownership requirement.
+
 The 2026-10-27
 [`coordination-aware-diagnostic-deferral-20261027.json`](../evidence/environmental-capability/coordination-aware-diagnostic-deferral-20261027.json)
 records a verified Debug and Environment integration: a verification capture
