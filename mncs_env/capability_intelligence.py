@@ -6333,6 +6333,31 @@ def _compact_projection(
         result["source"]["observation_records_compacted_out_count"] = (
             verified_observation_count - len(result["observations"])
         )
+    if (isinstance(raw_activity.get("resource_samples"), dict)
+            and not raw_resource_observations
+            and resource_source.get("artifact_window_truncated") is not True
+            and resource_source.get("records_omitted", 0) == 0):
+        status = raw_activity["resource_samples"].get("status")
+        if isinstance(status, str):
+            compact_with_empty_resource_status = dict(result)
+            compact_with_empty_resource_status["session_activity"] = dict(
+                result["session_activity"],
+            )
+            compact_with_empty_resource_status["session_activity"][
+                "resource_samples"
+            ] = {"status": _short_text(status, 96)}
+            for key in ("observation_count", "records_examined"):
+                value = raw_activity["resource_samples"].get(key)
+                if type(value) is int and value >= 0:
+                    compact_with_empty_resource_status["session_activity"][
+                        "resource_samples"
+                    ][key] = value
+            if len(json.dumps(
+                compact_with_empty_resource_status,
+                ensure_ascii=False,
+                sort_keys=True,
+            ).encode("utf-8")) <= max_result_bytes:
+                result = compact_with_empty_resource_status
     return result
 
 

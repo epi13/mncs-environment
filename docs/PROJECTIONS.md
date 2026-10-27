@@ -760,6 +760,10 @@ at capture time; it is not agent-attributed consumption and a single sample does
 not establish resource pressure. Each metric carries availability, and the
 projection identifies Monitor-derived CPU utilization separately from sampled
 host facts; it never fills missing values with zero.
+Size-compacted projections retain the resource-sample status and observation
+count even when the selected session has no samples, distinguishing
+`not-captured-in-session` from fields omitted because the compact response ran
+out of space.
 
 When a campaign observation records an `outcome.related_resource_sample`
 identity, the projection exposes `resource_sample_relation` beside that

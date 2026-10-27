@@ -3435,6 +3435,26 @@ def test_capability_binding_summary_survives_response_budget_trimming(
     ).encode("utf-8")) <= budget
 
 
+def test_compact_projection_preserves_missing_resource_sample_status(
+    tmp_path: Path,
+) -> None:
+    session, _state = _session(tmp_path, [])
+    projection = capability_intelligence.project(session)
+
+    full_samples = projection["session_activity"]["resource_samples"]
+    assert full_samples["status"] == "not-captured-in-session"
+    assert full_samples["observation_count"] == 0
+    assert full_samples["observations"] == []
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, 10_000,
+    )
+    compact_samples = compact["session_activity"]["resource_samples"]
+    assert compact_samples["status"] == "not-captured-in-session"
+    assert compact_samples["observation_count"] == 0
+    assert compact_samples.get("observations", []) == []
+
+
 def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     tmp_path: Path,
 ) -> None:
