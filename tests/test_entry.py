@@ -15,6 +15,7 @@ from unittest import mock
 import pytest
 
 from mncs_env import (
+    capability_intelligence,
     campaign_selector,
     capabilities,
     cli,
@@ -626,6 +627,29 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(operation["status"], "not-attempted")
         self.assertEqual(operation["code"], "environment-invocation-not-admitted")
         self.assertFalse((self.project / "service-state.json").exists())
+        session = sessions.Session.resume(
+            state_dir=self.state, session_id=first["session_id"], backend="file",
+        )
+        try:
+            projection = capability_intelligence.project(session)
+            accountability = projection["session_activity"]["service_accountability"]
+            service = accountability["services"][0]
+            self.assertEqual(service["service_identity"], "fixture-service")
+            self.assertEqual(service["operation_status"], "not-attempted")
+            self.assertEqual(
+                service["operation_code"],
+                "environment-invocation-not-admitted",
+            )
+            self.assertEqual(
+                accountability["source"]["service_session_id"],
+                first["session_id"],
+            )
+            self.assertEqual(
+                accountability["source"]["environment_id"],
+                first["environment_id"],
+            )
+        finally:
+            session.close()
         claim_code, claim = self.run_cli("claims", first["session_id"], "--acquire", "fixture", "--reason", "start fixture service")
         self.assertEqual(claim_code, 3, claim)
         self.assertEqual(claim["diagnostics"]["code"], "authority-denied")
