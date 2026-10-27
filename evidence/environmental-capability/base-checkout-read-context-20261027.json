@@ -1,0 +1,146 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_base_checkout_read_context_20261027",
+  "captured_at": "2026-10-27T11:26:01Z",
+  "measurement_basis": "full-authority-scope-regression-suite-and-live-session-worktree-claim-readback",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_b5bc68426ab5c5ee",
+    "campaign_evidence_count_before_recording": 26
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "base-intent-checkout-read-context-after-claim-release",
+    "source_interface": "MNCS Environment session revalidation, exact worktree claim acquisition, and authority-scope regressions",
+    "failure_condition": "When a base-intent checkout had been selected from a live same-session claim, a later claim acquisition could automatically revalidate after the branch or HEAD advanced. With no live claim yet, revalidation removed the checkout selection before the new claim could be acquired.",
+    "implementation": {
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "behavior": "Environment retains a prior base-intent checkout as observed-base-intent-checkout only when its registered checkout, checkout identity, and Git common-directory identity still match. It refreshes branch and HEAD from the live checkout, reports the row as observed, and leaves claim eligibility unchanged.",
+      "conflict_boundary": "The retained observation does not adopt another session's claim. A new claim still passes the ordinary live-claim, rights, and operation-specific checks."
+    },
+    "verification": {
+      "command": "python -m pytest -q tests/test_authority_scope_grants.py",
+      "test_file": "tests/test_authority_scope_grants.py",
+      "passed": 58,
+      "failed": 0,
+      "duration_seconds": 176.86,
+      "regression_cases": {
+        "selected_context_retained_after_claim_release": true,
+        "same_checkout_head_advance_refreshed": true,
+        "claim_reacquisition_after_head_advance_succeeded": true,
+        "foreign_overlapping_claim_not_adopted": true,
+        "foreign_overlapping_claim_still_blocks_acquisition": true,
+        "checkout_identity_change_still_fails_closed": "covered by existing authority-scope regressions"
+      }
+    },
+    "live_campaign_claim": {
+      "interface": "mncs-env claims",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "repository": "mncs-environment",
+      "claim_id": "claim:mncs-environment:worktree:a38d79da85af",
+      "claim_identity": "clm_3855b976c7d1e89b",
+      "branch": "campaign/service-accountability-response-compaction-20261027",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment",
+      "paths": [
+        "docs/ENTRY.md",
+        "mncs_env/sessions.py",
+        "tests/test_authority_scope_grants.py"
+      ],
+      "status_at_readback": "held",
+      "interpretation_limit": "One successful exact worktree claim demonstrates this campaign's path; it does not establish that claim friction is generally eliminated."
+    },
+    "interpretation_limit": "The regression suite verifies one claim lifecycle and preserves the conflict boundary. It does not measure longitudinal agent intervention, cross-session recurrence, changes in tool-call overhead, or the downstream effect on unrelated protected operations."
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_base_intent_checkout_lost_before_claim_refresh_20261027",
+    "title": "A valid base-intent checkout can disappear between claim release and safe reacquisition",
+    "category": "coordination-and-continuity",
+    "subsystem": "Environment checkout composition and worktree claim acquisition",
+    "basis": "The prior composition path required a live same-session claim to retain a base-intent checkout. The claim refresh path can itself trigger revalidation after branch or HEAD drift, before the next claim exists. A bounded regression now verifies that stable read context can survive this gap without becoming mutation eligibility.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "frequency across sessions and repositories",
+      "agent time or tool calls avoided over subsequent work",
+      "whether other Environment consumers rely on selection removal after claim release"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_base_intent_checkout_read_context_20261027",
+    "addresses_hypothesis_identity": "ph_environment_base_intent_checkout_lost_before_claim_refresh_20261027",
+    "implementation_reference": {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "mncs_env/sessions.py",
+      "sha256": "ac0cc717a1894cb73ba1cdef2dc63f03d7ec454c79ea999e6c63147fba9754e6",
+      "kind": "committed-implementation"
+    },
+    "verification_reference": {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "tests/test_authority_scope_grants.py",
+      "sha256": "77f0bf8d1a594cf621d9e3e3e97234e8d37ece240d629bf8cae93b5a3a084ab4",
+      "kind": "committed-regression-tests"
+    },
+    "verification_observation_identity": "ev_environment_base_checkout_read_context_20261027",
+    "verification_record_status": "verified-in-this-observation",
+    "verification_evidence_reference": {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "tests/test_authority_scope_grants.py",
+      "sha256": "77f0bf8d1a594cf621d9e3e3e97234e8d37ece240d629bf8cae93b5a3a084ab4"
+    },
+    "contract_reference": {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "docs/ENTRY.md",
+      "sha256": "947413e719b6698e0dd30f5376a6d1c6a483db5ee04fdb73f295a07e604197e6",
+      "kind": "committed-contract-documentation"
+    },
+    "basis": "The tests exercise no-live-claim revalidation, stable checkout identity, HEAD refresh, successful exact-claim reacquisition, and rejection of a foreign overlapping claim. The same session also acquired a scoped claim on the active campaign worktree through the existing CLI.",
+    "effectiveness_assessment": "single-session-path-verified; longitudinal-effectiveness-not-assessed",
+    "not_measured": [
+      "cross-session recurrence reduction",
+      "agent intervention or total tool-call reduction",
+      "long-term outcomes after future sessions use the updated mechanism"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "mncs_env/sessions.py",
+      "sha256": "ac0cc717a1894cb73ba1cdef2dc63f03d7ec454c79ea999e6c63147fba9754e6",
+      "kind": "committed-implementation"
+    },
+    {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "tests/test_authority_scope_grants.py",
+      "sha256": "77f0bf8d1a594cf621d9e3e3e97234e8d37ece240d629bf8cae93b5a3a084ab4",
+      "kind": "committed-regression-tests"
+    },
+    {
+      "repository": "mncs-environment",
+      "commit": "b3e4cbbffa8668944ddb4a06ed7ee1dc6e8b58e7",
+      "path": "docs/ENTRY.md",
+      "sha256": "947413e719b6698e0dd30f5376a6d1c6a483db5ee04fdb73f295a07e604197e6",
+      "kind": "committed-contract-documentation"
+    }
+  ],
+  "not_measured": [
+    "whether this improvement reduces environmental intervention in later real sessions",
+    "whether agents discover and rely on read-context source markers without additional guidance",
+    "whether the issue recurs in other base-intent repositories or checkout layouts"
+  ]
+}
