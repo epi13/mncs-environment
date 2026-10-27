@@ -3671,6 +3671,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             {
                 "identity": forge_service,
                 "status": "failed",
+                "code": "service-start-failed",
                 "reason": f"cannot start from {private_path}",
                 "provider_response": {"detail": private_path},
             },
@@ -3834,6 +3835,13 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     }
     language_accountability = accountable_services[language_service]
     assert language_accountability["readiness_status"] == "degraded"
+    assert accountable_services[forge_service]["operation_code"] == (
+        "service-start-failed"
+    )
+    assert language_accountability["observation_code"] == "service-not-ready"
+    assert language_accountability["observed_at"] == (
+        "2026-10-26T18:10:20.100Z"
+    )
     assert language_accountability["probe_observation_record_status"] == (
         "unique-record"
     )
@@ -3865,6 +3873,35 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "service_execution_id": service_execution_id,
         "latest_trace_relation": "exact-latest-trace-match",
     }]
+    assert ambient_probe_activity["probe_calls"] == [{
+        "owner_pass": "doctor",
+        "service_execution_id": service_execution_id,
+        "latest_trace_relation": "exact-latest-trace-match",
+        "probe_binding_attribution_status": "exact-current-session-binding",
+        "binding_identity": {
+            "status": "complete",
+            "provider": "mncs-language-service-provider",
+            "binding_id": "cap_language_service_ready",
+            "contract_revision": "2",
+        },
+        "invocation_count": 1,
+        "completion_count": 1,
+        "outcome_status_counts": {"ok": 1},
+        "nonzero_returncode_count": 0,
+        "supporting_events": [
+            {
+                "identity": "evt_service_readiness_invoked",
+                "sequence": 1,
+                "type": "capability.invoked",
+            },
+            {
+                "identity": "evt_service_readiness_completed",
+                "sequence": 2,
+                "type": "invocation.completed",
+            },
+        ],
+        "supporting_events_truncated": False,
+    }]
     assert ambient_probe_activity["supporting_events"] == [
         {
             "identity": "evt_service_readiness_invoked",
@@ -3881,12 +3918,25 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert language_accountability["ambient_fulfillment_status"] == (
         "not-established-no-eligible-opportunity-recorded"
     )
+    assert language_accountability["outcome_quality_status"] == "not-established"
     assert accountability["summary"][
         "agent_intervention_burden_status"
     ] == "not-measured"
     assert accountability["summary"][
         "ambient_probe_use_relation_status_counts"
     ]["exact-current-probe-binding-invocation-observed"] == 1
+    events[1]["payload"]["status"] = "failed"
+    events[1]["payload"]["returncode"] = 7
+    failed_probe = capability_intelligence.project(session)["session_activity"][
+        "service_accountability"
+    ]["services"][0]["ambient_owner_pass_activity"]["probe_calls"][0]
+    assert failed_probe["outcome_status_counts"] == {"failed": 1}
+    assert failed_probe["nonzero_returncode_count"] == 1
+    assert failed_probe["supporting_events"][-1]["identity"] == (
+        "evt_service_readiness_completed"
+    )
+    events[1]["payload"]["status"] = "ok"
+    events[1]["payload"]["returncode"] = 0
     invocation_context = events[0]["payload"].pop(
         "ambient_owner_pass_context",
     )
@@ -3966,6 +4016,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert compact_language["bindings"][0]["supporting_events"][0][
         "identity"
     ] == "evt_service_readiness_invoked"
+    assert compact_language["ambient_owner_pass_activity"]["probe_calls"] == (
+        language_accountability["ambient_owner_pass_activity"]["probe_calls"]
+    )
     assert compact_accountability["summary"][
         "eligible_service_opportunity_count"
     ] is None

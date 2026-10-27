@@ -1054,6 +1054,10 @@ snapshot remains distinct from binding availability and observed use, so a
 ready binding does not imply a ready service. Source references retain the
 session, Environment, and snapshot revision. The summary repeats readiness
 probe coverage counts to relate this view to its declarations and records.
+Each row also carries the sanitized readiness observation code and time, and
+the reconciliation operation code when present, so a failed or degraded
+service can be investigated from its declared status without exposing provider
+reason text or raw response data.
 Within the bounded binding-detail list, declared service probes are selected
 before other bindings, followed by exact invocation bindings and observed
 capabilities. A per-probe binding count derived from the scanned inventory
@@ -1083,6 +1087,16 @@ is not confused with complete-history evidence when the window is partial. If
 bounded owner-pass or capability groups were omitted, the probe relation marks
 its activity projection incomplete instead of treating the omitted rows as no
 observed invocation.
+
+For each matched ambient probe call, `probe_calls` retains the invocation and
+completion counts, the completion status counts and nonzero return-code count,
+exact binding attribution, and bounded source event references. The separate
+`owner_pass_executions` list remains deduplicated by scheduler execution. These
+are observed probe outcomes tied to an owner-pass trace; they do not establish
+independent verification, service fulfillment, agent receipt, or reduced
+intervention burden. The current service readiness snapshot remains separate,
+so a returned probe call is not treated as proof that the service fulfilled its
+responsibility.
 
 `session_activity.ambient_service_execution` exposes the latest recorded
 incremental owner-pass scheduler trace from the same session snapshot. Entry
