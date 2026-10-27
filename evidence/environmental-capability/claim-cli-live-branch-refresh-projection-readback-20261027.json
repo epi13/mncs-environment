@@ -1,0 +1,125 @@
+{
+  "captured_at": "2026-10-27T10:24:27Z",
+  "identity": "ev_environment_claim_cli_live_branch_refresh_projection_readback_20261027",
+  "measurement_basis": "bounded live environmental-capability projection readback after campaign evidence append and main delivery",
+  "not_measured": [
+    "recurrence or agent-intervention change after the implementation",
+    "long-term effectiveness or causal improvement beyond the targeted regression",
+    "discoverability, receipt, and use of the broader environmental capability set",
+    "systemwide native implementation ownership and adoption ratio"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "outcome": {
+      "campaign_projection": {
+        "campaign_evidence_count": 17,
+        "campaign_state_checkpoint_id": "chk_5bfa90f1ec66e886",
+        "identity": "eci_921cdca90082352d",
+        "improvement_relations_returned": 4,
+        "measurement_limits": [
+          "Response limit compacted payload; pressure totals may be omitted to retain source evidence.",
+          "Exact observation records remain addressable through their evidence references.",
+          "The bounded read selects the newest observation references in each page; older skipped references may contain additional evidence."
+        ],
+        "observation_records_compacted_out": 12,
+        "observation_records_considered": 17,
+        "observation_records_skipped_by_page_budget": 1,
+        "observation_records_verified": 16,
+        "observations_returned": 16,
+        "pressure_hypotheses_returned": 6,
+        "projection_status": "partial",
+        "response_byte_limit": 73728,
+        "serialized_response_bytes": 66010,
+        "source_pointers": {
+          "content_integrity_not_verified": 2,
+          "content_integrity_verified": 24,
+          "count": 26
+        }
+      },
+      "capability_accountability": {
+        "discoverability_status": "not-established",
+        "interpretation_limit": "No session.context operation was recorded in the selected event history; agent receipt or use is not established.",
+        "native_adoption_status": "not-measured",
+        "session_context_status": "no-context-operation-in-session-history",
+        "status": "source-context-unavailable"
+      },
+      "improvement_relation": {
+        "addresses_hypothesis_identity": "ph_environment_claim_cli_stale_branch_precondition",
+        "effectiveness_assessment": "not-assessed",
+        "identity": "im_environment_claim_cli_live_branch_refresh",
+        "implementation_reference": {
+          "commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+          "content_integrity_status": "content-integrity-verified",
+          "identity": "mncs_environment_claim_cli_live_branch_refresh_97941b6",
+          "path": "mncs_env/cli.py",
+          "repository": "mncs-environment",
+          "sha256": "0e7712c609d6abe5cb6e60491ab542add2d4ab97cd7f017226f746aa0fa499d1",
+          "status": "not-present-in-selected-campaign-evidence-window"
+        },
+        "subsequent_record_status": "not-recorded",
+        "verification_observation_identity": "ev_environment_claim_cli_live_branch_refresh_verification_20261027",
+        "verification_record_status": "record-integrity-verified-in-projection"
+      },
+      "pressure_hypothesis": {
+        "identity": "ph_environment_claim_cli_stale_branch_precondition",
+        "observation_count": 1,
+        "occurrence_distinct_session_count": 1,
+        "recurrence_status": "not-established",
+        "role_classification_status": "complete",
+        "source_observation_identities": [
+          "ev_environment_claim_cli_stale_branch_pressure_20261027",
+          "ev_environment_claim_cli_live_branch_refresh_improvement_20261027",
+          "ev_environment_claim_cli_live_branch_refresh_verification_20261027"
+        ]
+      }
+    },
+    "request": {
+      "campaign_id": "cmp_7f550d193225b7be",
+      "command": "./scripts/mncs-env projections <campaign-session> --interpret environmental-capability --history-pages 4 --evidence-limit 32 --session-event-limit 256",
+      "environment_id": "renv_6b644a59c2867246",
+      "projection_identity": "eci_921cdca90082352d",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "work_intent_id": "int_e9a2959ffe2e952c"
+    },
+    "source_interface": "MNCS Environment environmental-capability projection"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_712fb160746dea51",
+    "environment_id": "renv_6b644a59c2867246",
+    "session_id": "ses_a752e1c55fb4ca6f"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "97941b6b30367bb9efe223848f72b8b3110ea37b",
+      "kind": "committed-implementation",
+      "path": "mncs_env/cli.py",
+      "repository": "mncs-environment",
+      "sha256": "0e7712c609d6abe5cb6e60491ab542add2d4ab97cd7f017226f746aa0fa499d1"
+    },
+    {
+      "commit": "0f86b10cde1e9ac38cb6f176fba9f19faa8cb020",
+      "identity": "ev_environment_claim_cli_stale_branch_pressure_20261027",
+      "path": "evidence/environmental-capability/claim-cli-stale-branch-pressure-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "b31b356a4dec9eb5870672e9fb26557c2b82d7ca754454976ad95b25597f0e47"
+    },
+    {
+      "commit": "0f86b10cde1e9ac38cb6f176fba9f19faa8cb020",
+      "identity": "ev_environment_claim_cli_live_branch_refresh_improvement_20261027",
+      "path": "evidence/environmental-capability/claim-cli-live-branch-refresh-improvement-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "677f2a23920784df9f0c8dc40d3105070592d21d6b19521661f67f1d91e93c4c"
+    },
+    {
+      "commit": "0f86b10cde1e9ac38cb6f176fba9f19faa8cb020",
+      "identity": "ev_environment_claim_cli_live_branch_refresh_verification_20261027",
+      "path": "evidence/environmental-capability/claim-cli-live-branch-refresh-verification-20261027.json",
+      "repository": "mncs-environment",
+      "sha256": "47a12dcf435154eb6ef0d1eec715cffd184fdb0399aa19365c97023e300c31bd"
+    }
+  ]
+}
