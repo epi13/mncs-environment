@@ -1,0 +1,72 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_cli_request_surface_improvement_20261027",
+  "captured_at": "2026-10-27T15:33:38Z",
+  "measurement_basis": "explicit-implementation-verification-and-subsequent-bounded-session-readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI session activity projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_session_cli_request_surface_visibility_20261027",
+      "implementation_commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "verification_observation_identity": "ev_environment_session_cli_request_surface_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_session_cli_request_surface_live_readback_20261027"
+    },
+    "outcome": {
+      "implementation_scope": "Session capability invocation events, completion events, invocation artifacts, ECI session interactions and ambient owner-pass activity groups.",
+      "implementation_change": "The mncs-env invoke CLI supplies a bounded request-surface marker. Session persists it on both correlated events and the invocation artifact. The ECI preserves the marker only when the invocation and completion agree, including compact service activity views.",
+      "verified_change": "Focused and repository-wide regressions pass, the real Environment vertical proof passes, and the live ECI projection exposes the actual workspace-readiness invocation with exact event references and a matched request surface.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The change makes request-route evidence discoverable. It does not demonstrate that the request was avoidable, that ambient work was due, or that agent burden decreased."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_session_cli_request_surface_20261027",
+    "addresses_hypothesis_identity": "ph_environment_session_cli_request_surface_visibility_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_session_request_projection_4160e85",
+      "repository": "mncs-environment",
+      "commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d4bca0e4d33604ecc07a5b51668dc89899abbbed95a8bde3a6b72668f02ed750"
+    },
+    "verification_observation_identity": "ev_environment_session_cli_request_surface_verification_20261027",
+    "subsequent_observation_identity": "ev_environment_session_cli_request_surface_live_readback_20261027",
+    "basis": "The targeted and repository-wide tests verify paired event persistence and projection bounds. The subsequent bounded ECI readback matches a real CLI invocation and completion by provider request identity and preserves exact event references.",
+    "not_measured": [
+      "agent identity or runtime for the request",
+      "whether the request followed an eligible ambient opportunity",
+      "agent receipt, intervention burden, and service outcome quality",
+      "whether future agents discover or use this evidence"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_afc9f19b6696a175",
+    "campaign_evidence_count_before_recording": 54
+  },
+  "supporting_sources": [
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_session_cli_request_surface_verification_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "subsequent-observation",
+      "identity": "ev_environment_session_cli_request_surface_live_readback_20261027",
+      "repository": "mncs-environment"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

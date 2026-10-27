@@ -1,0 +1,66 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_scoped_claim_preflight_improvement_20261027",
+  "captured_at": "2026-10-27T15:33:38Z",
+  "measurement_basis": "verified-authority-diagnostic-linked-to-authenticated-coordination-evidence",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment authority evaluator",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_scoped_claim_preflight_clarity_20261027",
+      "implementation_commit": "8d53113dab3ba03cabfdf0d780dad0f9cc391942",
+      "verification_observation_identity": "ev_environment_scoped_claim_preflight_verification_20261027",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_scope": "Authority write preflight for dirty or shared checkouts with a same-session path-scoped worktree claim.",
+      "implementation_change": "The evaluator recognizes a same-checkout and same-branch claim that does not cover the requested paths and returns an explicit scope-coverage defer with an actionable next step. It does not grant broader write eligibility or request owner approval.",
+      "verified_change": "Regression tests verify a whole-worktree request is deferred with the new scope-mismatch status and an exact covered-path request is allowed under the same claim.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "No subsequent live workflow has yet demonstrated that the clearer explanation reduces coordination work or prevents recurrence."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_scoped_claim_preflight_clarity_20261027",
+    "addresses_hypothesis_identity": "ph_environment_scoped_claim_preflight_clarity_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_claim_scope_diagnostic_8d53113",
+      "repository": "mncs-environment",
+      "commit": "8d53113dab3ba03cabfdf0d780dad0f9cc391942",
+      "path": "mncs_env/authority.py",
+      "sha256": "da743803369f02602c8c8455710b41117195769f4f9ef1e31dc147f0421b0377"
+    },
+    "verification_observation_identity": "ev_environment_scoped_claim_preflight_verification_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The original session event records the generic coordination defer. A follow-up exact-path authority preflight allowed the same writable session without persistent authority, and targeted tests verify the new scope-specific guidance and exact-path eligibility.",
+    "not_measured": [
+      "whether future agents resolve this mismatch with fewer tool calls",
+      "whether the same mismatch recurs in other repositories",
+      "long-term agent intervention burden or integration quality"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_afc9f19b6696a175",
+    "campaign_evidence_count_before_recording": 54
+  },
+  "supporting_sources": [
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_scoped_claim_preflight_verification_20261027",
+      "repository": "mncs-environment"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

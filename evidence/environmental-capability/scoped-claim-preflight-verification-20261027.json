@@ -1,0 +1,100 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_scoped_claim_preflight_verification_20261027",
+  "captured_at": "2026-10-27T15:33:38Z",
+  "measurement_basis": "authenticated-coordination-deferral-exact-scope-preflight-and-targeted-authority-regressions",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment authority evaluator and session coordination projection",
+    "request": {
+      "implementation_commit": "8d53113dab3ba03cabfdf0d780dad0f9cc391942",
+      "commands": [
+        "python3 -m pytest -q tests/test_environment.py::AuthorityTests tests/test_authority_policy_guidance.py tests/test_authority_scope_grants.py",
+        "git diff --check"
+      ],
+      "observed_workflow": {
+        "deferral_event": {
+          "identity": "evt_01afe93d87e67c15",
+          "sequence": 536,
+          "type": "authority.coordination-deferred"
+        },
+        "pre_change_status": "shared-checkout-needs-isolation-or-lease",
+        "pre_change_next_step": "select-or-create-an-observed-proposal-worktree",
+        "pre_change_requested_scope": "whole worktree",
+        "held_claim_scope_at_preflight": "six repo-relative paths on the same worktree and branch",
+        "follow_up_exact_scope_verdict": "allow",
+        "follow_up_coordination_status": "scoped-mutation-lease-held",
+        "follow_up_persistent_authority_required": false
+      }
+    },
+    "outcome": {
+      "status": "passed",
+      "results": {
+        "authority_tests": {
+          "passed": 104,
+          "failed": 0
+        },
+        "whitespace_check": "passed"
+      },
+      "verified_change": "When the same session holds a path-scoped claim on the requested worktree and branch but the write preflight asks for a broader scope, the evaluator now reports own-claim-does-not-cover-requested-scope and recommends narrowing the operation or extending that session's claim. The exact path scope remains eligible.",
+      "interpretation_limit": "The original deferral was caused by a mismatch between the requested whole-worktree scope and the six-path claim. It was not an owner-approval requirement. This one workflow does not establish a recurring burden rate."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_scoped_claim_preflight_clarity_20261027",
+    "title": "A path-scoped claim does not explain why a broader write preflight is deferred",
+    "category": "agent-coordination-and-continuity",
+    "subsystem": "Environment authority preflight and claim scope matching",
+    "owner": "mncs-environment",
+    "basis": "The authenticated session recorded one generic coordination defer while its current claim was path-scoped and the request covered the whole worktree; a later exact path preflight was allowed.",
+    "recurrence": "One observed workflow; recurrence across sessions is not established.",
+    "actionable_recommendation": "Distinguish an own-claim coverage mismatch from missing ownership, and recommend narrowing the requested scope or extending the same session's claim without requesting approval or transfer.",
+    "not_measured": [
+      "recurrence across independent sessions or repositories",
+      "agent time or tool calls spent resolving the mismatch",
+      "effect on integration correctness or long-term coordination burden"
+    ]
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_afc9f19b6696a175",
+    "campaign_evidence_count_before_recording": 54
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "event_identities": [
+        "evt_01afe93d87e67c15"
+      ]
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_claim_scope_diagnostic_8d53113",
+      "repository": "mncs-environment",
+      "commit": "8d53113dab3ba03cabfdf0d780dad0f9cc391942",
+      "path": "mncs_env/authority.py",
+      "sha256": "da743803369f02602c8c8455710b41117195769f4f9ef1e31dc147f0421b0377"
+    }
+  ],
+  "measurement_limits": [
+    "The authority result is one observed coordination event and one later exact-scope evaluator response.",
+    "The new status and next step were verified by unit tests; no post-change live invocation of a deliberately mismatched scope was performed.",
+    "No agent approval or transfer was required in this workflow, but this does not measure future intervention reduction."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

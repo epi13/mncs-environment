@@ -1,0 +1,110 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_cli_request_surface_live_readback_20261027",
+  "captured_at": "2026-10-27T15:33:38Z",
+  "measurement_basis": "bounded-live-ECI-readback-of-authenticated-session-activity",
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --interpret environmental-capability --history-pages 1 --evidence-limit 1 --session-event-limit 32",
+      "campaign_state_checkpoint_id": "chk_afc9f19b6696a175",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "event_window_sequences": [
+        528,
+        559
+      ]
+    },
+    "outcome": {
+      "projection_identity": "eci_3706a0194550bfad",
+      "content_digest": "1b23f3fd58223a40cbf4940f190c6589",
+      "projection_status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 112408,
+      "event_window_truncated": true,
+      "matched_cli_interactions_in_window": [
+        {
+          "capability": "mncs-environment:workspace-readiness",
+          "request_surface": "mncs-env-invoke-cli",
+          "request_surface_relation_status": "matched-explicit-session-invoke",
+          "correlation_status": "matched-by-provider-request-id",
+          "outcome_status": "ok",
+          "returncode": 0,
+          "invocation_event": {
+            "identity": "evt_10fcceeabd5143a4",
+            "sequence": 534,
+            "type": "capability.invoked"
+          },
+          "completion_event": {
+            "identity": "evt_be7945c9d231d750",
+            "sequence": 535,
+            "type": "invocation.completed"
+          }
+        }
+      ],
+      "service_accountability_status": "empty-declared-scope",
+      "declared_readiness_service_count": 0,
+      "interpretation": "The live ECI readback exposes one successful, correlated CLI request in the selected event window. The current session declared no readiness-service scope, so ambient fulfillment, agent receipt, and intervention burden remain unmeasured."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_cli_request_surface_visibility_20261027",
+    "title": "Session capability evidence does not identify the Environment CLI request surface",
+    "category": "environmental-service-accountability",
+    "subsystem": "Environment capability invocation and ECI session activity",
+    "owner": "mncs-environment",
+    "basis": "The pre-change invocation and completion records did not carry a request-surface field; historical CLI route activity was not recorded.",
+    "recurrence": "Not established; one post-change CLI interaction is visible in this bounded window.",
+    "actionable_recommendation": "Keep explicit request-surface evidence correlated to invocation and completion while preserving unknown actor, ambient need, and burden.",
+    "not_measured": [
+      "whether the request replaced or followed an ambient service opportunity",
+      "whether the recorded caller was an agent and which runtime it used",
+      "service fulfillment ratio or reduction in agent intervention",
+      "longitudinal recurrence across sessions"
+    ]
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_afc9f19b6696a175",
+    "campaign_evidence_count_before_recording": 54
+  },
+  "supporting_sources": [
+    {
+      "kind": "authenticated-session-activity-projection",
+      "repository": "mncs-environment",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "event_identities": [
+        "evt_10fcceeabd5143a4",
+        "evt_be7945c9d231d750"
+      ]
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_request_projection_4160e85",
+      "repository": "mncs-environment",
+      "commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d4bca0e4d33604ecc07a5b51668dc89899abbbed95a8bde3a6b72668f02ed750"
+    }
+  ],
+  "measurement_limits": [
+    "The selected session window is truncated and contains only one CLI invocation; it does not establish complete session history.",
+    "The ECI response is partial and truncated, although the selected invocation and completion references are present.",
+    "The session declared zero readiness services; service accountability values remain not measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

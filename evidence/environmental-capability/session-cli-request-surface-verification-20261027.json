@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_cli_request_surface_verification_20261027",
+  "captured_at": "2026-10-27T15:33:38Z",
+  "measurement_basis": "repository-wide-regression-tests-and-real-environment-vertical-proof",
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment session invocation and capability-intelligence projection",
+    "request": {
+      "implementation_commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "commands": [
+        "python3 -m pytest tests/ -q",
+        "python3 scripts/vertical_proof.py",
+        "python3 -m pytest -q tests/test_invoke.py tests/test_environment.py::SessionTests::test_session_cli_request_surface_is_preserved_on_invocation_and_completion tests/test_environment.py::SessionTests::test_session_invoke_uses_capability_declared_output_limit tests/test_capability_intelligence.py::test_session_service_readiness_correlates_snapshot_dependencies_safely",
+        "git diff --check"
+      ],
+      "campaign_checkpoint_id_before_recording": "chk_afc9f19b6696a175"
+    },
+    "outcome": {
+      "status": "passed",
+      "results": {
+        "repository_tests": {
+          "passed": 1154,
+          "failed": 0,
+          "skipped": 46
+        },
+        "focused_regression_tests": {
+          "passed": 7,
+          "failed": 0
+        },
+        "vertical_proof": {
+          "status": "passed",
+          "steps_completed": 8,
+          "real_capability": "mncs-atlas:context-capsule"
+        },
+        "whitespace_check": "passed"
+      },
+      "verified_change": "The Environment-owned invoke CLI marks both capability invocation and completion events, persists the marker in its invocation artifact, and the ECI projection exposes it only when the paired events agree. Mismatched and unpaired evidence remains explicitly incomplete.",
+      "interpretation_limit": "Verification establishes event and projection behavior. It does not identify the actor, establish that ambient work was due, prove service receipt, or measure intervention burden or outcome quality."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_session_cli_request_surface_visibility_20261027",
+    "title": "Session capability evidence does not identify the Environment CLI request surface",
+    "category": "environmental-service-accountability",
+    "subsystem": "Environment capability invocation and ECI session activity",
+    "owner": "mncs-environment",
+    "basis": "The pre-change invocation and completion records did not carry a request-surface field; historical CLI route activity was not recorded.",
+    "recurrence": "Not established; no historical request-surface telemetry is available.",
+    "actionable_recommendation": "Record a bounded Environment-owned CLI surface on invocation and completion events and expose it only for a correlated pair, preserving actor, need, and burden as unknown.",
+    "not_measured": [
+      "historical CLI request counts before instrumentation",
+      "agent identity or runtime identity for the recorded calls",
+      "eligible ambient service opportunities",
+      "agent intervention burden and long-term effectiveness"
+    ]
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_afc9f19b6696a175",
+    "campaign_evidence_count_before_recording": 54
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_request_surface_4160e85",
+      "repository": "mncs-environment",
+      "commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "path": "mncs_env/sessions.py",
+      "sha256": "68d51a5d7680f9869d80e1ce03c67ed02ede8cef02e079b515c4f03bbcc7c6c3"
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_session_request_projection_4160e85",
+      "repository": "mncs-environment",
+      "commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d4bca0e4d33604ecc07a5b51668dc89899abbbed95a8bde3a6b72668f02ed750"
+    },
+    {
+      "kind": "verification-source",
+      "identity": "mncs_environment_session_request_tests_4160e85",
+      "repository": "mncs-environment",
+      "commit": "4160e8551e1e9a943dac58f5d16b7a223aa823de",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "3a7f147728f77129aedc3d34bafc31bf94a60a6d0e39548586a8bc8257b5dcfc"
+    }
+  ],
+  "measurement_limits": [
+    "The test suite verifies implementation contracts and does not estimate agent productivity.",
+    "The vertical proof uses an isolated temporary Store and does not add a synthetic agent benchmark."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
