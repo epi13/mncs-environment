@@ -572,6 +572,13 @@ in the selected session event window. The relation is a traceable sequence of
 observations, not proof that the eligible operation caused the later state,
 that a remote publication succeeded, or that the change was verified or
 beneficial. An absent match in a bounded page may exist on an older page.
+When an older before-state lacks checkout identity, the projection may expose a
+separate incomplete-preimage candidate if repository, objective, branch, and
+HEAD align and the later observation identifies the preflight checkout. It
+retains `no-exact-preflight-match-in-selected-window`; the candidate is not an
+exact relation because the earlier state could have come from another checkout
+at the same path. The event-page source records which observations were
+considered.
 When an exact registered destination was refreshed before a merge or publish
 denial, that `authority.denied` event also carries its repository identity and
 the same bounded local preimage. The projection exposes it as

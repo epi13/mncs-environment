@@ -5005,6 +5005,118 @@ def test_repository_ref_followup_matches_exact_preflight_without_claiming_cause(
     ]["identity"] == "evt_ref_transition_preflight"
 
 
+def test_repository_ref_followup_labels_missing_before_identity_as_candidate() -> None:
+    before_head = "c" * 40
+    transition = {
+        "state_change_status": "observed-delta",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_projection_reader",
+        "work_intent_id": "int_projection_reader",
+        "event_reference": {"identity": "evt_observed", "sequence": 42},
+        "before": {
+            "repository": "mncs-environment",
+            "observed_path": "mncs-environment",
+            "branch": "main",
+            "head": before_head,
+        },
+        "after": {
+            "repository": "mncs-environment",
+            "observed_path": "mncs-environment",
+            "checkout_identity": "checkout:observed-target",
+            "branch": "main",
+            "head": "d" * 40,
+        },
+    }
+    preflight = {
+        "action": "merge",
+        "repository": "mncs-environment",
+        "campaign_id": "cmp_projection_reader",
+        "work_intent_id": "int_projection_reader",
+        "preflight_state_status": "recorded-and-validated",
+        "event_reference": {
+            "identity": "evt_ref_transition_preflight",
+            "sequence": 41,
+        },
+        "repository_preflight_state": {
+            "checkout_identity": "checkout:observed-target",
+            "branch": "main",
+            "head_status": "measured",
+            "head": before_head,
+        },
+    }
+
+    relation = capability_intelligence._repository_ref_preflight_relation(
+        transition,
+        integration_records=[preflight],
+        proposal_records=[],
+    )
+
+    assert relation["status"] == "no-exact-preflight-match-in-selected-window"
+    assert relation["matching_preflight_count"] == 0
+    assert relation["candidate_status"] == (
+        "incomplete-preimage-checkout-identity-unavailable"
+    )
+    assert relation["candidate_count"] == 1
+    assert relation["candidates"][0]["checkout_identity_status"] == (
+        "unavailable-on-transition-before-state"
+    )
+    assert relation["candidates"][0]["event_reference"]["identity"] == (
+        "evt_ref_transition_preflight"
+    )
+
+    projection = {
+        "schema_version": capability_intelligence.SCHEMA,
+        "identity": "eci_incomplete_preimage_test",
+        "status": "partial",
+        "subject": {"work_intent": {}},
+        "source": {},
+        "correlation": {},
+        "observation_count": 0,
+        "pressure_hypothesis_count": 0,
+        "improvement_relation_count": 0,
+        "observations": [],
+        "pressure_hypotheses": [],
+        "improvement_relations": [],
+        "session_activity_pressure_candidate_count": 0,
+        "session_activity": {
+            "status": "partial",
+            "source": {},
+            "repository_ref_transition_count": 1,
+            "repository_ref_transitions": [{
+                "identity": "reftxn_incomplete_preimage_test",
+                "repository": "mncs-environment",
+                "observed_path": "mncs-environment",
+                "state_change_status": "observed-delta",
+                "causal_status": "not-established",
+                "before": transition["before"],
+                "after": transition["after"],
+                "event_reference": transition["event_reference"],
+                "preflight_relation": relation,
+            }],
+        },
+    }
+    compact = capability_intelligence._compact_projection(
+        projection, original_size=100_000, max_result_bytes=10_000,
+    )
+    compact_relation = compact["session_activity"][
+        "repository_ref_transitions"
+    ][0]["preflight_relation"]
+    assert compact_relation["candidate_status"] == (
+        "incomplete-preimage-checkout-identity-unavailable"
+    )
+    assert compact_relation["candidates"][0]["event_reference"]["identity"] == (
+        "evt_ref_transition_preflight"
+    )
+
+    transition["after"]["checkout_identity"] = "checkout:different-target"
+    unrelated = capability_intelligence._repository_ref_preflight_relation(
+        transition,
+        integration_records=[preflight],
+        proposal_records=[],
+    )
+    assert unrelated["candidate_count"] == 0
+
+
 def test_claim_owner_history_uses_only_bounded_read_interfaces() -> None:
     def unbounded_read_events(_session_id):
         raise AssertionError("unbounded event history must not be read")

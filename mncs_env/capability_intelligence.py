@@ -4696,7 +4696,11 @@ def _compact_projection(
         if isinstance(relation, dict):
             compact_relation = {
                 key: relation[key]
-                for key in ("status", "matching_preflight_count", "matches_truncated")
+                for key in (
+                    "status", "matching_preflight_count", "matches_truncated",
+                    "candidate_status", "candidate_count",
+                    "candidates_truncated",
+                )
                 if key in relation
             }
             matches = relation.get("matches")
@@ -4719,6 +4723,29 @@ def _compact_projection(
                         }
                     compact_matches.append(compact_match)
                 compact_relation["matches"] = compact_matches
+            raw_candidates = relation.get("candidates")
+            if isinstance(raw_candidates, list):
+                compact_candidates = []
+                for candidate in raw_candidates[:2]:
+                    if not isinstance(candidate, dict):
+                        continue
+                    compact_candidate = {
+                        key: candidate[key]
+                        for key in (
+                            "kind", "action", "match_basis",
+                            "checkout_identity_status",
+                        )
+                        if key in candidate
+                    }
+                    reference = candidate.get("event_reference")
+                    if isinstance(reference, dict):
+                        compact_candidate["event_reference"] = {
+                            key: reference[key]
+                            for key in ("identity", "sequence", "type")
+                            if key in reference
+                        }
+                    compact_candidates.append(compact_candidate)
+                compact_relation["candidates"] = compact_candidates
             compact_item["preflight_relation"] = compact_relation
         reference = item.get("event_reference")
         if isinstance(reference, dict):
@@ -11139,7 +11166,7 @@ def _repository_ref_preflight_relation(
     integration_records: list[dict[str, Any]],
     proposal_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Relate a later ref observation only to an exact recorded preimage."""
+    """Relate a later ref observation to exact or explicitly incomplete evidence."""
     before = transition.get("before")
     transition_event = transition.get("event_reference")
     transition_sequence = (
@@ -11190,6 +11217,74 @@ def _repository_ref_preflight_relation(
     matches.sort(key=lambda item: (
         item["event_reference"]["sequence"], item["kind"],
     ))
+    if not matches:
+        # Some older repository-ref baselines predate checkout identity
+        # recording. Preserve a useful candidate when all other available
+        # evidence aligns and the later observation confirms the same checkout,
+        # but do not promote it to an exact preimage match: the before-state
+        # could have come from a different checkout at the same path.
+        after = transition.get("after")
+        before_checkout_identity = before.get("checkout_identity")
+        after_checkout_identity = (
+            after.get("checkout_identity") if isinstance(after, dict) else None
+        )
+        candidates_with_incomplete_preimage: list[dict[str, Any]] = []
+        if (before_checkout_identity is None
+                and isinstance(after_checkout_identity, str)
+                and isinstance(before.get("branch"), str)):
+            for relation_kind, records, state_key in candidates:
+                for record in records:
+                    event_reference = record.get("event_reference")
+                    preflight_sequence = (
+                        event_reference.get("sequence")
+                        if isinstance(event_reference, dict) else None
+                    )
+                    state = record.get(state_key)
+                    if (
+                        type(preflight_sequence) is not int
+                        or preflight_sequence >= transition_sequence
+                        or record.get("repository") != transition.get("repository")
+                        or record.get("campaign_id") != transition.get("campaign_id")
+                        or record.get("work_intent_id") != transition.get("work_intent_id")
+                        or record.get("preflight_state_status")
+                        != "recorded-and-validated"
+                        or not isinstance(state, dict)
+                        or state.get("checkout_identity") != after_checkout_identity
+                        or state.get("branch") != before.get("branch")
+                        or state.get("head_status") != "measured"
+                        or state.get("head") != before.get("head")
+                    ):
+                        continue
+                    candidates_with_incomplete_preimage.append({
+                        "kind": relation_kind,
+                        "action": record.get("action"),
+                        "match_basis": (
+                            "repository-work-intent-branch-head-and-poststate-checkout-identity"
+                        ),
+                        "checkout_identity_status": (
+                            "unavailable-on-transition-before-state"
+                        ),
+                        "event_reference": event_reference,
+                    })
+            candidates_with_incomplete_preimage.sort(key=lambda item: (
+                item["event_reference"]["sequence"], item["kind"],
+            ))
+        candidate_status = (
+            "incomplete-preimage-checkout-identity-unavailable"
+            if len(candidates_with_incomplete_preimage) == 1
+            else "ambiguous-incomplete-preimage-candidates"
+            if candidates_with_incomplete_preimage
+            else "no-incomplete-preimage-candidate-in-selected-window"
+        )
+        return {
+            "status": "no-exact-preflight-match-in-selected-window",
+            "matching_preflight_count": 0,
+            "matches": [],
+            "candidate_status": candidate_status,
+            "candidate_count": len(candidates_with_incomplete_preimage),
+            "candidates": candidates_with_incomplete_preimage[:4],
+            "candidates_truncated": len(candidates_with_incomplete_preimage) > 4,
+        }
     return {
         "status": (
             "exact-preimage-match-after-preflight" if len(matches) == 1
