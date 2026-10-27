@@ -1445,10 +1445,22 @@ def cmd_claims(args: argparse.Namespace) -> int:
             )
         if args.release or args.release_claim:
             session = _resume_session(args, store=store)
+            repository = args.release or ""
+            claim_id = args.release_claim or args.claim_id
+            if args.release_claim:
+                owned_claim = next((
+                    record
+                    for record in claims_module.active_claims(
+                        session.store.read_claims()
+                    ).values()
+                    if record.get("claim_id") == args.release_claim
+                    and record.get("session_id") == session.session_id
+                ), None)
+                if owned_claim is not None:
+                    repository = str(owned_claim.get("repository") or "")
             try:
                 out({"released": session.release_claim(
-                    args.release or "", reason=args.reason,
-                    claim_id=args.release_claim or args.claim_id,
+                    repository, reason=args.reason, claim_id=claim_id,
                     request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"))})
             except claims_module.ClaimConflict as error:
                 return fail(str(error), code=3, diagnostics={

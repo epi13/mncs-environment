@@ -2017,6 +2017,24 @@ class ClaimTests(unittest.TestCase):
             active = claims.active_claims(store.read_claims())
             self.assertNotIn(own_claim["claim_id"], active)
             self.assertIn(foreign_claim["claim_id"], active)
+            event_reader = sessions.Session.open(
+                state_dir=state,
+                session_id=session_id,
+                backend="file",
+                store=store,
+            )
+            try:
+                release_event = next(
+                    event for event in event_reader.recent_events(limit=32)["events"]
+                    if event.get("type") == "lease.released"
+                    and event.get("payload", {}).get("claim_id")
+                    == own_claim["claim_id"]
+                )
+                self.assertEqual(
+                    release_event["payload"].get("repository"), "owned-repo",
+                )
+            finally:
+                event_reader.close()
 
             stdout = io.StringIO()
             stderr = io.StringIO()
