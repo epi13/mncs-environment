@@ -1,0 +1,125 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_preflight_followthrough_incomplete_identity_20261027",
+  "captured_at": "2026-10-27T03:17:39Z",
+  "measurement_basis": "direct authenticated Environment session events and an on-demand environmental-capability projection",
+  "observation": {
+    "kind": "integration-preflight-followthrough-with-incomplete-baseline-identity",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "operation": "environmental-capability projection",
+      "session_id": "ses_8d2eedabac6a6feb",
+      "session_event_limit": 16,
+      "event_page_before_sequence": null,
+      "prior_campaign_observation_identity": "ev_environment_unowned_scope_integration_observation_20261027"
+    },
+    "outcome": {
+      "event_window": {
+        "event_count": 12,
+        "sequence_start": 1,
+        "sequence_end": 12,
+        "truncated": false
+      },
+      "ownership_free_preflights": [
+        {
+          "action": "merge",
+          "event_reference": {
+            "identity": "evt_f3d3bace38abef20",
+            "sequence": 6,
+            "type": "authority.integration-eligible"
+          },
+          "persistent_claim_required": false,
+          "operation_executed": false,
+          "repository": "mncs-environment",
+          "branch": "main",
+          "checkout_identity": "checkout:6d9581db142d06e1",
+          "head": "e1760e346fda6df569dca4b0cc993b36f7c5e3d2"
+        },
+        {
+          "action": "publish",
+          "event_reference": {
+            "identity": "evt_0bea59eea1d1c8a7",
+            "sequence": 7,
+            "type": "authority.integration-eligible"
+          },
+          "persistent_claim_required": false,
+          "operation_executed": false,
+          "repository": "mncs-environment",
+          "branch": "improve/unowned-scope-preflight-20261027",
+          "checkout_identity": "checkout:6d9581db142d06e1",
+          "head": "e1760e346fda6df569dca4b0cc993b36f7c5e3d2"
+        }
+      ],
+      "subsequent_repository_observation": {
+        "workspace_event_reference": {
+          "identity": "evt_fa3a864efe8d6f2a",
+          "sequence": 11,
+          "type": "workspace.changed"
+        },
+        "campaign_event_reference": {
+          "identity": "evt_ae758ccde3fdb789",
+          "sequence": 12,
+          "type": "campaign.reconciled"
+        },
+        "repository": "mncs-environment",
+        "observed_path": "mncs-environment",
+        "branch": "main",
+        "before_head": "e1760e346fda6df569dca4b0cc993b36f7c5e3d2",
+        "after_head": "710f10a3dcd771631a603fac7bc04f56e6e65872",
+        "after_checkout_identity": "checkout:6d9581db142d06e1",
+        "clean_before_and_after": true
+      },
+      "preflight_relation": {
+        "status": "no-exact-preflight-match-in-selected-window",
+        "matching_preflight_count": 0,
+        "candidate_status": "incomplete-preimage-checkout-identity-unavailable",
+        "candidate_count": 1,
+        "candidate_event_reference": {
+          "identity": "evt_f3d3bace38abef20",
+          "sequence": 6,
+          "type": "authority.integration-eligible"
+        },
+        "candidate_basis": "repository, work intent, branch, HEAD, and later observed checkout identity agree; checkout identity is absent from the earlier stored before-state",
+        "causal_status": "not-established"
+      },
+      "implementation": {
+        "repository": "mncs-environment",
+        "commit": "f2438caf3acd5e76ddafdab5d1dd5143e04f4be5",
+        "paths": [
+          "mncs_env/capability_intelligence.py",
+          "tests/test_capability_intelligence.py",
+          "docs/PROJECTIONS.md"
+        ],
+        "verification": {
+          "command": "python3 -m pytest tests/test_capability_intelligence.py -k repository_ref_followup -q",
+          "result": "2 passed, 137 deselected",
+          "test_identities": [
+            "test_repository_ref_followup_matches_exact_preflight_without_claiming_cause",
+            "test_repository_ref_followup_labels_missing_before_identity_as_candidate"
+          ]
+        }
+      },
+      "interpretation": "A full event page exposed an ownership-free merge preflight and a later matching local repository observation. The projection preserves this only as an incomplete-preimage candidate because the stored before-state lacks checkout identity. The eligibility event did not execute integration, and this sequence does not establish that the preflight caused the transition, that remote publication succeeded, or that the change was independently verified."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "not_measured": [
+    "Environment-mediated merge or publish execution",
+    "causal attribution from eligibility to repository transition",
+    "live remote-ref state or network acknowledgement",
+    "independent verification of the integrated change by this projection",
+    "liveness of every overlapping claim record"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
