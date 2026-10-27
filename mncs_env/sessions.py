@@ -76,6 +76,7 @@ def is_campaign_charter_evidence_path(path: Any) -> bool:
 MAX_EMIT_RETRIES = 16
 MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS = 256
 MAX_RPC_READ_ACTIVITY_OBSERVATIONS = MAX_RPC_ACTIVITY_RECONCILIATION_EVENTS
+MAX_CONSUMED_PROVIDER_DIAGNOSTICS = 32
 RPC_READ_ACTIVITY_EVENT = "environment.rpc.read_observed"
 RPC_READ_ACTIVITY_REQUEST_INDEX = "rpc_read_activity_request_index"
 CONTEXT_RESPONSE_SUMMARY_SCHEMA = "mncs.environment.context-response-summary/2"
@@ -1818,6 +1819,7 @@ def _discover_read_only_consumed_provider_bindings(
     dict[str, Path],
     dict[str, dict[str, Any]],
     dict[str, dict[str, str]],
+    dict[str, Any],
 ]:
     """Bind only declared read-only capabilities from observed workspace repos.
 
@@ -1830,8 +1832,37 @@ def _discover_read_only_consumed_provider_bindings(
     consumers_by_capability = capabilities_module.declared_consumed_contracts(
         consumer_roots,
     )
-    if not consumers_by_capability or not isinstance(workspace_repositories, list):
-        return [], {}, {}, {}
+    diagnostic_rows: dict[str, dict[str, Any]] = {}
+
+    def record_diagnostic(capability: str, code: str) -> None:
+        diagnostic_rows[capability] = {
+            "code": code,
+            "consumers": consumers_by_capability.get(capability, []),
+            "provider_checkout_selected": False,
+            "authority_scope": "workspace-read-only",
+        }
+
+    def diagnostic_view() -> dict[str, Any]:
+        rows = [
+            {"capability": capability, **details}
+            for capability, details in sorted(diagnostic_rows.items())
+        ]
+        omitted = max(0, len(rows) - MAX_CONSUMED_PROVIDER_DIAGNOSTICS)
+        return {
+            "schema_version": "mncs.environment.consumed-provider-diagnostics/1",
+            "status": "partial" if omitted else "complete",
+            "count": len(rows),
+            "limit": MAX_CONSUMED_PROVIDER_DIAGNOSTICS,
+            "omitted_count": omitted,
+            "items": rows[:MAX_CONSUMED_PROVIDER_DIAGNOSTICS],
+        }
+
+    if not consumers_by_capability:
+        return [], {}, {}, {}, diagnostic_view()
+    if not isinstance(workspace_repositories, list):
+        for capability in consumers_by_capability:
+            record_diagnostic(capability, "workspace-observation-unavailable")
+        return [], {}, {}, {}, diagnostic_view()
 
     capabilities_by_provider: dict[str, set[str]] = {}
     for capability in consumers_by_capability:
@@ -1845,12 +1876,18 @@ def _discover_read_only_consumed_provider_bindings(
         candidate = root / provider
         try:
             if candidate.is_symlink():
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, "provider-path-symlink")
                 continue
             resolved = candidate.resolve(strict=True)
             resolved.relative_to(root)
         except (OSError, ValueError):
+            for capability in capabilities_by_provider[provider]:
+                record_diagnostic(capability, "provider-checkout-unavailable")
             continue
         if not resolved.is_dir():
+            for capability in capabilities_by_provider[provider]:
+                record_diagnostic(capability, "provider-checkout-unavailable")
             continue
         matches = [
             row for row in workspace_repositories
@@ -1859,6 +1896,8 @@ def _discover_read_only_consumed_provider_bindings(
             and row.get("path") == str(resolved)
         ]
         if len(matches) > 1:
+            for capability in capabilities_by_provider[provider]:
+                record_diagnostic(capability, "provider-checkout-ambiguous")
             continue
         if matches:
             row = matches[0]
@@ -1868,12 +1907,26 @@ def _discover_read_only_consumed_provider_bindings(
             # consumer manifest directly at its exact workspace path rather
             # than widening selection or inheriting mutation authority.
             state = workspace_module.inspect_repo(resolved, _refresh=True)
-            if (state is None or state.git_error or not state.head
-                    or state.manifest_repository != provider):
+            if state is None:
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, "provider-checkout-unavailable")
+                continue
+            if state.manifest_repository != provider:
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, "provider-identity-mismatch")
+                continue
+            if state.git_error or not state.head:
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(capability, "provider-checkout-state-unavailable")
                 continue
             row = state.record()
-        if (row.get("git_error") or not row.get("head")
-                or row.get("dirty") is not False):
+        if row.get("git_error") or not row.get("head"):
+            for capability in capabilities_by_provider[provider]:
+                record_diagnostic(capability, "provider-checkout-state-unavailable")
+            continue
+        if row.get("dirty") is not False:
+            for capability in capabilities_by_provider[provider]:
+                record_diagnostic(capability, "provider-checkout-dirty")
             continue
         provider_roots[provider] = resolved
         provider_facts[provider] = {
@@ -1886,7 +1939,7 @@ def _discover_read_only_consumed_provider_bindings(
             "authoritative_head": row.get("head"),
         }
     if not provider_roots:
-        return [], {}, {}, {}
+        return [], {}, {}, {}, diagnostic_view()
 
     all_provider_roots = dict(consumer_roots)
     all_provider_roots.update(provider_roots)
@@ -1913,10 +1966,19 @@ def _discover_read_only_consumed_provider_bindings(
     result: list[dict[str, Any]] = []
     for capability, consumers in sorted(consumers_by_capability.items()):
         provider, separator, _contract = capability.partition(":")
-        if not separator or provider not in provider_roots:
+        if not separator or provider not in capabilities_by_provider:
+            continue
+        if provider not in provider_roots:
             continue
         matches = by_key.get((provider, capability), [])
-        if len(matches) != 1 or matches[0].get("effects") != ["read"]:
+        if not matches:
+            record_diagnostic(capability, "consumed-capability-not-provided")
+            continue
+        if len(matches) != 1:
+            record_diagnostic(capability, "provider-binding-ambiguous")
+            continue
+        if matches[0].get("effects") != ["read"]:
+            record_diagnostic(capability, "provider-effects-not-read-only")
             continue
         binding = dict(matches[0])
         provenance = binding.get("provenance")
@@ -1928,7 +1990,13 @@ def _discover_read_only_consumed_provider_bindings(
         }
         binding["provenance"] = provenance
         result.append(binding)
-    return result, runtime_roots, runtime_facts, runtime_diagnostics
+    return (
+        result,
+        runtime_roots,
+        runtime_facts,
+        runtime_diagnostics,
+        diagnostic_view(),
+    )
 
 
 def _provider_managed_checkouts(
@@ -2303,11 +2371,15 @@ def resolve_environment(
             language_binary=language_binary,
         )
         (read_only_provider_bindings, consumed_runtime_roots,
-         consumed_runtime_facts, consumed_runtime_diagnostics) = (
+         consumed_runtime_facts, consumed_runtime_diagnostics,
+         consumed_provider_diagnostics) = (
             _discover_read_only_consumed_provider_bindings(
                 resolved_root, selected_roots, selected_facts,
                 workspace_view.get("repositories", []),
             )
+        )
+        workspace_view["consumed_provider_diagnostics"] = (
+            consumed_provider_diagnostics
         )
         discovered.extend(read_only_provider_bindings)
         runtime_toolchain_roots.update(consumed_runtime_roots)
@@ -8792,7 +8864,8 @@ class Session:
                 language_binary=language_binary,
             )
             (read_only_provider_bindings, consumed_runtime_roots,
-             consumed_runtime_facts, consumed_runtime_diagnostics) = (
+             consumed_runtime_facts, consumed_runtime_diagnostics,
+             consumed_provider_diagnostics) = (
                 _discover_read_only_consumed_provider_bindings(
                     workspace_root, roots, facts,
                     (self.snapshot.get("workspace") or {}).get(
@@ -8805,6 +8878,9 @@ class Session:
             runtime_toolchain_facts.update(consumed_runtime_facts)
             runtime_toolchain_diagnostics.update(consumed_runtime_diagnostics)
             workspace_snapshot = dict(self.snapshot.get("workspace", {}))
+            workspace_snapshot["consumed_provider_diagnostics"] = (
+                consumed_provider_diagnostics
+            )
             workspace_snapshot["runtime_toolchain_checkouts"] = [
                 runtime_toolchain_facts[name]
                 for name in sorted(runtime_toolchain_facts)
@@ -8813,6 +8889,9 @@ class Session:
             self.snapshot["workspace"] = workspace_snapshot
         elif workspace_root:
             discovered = capabilities_module.discover_capabilities(workspace_root)
+            workspace_snapshot = dict(self.snapshot.get("workspace", {}))
+            workspace_snapshot.pop("consumed_provider_diagnostics", None)
+            self.snapshot["workspace"] = workspace_snapshot
 
         language_toolchain = _language_toolchain_selection(
             self.snapshot.get("selected_checkouts", {}),
@@ -8839,6 +8918,12 @@ class Session:
         report: dict[str, Any] = {
             "reprobed": 0, "reused": 0, "changed": [], "bound": [], "unbound": [],
             "scope_composition": scope_composition,
+            "consumed_provider_diagnostics": (
+                (self.snapshot.get("workspace") or {}).get(
+                    "consumed_provider_diagnostics",
+                    {"items": [], "count": 0, "omitted_count": 0},
+                )
+            ),
         }
         for key, binding in current_by_key.items():
             previous = prior_by_key.get(key)

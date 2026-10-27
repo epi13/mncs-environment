@@ -4709,13 +4709,25 @@ class CapabilityTests(unittest.TestCase):
                 "authoritative_head": consumer_head,
             }}
             (read_only_bindings, _runtime_roots, _runtime_facts,
-             runtime_diagnostics) = sessions._discover_read_only_consumed_provider_bindings(
-                workspace_root,
-                selected_roots,
-                selected_facts,
-                [],
+             runtime_diagnostics, provider_diagnostics) = (
+                sessions._discover_read_only_consumed_provider_bindings(
+                    workspace_root,
+                    selected_roots,
+                    selected_facts,
+                    [],
+                )
             )
             self.assertEqual(runtime_diagnostics, {})
+            self.assertEqual(
+                provider_diagnostics["items"],
+                [{
+                    "capability": "mncs-doctor:mixed-effect",
+                    "code": "provider-effects-not-read-only",
+                    "consumers": ["mncs-environment"],
+                    "provider_checkout_selected": False,
+                    "authority_scope": "workspace-read-only",
+                }],
+            )
             self.assertEqual(set(selected_roots), {"mncs-environment"})
             self.assertEqual(
                 selected_roots["mncs-environment"], consumer,
@@ -4754,15 +4766,27 @@ class CapabilityTests(unittest.TestCase):
             self.assertNotIn("mncs-doctor:unconsumed-write", bindings)
             doc_script.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
             (dirty_bindings, _runtime_roots, _runtime_facts,
-             _runtime_diagnostics) = sessions._discover_read_only_consumed_provider_bindings(
-                workspace_root,
-                selected_roots,
-                selected_facts,
-                [],
+             _runtime_diagnostics, dirty_diagnostics) = (
+                sessions._discover_read_only_consumed_provider_bindings(
+                    workspace_root,
+                    selected_roots,
+                    selected_facts,
+                    [],
+                )
             )
             self.assertEqual(
                 [item["capability"] for item in dirty_bindings],
                 ["mncs-doctor:projection-health"],
+            )
+            self.assertIn(
+                {
+                    "capability": "mncs-doc:documentation-projection",
+                    "code": "provider-checkout-dirty",
+                    "consumers": ["mncs-environment"],
+                    "provider_checkout_selected": False,
+                    "authority_scope": "workspace-read-only",
+                },
+                dirty_diagnostics["items"],
             )
             doc_script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             external_provider = workspace_root / "external" / "mncs-doctor"
@@ -4772,15 +4796,21 @@ class CapabilityTests(unittest.TestCase):
                 external_provider, target_is_directory=True,
             )
             (symlink_bindings, _runtime_roots, _runtime_facts,
-             _runtime_diagnostics) = sessions._discover_read_only_consumed_provider_bindings(
-                workspace_root,
-                selected_roots,
-                selected_facts,
-                [],
+             _runtime_diagnostics, symlink_diagnostics) = (
+                sessions._discover_read_only_consumed_provider_bindings(
+                    workspace_root,
+                    selected_roots,
+                    selected_facts,
+                    [],
+                )
             )
             self.assertEqual(
                 [item["capability"] for item in symlink_bindings],
                 ["mncs-doc:documentation-projection"],
+            )
+            self.assertIn(
+                "provider-path-symlink",
+                {item["code"] for item in symlink_diagnostics["items"]},
             )
 
     def test_unclaimed_dirty_external_toolchain_is_not_resolved(self) -> None:

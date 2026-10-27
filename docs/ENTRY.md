@@ -210,7 +210,8 @@ exact, clean direct workspace repository when that capability declares only
 the `read` effect. Environment records this as a read-only dependency; the
 provider does not enter selected checkouts or gain mutation scope.
 Mixed-effect, write-effect, dirty, ambiguous, or symlinked providers are not
-bound through this path.
+bound through this path. The resume revalidation report includes bounded
+reason codes for consumed providers that were not bound.
 The runtime binding also selects the Language compiler and embed library used
 by Store. Explicit entry upgrades older package-only bootstrap metadata after
 checking the same selected checkout, preserving session identity and history.
