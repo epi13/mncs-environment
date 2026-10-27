@@ -252,13 +252,15 @@ class EpochTests(DoctorFixture):
         self.assertEqual(health["readiness"]["observation"], "live")
         # Entry reconciles services without paying for a full
         # revalidation. Recovery itself needs authority the fixture
-        # session does not hold, so it escalates instead of running.
+        # session does not hold, so the invocation is not admitted.
         code, second = self.enter()
         self.assertEqual(code, 5, second)
         self.assertFalse(second["doctor"]["reused"])
         self.assertEqual(second["entry"]["revalidation"]["reprobed"], 0)
         self.assertIn("services reconciled", second["entry"]["revalidation"]["note"])
-        self.assertEqual(second["entry"]["operations"][0]["status"], "pending-escalation")
+        operation = second["entry"]["operations"][0]
+        self.assertEqual(operation["status"], "not-attempted")
+        self.assertEqual(operation["code"], "environment-invocation-not-admitted")
         self.assertIn("fixture-service", second["readiness"]["blocking"])
 
     def test_status_terse_reports_without_store_round_trip(self):
@@ -908,6 +910,24 @@ class RecoveryBackoffTests(DoctorFixture):
             self.assertEqual(first["operations"][0]["status"], "pending-escalation")
             self.assertEqual(second["operations"][0]["status"], "pending-escalation")
             self.assertEqual(len(calls), 2, "escalations must stay visible every run")
+            self.assertEqual(session.snapshot["doctor"].get("recovery_backoff", {}), {})
+        finally:
+            session.close()
+
+    def test_authority_denial_is_not_attempted_or_counted_in_retry_backoff(self):
+        session = self.broken_session()
+        try:
+            with mock.patch.object(
+                session, "invoke",
+                side_effect=sessions.AuthorityDenied("fixture write scope is not admitted"),
+            ):
+                result = readiness.reconcile_services(
+                    session, retry_gate=self.refuse_gate,
+                )
+            operation = result["operations"][0]
+            self.assertEqual(operation["status"], "not-attempted")
+            self.assertEqual(operation["code"], "environment-invocation-not-admitted")
+            self.assertIn("not admitted", operation["reason"])
             self.assertEqual(session.snapshot["doctor"].get("recovery_backoff", {}), {})
         finally:
             session.close()

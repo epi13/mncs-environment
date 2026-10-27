@@ -467,11 +467,16 @@ def reconcile_services(session, *, force_recovery: bool = False,
                 ).values()
             ):
                 observations = probe_services(session)
-        except (AuthorityDenied, LifecycleError, ValueError, OSError) as error:
-            # Session authority/lifecycle exceptions carry actionable reasons;
-            # a failed optional provider must not discard a durable entry.
-            # The provider never ran, so this is not a failed recovery
-            # attempt: it stays visible every run instead of backing off.
+        except AuthorityDenied as error:
+            # A policy denial means the provider was never admitted to run.
+            # Preserve the boundary and expose that distinction to service
+            # accountability instead of recording an operational failure.
+            operations.append({"identity": identity, "status": "not-attempted",
+                               "code": "environment-invocation-not-admitted",
+                               "reason": str(error)})
+        except (LifecycleError, ValueError, OSError) as error:
+            # Lifecycle and provider failures carry actionable reasons; a
+            # failed optional provider must not discard a durable entry.
             operations.append({"identity": identity, "status": "failed", "reason": str(error)})
     if attempted:
         observations = probe_services(session)

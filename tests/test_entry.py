@@ -622,7 +622,9 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(code, 5, first)
         self.assertEqual(first["lifecycle"], "active")
         self.assertEqual(first["readiness"]["status"], "blocked")
-        self.assertEqual(first["entry"]["operations"][0]["status"], "pending-escalation")
+        operation = first["entry"]["operations"][0]
+        self.assertEqual(operation["status"], "not-attempted")
+        self.assertEqual(operation["code"], "environment-invocation-not-admitted")
         self.assertFalse((self.project / "service-state.json").exists())
         claim_code, claim = self.run_cli("claims", first["session_id"], "--acquire", "fixture", "--reason", "start fixture service")
         self.assertEqual(claim_code, 3, claim)
@@ -632,6 +634,7 @@ class EntryContractTests(unittest.TestCase):
         self.assertEqual(code, 5, recovered)
         self.assertEqual(recovered["readiness"]["status"], "blocked")
         self.assertEqual(recovered["session_id"], first["session_id"])
+        self.assertEqual(recovered["entry"]["operations"][0]["status"], "not-attempted")
         self.assertFalse((self.project / "service-state.json").exists())
 
     def test_authorized_entry_reconciles_missing_service_once(self):

@@ -109,6 +109,11 @@ Related surfaces:
   invocation descriptor (`provider-invocation-undeclared`) are classified
   as provider gaps and escalated as bare ids. Repairing another
   repository's manifest is cross-repo mutation and is never ambient.
+- **Invocation admission.** If session policy denies a service invocation,
+  Doctor records it as `not-attempted` with
+  `environment-invocation-not-admitted`. The provider did not run, so this
+  is not reported as a service failure or counted as a recovery attempt.
+  Explicit provider responses of `pending-escalation` remain distinct.
 
 ## Explicit repository remediation
 

@@ -3858,6 +3858,12 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
                 "reason": f"cannot start from {private_path}",
                 "provider_response": {"detail": private_path},
             },
+            {
+                "identity": language_service,
+                "status": "not-attempted",
+                "code": "environment-invocation-not-admitted",
+                "reason": "session policy did not admit the service invocation",
+            },
         ],
     })
     session.snapshot["bindings"] = [{
@@ -4018,6 +4024,10 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     }
     language_accountability = accountable_services[language_service]
     assert language_accountability["readiness_status"] == "degraded"
+    assert language_accountability["operation_status"] == "not-attempted"
+    assert language_accountability["operation_code"] == (
+        "environment-invocation-not-admitted"
+    )
     assert accountable_services[forge_service]["operation_code"] == (
         "service-start-failed"
     )
