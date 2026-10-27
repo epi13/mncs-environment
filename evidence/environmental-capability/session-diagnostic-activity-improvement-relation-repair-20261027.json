@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_diagnostic_activity_improvement_relation_repair_20261027",
+  "captured_at": "2026-10-27T21:52:08Z",
+  "measurement_basis": "schema-valid-improvement-observation-after-explicit-ECI-readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_session_diagnostic_activity_not_projected_20261027",
+      "implementation_commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "verification_observation_identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_session_diagnostic_activity_live_readback_20261027",
+      "prior_nested_relation_record_identity": "ev_environment_session_diagnostic_activity_improvement_20261027",
+      "prior_correction_attempt_identity": "ev_environment_session_diagnostic_activity_improvement_correction_20261027"
+    },
+    "outcome": {
+      "implementation_scope": "Expose bounded session diagnostic history summaries and exact validated same-session evidence references through ECI session activity.",
+      "relation_recording_change": "Record the verified implementation, verification, and subsequent live readback relationship at the top-level improvement_relation field consumed by the existing ECI schema. The earlier immutable record and correction attempt are preserved.",
+      "prior_correction_result": "The correction contract did not apply because the original record had no top-level improvement relation to repair. ECI reported replacement-values-unverified-or-unchanged; this was not interpreted as implementation or verification failure.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "This record establishes a schema-valid evidence relationship candidate. Its acceptance and content integrity remain subject to the subsequent ECI projection readback."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence and Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_9bdcba88b39f7a77",
+    "campaign_evidence_count_before_recording": 98
+  },
+  "improvement_relation": {
+    "identity": "im_environment_session_diagnostic_activity_projection_20261027",
+    "addresses_hypothesis_identity": "ph_environment_session_diagnostic_activity_not_projected_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_session_diagnostic_activity_fd8fb8c",
+      "repository": "mncs-environment",
+      "commit": "fd8fb8c3a2d62ade28d5b91b6b3e2877286438fc",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "545b5f239dbe81e3bfbd011d4b809334664312f2834c6d0d2cf6222f69446582"
+    },
+    "verification_observation_identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+    "subsequent_observation_identity": "ev_environment_session_diagnostic_activity_live_readback_20261027",
+    "basis": "The baseline implementation source lacked a session diagnostic projection path. The implementation and response bounds passed focused verification and the Environment vertical proof. A post-commit ECI query retained the authentic diagnostic summary and exact evidence reference alongside a separately correlated resource sample under a partial, response-truncated response.",
+    "not_measured": [
+      "agent discovery, receipt, or usability across different runtimes and models",
+      "whether an agent would otherwise have performed a separate diagnostic query",
+      "intervention time, token use, or resource cost saved",
+      "cross-session recurrence and generality of diagnostic-history shapes",
+      "future evidence that the projection changes diagnostic service quality"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_session_diagnostic_activity_pressure_20261027",
+      "repository": "mncs-environment",
+      "commit": "289c19e1556700dfb96767b1dd2f5839a1b0b691",
+      "path": "evidence/environmental-capability/session-diagnostic-activity-pressure-20261027.json",
+      "sha256": "8c38c358f4d88a5867c341692f1cf41aa67f242e6642b4f5d946c31988503de6"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_session_diagnostic_activity_verification_20261027",
+      "repository": "mncs-environment",
+      "commit": "289c19e1556700dfb96767b1dd2f5839a1b0b691",
+      "path": "evidence/environmental-capability/session-diagnostic-activity-verification-20261027.json",
+      "sha256": "8d420f83be4029286f2a18ad59d80ccb36c17089e0bb9ecce804551b7ef194a7"
+    },
+    {
+      "kind": "subsequent-observation",
+      "identity": "ev_environment_session_diagnostic_activity_live_readback_20261027",
+      "repository": "mncs-environment",
+      "commit": "289c19e1556700dfb96767b1dd2f5839a1b0b691",
+      "path": "evidence/environmental-capability/session-diagnostic-activity-live-readback-20261027.json",
+      "sha256": "0a6ef13ca1c3dfabf9f04c642e393940ec13368d489127aa7bf1ebccfea30ef7"
+    },
+    {
+      "kind": "prior-nested-relation-observation",
+      "identity": "ev_environment_session_diagnostic_activity_improvement_20261027",
+      "repository": "mncs-environment",
+      "commit": "289c19e1556700dfb96767b1dd2f5839a1b0b691",
+      "path": "evidence/environmental-capability/session-diagnostic-activity-improvement-20261027.json",
+      "sha256": "f6cf4fe31ea07a4421259362bbce2843c2e29a3e9f91e05641b8be7561245bb2"
+    },
+    {
+      "kind": "preserved-correction-attempt",
+      "identity": "ev_environment_session_diagnostic_activity_improvement_correction_20261027",
+      "repository": "mncs-environment",
+      "commit": "60a69f1bf991b410f4acb84ff1c624ca7723ba34",
+      "path": "evidence/environmental-capability/session-diagnostic-activity-improvement-correction-20261027.json",
+      "sha256": "bc5c483b7598b10d5aa41f851abcc2134caf009c83ac6cbda0047a3da8470b01"
+    },
+    {
+      "kind": "ECI-readback-of-correction-contract",
+      "identity": "eci_ec284700112ae41e",
+      "content_digest": "ee9d2f42403c9ed77f1e38b6444cb64d",
+      "campaign_evidence_offset": 93,
+      "campaign_evidence_limit": 5
+    }
+  ],
+  "measurement_limits": [
+    "The new relation is not accepted or integrity-verified until the next ECI readback.",
+    "The earlier nested relation and rejected correction attempt remain immutable campaign evidence and are not rewritten.",
+    "The same-session live readback does not establish independent agent discovery, intervention reduction, long-term recurrence, or effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
