@@ -13604,6 +13604,58 @@ def test_page_observation_budget_favors_newest_page_without_extra_reads() -> Non
                    for budget, capacity in zip(budgets, capacities))
 
 
+def test_four_page_history_retains_newest_pressure_within_read_ceiling(
+    tmp_path: Path,
+) -> None:
+    reports = [
+        _observation(
+            f"ev_environment_four_page_history_{index:02d}",
+            "ses_four_page_new" if index >= 24 else "ses_four_page_old",
+            "cmp_four_page_history",
+        )
+        for index in range(32)
+    ]
+    session, full_state = _session(tmp_path, reports)
+    references = full_state["evidence"]
+    page_states = {}
+    for offset in (24, 16, 8, 0):
+        page_states[offset] = {
+            **full_state,
+            "evidence": references[offset:offset + 8],
+            "evidence_offset": offset,
+            "evidence_limit": 8,
+            "previous_evidence_offset": offset - 8 if offset else None,
+            "next_evidence_offset": offset + 8 if offset < 24 else None,
+            "evidence_truncated": offset > 0 or offset < 24,
+        }
+    session.campaign_state = lambda *, evidence_offset=None, evidence_limit=32: (
+        page_states[evidence_offset]
+    )
+
+    projection = capability_intelligence.project(
+        session, campaign_state=page_states[24], history_pages=4,
+    )
+
+    budgets = projection["source"]["evidence_history_observation_budgets_by_page"]
+    assert [page["read_budget"] for page in budgets] == [5, 4, 4, 3]
+    assert budgets[0]["selected_observation_reference_identities"] == [
+        f"ev_environment_four_page_history_{index:02d}"
+        for index in range(27, 32)
+    ]
+    assert budgets[1]["read_budget"] + budgets[2]["read_budget"] + (
+        budgets[3]["read_budget"]
+    ) == 11
+    assert projection["source"]["observation_records_verified"] == 16
+    assert projection["source"]["observation_records_skipped_by_page_budget"] == 16
+    latest_pressure = next(
+        item for item in projection["observations"]
+        if item["identity"] == "ev_environment_four_page_history_27"
+    )
+    assert latest_pressure["evidence_reference"]["identity"] == (
+        "ev_environment_four_page_history_27"
+    )
+
+
 def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     tmp_path: Path, monkeypatch,
 ) -> None:
