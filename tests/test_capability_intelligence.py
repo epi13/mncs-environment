@@ -4300,6 +4300,72 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     )
 
 
+def test_explicit_empty_service_scope_remains_accountable_and_bounded(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    session.snapshot.update({
+        "snapshot_sequence": 37,
+        "requirements": {"required_capabilities": [], "services": []},
+        "campaign": {"identity": "cmp_empty_service_scope"},
+        "intent": {
+            "identity": "int_empty_service_scope",
+            "goal": "observe service accountability scope",
+        },
+    })
+
+    result = capability_intelligence.project(session)
+    activity = result["session_activity"]
+    readiness = activity["service_readiness"]
+    accountability = activity["service_accountability"]
+
+    assert readiness["status"] == "not-captured-in-session"
+    assert readiness["source"]["service_declaration_status"] == "explicit-empty"
+    assert readiness["summary"]["probe_observation_coverage_status"] == (
+        "no-declared-probe-opportunities"
+    )
+    assert accountability["status"] == "empty-declared-scope"
+    assert accountability["scope"] == (
+        "selected-session-declared-readiness-services"
+    )
+    assert accountability["source"] == {
+        "service_session_id": "ses_projection_reader",
+        "environment_id": "renv_projection_reader",
+        "snapshot_sequence": 37,
+        "service_declaration_status": "explicit-empty",
+        "campaign_id": "cmp_empty_service_scope",
+        "work_intent_id": "int_empty_service_scope",
+    }
+    assert accountability["summary"]["declared_service_count"] == 0
+    assert accountability["summary"]["projected_service_count"] == 0
+    assert accountability["summary"]["eligible_service_opportunity_count"] is None
+    assert accountability["summary"]["ambient_fulfillment_status"] == (
+        "not-measured"
+    )
+    assert accountability["summary"]["readiness_probe_coverage_status"] == (
+        "no-declared-probe-opportunities"
+    )
+    assert accountability["services"] == []
+    assert "does not establish whether other ambient services" in (
+        accountability["ambient_fulfillment"]["interpretation_limit"]
+    )
+    assert result["source"]["session_service_readiness_digest"]
+    assert result["source"]["session_service_accountability_digest"]
+
+    compact = capability_intelligence._compact_service_accountability_overview(
+        accountability,
+    )
+    assert compact["status"] == "empty-declared-scope"
+    assert compact["source"]["service_declaration_status"] == "explicit-empty"
+    assert compact["summary"]["declared_service_count"] == 0
+    assert compact["services"] == []
+
+    session.snapshot.pop("requirements")
+    absent = capability_intelligence.project(session)["session_activity"]
+    assert "service_readiness" not in absent
+    assert "service_accountability" not in absent
+
+
 def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     probe_capability = "mncs-doctor:compiler-vm-health"
     irrelevant_bindings = [{

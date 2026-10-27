@@ -2322,6 +2322,7 @@ def _compact_service_accountability_overview(
             "service_session_id", "environment_id", "snapshot_sequence",
             "campaign_id", "work_intent_id", "binding_inventory_source",
             "binding_count", "event_window_status",
+            "service_declaration_status",
         )
         if isinstance(source.get(key), str)
         or (key in {"snapshot_sequence", "binding_count"}
@@ -14902,8 +14903,16 @@ def _session_service_readiness(
 
     requirements = snapshot.get("requirements")
     requirements = requirements if isinstance(requirements, dict) else {}
-    declared = requirements.get("services")
-    declared = declared if isinstance(declared, list) else []
+    raw_declared_services = requirements.get("services")
+    declared = raw_declared_services if isinstance(raw_declared_services, list) else []
+    if isinstance(raw_declared_services, list):
+        service_declaration_status = (
+            "explicit-empty" if not raw_declared_services else "declared"
+        )
+    else:
+        service_declaration_status = (
+            "invalid" if "services" in requirements else "not-recorded"
+        )
     raw_observations = snapshot.get("service_observations")
     raw_observations = raw_observations if isinstance(raw_observations, list) else []
     raw_operations = snapshot.get("service_operations")
@@ -14916,6 +14925,7 @@ def _session_service_readiness(
         "snapshot_sequence": sequence,
         "last_reconciled_at": reconciled_at,
         "declared_service_count": len(declared),
+        "service_declaration_status": service_declaration_status,
         "service_observation_count": len(raw_observations),
         "service_operation_count": len(raw_operations),
         "service_scan_limit": MAX_SESSION_SERVICE_READINESS_RECORDS,
@@ -15465,7 +15475,86 @@ def _session_service_accountability(
     raw_services = service_readiness.get("services")
     raw_services = raw_services if isinstance(raw_services, list) else []
     if not raw_services:
-        return None
+        readiness_source = service_readiness.get("source")
+        readiness_source = (
+            readiness_source if isinstance(readiness_source, dict) else {}
+        )
+        if readiness_source.get("service_declaration_status") != "explicit-empty":
+            return None
+        snapshot = snapshot if isinstance(snapshot, dict) else {}
+        campaign = snapshot.get("campaign")
+        campaign = campaign if isinstance(campaign, dict) else {}
+        intent = snapshot.get("intent")
+        intent = intent if isinstance(intent, dict) else {}
+        source = {
+            "service_session_id": readiness_source.get("session_id"),
+            "environment_id": readiness_source.get("environment_id"),
+            "snapshot_sequence": readiness_source.get("snapshot_sequence"),
+            "service_declaration_status": "explicit-empty",
+            **({"campaign_id": _short_text(campaign["identity"], 160)}
+               if isinstance(campaign.get("identity"), str)
+               and campaign["identity"] else {}),
+            **({"work_intent_id": _short_text(intent["identity"], 160)}
+               if isinstance(intent.get("identity"), str)
+               and intent["identity"] else {}),
+        }
+        readiness_summary = service_readiness.get("summary")
+        readiness_summary = (
+            readiness_summary if isinstance(readiness_summary, dict) else {}
+        )
+        return {
+            "schema_version": "mncs.environment.service-accountability/1",
+            "status": "empty-declared-scope",
+            "scope": "selected-session-declared-readiness-services",
+            "source": source,
+            "summary": {
+                "declared_service_count": 0,
+                "projected_service_count": 0,
+                "eligible_service_opportunity_count": None,
+                "ambient_fulfillment_status": "not-measured",
+                "agent_intervention_burden_status": "not-measured",
+                "agent_receipt_status": "not-established",
+                "outcome_quality_status": "not-established",
+                "readiness_probe_opportunity_count": readiness_summary.get(
+                    "probe_opportunity_count", 0,
+                ),
+                "readiness_probe_observation_record_count": readiness_summary.get(
+                    "probe_observation_record_count", 0,
+                ),
+                "readiness_probe_observation_missing_count": readiness_summary.get(
+                    "probe_observation_missing_count", 0,
+                ),
+                "readiness_probe_observation_ambiguous_count": readiness_summary.get(
+                    "probe_observation_ambiguous_count", 0,
+                ),
+                "readiness_probe_configuration_missing_count": readiness_summary.get(
+                    "probe_configuration_missing_count", 0,
+                ),
+                "readiness_probe_observation_unmatched_count": readiness_summary.get(
+                    "probe_observation_unmatched_count", 0,
+                ),
+                "readiness_probe_coverage_status": readiness_summary.get(
+                    "probe_observation_coverage_status",
+                    "no-declared-probe-opportunities",
+                ),
+            },
+            "ambient_fulfillment": {
+                "status": "not-measured",
+                "eligible_opportunity_denominator": "not-recorded",
+                "verified_fulfillment_numerator": "not-established",
+                "interpretation_limit": (
+                    "No readiness services were declared for this session. "
+                    "This does not establish whether other ambient services "
+                    "were available, ran, or fulfilled agent needs."
+                ),
+            },
+            "services": [],
+            "measurement_limits": [
+                "This view covers only readiness services declared for the selected session; it does not enumerate all Environment capabilities or ambient owner passes.",
+                "An explicit empty declaration records zero readiness-service scope, not zero ambient service activity or successful fulfillment.",
+                "Agent need, receipt, intervention burden, and outcome quality remain unmeasured.",
+            ],
+        }
 
     delivery = capability_delivery if isinstance(capability_delivery, dict) else {}
     raw_bindings = delivery.get("bindings")
@@ -16649,7 +16738,7 @@ def _session_activity(
         if isinstance(raw_readiness_requirements, dict) else {}
     )
     has_service_readiness = any((
-        raw_readiness_requirements.get("services"),
+        "services" in raw_readiness_requirements,
         snapshot.get("service_observations"),
         snapshot.get("service_operations"),
     ))

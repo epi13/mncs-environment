@@ -1072,6 +1072,13 @@ snapshot remains distinct from binding availability and observed use, so a
 ready binding does not imply a ready service. Source references retain the
 session, Environment, and snapshot revision. The summary repeats readiness
 probe coverage counts to relate this view to its declarations and records.
+When `requirements.services` is explicitly present as an empty list, the
+projection reports `status: empty-declared-scope`, zero declared readiness
+services, and the session, Environment, snapshot, campaign, and WorkIntent
+identities. If the field is absent, the service projection remains absent.
+This empty scope is limited to session readiness declarations; it does not
+claim that other Environment capabilities or ambient owner passes were
+unavailable, idle, or successful.
 Each row also carries the sanitized readiness observation code and time, and
 the reconciliation operation code when present, so a failed or degraded
 service can be investigated from its declared status without exposing provider
