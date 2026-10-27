@@ -2539,6 +2539,8 @@ def _compact_service_accountability_overview(
         "agent_intervention_burden_status", "agent_receipt_status",
         "outcome_quality_status", "readiness_probe_opportunity_count",
         "owner_pass_observation_status", "owner_pass_observation_count",
+        "owner_pass_outcome_disposition_counts",
+        "owner_pass_outcome_reason_counts",
         "readiness_probe_observation_record_count",
         "readiness_probe_observation_missing_count",
         "readiness_probe_observation_ambiguous_count",
@@ -2560,6 +2562,8 @@ def _compact_service_accountability_overview(
         "capability_relation_status_counts", "readiness_status_counts",
         "reconciliation_operation_status_counts",
         "ambient_probe_use_relation_status_counts",
+        "owner_pass_outcome_disposition_counts",
+        "owner_pass_outcome_reason_counts",
     ):
         counts = summary.get(key)
         if isinstance(counts, dict):
@@ -2598,6 +2602,8 @@ def _compact_service_accountability_overview(
                 "skipped_pass_count", "owner_failure_count",
                 "owner_failure_observation_status",
                 "owner_pass_result_record_count",
+                "owner_pass_outcome_disposition_counts",
+                "owner_pass_outcome_reason_counts",
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
             )
@@ -2616,6 +2622,17 @@ def _compact_service_accountability_overview(
                 for name, count in list(result_status_counts.items())[:6]
                 if isinstance(name, str) and type(count) is int and count >= 0
             }
+        for key in (
+            "owner_pass_outcome_disposition_counts",
+            "owner_pass_outcome_reason_counts",
+        ):
+            counts = execution_summary.get(key)
+            if isinstance(counts, dict):
+                compact_environment_summary[key] = {
+                    name: count
+                    for name, count in list(counts.items())[:8]
+                    if isinstance(name, str) and type(count) is int and count >= 0
+                }
         execution_view = _environment_service_execution_accountability(
             ambient_service_execution, include_owner_pass_observations=True,
         )
@@ -2699,7 +2716,7 @@ def _compact_ambient_service_execution_overview(
                 for key in (
                     "status", "scheduled_owner_count", "result_record_count",
                     "ambient_fulfillment_status", "invalid_result_records",
-                    "result_records_omitted",
+                    "result_records_omitted", "outcome_disposition_counts",
                 ) if key in owner_results
             }
             results = owner_results.get("results")
@@ -2711,6 +2728,8 @@ def _compact_ambient_service_execution_overview(
                         "owner", "service_execution_id", "result_status",
                         "verification_status", "result_identity",
                         "source_reference_status", "source_reference",
+                        "outcome_disposition", "outcome_reason_code",
+                        "agent_response_emitted",
                     ) if key in row
                 }
                 for row in results[:2] if isinstance(row, dict)
@@ -17806,10 +17825,24 @@ def _environment_service_execution_accountability(
         results = owner_results.get("results")
         results = results if isinstance(results, list) else []
         result_status_counts: dict[str, int] = {}
+        outcome_disposition_counts: dict[str, int] = {}
+        outcome_reason_counts: dict[str, int] = {}
         for item in results:
             if isinstance(item, dict) and isinstance(item.get("result_status"), str):
                 status = item["result_status"]
                 result_status_counts[status] = result_status_counts.get(status, 0) + 1
+            if isinstance(item, dict):
+                disposition = item.get("outcome_disposition")
+                if disposition in {"completed-quietly", "disabled"}:
+                    outcome_disposition_counts[disposition] = (
+                        outcome_disposition_counts.get(disposition, 0) + 1
+                    )
+                reason_code = item.get("outcome_reason_code")
+                if (isinstance(reason_code, str)
+                        and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", reason_code)):
+                    outcome_reason_counts[reason_code] = (
+                        outcome_reason_counts.get(reason_code, 0) + 1
+                    )
         if type(owner_results.get("result_record_count")) is int:
             summary["owner_pass_result_record_count"] = owner_results[
                 "result_record_count"
@@ -17817,6 +17850,14 @@ def _environment_service_execution_accountability(
         if result_status_counts:
             summary["owner_pass_result_status_counts"] = dict(
                 sorted(result_status_counts.items()),
+            )
+        if outcome_disposition_counts:
+            summary["owner_pass_outcome_disposition_counts"] = dict(
+                sorted(outcome_disposition_counts.items()),
+            )
+        if outcome_reason_counts:
+            summary["owner_pass_outcome_reason_counts"] = dict(
+                sorted(outcome_reason_counts.items()),
             )
         scheduled = execution.get("scheduled_passes")
         scheduled = scheduled if isinstance(scheduled, list) else []
@@ -17875,7 +17916,8 @@ def _environment_service_execution_accountability(
                 for key in (
                     "result_identity", "source_reference_status",
                     "source_reference", "operation_status", "result_code",
-                    "result_reused",
+                    "result_reused", "outcome_disposition",
+                    "outcome_reason_code", "agent_response_emitted",
                 ):
                     value = result.get(key)
                     if isinstance(value, str) or type(value) is bool:

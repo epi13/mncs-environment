@@ -764,7 +764,8 @@ class AmbientEntryGatingTest(unittest.TestCase):
                     "evidence": "ref"}
         try:
             entry_module.actions.ambient_pass = fake
-            return entry_module._ambient_actions(object(), {})
+            result = entry_module._ambient_actions(object(), {})
+            return entry_module.incremental.owner_pass_response(result)
         finally:
             entry_module.actions.ambient_pass = real
 

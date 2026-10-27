@@ -1286,6 +1286,16 @@ prove service fulfillment, or measure agent receipt or intervention burden.
 Entry-only traces can show a result summary but do not claim a durable result
 reference.
 
+When an ambient adapter completes without emitting an entry block, it records
+a compact reason-coded result such as `no-diagnostic-findings`,
+`no-verification-obligations`, or `disabled-by-definition`. The normal entry
+response still omits that quiet block. The persisted or entry-only trace joins
+the outcome to the exact scheduled execution and keeps its source-reference
+status explicit. These codes describe the adapter's completed path; they do
+not establish that an agent needed the service, that it fulfilled a need, or
+that agent intervention was reduced. Opportunity denominator, fulfillment,
+and burden remain unmeasured.
+
 Committed campaign evidence with kind
 `ambient-owner-pass-result-trace` retains a compact view of the same
 relationship for historical investigation: scheduler persistence and duration,

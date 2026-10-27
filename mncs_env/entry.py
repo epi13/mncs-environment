@@ -264,14 +264,16 @@ def _ambient_verification(session, definition: dict) -> dict | None:
                          "definition-invalid", next="fix the definition verification knob")
     outcome = verification.ambient_pass(session, max_executions=budget)
     if outcome["summary"].get("obligations", 0) == 0 and outcome["summary"].get("blockers", 0) == 0:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "no-verification-obligations",
+        )
     return {"summary": outcome["summary"], "reused": outcome["reused"],
             "evidence": outcome.get("evidence"),
             "operation_status": outcome.get("operation_status", "complete")}
 
 
 def _ambient_actions(session, definition: dict) -> dict | None:
-    """Run the ambient external-evidence pass; None when quietly current.
+    """Run the ambient external-evidence pass; keep quiet outcomes trace-only.
 
     Actions are reactive: steady states (no route, unavailable subject,
     current evidence) carry no actions block at all. The pass itself
@@ -285,7 +287,9 @@ def _ambient_actions(session, definition: dict) -> dict | None:
         raise EntryError("environment definition actions knob must be an object",
                          "definition-invalid", next="set actions to an object or omit it")
     if knob.get("enabled", True) is False:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "disabled-by-definition", disabled=True,
+        )
     outcome = actions.ambient_pass(session)
     summary = outcome["summary"]
     if (summary.get("pending", 0) == 0 and summary.get("eligible", 0) == 0
@@ -294,13 +298,15 @@ def _ambient_actions(session, definition: dict) -> dict | None:
                  or summary.get("obligations", 0) == 0)):
         # Zero obligations with a coherence failure is toolchain news,
         # already owned by Doctor/verification — not routing news.
-        return None
+        return incremental.quiet_owner_pass_result(
+            "no-actionable-external-evidence",
+        )
     return {"summary": summary, "reused": outcome["reused"],
             "evidence": outcome.get("evidence")}
 
 
 def _ambient_family(session, definition: dict) -> dict | None:
-    """Run the ambient family-collaboration pass; None when quiet.
+    """Run the ambient family-collaboration pass; keep quiet outcomes trace-only.
 
     The pass always observes (presence + drift classification are
     read-only); repair converges only inside this session's own
@@ -314,21 +320,26 @@ def _ambient_family(session, definition: dict) -> dict | None:
         raise EntryError("environment definition family knob must be an object",
                          "definition-invalid", next="set family to an object or omit it")
     if knob.get("enabled", True) is False:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "disabled-by-definition", disabled=True,
+        )
     outcome = family.ambient_pass(
         session, converge_repairs=knob.get("converge", True) is not False)
     summary = outcome["summary"]
     if (summary.get("relevant", 0) == 0 and summary.get("reconciled", 0) == 0
             and summary.get("deferred", 0) == 0
             and summary.get("escalated", 0) == 0
-            and not summary.get("attention")):
-        return None
+            and not summary.get("attention")
+            and not summary.get("detail")):
+        return incremental.quiet_owner_pass_result(
+            "no-relevant-family-work",
+        )
     return {"capsule": family.capsule(session), "summary": summary,
             "reused": outcome["reused"]}
 
 
 def _ambient_diagnostics(session, definition: dict) -> dict | None:
-    """Run the ambient diagnostic pass; None when there is nothing to explain.
+    """Run the diagnostic pass; keep no-findings outcomes trace-only.
 
     Diagnostics are reactive: a healthy world carries no diagnostic block
     at all, so normal entry pays effectively zero diagnostic context.
@@ -340,7 +351,9 @@ def _ambient_diagnostics(session, definition: dict) -> dict | None:
         raise EntryError("environment definition diagnostics knob must be an object",
                          "definition-invalid", next="set diagnostics to an object or omit it")
     if knob.get("enabled", True) is False:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "disabled-by-definition", disabled=True,
+        )
     budget = knob.get("max_captures", diagnostics.DEFAULT_MAX_CAPTURES)
     if type(budget) is not int or budget < 1 or budget > diagnostics.MAX_FAILURES:
         raise EntryError("diagnostics max_captures must be an integer between 1 and 32",
@@ -348,13 +361,15 @@ def _ambient_diagnostics(session, definition: dict) -> dict | None:
     outcome = diagnostics.ambient_pass(session, max_captures=budget)
     summary = outcome["summary"]
     if summary.get("failures", 0) == 0 and summary.get("blockers", 0) == 0:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "no-diagnostic-findings",
+        )
     return {"summary": summary, "reused": outcome["reused"],
             "evidence": outcome.get("evidence")}
 
 
 def _ambient_semantics(session, definition: dict) -> dict | None:
-    """Run the ambient semantic pass; None when no workspace is declared.
+    """Run the semantic pass; keep no-contract outcomes trace-only.
 
     Like diagnostics, semantics is quiet by default: definitions that
     declare no resident service carry no semantic block at all, so
@@ -367,10 +382,14 @@ def _ambient_semantics(session, definition: dict) -> dict | None:
         raise EntryError("environment definition semantics knob must be an object",
                          "definition-invalid", next="set semantics to an object or omit it")
     if knob.get("enabled", True) is False:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "disabled-by-definition", disabled=True,
+        )
     outcome = semantics.ambient_pass(session)
     if outcome["summary"].get("declared", 0) == 0:
-        return None
+        return incremental.quiet_owner_pass_result(
+            "no-declared-semantic-contracts",
+        )
     return {"summary": outcome["summary"], "reused": outcome["reused"],
             "evidence": outcome.get("evidence"),
             "operation_status": outcome.get("operation_status", "complete")}

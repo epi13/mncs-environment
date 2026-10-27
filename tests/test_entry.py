@@ -64,6 +64,67 @@ def test_capability_observation_definition_has_bounded_scope_and_no_services():
     assert definition["services"] == []
     assert definition["intent"]["repositories"] == ["mncs-environment"]
 
+
+def test_quiet_ambient_adapters_record_reasons_without_agent_blocks(monkeypatch):
+    session = object()
+    cases = (
+        (entry._ambient_verification, "no-verification-obligations", "verification"),
+        (entry._ambient_actions, "no-actionable-external-evidence", "actions"),
+        (entry._ambient_family, "no-relevant-family-work", "family"),
+        (entry._ambient_diagnostics, "no-diagnostic-findings", "diagnostics"),
+        (entry._ambient_semantics, "no-declared-semantic-contracts", "semantics"),
+    )
+    outcomes = {
+        "verification": {"summary": {"obligations": 0, "blockers": 0}},
+        "actions": {"summary": {
+            "pending": 0, "eligible": 0, "capsule_ids": [],
+            "blockers": 0, "obligations": 0,
+        }, "reused": False},
+        "family": {"summary": {
+            "relevant": 0, "reconciled": 0, "deferred": 0,
+            "escalated": 0, "attention": [],
+        }, "reused": False},
+        "diagnostics": {"summary": {"failures": 0, "blockers": 0}},
+        "semantics": {"summary": {"declared": 0}},
+    }
+    for _adapter, _reason, name in cases:
+        provider = getattr(entry, name)
+        monkeypatch.setattr(provider, "ambient_pass", lambda *args, _name=name, **kwargs:
+                            outcomes[_name])
+
+    for adapter, reason, name in cases:
+        result = adapter(session, {})
+        assert result["ambient_owner_pass_outcome"]["reason_code"] == reason
+        assert result["ambient_owner_pass_outcome"]["disposition"] == (
+            "completed-quietly"
+        )
+        assert entry.incremental.owner_pass_response(result) is None
+
+    disabled = entry._ambient_diagnostics(
+        session, {"diagnostics": {"enabled": False}},
+    )
+    assert disabled["ambient_owner_pass_outcome"] == {
+        "schema_version": "mncs.environment.ambient-owner-pass-outcome/1",
+        "disposition": "disabled",
+        "reason_code": "disabled-by-definition",
+        "agent_response_emitted": False,
+    }
+    assert entry.incremental.owner_pass_response(disabled) is None
+
+    unavailable = {"summary": {
+        "relevant": 0, "reconciled": 0, "deferred": 0,
+        "escalated": 0, "attention": [],
+        "detail": "vocabulary-unavailable",
+    }, "reused": False}
+    monkeypatch.setattr(
+        entry.family, "ambient_pass", lambda *_args, **_kwargs: unavailable,
+    )
+    monkeypatch.setattr(entry.family, "capsule", lambda *_args, **_kwargs: {})
+    family_result = entry._ambient_family(session, {})
+    assert family_result["summary"]["detail"] == "vocabulary-unavailable"
+    assert "ambient_owner_pass_outcome" not in family_result
+
+
 class EntryContractTests(unittest.TestCase):
     def test_project_definition_symlink_is_rejected(self):
         alias = self.project / ".mncs" / "environment-alias.json"

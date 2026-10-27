@@ -29,6 +29,73 @@ MAX_WAVES = 3
 MAX_TRACE_OWNER_ROWS = 16
 MAX_TRACE_TRIGGER_KINDS = 8
 MAX_TRACE_RESULT_FIELDS = 16
+OWNER_PASS_OUTCOME_SCHEMA = "mncs.environment.ambient-owner-pass-outcome/1"
+OWNER_PASS_QUIET_REASONS = frozenset({
+    "disabled-by-definition",
+    "no-actionable-external-evidence",
+    "no-declared-semantic-contracts",
+    "no-diagnostic-findings",
+    "no-relevant-family-work",
+    "no-verification-obligations",
+})
+
+
+def quiet_owner_pass_result(reason_code: str, *, disabled: bool = False) -> dict:
+    """Record a quiet owner-pass outcome without creating an agent-facing block.
+
+    The result is scheduler evidence, not evidence that an agent needed or
+    received the service. ``owner_pass_response`` removes this internal record
+    from the normal entry response so quiet passes remain quiet for agents.
+    """
+    if reason_code not in OWNER_PASS_QUIET_REASONS:
+        raise ValueError("unsupported ambient owner-pass quiet reason")
+    if disabled != (reason_code == "disabled-by-definition"):
+        raise ValueError("disabled ambient passes require their exact reason code")
+    return {
+        "status": "disabled" if disabled else "quiet-no-op",
+        "operation_status": "complete",
+        "summary": {"response_emitted": False},
+        "ambient_owner_pass_outcome": {
+            "schema_version": OWNER_PASS_OUTCOME_SCHEMA,
+            "disposition": "disabled" if disabled else "completed-quietly",
+            "reason_code": reason_code,
+            "agent_response_emitted": False,
+        },
+    }
+
+
+def _validated_owner_pass_outcome(value: object) -> dict[str, object] | None:
+    if not isinstance(value, dict):
+        return None
+    outcome = value.get("ambient_owner_pass_outcome")
+    if (not isinstance(outcome, dict)
+            or set(outcome) != {
+                "schema_version", "disposition", "reason_code",
+                "agent_response_emitted",
+            }
+            or outcome.get("schema_version") != OWNER_PASS_OUTCOME_SCHEMA
+            or outcome.get("disposition") not in {"completed-quietly", "disabled"}
+            or outcome.get("reason_code") not in OWNER_PASS_QUIET_REASONS
+            or type(outcome.get("agent_response_emitted")) is not bool
+            or outcome.get("agent_response_emitted") is not False
+            or value.get("operation_status") != "complete"
+            or value.get("status") != (
+                "disabled" if outcome.get("disposition") == "disabled"
+                else "quiet-no-op"
+            )
+            or (outcome.get("disposition") == "disabled")
+            != (outcome.get("reason_code") == "disabled-by-definition")):
+        return None
+    return {
+        "disposition": outcome["disposition"],
+        "reason_code": outcome["reason_code"],
+        "agent_response_emitted": False,
+    }
+
+
+def owner_pass_response(value):
+    """Keep internal quiet-outcome evidence out of an agent-facing entry block."""
+    return None if _validated_owner_pass_outcome(value) is not None else value
 
 
 def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
@@ -313,6 +380,16 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
             if (isinstance(result_code, str)
                     and re.fullmatch(r"[a-z][a-z0-9.-]{0,79}", result_code)):
                 row["result_code"] = result_code
+            outcome_disposition = item.get("outcome_disposition")
+            outcome_reason = item.get("outcome_reason_code")
+            if (outcome_disposition in {"completed-quietly", "disabled"}
+                    and outcome_reason in OWNER_PASS_QUIET_REASONS
+                    and (outcome_disposition == "disabled")
+                    == (outcome_reason == "disabled-by-definition")
+                    and item.get("agent_response_emitted") is False):
+                row["outcome_disposition"] = outcome_disposition
+                row["outcome_reason_code"] = outcome_reason
+                row["agent_response_emitted"] = False
             reused = item.get("result_reused")
             if type(reused) is bool:
                 row["result_reused"] = reused
@@ -352,6 +429,17 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
                 "A returned or reused result does not establish service fulfillment, agent receipt, or reduced intervention burden.",
             ],
         }
+        outcome_disposition_counts: dict[str, int] = {}
+        for row in projected_owner_results:
+            disposition = row.get("outcome_disposition")
+            if disposition in {"completed-quietly", "disabled"}:
+                outcome_disposition_counts[disposition] = (
+                    outcome_disposition_counts.get(disposition, 0) + 1
+                )
+        if outcome_disposition_counts:
+            result["owner_pass_results"][
+                "outcome_disposition_counts"
+            ] = dict(sorted(outcome_disposition_counts.items()))
         if invalid_owner_result_count:
             result["owner_pass_results"]["invalid_result_records"] = (
                 invalid_owner_result_count
@@ -962,6 +1050,13 @@ def _owner_pass_results(session, scheduled: list[dict], results: dict,
                     break
             if summary:
                 row["summary"] = summary
+        outcome = _validated_owner_pass_outcome(block)
+        if outcome is not None:
+            row.update({
+                "outcome_disposition": outcome["disposition"],
+                "outcome_reason_code": outcome["reason_code"],
+                "agent_response_emitted": outcome["agent_response_emitted"],
+            })
         source_reference, source_status = _safe_result_reference(
             session, owner, identity, block,
             (result_refs or {}).get(owner)
@@ -1003,9 +1098,9 @@ def _owner_result_failed(value) -> bool:
 
     Domain verdicts such as a failed test remain completed evidence. Only the
     provider/invocation envelope blocks acknowledgement of the input event.
-    Environment owner adapters use ``None`` to mean their documented quiet
-    no-work case (for example, diagnostics has no failures to explain); that
-    is a successful no-op, not an invocation failure.
+    Legacy runners may use ``None`` for a successful quiet no-work case.
+    Environment adapters now return a bounded reason-coded quiet outcome,
+    which is also a completed response rather than an invocation failure.
     """
     if value is None:
         return False
@@ -1067,7 +1162,10 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         trace["owner_pass_results"] = _owner_pass_results(
             session, scheduled, results, None, persisted=False,
         )
-        return results, trace
+        return {
+            name: owner_pass_response(value)
+            for name, value in results.items()
+        }, trace
     now_ms = int(time.time() * 1000) if now_ms is None else now_ms
     spec = declarations()
     previous = session.snapshot.get("coherence") or {}
@@ -1313,6 +1411,8 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         session._save()
     report["events"] = events[:32]
     report["elapsed_seconds"] = round(time.monotonic() - scheduler_started, 3)
-    blocks = {name: results[name] if any(item["pass"] == name for item in report["scheduled"])
-              else _reuse(results.get(name)) for name in names}
+    blocks = {name: owner_pass_response(
+        results[name] if any(item["pass"] == name for item in report["scheduled"])
+        else _reuse(results.get(name))
+    ) for name in names}
     return blocks, report

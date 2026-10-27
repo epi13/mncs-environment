@@ -103,6 +103,12 @@ intervention. When the final ECI summary must drop the sibling activity
 projection, the service-accountability view restores bounded unscoped-call
 references from its source projection digest.
 
+Quiet adapters now record bounded outcome reason codes, including disabled
+scope and completed no-work cases, while entry continues to omit the quiet
+agent-facing block. The ECI carries these codes through the exact scheduled
+execution and result reference. They explain the adapter path only; they do
+not count agent need, service fulfillment, or intervention reduction.
+
 If the whole ECI response still exceeds its requested byte budget, a final
 summary-only view keeps service totals, exact source references for recorded
 owner results, the current Doctor epoch and bounded Doctor history

@@ -147,6 +147,39 @@ def test_recovery_scan_records_owner_failure_coverage_without_native_automation(
     assert result["result_status"] == "result-recorded"
 
 
+def test_quiet_owner_outcome_is_traceable_without_an_agent_response(
+    tmp_path, monkeypatch,
+):
+    monkeypatch.setenv("MNCS_AUTOMATION_ROOT", str(tmp_path / "unavailable"))
+    session = Participant(tmp_path / "state", repository(tmp_path))
+    _, owned = runners()
+    owned["diagnostics"] = lambda: coherence.quiet_owner_pass_result(
+        "no-diagnostic-findings",
+    )
+
+    blocks, trace = coherence.tick(session, {}, owned)
+
+    assert blocks["diagnostics"] is None
+    assert trace["owner_failures"] == []
+    projected = coherence.project_trace(trace)
+    diagnostic = next(
+        row for row in projected["owner_pass_results"]["results"]
+        if row["owner"] == "diagnostics"
+    )
+    assert diagnostic["result_status"] == "result-recorded"
+    assert diagnostic["result_code"] == "quiet-no-op"
+    assert diagnostic["outcome_disposition"] == "completed-quietly"
+    assert diagnostic["outcome_reason_code"] == "no-diagnostic-findings"
+    assert diagnostic["agent_response_emitted"] is False
+    assert diagnostic["summary"] == {"response_emitted": False}
+    assert diagnostic["source_reference_status"] == "trace-not-persisted"
+    assert projected["owner_pass_results"]["outcome_disposition_counts"] == {
+        "completed-quietly": 1,
+    }
+    assert projected["ambient_fulfillment"] == "not-established"
+    assert projected["agent_need_opportunity_denominator"] == "not-recorded"
+
+
 def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillment():
     private_path = "/home/private/project/source.mncs"
     projected = coherence.project_trace({
@@ -474,16 +507,30 @@ def test_later_owner_wave_records_its_derived_trigger(tmp_path, monkeypatch):
             session.snapshot['verification_state'] = {
                 'ob-1': {'verdict': 'PASS'},
             }
+            return coherence.quiet_owner_pass_result(
+                'no-verification-obligations',
+            )
         return {'summary': {}, 'reused': False}
 
-    _, trace = coherence.tick(
+    blocks, trace = coherence.tick(
         session, {}, {name: lambda name=name: run(name) for name in names},
     )
+    assert blocks['verification'] is None
     family_pass = next(
         item for item in trace['scheduled'] if item['pass'] == 'family'
     )
     assert family_pass['wave'] == 1
     assert family_pass['inputs'] == ['verification.changed']
+    verification_result = next(
+        item for item in trace['owner_pass_results']
+        if item['owner'] == 'verification'
+    )
+    assert verification_result['result_status'] == 'result-recorded'
+    assert verification_result['outcome_disposition'] == 'completed-quietly'
+    assert verification_result['outcome_reason_code'] == (
+        'no-verification-obligations'
+    )
+    assert verification_result['agent_response_emitted'] is False
 
 
 def test_same_dirty_filename_edited_twice_is_not_cached(participant):

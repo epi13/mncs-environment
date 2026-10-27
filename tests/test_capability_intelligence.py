@@ -6291,6 +6291,9 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
                     + "f" * 64 + ".json"
                 ),
                 "operation_status": "complete",
+                "outcome_disposition": "completed-quietly",
+                "outcome_reason_code": "no-verification-obligations",
+                "agent_response_emitted": False,
                 "summary": {"executed": 2, "failed": 0},
                 "verification_status": "not-established",
             }],
@@ -6333,6 +6336,27 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert owner_results["results"][0]["verification_status"] == (
         "not-established"
     )
+    assert owner_results["results"][0]["outcome_disposition"] == (
+        "completed-quietly"
+    )
+    assert owner_results["results"][0]["outcome_reason_code"] == (
+        "no-verification-obligations"
+    )
+    assert owner_results["results"][0]["agent_response_emitted"] is False
+    service_execution = (
+        capability_intelligence._environment_service_execution_accountability(
+            view, include_owner_pass_observations=True,
+        )
+    )
+    assert service_execution["summary"][
+        "owner_pass_outcome_disposition_counts"
+    ] == {"completed-quietly": 1}
+    pass_observation = service_execution["owner_pass_observations"]["items"][0]
+    assert pass_observation["outcome_disposition"] == "completed-quietly"
+    assert pass_observation["outcome_reason_code"] == (
+        "no-verification-obligations"
+    )
+    assert pass_observation["agent_response_emitted"] is False
     assert projection["source"]["session_ambient_service_execution_digest"]
     assert "/private/project" not in json.dumps(projection)
 
@@ -6349,11 +6373,13 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     compact = capability_intelligence.project(session, max_result_bytes=8_000)
     assert compact["source"]["response_truncated"] is True
     compact_activity = compact["session_activity"]
-    compact_view = compact_activity["ambient_service_execution"]
-    assert compact_view["execution"]["scheduled_pass_count"] == 1
-    assert compact_view["execution"]["owner_pass_results"][
-        "result_record_count"
-    ] == 1
+    compact_execution = compact_activity["service_accountability"][
+        "environment_service_execution"
+    ]
+    assert compact_execution["summary"][
+        "owner_pass_outcome_reason_counts"
+    ] == {"no-verification-obligations": 1}
+    assert compact_execution["source"]["projection_digest"]
 
     session.snapshot["coherence"]["last_trace"]["owner_failures"] = [
         "verification",
