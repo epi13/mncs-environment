@@ -1153,6 +1153,19 @@ whose scheduler state was not otherwise saved may be visible in the entry
 response but absent from a later session projection. Recovery-scan traces are
 also returned at entry and are not retained as incremental scheduler state.
 
+For each scheduled owner pass, the trace now carries a bounded result relation
+when the runner returned one. The row joins the scheduler's exact
+`service_execution_id` to the content identity and safe source reference in
+the existing `coherence.result_refs` map, and exposes only scalar summary
+counts and operation status. Local artifact references are repository-independent
+paths under the session state; absolute checkout and state paths are omitted. A missing or
+mismatched result reference remains explicit. This makes the service's
+recorded result inspectable alongside its scheduling decision without adding
+a telemetry store. The relation does not independently verify the result,
+prove service fulfillment, or measure agent receipt or intervention burden.
+Entry-only traces can show a result summary but do not claim a durable result
+reference.
+
 `session_activity.ambient_owner_pass_activity` joins Environment capability
 invocations that were explicitly tagged while running inside a synchronous
 incremental owner pass to the latest stored scheduler trace using an opaque

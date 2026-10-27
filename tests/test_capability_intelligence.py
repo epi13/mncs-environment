@@ -4909,12 +4909,27 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
                 "wave": 0,
                 "owner_reused": False,
                 "timer_or_lifecycle_due": False,
+                "service_execution_id": "ase_" + "e" * 32,
                 "run_elapsed_seconds": 0.2,
                 "inputs": ["source.changed"],
                 "checkout": "/private/project",
             }],
             "skipped": [{"pass": "doctor", "reason": "current inputs"}],
             "owner_failures": [],
+            "owner_pass_results": [{
+                "owner": "verification",
+                "service_execution_id": "ase_" + "e" * 32,
+                "result_status": "result-recorded",
+                "result_identity": "f" * 64,
+                "source_reference_status": "session-artifact",
+                "source_reference": (
+                    "sessions/ses_projection_reader/coherence-results/"
+                    + "f" * 64 + ".json"
+                ),
+                "operation_status": "complete",
+                "summary": {"executed": 2, "failed": 0},
+                "verification_status": "not-established",
+            }],
         }},
     })
 
@@ -4941,6 +4956,19 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     ] == "not-established"
     assert view["execution"]["ambient_fulfillment"] == "not-established"
     assert view["execution"]["agent_need_opportunity_denominator"] == "not-recorded"
+    owner_results = view["execution"]["owner_pass_results"]
+    assert owner_results["status"] == "recorded"
+    assert owner_results["result_record_count"] == 1
+    assert owner_results["results"][0]["service_execution_id"] == (
+        "ase_" + "e" * 32
+    )
+    assert owner_results["results"][0]["result_identity"] == "f" * 64
+    assert owner_results["results"][0]["summary"] == {
+        "executed": 2, "failed": 0,
+    }
+    assert owner_results["results"][0]["verification_status"] == (
+        "not-established"
+    )
     assert projection["source"]["session_ambient_service_execution_digest"]
     assert "/private/project" not in json.dumps(projection)
 
@@ -4958,6 +4986,9 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     compact_view = compact["session_activity"]["ambient_service_execution"]
     assert compact["source"]["response_truncated"] is True
     assert compact_view["execution"]["scheduled_pass_count"] == 1
+    assert compact_view["execution"]["owner_pass_results"][
+        "result_record_count"
+    ] == 1
 
     session.snapshot["coherence"]["last_trace"]["owner_failures"] = [
         "verification",

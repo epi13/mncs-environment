@@ -105,12 +105,29 @@ def test_recovery_scan_records_owner_failure_coverage_without_native_automation(
     _, successful_trace = coherence.tick(session, {}, owned)
     assert successful_trace["mode"] == "recovery_scan"
     assert successful_trace["owner_failures"] == []
+    assert len(successful_trace["owner_pass_results"]) == 7
     successful_projection = coherence.project_trace(successful_trace)
     assert successful_projection["owner_failure_observation_status"] == "complete"
     assert all(
         row["owner_outcome_status"] == "no-failure-reported"
         for row in successful_projection["scheduled_passes"]
     )
+    verification = next(
+        row for row in successful_projection["owner_pass_results"]["results"]
+        if row["owner"] == "verification"
+    )
+    scheduled_verification = next(
+        row for row in successful_projection["scheduled_passes"]
+        if row["owner"] == "verification"
+    )
+    assert verification["service_execution_id"] == (
+        scheduled_verification["service_execution_id"]
+    )
+    assert verification["result_status"] == "result-recorded"
+    assert verification["source_reference_status"] == "trace-not-persisted"
+    assert successful_projection["owner_pass_results"][
+        "ambient_fulfillment_status"
+    ] == "not-established"
 
     owned["verification"] = lambda: {"operation_status": "retry"}
     _, failed_trace = coherence.tick(session, {}, owned)
@@ -122,6 +139,12 @@ def test_recovery_scan_records_owner_failure_coverage_without_native_automation(
     )
     assert verification["owner_outcome_status"] == "failure-reported"
     assert verification["verification_status"] == "not-established"
+    result = next(
+        row for row in failed_projection["owner_pass_results"]["results"]
+        if row["owner"] == "verification"
+    )
+    assert result["operation_status"] == "retry"
+    assert result["result_status"] == "result-recorded"
 
 
 def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillment():
@@ -173,6 +196,142 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     assert projected["ambient_fulfillment"] == "not-established"
     assert projected["agent_need_opportunity_denominator"] == "not-recorded"
     assert private_path not in json.dumps(projected)
+
+
+def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference(
+    tmp_path,
+):
+    session = SimpleNamespace(
+        session_id="ses_incremental_fixture",
+        state_dir=tmp_path,
+    )
+    execution_id = "ase_" + "b" * 32
+    block = {
+        "operation_status": "complete",
+        "reused": False,
+        "summary": {
+            "current": 3,
+            "failed": 0,
+            "elapsed_seconds": 0.25,
+            "failed_ids": ["private-test-detail"],
+            "detail": "not exposed",
+        },
+    }
+    references = coherence._result_refs(session, {"verification": block})
+    scheduled = [{
+        "owner": "verification",
+        "service_execution_id": execution_id,
+        "owner_reused": False,
+    }]
+    rows = coherence._owner_pass_results(
+        session, scheduled, {"verification": block}, references,
+        persisted=True,
+    )
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "scheduled": scheduled,
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": rows,
+    }, session_id=session.session_id)["owner_pass_results"]
+
+    assert projected["status"] == "recorded"
+    assert projected["scheduled_owner_count"] == 1
+    assert projected["result_record_count"] == 1
+    row = projected["results"][0]
+    assert row["owner"] == "verification"
+    assert row["service_execution_id"] == execution_id
+    assert row["result_status"] == "result-recorded"
+    assert row["result_identity"] == references["verification"]["identity"]
+    assert row["source_reference_status"] == "session-artifact"
+    assert row["source_reference"] == (
+        "sessions/ses_incremental_fixture/coherence-results/"
+        + references["verification"]["identity"] + ".json"
+    )
+    assert row["operation_status"] == "complete"
+    assert row["summary"] == {
+        "current": 3, "elapsed_seconds": 0.25, "failed": 0,
+    }
+    assert row["verification_status"] == "not-established"
+    assert projected["ambient_fulfillment_status"] == "not-established"
+    assert str(tmp_path) not in json.dumps(projected)
+    assert "private-test-detail" not in json.dumps(projected)
+    assert "not exposed" not in json.dumps(projected)
+
+
+def test_owner_pass_result_reference_mismatch_is_not_exposed(tmp_path):
+    session = SimpleNamespace(
+        session_id="ses_incremental_fixture",
+        state_dir=tmp_path,
+    )
+    execution_id = "ase_" + "c" * 32
+    block = {"summary": {"failed": 1}, "reused": False}
+    references = coherence._result_refs(session, {"diagnostics": block})
+    references["diagnostics"]["identity"] = "0" * 64
+    rows = coherence._owner_pass_results(
+        session,
+        [{"owner": "diagnostics", "service_execution_id": execution_id}],
+        {"diagnostics": block}, references, persisted=True,
+    )
+
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": [{
+            "owner": "diagnostics",
+            "service_execution_id": execution_id,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": rows,
+    })["owner_pass_results"]["results"][0]
+    assert projected["source_reference_status"] == "identity-mismatch"
+    assert "source_reference" not in projected
+    assert projected["verification_status"] == "not-established"
+
+
+def test_owner_pass_result_store_reference_is_session_and_owner_bound(tmp_path):
+    class Store:
+        backend = "store"
+
+        def __init__(self):
+            self.records = {}
+
+        def get_record_strict(self, schema, address):
+            return self.records.get((schema, address))
+
+        def put_record(self, schema, address, record):
+            self.records[(schema, address)] = record
+
+    session = SimpleNamespace(
+        session_id="ses_incremental_fixture",
+        state_dir=tmp_path,
+        store=Store(),
+    )
+    execution_id = "ase_" + "d" * 32
+    block = {"summary": {"failed": 1}, "operation_status": "complete"}
+    references = coherence._result_refs(session, {"diagnostics": block})
+    rows = coherence._owner_pass_results(
+        session,
+        [{"owner": "diagnostics", "service_execution_id": execution_id}],
+        {"diagnostics": block}, references, persisted=True,
+    )
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": [{
+            "owner": "diagnostics",
+            "service_execution_id": execution_id,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": rows,
+    }, session_id=session.session_id)["owner_pass_results"]["results"][0]
+
+    assert projected["source_reference_status"] == "store-record"
+    assert projected["source_reference"] == references["diagnostics"]["reference"]
+    assert projected["source_reference"].startswith(
+        "mncs-store:ses_incremental_fixture:incremental-coherence:diagnostics:"
+    )
 
 
 def test_project_trace_preserves_missing_and_reported_owner_outcomes():

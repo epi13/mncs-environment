@@ -28,9 +28,10 @@ INPUTS_PATH = Path(__file__).resolve().parents[1] / ".mncs/coherence-passes.json
 MAX_WAVES = 3
 MAX_TRACE_OWNER_ROWS = 16
 MAX_TRACE_TRIGGER_KINDS = 8
+MAX_TRACE_RESULT_FIELDS = 16
 
 
-def project_trace(value: dict) -> dict | None:
+def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
     """Return a bounded, path-free view of an incremental owner-pass trace."""
     if not isinstance(value, dict):
         return None
@@ -58,6 +59,11 @@ def project_trace(value: dict) -> dict | None:
         return round(float(raw), 3) if (
             type(raw) in (int, float) and 0 <= raw <= 86400
         ) else None
+
+    safe_session_id = (
+        session_id if isinstance(session_id, str)
+        and re.fullmatch(r"[A-Za-z0-9_.-]{1,96}", session_id) else None
+    )
 
     raw_scheduled = value.get("scheduled")
     scheduled_shape_valid = isinstance(raw_scheduled, list)
@@ -230,6 +236,130 @@ def project_trace(value: dict) -> dict | None:
             "Trace persistence distinguishes the current entry response from the session snapshot; snapshot retention does not establish service fulfillment or independent verification.",
         ],
     }
+    raw_owner_results = value.get("owner_pass_results")
+    if isinstance(raw_owner_results, list):
+        scheduled_execution_ids = {
+            (row.get("owner"), row.get("service_execution_id"))
+            for row in scheduled
+            if isinstance(row.get("service_execution_id"), str)
+        }
+        projected_owner_results = []
+        invalid_owner_result_count = 0
+        seen_owner_result_ids = set()
+        for item in raw_owner_results[:MAX_TRACE_OWNER_ROWS]:
+            if not isinstance(item, dict):
+                invalid_owner_result_count += 1
+                continue
+            owner = safe_identity(item.get("owner"))
+            execution_id = item.get("service_execution_id")
+            if (owner is None or not isinstance(execution_id, str)
+                    or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None
+                    or (owner, execution_id) not in scheduled_execution_ids):
+                invalid_owner_result_count += 1
+                continue
+            owner_result_id = (owner, execution_id)
+            if owner_result_id in seen_owner_result_ids:
+                invalid_owner_result_count += 1
+                continue
+            status = item.get("result_status")
+            if status not in {
+                "result-recorded", "runner-returned-none", "result-missing",
+                "invalid-result-shape",
+            }:
+                invalid_owner_result_count += 1
+                continue
+            seen_owner_result_ids.add(owner_result_id)
+            row = {
+                "owner": owner,
+                "service_execution_id": execution_id,
+                "result_status": status,
+                "verification_status": "not-established",
+            }
+            identity = item.get("result_identity")
+            if isinstance(identity, str) and re.fullmatch(r"[0-9a-f]{64}", identity):
+                row["result_identity"] = identity
+            source_reference_status = item.get("source_reference_status")
+            if source_reference_status in {
+                "store-record", "session-artifact", "trace-not-persisted",
+                "not-recorded", "identity-mismatch", "invalid-reference",
+            }:
+                row["source_reference_status"] = source_reference_status
+            reference = item.get("source_reference")
+            if (source_reference_status == "store-record"
+                    and isinstance(reference, str)
+                    and safe_session_id is not None
+                    and reference.startswith(
+                        f"mncs-store:{safe_session_id}:incremental-coherence:{owner}:"
+                    )
+                    and re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])
+                    and re.fullmatch(
+                        r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                    )):
+                row["source_reference"] = reference
+            elif (source_reference_status == "session-artifact"
+                  and isinstance(reference, str)
+                  and safe_session_id is not None
+                  and reference.startswith(f"sessions/{safe_session_id}/coherence-results/")
+                  and re.fullmatch(
+                      rf"sessions/{re.escape(safe_session_id)}/coherence-results/[0-9a-f]{{64}}\.json",
+                      reference,
+                  )):
+                row["source_reference"] = reference
+            operation_status = item.get("operation_status")
+            if (isinstance(operation_status, str)
+                    and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", operation_status)):
+                row["operation_status"] = operation_status
+            result_code = item.get("result_code")
+            if (isinstance(result_code, str)
+                    and re.fullmatch(r"[a-z][a-z0-9.-]{0,79}", result_code)):
+                row["result_code"] = result_code
+            reused = item.get("result_reused")
+            if type(reused) is bool:
+                row["result_reused"] = reused
+            raw_summary = item.get("summary")
+            if isinstance(raw_summary, dict):
+                summary = {}
+                for key in sorted(raw_summary):
+                    if (not isinstance(key, str)
+                            or re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key) is None):
+                        continue
+                    summary_value = raw_summary[key]
+                    if (type(summary_value) is int and summary_value >= 0
+                            or type(summary_value) is bool
+                            or type(summary_value) is float
+                            and 0 <= summary_value <= 86400):
+                        summary[key] = summary_value
+                    if len(summary) >= MAX_TRACE_RESULT_FIELDS:
+                        break
+                if summary:
+                    row["summary"] = summary
+            projected_owner_results.append(row)
+        result["owner_pass_results"] = {
+            "status": (
+                "recorded" if (len(projected_owner_results) == len(scheduled)
+                               and len(seen_owner_result_ids) == len(scheduled_execution_ids)
+                               and seen_owner_result_ids == scheduled_execution_ids
+                               and not invalid_owner_result_count
+                               and len(raw_owner_results) <= MAX_TRACE_OWNER_ROWS)
+                else "partial"
+            ),
+            "scheduled_owner_count": len(scheduled),
+            "result_record_count": len(projected_owner_results),
+            "results": projected_owner_results,
+            "ambient_fulfillment_status": "not-established",
+            "measurement_limits": [
+                "Each result is related to a scheduled owner pass by its exact execution identity and content identity; the reference is a source pointer, not independent verification.",
+                "A returned or reused result does not establish service fulfillment, agent receipt, or reduced intervention burden.",
+            ],
+        }
+        if invalid_owner_result_count:
+            result["owner_pass_results"]["invalid_result_records"] = (
+                invalid_owner_result_count
+            )
+        if len(raw_owner_results) > MAX_TRACE_OWNER_ROWS:
+            result["owner_pass_results"]["result_records_omitted"] = (
+                len(raw_owner_results) - MAX_TRACE_OWNER_ROWS
+            )
     persistence_status = value.get("trace_persistence_status")
     if persistence_status in {"session-snapshot", "entry-response-only"}:
         result["trace_persistence_status"] = persistence_status
@@ -732,6 +862,120 @@ def _result_refs(session, results):
     return refs
 
 
+def _safe_result_reference(session, owner: str, identity: str, block: dict,
+                           reference: dict | None) -> tuple[str | None, str]:
+    """Expose a bounded source pointer without leaking local absolute paths."""
+    if not isinstance(reference, dict):
+        return None, "not-recorded"
+    if reference.get("identity") != identity:
+        return None, "identity-mismatch"
+    store_reference = reference.get("reference")
+    if isinstance(store_reference, str):
+        prefix = f"mncs-store:{session.session_id}:incremental-coherence:{owner}:"
+        suffix = store_reference.removeprefix(prefix)
+        if (store_reference.startswith(prefix)
+                and re.fullmatch(r"[0-9a-f]{64}", suffix)
+                and suffix == digest_hex({"block": block}, length=64)):
+            return store_reference, "store-record"
+        return None, "invalid-reference"
+    artifact = reference.get("artifact")
+    if isinstance(artifact, str):
+        try:
+            state_root = Path(session.state_dir).resolve()
+            expected = (state_root / "sessions" / session.session_id
+                        / "coherence-results").resolve()
+            path = Path(artifact).resolve()
+            if (path.parent != expected or path.name != f"{identity}.json"
+                    or not path.is_file()):
+                return None, "invalid-reference"
+            return path.relative_to(state_root).as_posix(), "session-artifact"
+        except (OSError, ValueError, TypeError):
+            return None, "invalid-reference"
+    return None, "invalid-reference"
+
+
+def _owner_pass_results(session, scheduled: list[dict], results: dict,
+                        result_refs: dict | None, *, persisted: bool) -> list[dict]:
+    """Tie each scheduled runner return to its bounded content-addressed result."""
+    rows = []
+    for item in scheduled[:MAX_TRACE_OWNER_ROWS]:
+        if not isinstance(item, dict):
+            continue
+        owner = item.get("owner") or item.get("pass")
+        execution_id = item.get("service_execution_id")
+        if (not isinstance(owner, str)
+                or re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,63}", owner) is None
+                or not isinstance(execution_id, str)
+                or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None):
+            continue
+        row = {
+            "owner": owner,
+            "service_execution_id": execution_id,
+            "verification_status": "not-established",
+        }
+        if owner not in results:
+            row["result_status"] = "result-missing"
+            row["source_reference_status"] = (
+                "not-recorded" if persisted else "trace-not-persisted"
+            )
+            rows.append(row)
+            continue
+        block = results[owner]
+        if block is None:
+            row["result_status"] = "runner-returned-none"
+            row["source_reference_status"] = (
+                "not-recorded" if persisted else "trace-not-persisted"
+            )
+            rows.append(row)
+            continue
+        if not isinstance(block, dict):
+            row["result_status"] = "invalid-result-shape"
+            row["source_reference_status"] = "invalid-reference"
+            rows.append(row)
+            continue
+        identity = digest_hex(block, length=64)
+        row.update({
+            "result_status": "result-recorded",
+            "result_identity": identity,
+            "result_reused": block.get("reused") is True,
+        })
+        operation_status = block.get("operation_status")
+        if (isinstance(operation_status, str)
+                and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", operation_status)):
+            row["operation_status"] = operation_status
+        result_code = block.get("status")
+        if (isinstance(result_code, str)
+                and re.fullmatch(r"[a-z][a-z0-9.-]{0,79}", result_code)):
+            row["result_code"] = result_code
+        raw_summary = block.get("summary")
+        if isinstance(raw_summary, dict):
+            summary = {}
+            for key in sorted(raw_summary):
+                if (not isinstance(key, str)
+                        or re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key) is None):
+                    continue
+                value = raw_summary[key]
+                if (type(value) is int and value >= 0 or type(value) is bool
+                        or type(value) is float and 0 <= value <= 86400):
+                    summary[key] = value
+                if len(summary) >= MAX_TRACE_RESULT_FIELDS:
+                    break
+            if summary:
+                row["summary"] = summary
+        source_reference, source_status = _safe_result_reference(
+            session, owner, identity, block,
+            (result_refs or {}).get(owner)
+            if isinstance(result_refs, dict) else None,
+        )
+        if not persisted and source_status == "not-recorded":
+            source_status = "trace-not-persisted"
+        row["source_reference_status"] = source_status
+        if source_reference is not None:
+            row["source_reference"] = source_reference
+        rows.append(row)
+    return rows
+
+
 def _load_results(session, refs):
     results, known = {}, True
     expected = session.state_dir / "sessions" / session.session_id / "coherence-results"
@@ -811,7 +1055,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         owner_failures = sorted(
             name for name in results if _owner_result_failed(results[name])
         )
-        return results, {
+        trace = {
             "mode": "recovery_scan",
             "trace_persistence_status": "entry-response-only",
             "reason": "native coherence provider unavailable",
@@ -820,6 +1064,10 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             "owner_failures": owner_failures,
             "elapsed_seconds": round(time.monotonic() - scheduler_started, 3),
         }
+        trace["owner_pass_results"] = _owner_pass_results(
+            session, scheduled, results, None, persisted=False,
+        )
+        return results, trace
     now_ms = int(time.time() * 1000) if now_ms is None else now_ms
     spec = declarations()
     previous = session.snapshot.get("coherence") or {}
@@ -1038,8 +1286,13 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     report["trace_persistence_status"] = (
         "session-snapshot" if persist_trace else "entry-response-only"
     )
+    result_refs = _result_refs(session, results) if persist_trace else None
+    report["owner_pass_results"] = _owner_pass_results(
+        session, report["scheduled"], results, result_refs,
+        persisted=persist_trace,
+    )
     if persist_trace:
-        state = {"schema_version": SCHEMA, **observed, "result_refs": _result_refs(session, results),
+        state = {"schema_version": SCHEMA, **observed, "result_refs": result_refs,
                  "policy_identity": policy, "policy_artifacts": policy_artifacts,
                  "policy_receipt": receipt, "last_trace": report, "deadlines": deadlines,
                  "stable": stable and semantic_known, "store_cursor": cursor, "semantic_cursors": semantic_cursors,

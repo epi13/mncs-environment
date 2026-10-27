@@ -16379,7 +16379,9 @@ def _session_ambient_service_execution(
 
     from .coherence import project_trace
 
-    execution = project_trace(raw_trace)
+    execution = project_trace(
+        raw_trace, session_id=session_id if isinstance(session_id, str) else None,
+    )
     campaign = snapshot.get("campaign")
     campaign = campaign if isinstance(campaign, dict) else {}
     intent = snapshot.get("intent")
