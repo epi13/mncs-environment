@@ -1196,6 +1196,7 @@ def test_observation_correction_restores_source_interface_and_verified_sources(
     )
     target["observation"].pop("source_interface")
     target["observation"].pop("request")
+    target.pop("pressure_hypothesis")
     target["supporting_sources"] = [{"kind": "unverified-legacy-pointer"}]
     session, state = _session(tmp_path, [target])
     checkout = Path(session.snapshot["selected_checkouts"][
@@ -1302,6 +1303,7 @@ def test_observation_correction_restores_source_interface_and_verified_sources(
     assert corrected["observation"]["request"] == replacements[
         "observation.request"
     ]
+    assert corrected["pressure_hypothesis"] is None
     assert corrected["supporting_sources"][0][
         "content_integrity_status"
     ] == "content-integrity-verified"

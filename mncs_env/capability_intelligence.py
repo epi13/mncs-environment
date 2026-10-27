@@ -9237,6 +9237,46 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
     }
 
 
+def _apply_observation_correction_values(
+    record: dict[str, Any], correction: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply only the exact fields named by an append-only correction.
+
+    Optional sections must remain absent when a correction does not address
+    them. In particular, synthesizing an empty pressure hypothesis would turn
+    an otherwise valid observation repair into an invalid record.
+    """
+    corrected = dict(record)
+    fields = correction["corrected_field_paths"]
+    replacements = correction["replacement_values"]
+    observation_updates = {
+        field.partition(".")[2]: replacements[field]
+        for field in fields if field.startswith("observation.")
+    }
+    if observation_updates:
+        observation = record.get("observation")
+        corrected["observation"] = {
+            **(observation if isinstance(observation, dict) else {}),
+            **observation_updates,
+        }
+    pressure_updates = {
+        field.partition(".")[2]: replacements[field]
+        for field in fields if field.startswith("pressure_hypothesis.")
+    }
+    if pressure_updates:
+        hypothesis = record.get("pressure_hypothesis")
+        corrected["pressure_hypothesis"] = {
+            **(hypothesis if isinstance(hypothesis, dict) else {}),
+            **pressure_updates,
+        }
+    for field in (
+        "supporting_sources", "not_measured", "pressure_hypothesis_role",
+    ):
+        if field in fields:
+            corrected[field] = replacements[field]
+    return corrected
+
+
 def _validate_evidence_reference_correction(
     value: Any,
 ) -> dict[str, Any] | None:
@@ -16890,29 +16930,9 @@ def project(
                 replacements_verified = False
                 break
         if replacements_verified and target_is_contract_invalid:
-            corrected_record = {
-                **target_record,
-                "observation": {
-                    **(target_record.get("observation")
-                       if isinstance(target_record.get("observation"), dict)
-                       else {}),
-                    **{
-                        field.partition(".")[2]: replacement_values[field]
-                        for field in correction["corrected_field_paths"]
-                        if field.startswith("observation.")
-                    },
-                },
-                "pressure_hypothesis": {
-                    **(target_record.get("pressure_hypothesis")
-                       if isinstance(target_record.get("pressure_hypothesis"), dict)
-                       else {}),
-                    **{
-                        field.partition(".")[2]: replacement_values[field]
-                        for field in correction["corrected_field_paths"]
-                        if field.startswith("pressure_hypothesis.")
-                    },
-                },
-            }
+            corrected_record = _apply_observation_correction_values(
+                target_record, correction,
+            )
             if _observation_contract_diagnostics(corrected_record):
                 replacements_verified = False
         if not replacements_verified:
@@ -16962,28 +16982,9 @@ def project(
         if invalid_target is None:
             continue
         target_record, target_reference = invalid_target
-        corrected_record = {
-            **target_record,
-            "observation": {
-                **(target_record.get("observation")
-                   if isinstance(target_record.get("observation"), dict) else {}),
-                **{
-                    field.partition(".")[2]: correction["replacement_values"][field]
-                    for field in correction["corrected_field_paths"]
-                    if field.startswith("observation.")
-                },
-            },
-            "pressure_hypothesis": {
-                **(target_record.get("pressure_hypothesis")
-                   if isinstance(target_record.get("pressure_hypothesis"), dict)
-                   else {}),
-                **{
-                    field.partition(".")[2]: correction["replacement_values"][field]
-                    for field in correction["corrected_field_paths"]
-                    if field.startswith("pressure_hypothesis.")
-                },
-            },
-        }
+        corrected_record = _apply_observation_correction_values(
+            target_record, correction,
+        )
         corrected_record.pop("_projection_contract_diagnostics", None)
         if _observation_contract_diagnostics(corrected_record):
             continue
