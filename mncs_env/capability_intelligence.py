@@ -14089,6 +14089,13 @@ def _session_service_readiness(
         capability = identity(probe.get("capability")) if isinstance(probe, dict) else None
         if capability:
             row["capability"] = capability
+            row["probe_observation_record_status"] = (
+                "unique-record" if len(matching) == 1
+                else "not-recorded" if not matching
+                else "ambiguous-records"
+            )
+        else:
+            row["probe_observation_record_status"] = "not-applicable"
         if observation is not None:
             observed_code = code(observation.get("code"))
             observed_at = observation.get("observed_at")
@@ -14157,6 +14164,51 @@ def _session_service_readiness(
             candidate["objective_context"] = objective
         candidates.append(candidate)
 
+    probe_opportunity_count = sum(
+        service.get("probe_observation_record_status") != "not-applicable"
+        for service in services
+    )
+    probe_observation_record_count = sum(
+        service.get("probe_observation_record_status") == "unique-record"
+        for service in services
+    )
+    probe_observation_missing_count = sum(
+        service.get("probe_observation_record_status") == "not-recorded"
+        for service in services
+    )
+    probe_observation_ambiguous_count = sum(
+        service.get("probe_observation_record_status") == "ambiguous-records"
+        for service in services
+    )
+    probe_configuration_missing_count = sum(
+        service.get("probe_observation_record_status") == "not-applicable"
+        for service in services
+    )
+    projected_service_identities = {
+        service["identity"] for service in services
+        if isinstance(service.get("identity"), str)
+    }
+    probe_observation_unmatched_count = sum(
+        not isinstance(item, dict)
+        or identity(item.get("identity")) not in projected_service_identities
+        for item in raw_observations[:MAX_SESSION_SERVICE_READINESS_RECORDS]
+    )
+    if (
+        source["declared_services_truncated"]
+        or source["observations_truncated"]
+        or len(services) < len(declarations)
+        or invalid_observations
+        or ambiguous_observations
+        or probe_observation_missing_count
+        or probe_configuration_missing_count
+        or probe_observation_unmatched_count
+    ):
+        probe_observation_coverage_status = "partial-selected-snapshot"
+    elif not probe_opportunity_count:
+        probe_observation_coverage_status = "no-declared-probe-opportunities"
+    else:
+        probe_observation_coverage_status = "complete-for-selected-snapshot"
+
     result = {
         "status": "observed" if has_records else "not-captured-in-session",
         "readiness_status": readiness,
@@ -14171,11 +14223,18 @@ def _session_service_readiness(
             "invalid_operation_count": invalid_operations,
             "ambiguous_observation_count": ambiguous_observations,
             "ambiguous_operation_count": ambiguous_operations,
+            "probe_opportunity_count": probe_opportunity_count,
+            "probe_observation_record_count": probe_observation_record_count,
+            "probe_observation_missing_count": probe_observation_missing_count,
+            "probe_observation_ambiguous_count": probe_observation_ambiguous_count,
+            "probe_configuration_missing_count": probe_configuration_missing_count,
+            "probe_observation_unmatched_count": probe_observation_unmatched_count,
+            "probe_observation_coverage_status": probe_observation_coverage_status,
         },
         "services": services,
         "candidates": candidates,
         "measurement_limits": [
-            "Readiness and reconciliation results are co-observed in this current snapshot; causality is not established.",
+            "Readiness and reconciliation results are co-observed in this current snapshot; causality is not established. Probe-record coverage counts valid declarations and unique matching rows, not agent need or service fulfillment.",
             "Provider prose, raw responses, and workspace paths are omitted.",
             "A non-ready service or unsuccessful operation is an investigation candidate, not proof of an environmental defect.",
             "Earlier readiness history is not reconstructed by this view.",
@@ -14308,6 +14367,9 @@ def _session_service_accountability(
             "required": service.get("required") is True,
             "readiness_status": readiness_status
             if isinstance(readiness_status, str) else "unknown",
+            "probe_observation_record_status": service.get(
+                "probe_observation_record_status", "not-projected",
+            ),
             "operation_status": operation_status
             if isinstance(operation_status, str) else "not-recorded",
             "capability_relation_status": relation_status,
@@ -14371,6 +14433,27 @@ def _session_service_accountability(
         "agent_intervention_burden_status": "not-measured",
         "agent_receipt_status": "not-established",
         "outcome_quality_status": "not-established",
+        "readiness_probe_opportunity_count": readiness_summary.get(
+            "probe_opportunity_count",
+        ),
+        "readiness_probe_observation_record_count": readiness_summary.get(
+            "probe_observation_record_count",
+        ),
+        "readiness_probe_observation_missing_count": readiness_summary.get(
+            "probe_observation_missing_count",
+        ),
+        "readiness_probe_observation_ambiguous_count": readiness_summary.get(
+            "probe_observation_ambiguous_count",
+        ),
+        "readiness_probe_configuration_missing_count": readiness_summary.get(
+            "probe_configuration_missing_count",
+        ),
+        "readiness_probe_observation_unmatched_count": readiness_summary.get(
+            "probe_observation_unmatched_count",
+        ),
+        "readiness_probe_coverage_status": readiness_summary.get(
+            "probe_observation_coverage_status", "not-measured",
+        ),
     }
     return {
         "schema_version": "mncs.environment.service-accountability/1",

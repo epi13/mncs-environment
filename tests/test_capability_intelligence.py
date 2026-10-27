@@ -3760,6 +3760,15 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "2026-10-26T18:10:20.123Z"
     )
     assert readiness["summary"]["investigation_candidate_count"] == 2
+    assert readiness["summary"]["probe_opportunity_count"] == 2
+    assert readiness["summary"]["probe_observation_record_count"] == 2
+    assert readiness["summary"]["probe_observation_missing_count"] == 0
+    assert readiness["summary"]["probe_observation_ambiguous_count"] == 0
+    assert readiness["summary"]["probe_configuration_missing_count"] == 0
+    assert readiness["summary"]["probe_observation_unmatched_count"] == 0
+    assert readiness["summary"]["probe_observation_coverage_status"] == (
+        "complete-for-selected-snapshot"
+    )
     services = {item["identity"]: item for item in readiness["services"]}
     assert services[language_service]["status"] == "degraded"
     assert services[forge_service]["dependencies"] == [{
@@ -3798,6 +3807,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     }
     language_accountability = accountable_services[language_service]
     assert language_accountability["readiness_status"] == "degraded"
+    assert language_accountability["probe_observation_record_status"] == (
+        "unique-record"
+    )
     assert language_accountability["capability_relation_status"] == (
         "exact-capability-identity-match"
     )
@@ -3817,6 +3829,13 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert accountability["summary"]["exact_binding_use_observed_count"] == 1
     assert accountability["summary"]["capability_name_use_observed_count"] == 0
     assert accountability["summary"]["eligible_service_opportunity_count"] is None
+    assert accountability["summary"]["readiness_probe_opportunity_count"] == 2
+    assert accountability["summary"][
+        "readiness_probe_observation_record_count"
+    ] == 2
+    assert accountability["summary"]["readiness_probe_coverage_status"] == (
+        "complete-for-selected-snapshot"
+    )
     assert accountability["ambient_fulfillment"][
         "eligible_opportunity_denominator"
     ] == "not-recorded"
@@ -3832,6 +3851,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     compact_readiness = compact["session_activity"]["service_readiness"]
     assert compact["source"]["response_truncated"] is True
     assert compact_readiness["source"]["snapshot_sequence"] == 37
+    assert compact_readiness["summary"]["probe_opportunity_count"] == 2
     assert any(
         item["service_identity"] == forge_service
         for item in compact_readiness["candidates"]
@@ -3864,7 +3884,80 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert compact_accountability["summary"][
         "eligible_service_opportunity_count"
     ] is None
+    assert compact_accountability["summary"][
+        "readiness_probe_coverage_status"
+    ] == "complete-for-selected-snapshot"
     assert private_path not in json.dumps(compact)
+
+    observations = session.snapshot["service_observations"]
+    session.snapshot["service_observations"] = observations[:1]
+    missing_probe_result = capability_intelligence.project(session)
+    missing_readiness = missing_probe_result["session_activity"][
+        "service_readiness"
+    ]
+    assert missing_readiness["summary"]["probe_opportunity_count"] == 2
+    assert missing_readiness["summary"]["probe_observation_record_count"] == 1
+    assert missing_readiness["summary"]["probe_observation_missing_count"] == 1
+    assert missing_readiness["summary"]["probe_observation_coverage_status"] == (
+        "partial-selected-snapshot"
+    )
+    missing_accountability = missing_probe_result["session_activity"][
+        "service_accountability"
+    ]
+    assert missing_accountability["summary"][
+        "readiness_probe_coverage_status"
+    ] == "partial-selected-snapshot"
+    assert missing_accountability["summary"][
+        "eligible_service_opportunity_count"
+    ] is None
+
+    session.snapshot["service_observations"] = [
+        observations[0], observations[0], observations[1],
+    ]
+    ambiguous_probe_result = capability_intelligence.project(session)
+    ambiguous_readiness = ambiguous_probe_result["session_activity"][
+        "service_readiness"
+    ]
+    assert ambiguous_readiness["summary"]["probe_opportunity_count"] == 2
+    assert ambiguous_readiness["summary"][
+        "probe_observation_record_count"
+    ] == 1
+    assert ambiguous_readiness["summary"][
+        "probe_observation_ambiguous_count"
+    ] == 1
+    assert ambiguous_readiness["summary"][
+        "probe_observation_coverage_status"
+    ] == "partial-selected-snapshot"
+
+    session.snapshot["service_observations"] = observations
+    session.snapshot["requirements"]["services"][1].pop("probe")
+    missing_probe_contract = capability_intelligence.project(session)
+    contract_summary = missing_probe_contract["session_activity"][
+        "service_readiness"
+    ]["summary"]
+    assert contract_summary["probe_opportunity_count"] == 1
+    assert contract_summary["probe_configuration_missing_count"] == 1
+    assert contract_summary["probe_observation_coverage_status"] == (
+        "partial-selected-snapshot"
+    )
+
+    session.snapshot["requirements"]["services"][1]["probe"] = {
+        "capability": "mncs-forge:ready",
+    }
+    session.snapshot["service_observations"] = [
+        *observations,
+        {"identity": "unmatched-old-service", "status": "ready"},
+    ]
+    unmatched_probe_observation = capability_intelligence.project(session)
+    unmatched_summary = unmatched_probe_observation["session_activity"][
+        "service_readiness"
+    ]["summary"]
+    assert unmatched_summary["probe_opportunity_count"] == 2
+    assert unmatched_summary["probe_observation_record_count"] == 2
+    assert unmatched_summary["probe_observation_unmatched_count"] == 1
+    assert unmatched_summary["probe_observation_coverage_status"] == (
+        "partial-selected-snapshot"
+    )
 
 
 def test_session_doctor_health_history_is_bounded_and_revision_linked(

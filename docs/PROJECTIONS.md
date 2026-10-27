@@ -994,6 +994,16 @@ candidates; it represents current recorded state and does not reconstruct
 earlier readiness history. Co-occurrence of a failed operation and a
 non-ready service does not establish causation.
 
+For each selected service declaration with a valid `probe.capability`, the
+readiness view records whether there is one matching probe observation, no
+observation, or an ambiguous set of observations. Its summary reports the
+bounded declared-probe count, the count with one recorded result, missing,
+ambiguous, unconfigured, and unmatched-record counts, and whether coverage is
+complete for this snapshot. Here an opportunity means only that the session
+declares a readiness probe the Environment is responsible for observing. It
+does not represent an agent need or prove the underlying service fulfilled
+that need; readiness outcomes remain separate from observation coverage.
+
 `session_activity.doctor_health_history` exposes the current Doctor epoch and
 the newest eight entries from the session snapshot's bounded Doctor history.
 The epoch and history are linked to the session, Environment, snapshot
@@ -1042,7 +1052,9 @@ availability and use evidence. Exact binding-attributed invocations are
 separated from older capability-name-only activity. The service readiness
 snapshot remains distinct from binding availability and observed use, so a
 ready binding does not imply a ready service. Source references retain the
-session, Environment, and snapshot revision. Ambient fulfillment, an eligible
+session, Environment, and snapshot revision. The summary repeats readiness
+probe coverage counts to relate this view to its declarations and records.
+Those counts cover probe observations only. Ambient fulfillment, an agent-need
 opportunity denominator, agent receipt, intervention burden, and outcome
 quality remain explicitly unmeasured unless the environment records the
 opportunities and outcomes needed to establish them; no fulfillment ratio is
