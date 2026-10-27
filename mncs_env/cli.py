@@ -1786,7 +1786,7 @@ def _retirement_admission(session: sessions_module.Session, repo: Path,
     verdict = session.check(
         action="retire", target=repo.name, scope=spec["scope"],
     )
-    return {
+    admission = {
         "target_index": spec["index"],
         "verdict": verdict.get("verdict", "unknown"),
         "reason": verdict.get("reason"),
@@ -1797,6 +1797,14 @@ def _retirement_admission(session: sessions_module.Session, repo: Path,
         "campaign_id": (session.snapshot.get("campaign", {}).get("identity")
                         if isinstance(session.snapshot.get("campaign"), dict) else None),
     }
+    for key in (
+        "decision_domain", "authorization_basis", "coordination_status",
+        "required_coordination", "persistent_authority_required",
+        "next_step", "operation_executed",
+    ):
+        if key in verdict:
+            admission[key] = verdict[key]
+    return admission
 
 
 def _retirement_adapter(
@@ -1980,16 +1988,37 @@ def cmd_retire(args: argparse.Namespace) -> int:
                 admissions[spec["index"]] = admission
                 if admission["verdict"] != "allow":
                     status = str(admission["verdict"])
+                    if status == "deny":
+                        diagnostic_code = "authority-denied"
+                        disposition = "denied by policy"
+                    elif status == "defer":
+                        diagnostic_code = "coordination-deferred"
+                        disposition = "deferred for coordination"
+                    elif status == "escalate":
+                        diagnostic_code = "authority-escalation-required"
+                        disposition = "requires owner authorization"
+                    else:
+                        diagnostic_code = "authority-decision-unavailable"
+                        disposition = "could not be admitted"
+                    diagnostics = {
+                        "code": diagnostic_code,
+                        "action": "retire", "target": repo.name,
+                        "scope": spec["scope"], "verdict": status,
+                        "reason": admission.get("reason"),
+                        "request_id": request_id,
+                        "mutation_performed": False,
+                    }
+                    for key in (
+                        "decision_domain", "authorization_basis",
+                        "coordination_status", "required_coordination",
+                        "persistent_authority_required", "next_step",
+                        "operation_executed",
+                    ):
+                        if key in admission:
+                            diagnostics[key] = admission[key]
                     return fail(
-                        f"retirement of {spec['kind']} {spec['target']} is not authorized: {admission.get('reason') or status}",
-                        code=3,
-                        diagnostics={"code": ("authority-denied" if status == "deny"
-                                             else "authority-escalation-required"),
-                                    "action": "retire", "target": repo.name,
-                                    "scope": spec["scope"], "verdict": status,
-                                    "reason": admission.get("reason"),
-                                    "request_id": request_id,
-                                    "mutation_performed": False},
+                        f"retirement of {spec['kind']} {spec['target']} {disposition}: {admission.get('reason') or status}",
+                        code=3, diagnostics=diagnostics,
                     )
             try:
                 claim_records = _retirement_store_claims(args)

@@ -375,6 +375,74 @@ class RetireTests(unittest.TestCase):
         retire_branch.assert_not_called()
         self.assertIn('"mutation_performed": false', error.getvalue())
 
+    def test_cli_reports_retirement_lease_deferral_as_coordination(self):
+        class Session:
+            def __init__(self):
+                self.calls = []
+                self.snapshot = {"consumer_id": "test-consumer", "campaign": {}}
+                self.session_id = "ses_mine"
+
+            def check(self, **kwargs):
+                self.calls.append(kwargs)
+                return {
+                    "verdict": "defer",
+                    "decision_domain": "coordination",
+                    "required_coordination": "scoped-mutation-lease",
+                    "coordination_status": "exact-scope-lease-required",
+                    "persistent_authority_required": False,
+                    "next_step": "acquire-exact-scope-lease",
+                    "operation_executed": False,
+                    "reason": "branch retirement needs an exact scoped lease",
+                }
+
+            def request_event(self, *_args):
+                return None
+
+            def close(self):
+                pass
+
+        class Store:
+            def read_claims(self):
+                return []
+
+        session = Session()
+        args = argparse.Namespace(
+            session="ses_mine", repository=self.name, canonical="origin/main",
+            execution_root=None, inventory=False, dry_run=False, prune=False,
+            branch=["feature/x"], worktree=[], state_dir=self.base,
+            persistence="store", sandbox_root=None, request_id=None,
+        )
+        error = io.StringIO()
+        with mock.patch.object(cli_module, "_open", return_value=session), \
+                mock.patch.object(cli_module, "_resolve_retire_repo", return_value=self.repo), \
+                mock.patch.object(cli_module, "open_store", return_value=Store()), \
+                mock.patch.object(cli_module, "close_store"), \
+                mock.patch.object(retire_module, "retire_branch") as retire_branch, \
+                redirect_stderr(error):
+            result = cli_module.cmd_retire(args)
+
+        self.assertEqual(result, 3)
+        self.assertEqual(len(session.calls), 1)
+        retire_branch.assert_not_called()
+        payload = json.loads(error.getvalue())
+        self.assertIn("deferred for coordination", payload["error"])
+        diagnostics = payload["diagnostics"]
+        self.assertEqual(diagnostics["code"], "coordination-deferred")
+        self.assertEqual(diagnostics["action"], "retire")
+        self.assertEqual(diagnostics["verdict"], "defer")
+        self.assertEqual(diagnostics["decision_domain"], "coordination")
+        self.assertEqual(
+            diagnostics["required_coordination"], "scoped-mutation-lease",
+        )
+        self.assertEqual(
+            diagnostics["coordination_status"], "exact-scope-lease-required",
+        )
+        self.assertFalse(diagnostics["persistent_authority_required"])
+        self.assertEqual(
+            diagnostics["next_step"], "acquire-exact-scope-lease",
+        )
+        self.assertFalse(diagnostics["mutation_performed"])
+
     def test_cli_authorizes_worktree_by_exact_checkout_scope(self):
         target = self._worktree("owned", "feature/owned")
 

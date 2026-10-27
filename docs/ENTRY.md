@@ -414,6 +414,13 @@ protection, such as a fast-forward-only merge and a non-forcing push. The
 preflight does not reserve the scope or guarantee that the operation will
 succeed.
 
+Retirement uses a narrower consistency boundary because it deletes a branch or
+worktree. If authority evaluation returns `defer` for a missing exact-scope
+lease, the CLI reports `coordination-deferred` with the evaluator's
+`required_coordination`, `coordination_status`, and `next_step`. This is not an
+owner-approval request, and no retirement operation has run. A policy `deny`
+and an explicit `escalate` remain separate outcomes.
+
 Local proposal writes and verification can proceed without a persistent
 claim when the request identifies an exactly observed, attached non-main
 worktree separate from the repository root. An isolated proposal worktree can
