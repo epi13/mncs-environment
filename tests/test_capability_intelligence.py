@@ -3584,6 +3584,36 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     }
 
     result = capability_intelligence.project(session)
+    original_projection_identity = result["identity"]
+    original_readiness_digest = result["source"][
+        "session_service_readiness_digest"
+    ]
+    original_accountability_digest = result["source"][
+        "session_service_accountability_digest"
+    ]
+    original_event_window_digest = result["session_activity"]["source"][
+        "event_window_identity_digest"
+    ]
+    original_delivery_digest = result["source"][
+        "session_capability_delivery_digest"
+    ]
+    session.snapshot["service_observations"][0]["status"] = "ready"
+    changed_readiness_result = capability_intelligence.project(session)
+    assert changed_readiness_result["identity"] != original_projection_identity
+    assert changed_readiness_result["source"][
+        "session_service_readiness_digest"
+    ] != original_readiness_digest
+    assert changed_readiness_result["source"][
+        "session_service_accountability_digest"
+    ] != original_accountability_digest
+    assert changed_readiness_result["session_activity"]["source"][
+        "event_window_identity_digest"
+    ] == original_event_window_digest
+    assert changed_readiness_result["source"][
+        "session_capability_delivery_digest"
+    ] == original_delivery_digest
+    session.snapshot["service_observations"][0]["status"] = "degraded"
+
     activity = result["session_activity"]
     readiness = activity["service_readiness"]
     assert readiness["status"] == "observed"
@@ -3682,6 +3712,12 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     compact_accountability = compact_with_accountability["session_activity"][
         "service_accountability"
     ]
+    assert compact_with_accountability["source"][
+        "session_service_readiness_digest"
+    ] == original_readiness_digest
+    assert compact_with_accountability["source"][
+        "session_service_accountability_digest"
+    ] == original_accountability_digest
     compact_language = next(
         item for item in compact_accountability["services"]
         if item["service_identity"] == language_service

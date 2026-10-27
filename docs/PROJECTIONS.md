@@ -1018,7 +1018,11 @@ session, Environment, and snapshot revision. Ambient fulfillment, an eligible
 opportunity denominator, agent receipt, intervention burden, and outcome
 quality remain explicitly unmeasured unless the environment records the
 opportunities and outcomes needed to establish them; no fulfillment ratio is
-inferred from readiness or invocation counts.
+inferred from readiness or invocation counts. The projection source exposes
+digests for the selected session's readiness and accountability views, and
+includes them in projection identity so snapshot changes remain distinguishable
+even when the event tail and binding inventory are unchanged. These digests
+identify derived input state; they do not verify service correctness.
 
 New write-effect invocation events may include an `effect_target` with the
 exact repository, checkout, and branch admitted for that operation.

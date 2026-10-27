@@ -2125,6 +2125,8 @@ def _compact_projection(
                     "source_pointer_count",
                     "source_pointer_content_integrity_verified_count",
                     "source_pointer_content_integrity_not_verified_count",
+                    "session_service_readiness_digest",
+                    "session_service_accountability_digest",
                     "observation_records_considered",
                     "observation_records_verified",
                     "observation_records_unavailable",
@@ -18105,6 +18107,14 @@ def project(
         subject["workspace_alignment"] = workspace_alignment
     if isinstance(campaign_charter, dict):
         subject["campaign_charter"] = campaign_charter
+    session_service_readiness_digest = (
+        digest_hex(activity["service_readiness"])
+        if isinstance(activity.get("service_readiness"), dict) else None
+    )
+    session_service_accountability_digest = (
+        digest_hex(activity["service_accountability"])
+        if isinstance(activity.get("service_accountability"), dict) else None
+    )
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({
@@ -18130,6 +18140,16 @@ def project(
                 if isinstance(activity.get("capability_delivery"), dict)
                 else None
             ),
+            **({
+                "session_service_readiness_digest": (
+                    session_service_readiness_digest
+                ),
+            } if session_service_readiness_digest is not None else {}),
+            **({
+                "session_service_accountability_digest": (
+                    session_service_accountability_digest
+                ),
+            } if session_service_accountability_digest is not None else {}),
             "session_resource_sample_digest": (
                 activity.get("source", {}).get("resource_sample_identity_digest")
                 if isinstance(activity.get("source"), dict) else None
@@ -18183,6 +18203,16 @@ def project(
                 if isinstance(activity.get("capability_delivery"), dict)
                 else None
             ),
+            **({
+                "session_service_readiness_digest": (
+                    session_service_readiness_digest
+                ),
+            } if session_service_readiness_digest is not None else {}),
+            **({
+                "session_service_accountability_digest": (
+                    session_service_accountability_digest
+                ),
+            } if session_service_accountability_digest is not None else {}),
             "observation_records_considered": len(references),
             "observation_records_verified": len(observations),
             "observation_records_unavailable": unavailable,
