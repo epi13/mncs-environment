@@ -1008,6 +1008,18 @@ does not account for use through external interfaces. These relationships make
 availability and recorded use inspectable without treating an absent record
 as evidence of poor discoverability or usability.
 
+`session_activity.service_accountability` connects each declared service's
+probe capability to the current session binding inventory and its recorded
+availability and use evidence. Exact binding-attributed invocations are
+separated from older capability-name-only activity. The service readiness
+snapshot remains distinct from binding availability and observed use, so a
+ready binding does not imply a ready service. Source references retain the
+session, Environment, and snapshot revision. Ambient fulfillment, an eligible
+opportunity denominator, agent receipt, intervention burden, and outcome
+quality remain explicitly unmeasured unless the environment records the
+opportunities and outcomes needed to establish them; no fulfillment ratio is
+inferred from readiness or invocation counts.
+
 New write-effect invocation events may include an `effect_target` with the
 exact repository, checkout, and branch admitted for that operation.
 `session_activity.interactions[].effect_target` exposes the recorded

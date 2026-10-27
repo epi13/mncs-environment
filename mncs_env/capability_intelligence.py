@@ -4673,6 +4673,10 @@ def _compact_projection(
         # _session_service_readiness already returns a bounded, sanitized
         # projection, so retain that reusable record without rebuilding it.
         compact_activity["service_readiness"] = raw_service_readiness
+    raw_service_accountability = activity.get("service_accountability")
+    if isinstance(raw_service_accountability, dict):
+        # The session projection has already bounded and sanitized this join.
+        compact_activity["service_accountability"] = raw_service_accountability
     raw_doctor_history = activity.get("doctor_health_history")
     if isinstance(raw_doctor_history, dict):
         # Doctor's snapshot history is already bounded and sanitized here.
@@ -5415,6 +5419,27 @@ def _compact_projection(
         elif result["session_activity"].get("resource_samples", {}).get("observations"):
             result["session_activity"]["resource_samples"]["observations"].pop()
             result["session_activity"]["resource_samples"]["observations_truncated"] = True
+        elif result["session_activity"].get(
+            "service_accountability", {},
+        ).get("services"):
+            accountability_view = result["session_activity"][
+                "service_accountability"
+            ]
+            accountability_view["services"].pop()
+            accountability_view["services_truncated"] = True
+            accountability_view["services_omitted_count"] = (
+                accountability_view.get("services_omitted_count", 0) + 1
+            )
+        elif result["session_activity"].get(
+            "service_accountability", {},
+        ).get("measurement_limits"):
+            result["session_activity"]["service_accountability"][
+                "measurement_limits"
+            ].pop()
+        elif isinstance(
+            result["session_activity"].get("service_accountability"), dict,
+        ):
+            result["session_activity"].pop("service_accountability")
         elif result["session_activity"].get("service_readiness", {}).get("candidates"):
             readiness = result["session_activity"]["service_readiness"]
             readiness["candidates"].pop()
@@ -13875,6 +13900,236 @@ def _session_service_readiness(
     return result
 
 
+def _session_service_accountability(
+    service_readiness: Any, capability_delivery: Any,
+    snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Relate declared services to their exact session capability evidence."""
+    if not isinstance(service_readiness, dict):
+        return None
+    raw_services = service_readiness.get("services")
+    raw_services = raw_services if isinstance(raw_services, list) else []
+    if not raw_services:
+        return None
+
+    delivery = capability_delivery if isinstance(capability_delivery, dict) else {}
+    raw_bindings = delivery.get("bindings")
+    raw_bindings = raw_bindings if isinstance(raw_bindings, list) else []
+    delivery_source = delivery.get("use_event_window")
+    delivery_source = delivery_source if isinstance(delivery_source, dict) else {}
+    binding_snapshot_complete = (
+        delivery.get("status") == "ready"
+        and delivery.get("binding_records_not_examined", 0) == 0
+        and delivery.get("binding_records_invalid", 0) == 0
+        and delivery.get("bindings_omitted", 0) == 0
+    )
+    candidates_by_service: dict[str, dict[str, Any]] = {}
+    raw_candidates = service_readiness.get("candidates")
+    raw_candidates = raw_candidates if isinstance(raw_candidates, list) else []
+    for candidate in raw_candidates:
+        if (isinstance(candidate, dict)
+                and isinstance(candidate.get("service_identity"), str)):
+            candidates_by_service[candidate["service_identity"]] = candidate
+
+    services: list[dict[str, Any]] = []
+    relation_counts: dict[str, int] = {}
+    readiness_counts: dict[str, int] = {}
+    operation_counts: dict[str, int] = {}
+    available_binding_count = 0
+    exact_binding_use_count = 0
+    capability_name_use_count = 0
+    for service in raw_services[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+        if not isinstance(service, dict):
+            continue
+        identity = service.get("identity")
+        if not isinstance(identity, str) or not identity:
+            continue
+        capability = service.get("capability")
+        matches = [
+            binding for binding in raw_bindings
+            if isinstance(binding, dict)
+            and isinstance(capability, str)
+            and binding.get("capability") == capability
+        ]
+        if not isinstance(capability, str) or not capability:
+            relation_status = "service-probe-capability-not-recorded"
+        elif delivery.get("status") == "unavailable" or not delivery:
+            relation_status = "capability-delivery-unavailable"
+        elif len(matches) > 1:
+            relation_status = "ambiguous-multiple-capability-bindings"
+        elif matches:
+            relation_status = "exact-capability-identity-match"
+        elif binding_snapshot_complete:
+            relation_status = "capability-not-present-in-current-binding-snapshot"
+        else:
+            relation_status = "capability-not-observed-in-incomplete-binding-snapshot"
+        relation_counts[relation_status] = relation_counts.get(relation_status, 0) + 1
+
+        readiness_status = service.get("status")
+        if isinstance(readiness_status, str):
+            readiness_counts[readiness_status] = (
+                readiness_counts.get(readiness_status, 0) + 1
+            )
+        operation_status = service.get("operation_status")
+        if isinstance(operation_status, str):
+            operation_counts[operation_status] = (
+                operation_counts.get(operation_status, 0) + 1
+            )
+
+        projected_bindings: list[dict[str, Any]] = []
+        for binding in matches[:4]:
+            compact_binding = _compact_delivery_binding(binding)
+            if compact_binding is None:
+                continue
+            for key in ("availability_verification", "availability_observed_at"):
+                if isinstance(binding.get(key), str):
+                    compact_binding[key] = _short_text(binding[key], 96)
+            sequence_relation = binding.get(
+                "context_response_use_sequence_relation",
+            )
+            if isinstance(sequence_relation, dict):
+                compact_binding["context_response_use_sequence_relation"] = {
+                    key: _short_text(sequence_relation[key], 96)
+                    for key in (
+                        "status", "causal_claim", "event_window_status",
+                    )
+                    if isinstance(sequence_relation.get(key), str)
+                }
+                for key in ("response_summaries_omitted", "invocation_summaries_omitted"):
+                    if type(sequence_relation.get(key)) is int:
+                        compact_binding[
+                            "context_response_use_sequence_relation"
+                        ][key] = max(0, sequence_relation[key])
+            projected_bindings.append(compact_binding)
+            if binding.get("availability_status") == "available":
+                available_binding_count += 1
+            use_status = binding.get("use_observation_status")
+            if use_status == "invoked-for-exact-session-binding":
+                exact_binding_use_count += 1
+            elif use_status == "invoked-in-selected-event-window":
+                capability_name_use_count += 1
+
+        source_reference = service.get("source_reference")
+        source_reference = source_reference if isinstance(source_reference, dict) else {}
+        projected: dict[str, Any] = {
+            "service_identity": identity,
+            "required": service.get("required") is True,
+            "readiness_status": readiness_status
+            if isinstance(readiness_status, str) else "unknown",
+            "operation_status": operation_status
+            if isinstance(operation_status, str) else "not-recorded",
+            "capability_relation_status": relation_status,
+            "binding_match_count": len(matches),
+            "bindings": projected_bindings,
+            "ambient_fulfillment_status": (
+                "not-established-no-eligible-opportunity-recorded"
+            ),
+            "agent_receipt_status": "not-established",
+            "agent_intervention_burden_status": "not-measured",
+            "outcome_quality_status": "not-established",
+            "source_reference": {
+                key: source_reference[key]
+                for key in (
+                    "kind", "session_id", "environment_id",
+                    "snapshot_sequence", "service_identity",
+                )
+                if isinstance(source_reference.get(key), str)
+                or (key == "snapshot_sequence"
+                    and type(source_reference.get(key)) is int)
+            },
+        }
+        if isinstance(capability, str) and capability:
+            projected["capability"] = capability
+        candidate = candidates_by_service.get(identity)
+        if isinstance(candidate, dict):
+            projected["investigation_candidate"] = {
+                "identity": candidate.get("identity"),
+                "kind": candidate.get("kind"),
+                "basis": candidate.get("basis", []),
+                "causal_status": candidate.get("causal_status", "not-established"),
+            }
+        services.append(projected)
+
+    source = service_readiness.get("source")
+    source = source if isinstance(source, dict) else {}
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    readiness_summary = service_readiness.get("summary")
+    readiness_summary = (
+        readiness_summary if isinstance(readiness_summary, dict) else {}
+    )
+    declared_service_count = readiness_summary.get("declared_service_count")
+    if type(declared_service_count) is not int or declared_service_count < 0:
+        declared_service_count = len(raw_services)
+    event_window_complete = delivery_source.get("complete_history") is True
+    summary = {
+        "declared_service_count": declared_service_count,
+        "projected_service_count": len(services),
+        "capability_relation_status_counts": dict(sorted(relation_counts.items())),
+        "readiness_status_counts": dict(sorted(readiness_counts.items())),
+        "reconciliation_operation_status_counts": dict(sorted(operation_counts.items())),
+        "available_service_capability_binding_count": available_binding_count,
+        "exact_binding_use_observed_count": exact_binding_use_count,
+        "capability_name_use_observed_count": capability_name_use_count,
+        "eligible_service_opportunity_count": None,
+        "ambient_fulfillment_status": "not-measured",
+        "agent_intervention_burden_status": "not-measured",
+        "agent_receipt_status": "not-established",
+        "outcome_quality_status": "not-established",
+    }
+    return {
+        "schema_version": "mncs.environment.service-accountability/1",
+        "status": (
+            "observed"
+            if service_readiness.get("status") == "observed"
+            and delivery.get("status") == "ready"
+            else "partial"
+        ),
+        "scope": "selected-session-service-snapshot-and-capability-delivery",
+        "source": {
+            "service_session_id": source.get("session_id"),
+            "environment_id": source.get("environment_id"),
+            "snapshot_sequence": source.get("snapshot_sequence"),
+            **({"campaign_id": _short_text(campaign["identity"], 160)}
+               if isinstance(campaign.get("identity"), str)
+               and campaign["identity"] else {}),
+            **({"work_intent_id": _short_text(intent["identity"], 160)}
+               if isinstance(intent.get("identity"), str)
+               and intent["identity"] else {}),
+            "binding_inventory_source": delivery.get("inventory_source"),
+            "binding_count": delivery.get("binding_count", 0),
+            "event_window_status": (
+                "complete-session-history" if event_window_complete
+                else "selected-session-event-window"
+                if delivery_source else "not-available"
+            ),
+        },
+        "summary": summary,
+        "ambient_fulfillment": {
+            "status": "not-measured",
+            "eligible_opportunity_denominator": "not-recorded",
+            "verified_fulfillment_numerator": "not-established",
+            "interpretation_limit": (
+                "Service readiness and capability use do not identify every "
+                "eligible opportunity or establish that an agent's need was "
+                "fulfilled without intervention."
+            ),
+        },
+        "services": services,
+        "measurement_limits": [
+            "Service readiness and reconciliation status come from one session snapshot; they are not historical service outcomes.",
+            "A probe-capability match relates exact capability identity to a current binding, not successful provider behavior.",
+            "Only invocation evidence attributed to the exact current binding is counted as exact binding use; capability-name-only activity is reported separately.",
+            "An invocation records use of an Environment binding; it does not establish that the service was needed, fulfilled an opportunity, or reduced agent work.",
+            "Discoverability, agent receipt, eligible service opportunities, intervention burden, and outcome quality remain unavailable unless separately recorded.",
+            "No ambient fulfillment ratio is computed because an eligible-opportunity denominator is not recorded.",
+        ],
+    }
+
+
 def _session_doctor_health_history(
     session: Any, snapshot: dict[str, Any],
 ) -> dict[str, Any]:
@@ -14124,6 +14379,9 @@ def _session_activity(
         "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves.",
     ]
     service_readiness = _session_service_readiness(session, snapshot)
+    service_accountability = _session_service_accountability(
+        service_readiness, None, snapshot,
+    )
     doctor_health_history = _session_doctor_health_history(session, snapshot)
     raw_readiness_requirements = snapshot.get("requirements")
     raw_readiness_requirements = (
@@ -14192,6 +14450,8 @@ def _session_activity(
             "resource_samples": resource_samples,
             **({"service_readiness": service_readiness}
                if has_service_readiness else {}),
+            **({"service_accountability": service_accountability}
+               if service_accountability is not None else {}),
             **({"doctor_health_history": doctor_health_history}
                if has_doctor_health_history else {}),
             "measurement_limits": [
@@ -14230,6 +14490,8 @@ def _session_activity(
             "resource_samples": resource_samples,
             **({"service_readiness": service_readiness}
                if has_service_readiness else {}),
+            **({"service_accountability": service_accountability}
+               if service_accountability is not None else {}),
             **({"doctor_health_history": doctor_health_history}
                if has_doctor_health_history else {}),
             "measurement_limits": [
@@ -14777,6 +15039,9 @@ def _session_activity(
         event_window_truncated=event_window_truncated,
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,
+    )
+    service_accountability = _session_service_accountability(
+        service_readiness, capability_delivery, snapshot,
     )
     denial_events = [
         event for event in events if event.get("type") == "authority.denied"
@@ -16350,6 +16615,8 @@ def _session_activity(
         "resource_samples": resource_samples,
         **({"service_readiness": service_readiness}
            if has_service_readiness else {}),
+        **({"service_accountability": service_accountability}
+           if service_accountability is not None else {}),
         **({"doctor_health_history": doctor_health_history}
            if has_doctor_health_history else {}),
         "source": {

@@ -3471,6 +3471,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     session, _ = _session(tmp_path, [])
     language_service = "mncs-language-service:resident-workspace"
     forge_service = "mncs-forge:resident-workspace"
+    language_probe = "mncs-language-service:ready"
     private_path = "/home/private/workspace/.bootstrap/secret"
     session.snapshot.update({
         "snapshot_sequence": 37,
@@ -3485,7 +3486,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
                 {
                     "identity": language_service,
                     "required": True,
-                    "probe": {"capability": "mncs-language-service:ready"},
+                    "probe": {"capability": language_probe},
                     "ready_when": {"/ready": True},
                 },
                 {
@@ -3506,7 +3507,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             {
                 "identity": language_service,
                 "required": True,
-                "capability": "mncs-language-service:ready",
+                "capability": language_probe,
                 "status": "degraded",
                 "code": "service-not-ready",
                 "reason": f"provider could not open {private_path}",
@@ -3533,6 +3534,54 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             },
         ],
     })
+    session.snapshot["bindings"] = [{
+        "binding_id": "cap_language_service_ready",
+        "provider": "mncs-language-service-provider",
+        "capability": language_probe,
+        "contract_revision": "2",
+        "availability": {
+            "status": "available",
+            "verification": "probe-success",
+            "observed_at": "2026-10-26T18:10:19.900Z",
+        },
+    }]
+    request_id = "req_service_readiness_probe"
+    events = [
+        {
+            "identity": "evt_service_readiness_invoked",
+            "sequence": 1,
+            "type": "capability.invoked",
+            "producer": "local-agent",
+            "observed_at": "2026-10-26T18:10:19.950Z",
+            "payload": {
+                "capability": language_probe,
+                "provider": "mncs-language-service-provider",
+                "binding_id": "cap_language_service_ready",
+                "contract_revision": "2",
+                "provider_request_id": request_id,
+            },
+        },
+        {
+            "identity": "evt_service_readiness_completed",
+            "sequence": 2,
+            "type": "invocation.completed",
+            "producer": "mncs-language-service-provider",
+            "observed_at": "2026-10-26T18:10:20.000Z",
+            "payload": {
+                "capability": language_probe,
+                "provider": "mncs-language-service-provider",
+                "binding_id": "cap_language_service_ready",
+                "contract_revision": "2",
+                "provider_request_id": request_id,
+                "status": "ok",
+                "returncode": 0,
+            },
+        },
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
 
     result = capability_intelligence.project(session)
     activity = result["session_activity"]
@@ -3567,6 +3616,48 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "work_intent_id": "int_service_readiness",
     }
     assert result["session_activity_pressure_candidate_count"] == 2
+    accountability = activity["service_accountability"]
+    assert accountability["source"]["service_session_id"] == (
+        "ses_projection_reader"
+    )
+    assert accountability["source"]["environment_id"] == (
+        "renv_projection_reader"
+    )
+    assert accountability["source"]["snapshot_sequence"] == 37
+    assert accountability["source"]["campaign_id"] == "cmp_service_readiness"
+    assert accountability["source"]["work_intent_id"] == "int_service_readiness"
+    accountable_services = {
+        item["service_identity"]: item
+        for item in accountability["services"]
+    }
+    language_accountability = accountable_services[language_service]
+    assert language_accountability["readiness_status"] == "degraded"
+    assert language_accountability["capability_relation_status"] == (
+        "exact-capability-identity-match"
+    )
+    assert language_accountability["bindings"][0]["availability_status"] == (
+        "available"
+    )
+    assert language_accountability["bindings"][0]["use_observation_status"] == (
+        "invoked-for-exact-session-binding"
+    )
+    assert language_accountability["bindings"][0]["supporting_events"][0][
+        "identity"
+    ] == "evt_service_readiness_invoked"
+    assert accountable_services[forge_service]["capability_relation_status"] == (
+        "capability-not-present-in-current-binding-snapshot"
+    )
+    assert accountability["summary"]["available_service_capability_binding_count"] == 1
+    assert accountability["summary"]["exact_binding_use_observed_count"] == 1
+    assert accountability["summary"]["capability_name_use_observed_count"] == 0
+    assert accountability["summary"]["eligible_service_opportunity_count"] is None
+    assert accountability["ambient_fulfillment"][
+        "eligible_opportunity_denominator"
+    ] == "not-recorded"
+    assert accountability["summary"]["agent_receipt_status"] == "not-established"
+    assert accountability["summary"][
+        "agent_intervention_burden_status"
+    ] == "not-measured"
     assert private_path not in json.dumps(result)
     assert "provider_detail" not in json.dumps(result)
     assert "cannot start from" not in json.dumps(result)
@@ -3579,6 +3670,28 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         item["service_identity"] == forge_service
         for item in compact_readiness["candidates"]
     )
+    full_projection = capability_intelligence.project(
+        session, max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
+    )
+    full_size = len(json.dumps(
+        full_projection, ensure_ascii=False, sort_keys=True,
+    ).encode("utf-8"))
+    compact_with_accountability = capability_intelligence._compact_projection(
+        full_projection, full_size, 16_000,
+    )
+    compact_accountability = compact_with_accountability["session_activity"][
+        "service_accountability"
+    ]
+    compact_language = next(
+        item for item in compact_accountability["services"]
+        if item["service_identity"] == language_service
+    )
+    assert compact_language["bindings"][0]["supporting_events"][0][
+        "identity"
+    ] == "evt_service_readiness_invoked"
+    assert compact_accountability["summary"][
+        "eligible_service_opportunity_count"
+    ] is None
     assert private_path not in json.dumps(compact)
 
 
