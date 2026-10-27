@@ -2293,6 +2293,76 @@ def test_observation_correction_accepts_verified_source_outside_campaign_page(
     assert _git(checkout, "status", "--porcelain") == ""
 
 
+def test_observation_correction_restores_unsupported_schema_version(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_unsupported_schema_target",
+        "ses_environment_schema_correction",
+        "cmp_environment_schema_correction",
+    )
+    target["schema_version"] = "mncs.environment.observation/1"
+    session, state = _session(tmp_path, [target])
+    correction = _observation(
+        "ev_environment_schema_version_correction",
+        "ses_environment_schema_correction",
+        "cmp_environment_schema_correction",
+    )
+    _drop_pressure_hypothesis(correction)
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": ["schema_version"],
+        "replacement_values": {
+            "schema_version": capability_intelligence.OBSERVATION_SCHEMA,
+        },
+        "reason": (
+            "Restore the supported observation schema version without rewriting "
+            "the immutable target record."
+        ),
+    }
+    relative = (
+        "evidence/environmental-capability/schema-version-correction.json"
+    )
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    (checkout / relative).write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "append schema correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 0
+    corrected = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert corrected["record_correction"]["status"] == (
+        "completed-by-append-only-record"
+    )
+    correction_view = next(
+        item for item in result["observations"]
+        if item["identity"] == correction["identity"]
+    )
+    assert correction_view["record_correction"]["basis"] == (
+        "contract-invalid-schema-restoration"
+    )
+
+
 def test_append_only_correction_repairs_invalid_improvement_relation(
     tmp_path: Path,
 ) -> None:

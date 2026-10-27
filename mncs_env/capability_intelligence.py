@@ -11597,7 +11597,7 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
             or any(
                 not isinstance(field, str)
                 or field not in {
-                    "supporting_sources", "not_measured",
+                    "schema_version", "supporting_sources", "not_measured",
                     "pressure_hypothesis_role",
                     "related_work",
                     "improvement_relation",
@@ -11659,6 +11659,9 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
             or _validate_improvement_relation(
                 replacements["improvement_relation"],
             ) is None):
+        return None
+    if ("schema_version" in fields
+            and replacements["schema_version"] != OBSERVATION_SCHEMA):
         return None
     if ("pressure_hypothesis.actionable_recommendation" in fields
             and (not isinstance(
@@ -11724,7 +11727,8 @@ def _apply_observation_correction_values(
             **pressure_updates,
         }
     for field in (
-        "supporting_sources", "not_measured", "pressure_hypothesis_role",
+        "schema_version", "supporting_sources", "not_measured",
+        "pressure_hypothesis_role",
         "related_work", "improvement_relation",
     ):
         if field in fields:
@@ -22395,6 +22399,14 @@ def project(
                         )):
                     replacements_verified = False
                     break
+            elif field == "schema_version":
+                current = target_record.get(field)
+                if (not target_is_contract_invalid
+                        or current == OBSERVATION_SCHEMA
+                        or replacement != OBSERVATION_SCHEMA):
+                    replacements_verified = False
+                    break
+                correction_basis = "contract-invalid-schema-restoration"
             elif field == "improvement_relation":
                 original_relation = target_record.get(field)
                 current = original_relation

@@ -1440,7 +1440,8 @@ values. One correction may name up to three supported fields, including
 `pressure_hypothesis.actionable_recommendation`. On an integrity-verified
 contract-invalid target, a correction may supply a missing or invalid
 actionable recommendation, `observation.source_interface`,
-`observation.request`, or `observation.outcome`.
+`observation.request`, `observation.outcome`, or the top-level
+`schema_version`.
 These fields can only complete a contract-invalid target; they cannot rewrite
 a valid observation. The exception is an actionable recommendation that
 conflicts with another definition of the same pressure: it may be reconciled
