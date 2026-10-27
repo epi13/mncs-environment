@@ -1946,6 +1946,113 @@ class ClaimTests(unittest.TestCase):
             self.assertEqual(result[0]["status"], "held")
             self.assertTrue(result[0]["live"])
 
+    def test_cli_releases_one_own_claim_by_exact_id(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            state = base / "state"
+            workspace_root = base / "workspace"
+            workspace_root.mkdir()
+            store = open_store(state, "file")
+            environment = sessions.resolve_environment(
+                definition=definition(intent={"goal": "release one exact claim"}),
+                workspace_root=workspace_root,
+                state_dir=state,
+                consumer_id="exact-claim-release-test",
+                store=store,
+            )
+            session = sessions.Session.create(
+                state_dir=state,
+                environment=environment,
+                consumer_id="exact-claim-release-test",
+                backend="file",
+                store=store,
+            )
+            session.transition("resolving", "exact claim release test")
+            session.transition("ready", "exact claim release test")
+            session.transition("active", "exact claim release test")
+            session_id = session.session_id
+            own_claim = claims.acquire(
+                store,
+                repository="owned-repo",
+                session_id=session_id,
+                consumer_id="exact-claim-release-test",
+                basis=claims.BASIS_EXPLICIT,
+                reason="owned claim to release",
+            )
+            foreign_claim = claims.acquire(
+                store,
+                repository="foreign-repo",
+                session_id="ses_foreign_owner",
+                consumer_id="foreign-owner",
+                basis=claims.BASIS_EXPLICIT,
+                reason="foreign claim to preserve",
+            )
+            session.close()
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                conflict_code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", session_id,
+                    "--release-claim", own_claim["claim_id"],
+                    "--release", "owned-repo",
+                ])
+            self.assertNotEqual(conflict_code, 0)
+            self.assertIn("mutually exclusive", stderr.getvalue())
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn(own_claim["claim_id"], claims.active_claims(store.read_claims()))
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                release_code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", session_id,
+                    "--release-claim", own_claim["claim_id"],
+                ])
+            self.assertEqual(release_code, 0, stderr.getvalue())
+            self.assertEqual(stderr.getvalue(), "")
+            self.assertEqual(json.loads(stdout.getvalue()), {"released": True})
+            active = claims.active_claims(store.read_claims())
+            self.assertNotIn(own_claim["claim_id"], active)
+            self.assertIn(foreign_claim["claim_id"], active)
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                foreign_release_code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", session_id,
+                    "--release-claim", foreign_claim["claim_id"],
+                ])
+            self.assertEqual(foreign_release_code, 0, stderr.getvalue())
+            self.assertEqual(json.loads(stdout.getvalue()), {"released": False})
+            self.assertIn(foreign_claim["claim_id"], claims.active_claims(store.read_claims()))
+
+            repository_claim = claims.acquire(
+                store,
+                repository="legacy-repo",
+                session_id=session_id,
+                consumer_id="exact-claim-release-test",
+                basis=claims.BASIS_EXPLICIT,
+                reason="preserve repository release form",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                repository_release_code = cli.main([
+                    "--persistence", "file", "--state-dir", str(state),
+                    "claims", session_id,
+                    "--release", "legacy-repo",
+                    "--claim-id", repository_claim["claim_id"],
+                ])
+            self.assertEqual(repository_release_code, 0, stderr.getvalue())
+            self.assertEqual(json.loads(stdout.getvalue()), {"released": True})
+            self.assertNotIn(
+                repository_claim["claim_id"], claims.active_claims(store.read_claims()),
+            )
+
     def test_repository_claim_query_returns_bounded_latest_records(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)

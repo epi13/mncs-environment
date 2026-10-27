@@ -1379,7 +1379,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
         if type(expected_generation) is not int or expected_generation < 0:
             return fail("expected Store generation must be a non-negative integer")
         if not args.acquire or any((
-            args.release, args.transfer_to, args.claim_id, args.explain,
+            args.release, args.release_claim, args.transfer_to, args.claim_id, args.explain,
             args.repository is not None, args.offset is not None,
             args.limit is not None,
         )):
@@ -1393,7 +1393,8 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 or len(args.repository) > 120):
             return fail("claim repository filter must be bounded nonempty text")
         if (
-            args.acquire or args.release or args.transfer_to or args.claim_id or args.explain
+            args.acquire or args.release or args.release_claim or args.transfer_to
+            or args.claim_id or args.explain
             or args.transfer_consumer or args.paths or args.worktree or args.branch
             or args.repository_paths
             or args.adopt or args.reason or args.basis != claims_module.BASIS_EXPLICIT
@@ -1412,6 +1413,22 @@ def cmd_claims(args: argparse.Namespace) -> int:
         return fail("--repository-paths cannot be combined with --worktree")
     if args.repository_paths and args.branch:
         return fail("--repository-paths cannot be combined with --branch")
+    if args.release and args.release_claim:
+        return fail("--release and --release-claim are mutually exclusive")
+    if args.release_claim:
+        if (not isinstance(args.release_claim, str)
+                or not args.release_claim.strip()
+                or len(args.release_claim) > 160):
+            return fail("--release-claim must be bounded nonempty claim ID text")
+        if any((
+            args.acquire, args.claim_id, args.transfer_to, args.explain,
+            args.repository is not None, args.offset is not None, args.limit is not None,
+            args.transfer_consumer, args.paths, args.worktree, args.branch,
+            args.repository_paths, args.adopt,
+        )):
+            return fail(
+                "--release-claim accepts one exact claim ID and cannot be combined with other claim operations"
+            )
     store = open_store(args.state_dir, args.persistence, session_id=args.session)
     try:
         if expected_generation is not None and not callable(
@@ -1426,11 +1443,12 @@ def cmd_claims(args: argparse.Namespace) -> int:
                     "publication_completed": False,
                 },
             )
-        if args.release:
+        if args.release or args.release_claim:
             session = _resume_session(args, store=store)
             try:
                 out({"released": session.release_claim(
-                    args.release, reason=args.reason, claim_id=args.claim_id,
+                    args.release or "", reason=args.reason,
+                    claim_id=args.release_claim or args.claim_id,
                     request_id=os.environ.get("MNCS_ENV_RPC_REQUEST_ID"))})
             except claims_module.ClaimConflict as error:
                 return fail(str(error), code=3, diagnostics={
@@ -2769,10 +2787,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--expected-store-generation", type=int, default=None,
         help="fence this claim against the current canonical Store generation",
     )
-    claims.add_argument("--release", default=None)
+    claims.add_argument(
+        "--release", default=None,
+        help="release this session's held claims for a repository",
+    )
+    claims.add_argument(
+        "--release-claim", default=None,
+        help="release this session's one held claim by exact claim ID",
+    )
     claims.add_argument(
         "--claim-id", default=None,
-        help="target one claim for release/transfer, or inspect its latest record",
+        help="target one claim with --release or --transfer-to, or inspect its latest record",
     )
     claims.add_argument(
         "--repository", default=None,

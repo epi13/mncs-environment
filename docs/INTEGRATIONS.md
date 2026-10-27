@@ -112,6 +112,20 @@ projection has no canonical Store generation and is rejected for guarded
 acquisition. Environment retains its authority and scope checks, and callers
 do not receive Store paths or descriptors.
 
+### Exact claim release
+
+Release one of the caller's held claims by its stable claim ID:
+
+```text
+mncs-env claims <session-id> --release-claim <claim-id>
+```
+
+This targets that exact claim in the caller's session. It does not release a
+claim held by another session or grant any additional repository or mutation
+rights. `--release <repository>` remains available to release the caller's
+held claims for one repository; combine it with `--claim-id <claim-id>` when
+selecting one claim through that form.
+
 ### Artifact and state references
 
 Prefer stable, revisioned references:
