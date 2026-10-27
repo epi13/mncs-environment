@@ -5181,7 +5181,29 @@ def _compact_projection(
                 ) + 1
                 continue
         if result["observations"]:
-            result["observations"].pop(0)
+            def observation_retention_priority(item: dict[str, Any]) -> int:
+                relation = item.get("resource_sample_relation")
+                if (isinstance(relation, dict)
+                        and relation.get("status")
+                        == "matched-exact-resource-sample-and-session"):
+                    return 2
+                correction = item.get("record_correction")
+                if (isinstance(correction, dict)
+                        and correction.get("status")
+                        == "completed-by-append-only-record"):
+                    return 1
+                return 0
+
+            removable_index = min(
+                range(len(result["observations"])),
+                key=lambda index: (
+                    observation_retention_priority(
+                        result["observations"][index],
+                    ),
+                    index,
+                ),
+            )
+            result["observations"].pop(removable_index)
         elif any(
             isinstance(hypothesis.get("evidence_references"), list)
             and len(hypothesis["evidence_references"]) > 1

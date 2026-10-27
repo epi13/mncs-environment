@@ -2127,6 +2127,10 @@ def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> N
         }
         for index, identity in enumerate(identities)
     ]
+    full["observations"][7]["resource_sample_relation"] = {
+        "sample_identity": "rsm_compact_priority",
+        "status": "matched-exact-resource-sample-and-session",
+    }
     full["observation_count"] = len(identities)
     full["source"]["observation_records_considered"] = len(identities)
     full["source"]["observation_records_verified"] = len(identities)
@@ -2153,11 +2157,17 @@ def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> N
 
     compact_bytes = len(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode())
     tight = capability_intelligence._compact_projection(
-        full, 100_000, compact_bytes - 1,
+        full, 100_000, max(1, compact_bytes - 2_000),
     )
     tight_identities = [item["identity"] for item in tight["observations"]]
 
-    assert tight_identities[-1] == identities[-1]
+    assert identities[7] in tight_identities
+    assert next(
+        item for item in tight["observations"]
+        if item["identity"] == identities[7]
+    )["resource_sample_relation"]["status"] == (
+        "matched-exact-resource-sample-and-session"
+    )
     assert tight["source"]["observation_records_compacted_out_count"] == (
         len(identities) - len(tight_identities)
     )
