@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_content_digest_projection_readback_20261027",
+  "captured_at": "2026-10-27T14:03:18Z",
+  "measurement_basis": "direct-bounded-ECI-readback-after-campaign-evidence-registration",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_1e66d26774b4cc4e",
+    "campaign_evidence_count": 46
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "history_pages": 1,
+      "evidence_offset": 43,
+      "evidence_limit": 3,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_identity": "eci_d639d74100ceaf09",
+      "content_digest": "b985f710367bdee9c18f63a224b0b32d",
+      "status": "partial",
+      "response_truncated": true,
+      "response_byte_count": 104236,
+      "campaign_state_checkpoint_id": "chk_1e66d26774b4cc4e",
+      "campaign_evidence_count": 46,
+      "selected_observation_count": 3,
+      "source_pointer_count": 5,
+      "source_pointer_content_integrity_verified_count": 5,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "pressure_hypotheses": [
+        {
+          "identity": "ph_environment_eci_output_identity_20261027",
+          "definition_status": "consistent",
+          "recurrence_status": "not-established"
+        }
+      ],
+      "improvement_relations": [
+        {
+          "identity": "im_environment_eci_content_digest_20261027",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "effectiveness_assessment": "not-assessed"
+        }
+      ]
+    },
+    "interpretation_limit": "This authentic readback demonstrates that the registered pressure, implementation, and verification records form a queryable relation and that all five selected source pointers pass content-integrity checks. The read remains partial and truncated; recurrence, projection correctness, agent use, and effectiveness remain unestablished or unmeasured."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_content_digest_pressure_20261027",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "b898a7d970c426227f0ee43b1cfc280901ba78f2",
+      "path": "evidence/environmental-capability/eci-content-digest-pressure-20261027.json",
+      "sha256": "fb24d95ff7ab344c701c708234bee26337fd83e7bd452e3d56100f3eb72303b3"
+    },
+    {
+      "identity": "ev_environment_eci_content_digest_verification_20261027",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "b898a7d970c426227f0ee43b1cfc280901ba78f2",
+      "path": "evidence/environmental-capability/eci-content-digest-verification-20261027.json",
+      "sha256": "40d7a862f2bda65a4f8618d19e9cc844267da3bae916f5657c583f38fce5d2c1"
+    },
+    {
+      "identity": "ev_environment_eci_content_digest_improvement_20261027",
+      "kind": "campaign-improvement-relation",
+      "repository": "mncs-environment",
+      "commit": "b898a7d970c426227f0ee43b1cfc280901ba78f2",
+      "path": "evidence/environmental-capability/eci-content-digest-improvement-20261027.json",
+      "sha256": "f1d2ffebdbfc61d0dc44364bbc801261692f3c8144bbfc6c403d1b3a2cf23991"
+    }
+  ],
+  "not_measured": [
+    "whether other agents discover or use the projection content digest",
+    "whether the pressure recurs in another session or after a later implementation change",
+    "whether the added traceability changes development decisions or reduces agent intervention"
+  ]
+}
