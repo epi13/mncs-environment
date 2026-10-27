@@ -444,9 +444,10 @@ def evaluate(
     write scope; it does not grant merge, publish, or general repository
     authority. Repository-wide or repository-relative path claims remain
     visible as coordination context rather than reserving every proposal
-    branch. Checkout-scoped claims for the same checkout or a shared attached
-    branch still block. Branch names in separate Git common
-    directories do not identify shared refs. Protected, forbidden,
+    branch. Claims on distinct worktrees sharing an attached branch are
+    coordination evidence for local writes, mutations, and verification;
+    operations that may update shared refs or retire a checkout retain the
+    shared-ref constraint. Protected, forbidden,
     and fenced scope denies. For merge and publish, overlap remains
     coordination evidence while the repository-native update resolves actual
     conflicts. Escalate and deny never authorize execution.
@@ -567,8 +568,9 @@ def evaluate(
         # Repository-wide and repository-relative path claims cannot identify
         # which checkout their holder is changing. They remain useful
         # coordination evidence, but cannot reserve every isolated proposal
-        # worktree. A `worktree` claim carries the checkout and branch identity
-        # needed to detect a real shared-checkout or shared-ref conflict.
+        # worktree. A `worktree` claim carries stable checkout identity; a
+        # shared attached branch remains coordination evidence for local
+        # proposal effects and a constraint for ref-changing operations.
         if proposal_worktree and other_scope.get("kind") in {"repository", "paths"}:
             nonblocking_coordination_claim_count += 1
             if len(nonblocking_coordination_claims) < MAX_INTEGRATION_COORDINATION_OVERLAPS:
@@ -586,8 +588,46 @@ def evaluate(
                     observation["claim_id"] = claim_id
                 nonblocking_coordination_claims.append(observation)
             continue
-        conflict = claims_module.scopes_conflict(
-            requested or {}, other_scope)
+        shared_branch_overlap = (
+            claims_module.shared_branch_coordination_overlap(
+                requested or {}, other_scope,
+            )
+        )
+        if shared_branch_overlap and action in ("merge", "publish"):
+            integration_coordination_overlap_count += 1
+            if (len(integration_coordination_overlaps)
+                    < MAX_INTEGRATION_COORDINATION_OVERLAPS):
+                observation = {
+                    "session_id": other["session_id"],
+                    "scope": _scope_evidence(other_scope, repo),
+                    "overlap_reason": shared_branch_overlap,
+                }
+                claim_id = other.get("claim_id")
+                if isinstance(claim_id, str) and claim_id:
+                    observation["claim_id"] = claim_id
+                integration_coordination_overlaps.append(observation)
+            continue
+        if (shared_branch_overlap and proposal_worktree
+                and action in {"write", "mutate", "verify"}):
+            nonblocking_coordination_claim_count += 1
+            if (len(nonblocking_coordination_claims)
+                    < MAX_INTEGRATION_COORDINATION_OVERLAPS):
+                observation = {
+                    "session_id": other["session_id"],
+                    "scope": _scope_evidence(other_scope, repo),
+                    "disposition": "coordination-only-shared-branch-proposal",
+                    "overlap_reason": shared_branch_overlap,
+                }
+                claim_id = other.get("claim_id")
+                if isinstance(claim_id, str) and claim_id:
+                    observation["claim_id"] = claim_id
+                nonblocking_coordination_claims.append(observation)
+            continue
+        conflict = shared_branch_overlap if (
+            shared_branch_overlap and action in {
+                "write", "mutate", "execute", "verify", "retire",
+            }
+        ) else claims_module.scopes_conflict(requested or {}, other_scope)
         if conflict is not None:
             blocking_claim: dict[str, Any] = {
                 "session_id": other["session_id"],

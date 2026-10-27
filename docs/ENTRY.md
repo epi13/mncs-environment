@@ -45,7 +45,11 @@ to file persistence.
 
 Claims acquired without an explicit scope follow the session's selected
 worktree and are nonexclusive. Repository-wide claims require an explicit
-scope. When ordinary acquisition encounters one exact conflicting claim held
+scope. An agent can propose changes in a distinct observed worktree without
+acquiring a new claim. A shared-branch claim can remain relevant to
+ref-changing work while local proposal edits use checkout isolation and do not
+need ownership transfer. When ordinary acquisition encounters one exact
+conflicting claim held
 by the same authenticated operator, Control checks host liveness, fences the
 old execution, and atomically transfers the claim into the selected scope.
 This checkout-selection path keeps its process fence. For ordinary claim
@@ -74,18 +78,28 @@ Environment-mediated provider effects only. Direct shell or Git mutations do
 not pass through this operation boundary.
 
 A `--paths` claim follows the session's selected, verified worktree by default;
-the checkout and branch stay part of its identity. This lets independent
-branches claim the same files for isolated proposals while preserving conflicts
-for the same checkout or a shared attached branch. Use `--worktree` to select a
-different registered checkout. Use `--repository-paths --paths` when a
+the checkout and branch stay part of its identity. A local `write`, `mutate`,
+or `verify` proposal can proceed in a distinct observed checkout even when an
+existing claim covers overlapping paths on the same attached branch; the
+preflight records that claim as coordination evidence. It does not need to
+acquire or transfer that claim. Existing overlapping claims continue to
+serialize claim acquisition on a shared branch. Git serializes ref writes, and
+Environment requires operation-specific eligibility checks before
+ref-changing execution or integration. Incomplete legacy checkout identity
+remains conservative.
+Writes to the same physical checkout still conflict on overlapping paths.
+Use `--worktree` to select a different registered checkout. Use
+`--repository-paths --paths` when a
 repository-relative claim should intentionally describe a path across every
 checkout. Such claims still coordinate with other claim requests, but do not
 reserve isolated proposal worktrees for local edits; preflight records them as
 coordination evidence. A checkout-bound worktree claim protects an overlapping
-edit in the same checkout or on the same attached branch when both checkouts
-have the same observed Git common-directory identity. Matching branch names in
-distinct Git common directories do not share local refs and do not block one
-another. Older claims without that identity remain conservative. An unanchored
+edit in the same checkout. Across distinct checkouts on one attached branch,
+local proposal operations can record the overlap as advisory coordination
+evidence, while claim acquisition and actions that can change the shared ref
+remain constrained. Matching branch names in distinct Git common directories
+do not share local refs. Older claims without common-directory identity remain
+conservative. An unanchored
 path claim requires that explicit flag, so a missing checkout cannot silently
 create a repository-wide blocker.
 

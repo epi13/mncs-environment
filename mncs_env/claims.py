@@ -244,6 +244,47 @@ def _paths_overlap(left: list[str] | None, right: list[str] | None) -> bool:
     return False
 
 
+def shared_branch_coordination_overlap(
+    left: dict[str, Any], right: dict[str, Any],
+) -> str | None:
+    """Describe overlapping paths on a shared branch without reserving them.
+
+    Separate worktrees have separate working files and indexes. A shared
+    attached branch is still relevant coordination context. Git serializes
+    ref writes, while Environment separately gates ref-changing execution and
+    integration through operation-specific checks. This relation lets policy
+    distinguish local proposal work from ref-changing or checkout-retirement
+    operations.
+    """
+    if (left.get("repository") != right.get("repository")
+            or left.get("kind") != "worktree"
+            or right.get("kind") != "worktree"):
+        return None
+    if (left.get("checkout") or None) == (right.get("checkout") or None):
+        return None
+    left_identity = left.get("checkout_identity")
+    right_identity = right.get("checkout_identity")
+    if (
+        not isinstance(left_identity, str) or not left_identity
+        or not isinstance(right_identity, str) or not right_identity
+        or left_identity == right_identity
+    ):
+        return None
+    left_branch = left.get("branch") or None
+    right_branch = right.get("branch") or None
+    if left_branch is None or left_branch != right_branch:
+        return None
+    left_common = left.get("git_common_directory_identity")
+    right_common = right.get("git_common_directory_identity")
+    if (isinstance(left_common, str) and left_common
+            and isinstance(right_common, str) and right_common
+            and left_common != right_common):
+        return None
+    if _paths_overlap(left.get("paths"), right.get("paths")):
+        return "shared branch with overlapping paths across checkouts"
+    return None
+
+
 def scopes_conflict(left: dict[str, Any], right: dict[str, Any]) -> str | None:
     """Deterministic overlap verdict for two scopes on the same repository.
 

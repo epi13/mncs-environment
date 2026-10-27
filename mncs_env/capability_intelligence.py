@@ -4143,13 +4143,14 @@ def _compact_projection(
         compact_claims = []
         raw_claims = item.get("coordination_only_claims")
         raw_claims = raw_claims if isinstance(raw_claims, list) else []
-        for claim in raw_claims[:2]:
+        for claim in raw_claims[:3]:
             if not isinstance(claim, dict):
                 continue
             compact_claim = {
                 key: _short_text(claim.get(key), 160)
                 for key in (
                     "session_id", "claim_id", "disposition",
+                    "overlap_reason",
                     "claim_lifecycle_correlation_identity",
                 )
                 if isinstance(claim.get(key), str)
@@ -11557,6 +11558,23 @@ def _authority_claim_conflict_guidance(
         return guidance
     if blocking_status == "blocks-at-projection-time":
         conflict_reason = conflict.get("conflict_reason")
+        if (
+            conflict_reason
+            == "shared branch with overlapping paths across checkouts"
+            and action in {"write", "mutate", "verify"}
+        ):
+            guidance.update({
+                "status": "shared-ref-overlap-is-proposal-coordination",
+                "next_step": "refresh-proposal-preflight-on-distinct-registered-worktree",
+                "ownership_transfer": "not-required-for-local-proposal-work",
+                "limit": (
+                    "the recorded denial reflects its event-time policy; "
+                    "current local proposal checks treat verified distinct "
+                    "worktrees as separate file state, while ref-changing "
+                    "operations retain their concurrency check"
+                ),
+            })
+            return guidance
         if conflict_reason in {
             "same checkout with overlapping paths",
             "shared branch with overlapping paths across checkouts",
@@ -14504,6 +14522,36 @@ def _session_activity(
                 "repository": "coordination-only-broad-claim",
                 "paths": "coordination-only-repository-path-claim",
             }.get(claim_kind)
+            shared_checkout_identity = scope.get("checkout_identity")
+            claim_checkout_identity = (
+                claim_scope.get("checkout_identity")
+                if isinstance(claim_scope, dict) else None
+            )
+            shared_git_directory = scope.get(
+                "git_common_directory_identity",
+            )
+            claim_git_directory = (
+                claim_scope.get("git_common_directory_identity")
+                if isinstance(claim_scope, dict) else None
+            )
+            shared_branch_overlap = (
+                claim_kind == "worktree"
+                and isinstance(claim_scope, dict)
+                and claim_scope.get("branch") == scope.get("branch")
+                and isinstance(scope.get("branch"), str)
+                and isinstance(shared_checkout_identity, str)
+                and isinstance(claim_checkout_identity, str)
+                and shared_checkout_identity != claim_checkout_identity
+                and not (
+                    isinstance(shared_git_directory, str)
+                    and isinstance(claim_git_directory, str)
+                    and shared_git_directory != claim_git_directory
+                )
+            )
+            if shared_branch_overlap:
+                expected_disposition = (
+                    "coordination-only-shared-branch-proposal"
+                )
             if (
                 not isinstance(session_id, str) or not session_id
                 or len(session_id) > 160
@@ -14514,6 +14562,17 @@ def _session_activity(
                 or claim_scope is None
                 or expected_disposition is None
                 or claim.get("disposition") != expected_disposition
+                or (
+                    expected_disposition
+                    == "coordination-only-shared-branch-proposal"
+                    and claim.get("overlap_reason")
+                    != "shared branch with overlapping paths across checkouts"
+                )
+                or (
+                    expected_disposition
+                    != "coordination-only-shared-branch-proposal"
+                    and "overlap_reason" in claim
+                )
             ):
                 invalid_coordination_claim = True
                 break
@@ -14522,6 +14581,12 @@ def _session_activity(
                 **({"claim_id": claim_id} if claim_id is not None else {}),
                 "scope": claim_scope,
                 "disposition": expected_disposition,
+                **({
+                    "overlap_reason": (
+                        "shared branch with overlapping paths across checkouts"
+                    ),
+                } if expected_disposition
+                    == "coordination-only-shared-branch-proposal" else {}),
             })
         if invalid_coordination_claim:
             invalid_proposal_eligibility_event_count += 1

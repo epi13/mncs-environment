@@ -399,36 +399,109 @@ class AuthorityTests(unittest.TestCase):
             "same checkout with overlapping paths",
         )
 
-    def test_same_branch_worktree_claim_still_blocks_overlapping_proposal(self) -> None:
+    def test_same_branch_worktree_claim_is_advisory_for_local_proposal(self) -> None:
         checkout = "/workspace/mncs-atlas/.worktrees/proposal"
         target = checkout + "/src/shared.mn"
         scope = {
             "kind": "worktree", "checkout": checkout,
-            "branch": "campaign/proposal", "exclusive": False,
+            "branch": "campaign/proposal",
+            "checkout_identity": "checkout:proposal",
+            "git_common_directory_identity": "git-common:mncs-atlas",
+            "exclusive": False,
         }
         facts = {"mncs-atlas": {
             "repository": "mncs-atlas", "path": checkout,
             "repository_root_path": "/workspace/mncs-atlas",
             "branch": "campaign/proposal", "main_branch": False,
             "clean": True, "foreign_signals": [],
+            "checkout_identity": "checkout:proposal",
+            "git_common_directory_identity": "git-common:mncs-atlas",
         }}
         other_checkout_scope = {
             "kind": "worktree",
             "checkout": "/workspace/mncs-atlas/.worktrees/other",
             "branch": "campaign/proposal",
             "paths": ["src/shared.mn"],
+            "checkout_identity": "checkout:other",
+            "git_common_directory_identity": "git-common:mncs-atlas",
             "exclusive": False,
         }
 
-        verdict = authority.evaluate(
-            context_for(), action="write", target=target,
+        holders = {"mncs-atlas": [{
+            "claim_id": "claim:mncs-atlas:worktree:shared-branch",
+            "session_id": "ses_same_branch_editor",
+            "scope": other_checkout_scope,
+        }]}
+        for action in ("write", "mutate", "verify"):
+            with self.subTest(action=action):
+                verdict = authority.evaluate(
+                    context_for(), action=action, target=target,
+                    session_id="ses_proposer", claims=holders,
+                    repo_facts=facts, scope=scope,
+                )
+                self.assertEqual(verdict["verdict"], "allow", verdict)
+                self.assertEqual(verdict["coordination_only_claim_count"], 1)
+                overlap = verdict["coordination_only_claims"][0]
+                self.assertEqual(
+                    overlap["disposition"],
+                    "coordination-only-shared-branch-proposal",
+                )
+                self.assertEqual(
+                    overlap["overlap_reason"],
+                    "shared branch with overlapping paths across checkouts",
+                )
+        ref_changing = authority.evaluate(
+            context_for(), action="execute", target=target,
             session_id="ses_proposer",
-            claims={"mncs-atlas": [{
-                "claim_id": "claim:mncs-atlas:worktree:shared-branch",
-                "session_id": "ses_same_branch_editor",
-                "scope": other_checkout_scope,
-            }]},
+            claims=holders,
             repo_facts=facts, scope=scope,
+        )
+        self.assertEqual(ref_changing["verdict"], "deny", ref_changing)
+        self.assertEqual(
+            ref_changing["claim_conflict"]["conflict_reason"],
+            "shared branch with overlapping paths across checkouts",
+        )
+
+    def test_shared_branch_claim_keeps_main_checkout_mutation_blocked(self) -> None:
+        repository_root = "/workspace/mncs-atlas"
+        scope = {
+            "kind": "worktree",
+            "checkout": repository_root,
+            "branch": "main",
+            "checkout_identity": "checkout:main",
+            "git_common_directory_identity": "git-common:mncs-atlas",
+            "exclusive": False,
+        }
+        other_scope = {
+            "kind": "worktree",
+            "checkout": repository_root + "/.worktrees/other",
+            "branch": "main",
+            "checkout_identity": "checkout:other",
+            "git_common_directory_identity": "git-common:mncs-atlas",
+            "paths": ["src/shared.mn"],
+            "exclusive": False,
+        }
+        verdict = authority.evaluate(
+            context_for(), action="write",
+            target=repository_root + "/src/shared.mn",
+            session_id="ses_main_editor",
+            claims={"mncs-atlas": [{
+                "claim_id": "claim:mncs-atlas:worktree:main-overlap",
+                "session_id": "ses_other_editor",
+                "scope": other_scope,
+            }]},
+            repo_facts={"mncs-atlas": {
+                "repository": "mncs-atlas",
+                "path": repository_root,
+                "repository_root_path": repository_root,
+                "branch": "main",
+                "main_branch": True,
+                "clean": True,
+                "foreign_signals": [],
+                "checkout_identity": "checkout:main",
+                "git_common_directory_identity": "git-common:mncs-atlas",
+            }},
+            scope=scope,
         )
 
         self.assertEqual(verdict["verdict"], "deny", verdict)
@@ -789,6 +862,19 @@ class AuthorityTests(unittest.TestCase):
                     "repository": "mncs-atlas",
                     "exclusive": True,
                 },
+            }, {
+                "session_id": "ses_same_branch_editor",
+                "claim_id": "claim:mncs-atlas:worktree:shared-branch",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": "mncs-atlas",
+                    "checkout": f"{root}/.worktrees/editor",
+                    "branch": branch,
+                    "checkout_identity": "checkout:editor",
+                    "git_common_directory_identity": "git-common:atlas",
+                    "paths": ["src/native.mn"],
+                    "exclusive": False,
+                },
             }]}
             checkout_identity = {
                 "path": checkout,
@@ -807,7 +893,8 @@ class AuthorityTests(unittest.TestCase):
                 dirty=True,
             )
             with mock.patch.object(
-                session, "_refresh_holders", return_value={},
+                session, "_refresh_holders",
+                return_value=session.snapshot["claim_holders"],
             ), mock.patch.object(
                 sessions.workspace_module, "verify_registered_checkout",
                 return_value=checkout_identity,
@@ -857,7 +944,7 @@ class AuthorityTests(unittest.TestCase):
                 event["payload"]["scope"],
             )
             self.assertEqual(
-                event["payload"]["coordination_only_claim_count"], 1,
+                event["payload"]["coordination_only_claim_count"], 2,
             )
             self.assertEqual(
                 event["payload"]["coordination_only_claims"][0]["claim_id"],
@@ -868,6 +955,18 @@ class AuthorityTests(unittest.TestCase):
                     "disposition"
                 ],
                 "coordination-only-broad-claim",
+            )
+            self.assertEqual(
+                event["payload"]["coordination_only_claims"][1][
+                    "disposition"
+                ],
+                "coordination-only-shared-branch-proposal",
+            )
+            self.assertEqual(
+                event["payload"]["coordination_only_claims"][1][
+                    "overlap_reason"
+                ],
+                "shared branch with overlapping paths across checkouts",
             )
             self.assertEqual(
                 event["payload"]["proposal_preflight_state"],
@@ -2028,14 +2127,16 @@ class ClaimTests(unittest.TestCase):
         self.assertIsNotNone(claims.scopes_conflict(first, same_checkout))
         self.assertIsNotNone(claims.scopes_conflict(repository, first))
 
-    def test_same_attached_branch_conflicts_across_worktrees(self) -> None:
+    def test_same_attached_branch_conflicts_without_common_directory_identity(self) -> None:
         first = claims.normalize_scope({
             "kind": "worktree", "checkout": "/repo/.worktrees/first",
-            "branch": "main", "exclusive": False,
+            "branch": "main", "checkout_identity": "checkout:first",
+            "exclusive": False,
         }, "r")
         second = claims.normalize_scope({
             "kind": "worktree", "checkout": "/repo/.worktrees/second",
-            "branch": "main", "exclusive": False,
+            "branch": "main", "checkout_identity": "checkout:second",
+            "exclusive": False,
         }, "r")
 
         self.assertEqual(
@@ -2043,7 +2144,7 @@ class ClaimTests(unittest.TestCase):
             "shared branch with overlapping paths across checkouts",
         )
 
-    def test_same_branch_claims_only_conflict_when_common_directory_is_shared(self) -> None:
+    def test_same_branch_claims_conflict_only_when_common_directory_is_shared(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             first_checkout = root / "first"
@@ -2060,6 +2161,7 @@ class ClaimTests(unittest.TestCase):
                 scope={
                     "kind": "worktree", "checkout": str(first_checkout),
                     "branch": "campaign/shared", "paths": shared_paths,
+                    "checkout_identity": "checkout:first",
                     "git_common_directory_identity": "git-common:first",
                     "exclusive": False,
                 },
@@ -2071,6 +2173,7 @@ class ClaimTests(unittest.TestCase):
                 scope={
                     "kind": "worktree", "checkout": str(second_checkout),
                     "branch": "campaign/shared", "paths": shared_paths,
+                    "checkout_identity": "checkout:second",
                     "git_common_directory_identity": "git-common:second",
                     "exclusive": False,
                 },
@@ -2087,6 +2190,7 @@ class ClaimTests(unittest.TestCase):
                     scope={
                         "kind": "worktree", "checkout": str(third_checkout),
                         "branch": "campaign/shared", "paths": shared_paths,
+                        "checkout_identity": "checkout:third",
                         "git_common_directory_identity": "git-common:first",
                         "exclusive": False,
                     },
@@ -2108,6 +2212,7 @@ class ClaimTests(unittest.TestCase):
                 workspace_root=str(root),
                 scope={"kind": "worktree", "checkout": str(first_checkout),
                        "branch": "campaign/proposal-a", "paths": shared_paths,
+                       "checkout_identity": "checkout:first",
                        "exclusive": False},
             )
             second = claims.acquire(
@@ -2116,6 +2221,7 @@ class ClaimTests(unittest.TestCase):
                 workspace_root=str(root),
                 scope={"kind": "worktree", "checkout": str(second_checkout),
                        "branch": "campaign/proposal-b", "paths": shared_paths,
+                       "checkout_identity": "checkout:second",
                        "exclusive": False},
             )
 
@@ -2130,6 +2236,7 @@ class ClaimTests(unittest.TestCase):
                     scope={"kind": "worktree",
                            "checkout": str(same_branch_checkout),
                            "branch": "campaign/proposal-a", "paths": shared_paths,
+                           "checkout_identity": "checkout:same-branch",
                            "exclusive": False},
                 )
 

@@ -3716,6 +3716,7 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
                 "repository": repository,
                 "branch": "campaign/proposal",
                 "checkout_identity": "checkout:proposal",
+                "git_common_directory_identity": "git-common:mncs-environment",
                 "paths": ["mncs_env/authority.py"],
                 "exclusive": False,
             },
@@ -3725,7 +3726,7 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
             ),
             "persistent_claim_required": False,
             "operation_executed": False,
-            "coordination_only_claim_count": 2,
+            "coordination_only_claim_count": 3,
             "coordination_only_claims": [{
                 "session_id": "ses_repository_coordinator",
                 "claim_id": "claim:mncs-environment",
@@ -3745,6 +3746,26 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
                     "exclusive": False,
                 },
                 "disposition": "coordination-only-repository-path-claim",
+            }, {
+                "session_id": "ses_shared_branch_editor",
+                "claim_id": "claim:mncs-environment:worktree:shared",
+                "scope": {
+                    "kind": "worktree",
+                    "repository": repository,
+                    "branch": "campaign/proposal",
+                    "checkout_identity": "checkout:other-proposal",
+                    "git_common_directory_identity": (
+                        "git-common:mncs-environment"
+                    ),
+                    "paths": ["mncs_env/authority.py"],
+                    "exclusive": False,
+                },
+                "disposition": (
+                    "coordination-only-shared-branch-proposal"
+                ),
+                "overlap_reason": (
+                    "shared branch with overlapping paths across checkouts"
+                ),
             }],
             "coordination_only_claims_truncated": False,
             "proposal_preflight_state": {
@@ -3785,7 +3806,7 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     assert eligible["proposal_preflight_state"]["checkout_identity"] == (
         "checkout:proposal"
     )
-    assert eligible["coordination_only_claim_count"] == 2
+    assert eligible["coordination_only_claim_count"] == 3
     assert eligible["coordination_only_claims"][0]["claim_id"] == (
         "claim:mncs-environment"
     )
@@ -3794,6 +3815,12 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     ]
     assert eligible["coordination_only_claims"][1]["disposition"] == (
         "coordination-only-repository-path-claim"
+    )
+    assert eligible["coordination_only_claims"][2]["disposition"] == (
+        "coordination-only-shared-branch-proposal"
+    )
+    assert eligible["coordination_only_claims"][2]["overlap_reason"] == (
+        "shared branch with overlapping paths across checkouts"
     )
     assert eligible["event_reference"]["identity"] == "evt_proposal_eligible_7"
     assert eligible["scope"]["branch"] == "campaign/proposal"
@@ -3813,6 +3840,9 @@ def test_claimless_proposal_worktree_preflight_is_projected_with_objective_conte
     )
     assert compact_eligible["coordination_only_claims"][1]["claim_id"] == (
         "claim:mncs-environment:paths:shared"
+    )
+    assert compact_eligible["coordination_only_claims"][2]["overlap_reason"] == (
+        "shared branch with overlapping paths across checkouts"
     )
 
     event_without_preflight = json.loads(json.dumps(event))
@@ -5171,6 +5201,29 @@ def test_claim_conflict_evidence_is_correlated_and_keeps_legacy_gaps_explicit(
     assert live_guidance["status"] == "active-shared-scope-conflict"
     assert live_guidance["next_step"] == "choose-a-nonoverlapping-scope-or-wait"
     assert live_guidance["claim_mutated"] is False
+
+
+def test_shared_branch_conflict_guidance_preserves_claimless_proposal_path() -> None:
+    guidance = capability_intelligence._authority_claim_conflict_guidance(
+        "write",
+        {
+            "conflict_reason": (
+                "shared branch with overlapping paths across checkouts"
+            ),
+        },
+        {"blocking_status": "blocks-at-projection-time"},
+    )
+
+    assert guidance["status"] == (
+        "shared-ref-overlap-is-proposal-coordination"
+    )
+    assert guidance["next_step"] == (
+        "refresh-proposal-preflight-on-distinct-registered-worktree"
+    )
+    assert guidance["ownership_transfer"] == (
+        "not-required-for-local-proposal-work"
+    )
+    assert guidance["claim_mutated"] is False
 
 
 def test_claim_coordination_projects_bounded_objective_linked_transitions(

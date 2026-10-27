@@ -488,9 +488,15 @@ for merge or publish. `execute` remains gated by repository write scope.
 Repository-wide and
 repository-relative path claims are preserved as coordination evidence but do
 not reserve isolated proposal worktrees. Checkout-bound worktree claims still
-block same-checkout and same-branch overlaps. Main-checkout mutations retain
-the existing clean-state or exact-claim checks, and checkout retirement
-remains claim-gated.
+block overlapping writes to the same physical checkout. Distinct registered
+worktrees with stable identities may propose overlapping changes on a shared
+branch; local writes, mutations, and verification record that shared-ref
+overlap as coordination evidence. Operations that can update the shared ref or
+retire a checkout retain the conflict. Ref-changing execution and integration
+still require their operation-specific eligibility checks and Git-native
+concurrency handling. Missing checkout identity remains conservative.
+Main-checkout mutations retain the existing clean-state or exact-claim checks,
+and checkout retirement remains claim-gated.
 The bounded `session_activity.proposal_eligibility` projection exposes
 validated `authority.proposal-eligible` records, their objective references,
 observed worktree scope, whether repository write scope was present at the
