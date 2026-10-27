@@ -1092,6 +1092,13 @@ digests for the selected session's readiness and accountability views, and
 includes them in projection identity so snapshot changes remain distinguishable
 even when the event tail and binding inventory are unchanged. These digests
 identify derived input state; they do not verify service correctness.
+When a projection exceeds its response budget, the compact view retains the
+service-accountability summary and its session, Environment, snapshot, campaign,
+and work-intent context. Per-service detail rows are omitted with an explicit
+`services_omitted_count`; the selected-session accountability digest remains
+available for correlation with the source projection. The summary preserves
+unknown opportunity and burden values rather than deriving them from readiness
+or invocation counts.
 Each declared probe also includes `ambient_owner_pass_activity`, which relates
 the exact probe capability and current binding to scoped invocation records
 that ran inside a recorded ambient owner pass. It preserves bounded references

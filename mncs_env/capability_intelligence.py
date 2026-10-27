@@ -2308,6 +2308,83 @@ def _compact_selected_session_delivery_observation(
     }
 
 
+def _compact_service_accountability_overview(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Keep measured totals and their selected-session source under response pressure."""
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "service_session_id", "environment_id", "snapshot_sequence",
+            "campaign_id", "work_intent_id", "binding_inventory_source",
+            "binding_count", "event_window_status",
+        )
+        if isinstance(source.get(key), str)
+        or (key in {"snapshot_sequence", "binding_count"}
+            and type(source.get(key)) is int and source[key] >= 0)
+    }
+    summary = value.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    summary_fields = (
+        "declared_service_count", "projected_service_count",
+        "available_service_capability_binding_count",
+        "exact_binding_use_observed_count", "capability_name_use_observed_count",
+        "eligible_service_opportunity_count", "ambient_fulfillment_status",
+        "agent_intervention_burden_status", "agent_receipt_status",
+        "outcome_quality_status", "readiness_probe_opportunity_count",
+        "readiness_probe_observation_record_count",
+        "readiness_probe_observation_missing_count",
+        "readiness_probe_observation_ambiguous_count",
+        "readiness_probe_configuration_missing_count",
+        "readiness_probe_observation_unmatched_count",
+        "readiness_probe_coverage_status",
+    )
+    compact_summary = {
+        key: summary[key]
+        for key in summary_fields
+        if isinstance(summary.get(key), str)
+        or (type(summary.get(key)) is int and summary[key] >= 0)
+        or (key == "eligible_service_opportunity_count"
+            and summary.get(key) is None)
+    }
+    for key in (
+        "capability_relation_status_counts", "readiness_status_counts",
+        "reconciliation_operation_status_counts",
+        "ambient_probe_use_relation_status_counts",
+    ):
+        counts = summary.get(key)
+        if isinstance(counts, dict):
+            compact_summary[key] = {
+                name: count for name, count in list(counts.items())[:12]
+                if isinstance(name, str) and type(count) is int and count >= 0
+            }
+
+    services = value.get("services")
+    services = services if isinstance(services, list) else []
+    projected_count = summary.get("projected_service_count")
+    if type(projected_count) is not int or projected_count < len(services):
+        projected_count = len(services)
+    previously_omitted = value.get("services_omitted_count", 0)
+    if type(previously_omitted) is not int or previously_omitted < 0:
+        previously_omitted = 0
+    omitted = projected_count + previously_omitted
+    return {
+        "schema_version": value.get("schema_version"),
+        "status": value.get("status"),
+        "scope": value.get("scope"),
+        "source": compact_source,
+        "summary": compact_summary,
+        "services": [],
+        "services_truncated": omitted > 0,
+        "services_omitted_count": omitted,
+        "response_budget_summary_only": True,
+    }
+
+
 def _compact_projection(
     projection: dict[str, Any], original_size: int, max_result_bytes: int,
 ) -> dict[str, Any]:
@@ -5152,6 +5229,9 @@ def _compact_projection(
     if isinstance(raw_service_accountability, dict):
         # The session projection has already bounded and sanitized this join.
         compact_activity["service_accountability"] = raw_service_accountability
+    compact_service_accountability_fallback = (
+        _compact_service_accountability_overview(raw_service_accountability)
+    )
     raw_doctor_history = activity.get("doctor_health_history")
     if isinstance(raw_doctor_history, dict):
         # Doctor's snapshot history is already bounded and sanitized here.
@@ -6141,9 +6221,9 @@ def _compact_projection(
             result["session_activity"].get("ambient_owner_pass_activity"), dict,
         ):
             result["session_activity"].pop("ambient_owner_pass_activity")
-        elif result["session_activity"].get(
+        elif (result["session_activity"].get(
             "service_accountability", {},
-        ).get("services"):
+        ).get("services")):
             accountability_view = result["session_activity"][
                 "service_accountability"
             ]
@@ -6160,11 +6240,37 @@ def _compact_projection(
             ].pop()
         elif isinstance(
             result["session_activity"].get("service_accountability"), dict,
-        ):
+        ) and result["session_activity"]["service_accountability"].get(
+            "response_budget_summary_only"
+        ) is not True:
+            if compact_service_accountability_fallback is not None:
+                result["session_activity"]["service_accountability"] = (
+                    compact_service_accountability_fallback
+                )
+                continue
             result["session_activity"].pop("service_accountability")
-        elif result["session_activity"].get("service_readiness", {}).get("candidates"):
+        elif (isinstance(
+            result["session_activity"].get("service_readiness", {}).get(
+                "candidates",
+            ), list,
+        ) and len(result["session_activity"]["service_readiness"][
+            "candidates"
+        ]) > 1):
             readiness = result["session_activity"]["service_readiness"]
-            readiness["candidates"].pop()
+            candidates = readiness["candidates"]
+            # Preserve one actionable candidate, preferring explicit dependency
+            # evidence when the response budget requires trimming.
+            removable_index = min(
+                range(len(candidates)),
+                key=lambda index: (
+                    1 if isinstance(candidates[index], dict)
+                    and candidates[index].get(
+                        "supporting_dependency_identities",
+                    ) else 0,
+                    -index,
+                ),
+            )
+            candidates.pop(removable_index)
             readiness["candidates_truncated"] = True
             summary = readiness.get("summary")
             if isinstance(summary, dict):

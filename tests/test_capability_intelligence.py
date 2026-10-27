@@ -4174,6 +4174,25 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         item["service_identity"] == forge_service
         for item in compact_readiness["candidates"]
     )
+    compact_accountability_overview = compact["session_activity"][
+        "service_accountability"
+    ]
+    assert compact_accountability_overview["source"]["service_session_id"] == (
+        "ses_projection_reader"
+    )
+    assert compact_accountability_overview["source"]["snapshot_sequence"] == 37
+    assert compact_accountability_overview["summary"][
+        "eligible_service_opportunity_count"
+    ] is None
+    assert compact_accountability_overview["summary"][
+        "agent_intervention_burden_status"
+    ] == "not-measured"
+    assert compact_accountability_overview["services"] == []
+    assert compact_accountability_overview["services_truncated"] is True
+    assert compact_accountability_overview["services_omitted_count"] == 2
+    assert compact["source"]["session_service_accountability_digest"] == (
+        original_accountability_digest
+    )
     full_projection = capability_intelligence.project(
         session, max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
     )
