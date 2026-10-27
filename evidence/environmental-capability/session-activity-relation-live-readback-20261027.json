@@ -1,0 +1,138 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_session_activity_relation_live_readback_20261027",
+  "captured_at": "2026-10-27T05:10:02Z",
+  "measurement_basis": "bounded read-only MNCS Environmental Capability projection linking campaign evidence to selected-session activity",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "campaign_objective": "Improve MNCS capability intelligence and reduce avoidable coordination and service burden for agents.",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS capability intelligence and reduce avoidable coordination and service burden for agents.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_e9e004c2e608c5d5",
+    "campaign_evidence_count_before_recording": 9
+  },
+  "observation": {
+    "kind": "session-activity-relation-live-readback",
+    "source_interface": "MNCS Environment mncs-env projections --interpret environmental-capability",
+    "request": {
+      "projection_identity": "eci_6514e9ffc3f1d266",
+      "campaign_state_checkpoint_id": "chk_e9e004c2e608c5d5",
+      "evidence_count": 9,
+      "history_pages": 1,
+      "evidence_offset": 0,
+      "evidence_limit": 8,
+      "session_event_before_sequence": 8,
+      "session_event_limit": 4,
+      "target_observation_identity": "ev_environment_unowned_scope_integration_observation_20261027",
+      "source_event_reference": {
+        "identity": "evt_0bea59eea1d1c8a7",
+        "sequence": 7,
+        "type": "authority.integration-eligible"
+      }
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_compacted": true,
+      "target_observation_reference": {
+        "commit": "710f10a3dcd771631a603fac7bc04f56e6e65872",
+        "identity": "ev_environment_unowned_scope_integration_observation_20261027",
+        "path": "evidence/environmental-capability/unowned-scope-integration-observation-20261027.json",
+        "repository": "mncs-environment",
+        "sha256": "28ec4b5ce98ebe3309b739fec35adae1811f1c75724936364e015efe1f495493"
+      },
+      "session_activity_relation": {
+        "status": "matched-exact-session-activity",
+        "basis": "exact-selected-session-event-identity-sequence-and-type",
+        "activity_kind": "integration_eligibility",
+        "activity_record_identity": "inteligible_e2ac74117bb83389",
+        "selected_session_id": "ses_8d2eedabac6a6feb",
+        "event_reference": {
+          "identity": "evt_0bea59eea1d1c8a7",
+          "sequence": 7,
+          "type": "authority.integration-eligible"
+        },
+        "activity_event_reference": {
+          "identity": "evt_0bea59eea1d1c8a7",
+          "sequence": 7,
+          "type": "authority.integration-eligible"
+        },
+        "event_reference_status": "matched-exact-identity-sequence-and-type",
+        "work_context": {
+          "campaign_id": "matched",
+          "work_intent_id": "matched"
+        },
+        "work_context_status": "campaign-and-work-intent-matched",
+        "interpretation_limit": "The event reference links recorded evidence to session activity; it does not establish that a proposed operation executed, that the event caused an outcome, or that the change was correct."
+      },
+      "eligibility_context": {
+        "action": "publish",
+        "persistent_claim_required": false,
+        "operation_executed": false,
+        "coordination_overlap_count": 8,
+        "coordination_overlap_records_returned": 4,
+        "claim_state_lookup_omitted_count": 4,
+        "claim_state_lookup_status": "partial-lookup-limit"
+      },
+      "interpretation": "The projection linked the integrity-referenced campaign observation to the exact integration-eligibility event in the selected session and matched its campaign and WorkIntent context. The event is a preflight: it records eligibility only, does not show that a Git operation executed, and does not establish the liveness of all overlapping claims."
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_unowned_scope_integration_observation_20261027",
+      "kind": "historical-operational-observation",
+      "repository": "mncs-environment",
+      "commit": "710f10a3dcd771631a603fac7bc04f56e6e65872",
+      "path": "evidence/environmental-capability/unowned-scope-integration-observation-20261027.json",
+      "sha256": "28ec4b5ce98ebe3309b739fec35adae1811f1c75724936364e015efe1f495493"
+    },
+    {
+      "identity": "ev_environment_compact_event_reference_live_readback_20261027",
+      "kind": "prior-session-event-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "0d4bfb7e197f997cb659df41b5753cf5abd81093",
+      "path": "evidence/environmental-capability/compact-event-reference-live-readback-20261027.json",
+      "sha256": "49b60d69c4466b382f7beed654ce797037b84a08aef65a95e189c4d4e3e8a975"
+    },
+    {
+      "identity": "mncs_environment_session_activity_relation_implementation_69d8223",
+      "kind": "implementation-source",
+      "repository": "mncs-environment",
+      "commit": "69d822357238566d85c0351591cc20ef0a0d3e54",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4b5ca378c99a34813c6c03af328c9c468e419dde08a3c27c5640ba9b9e213bd0"
+    },
+    {
+      "identity": "mncs_environment_session_activity_relation_verification_69d8223",
+      "kind": "verification-source",
+      "repository": "mncs-environment",
+      "commit": "69d822357238566d85c0351591cc20ef0a0d3e54",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "7b74783a771a9b7681ab3b45cb271b4c93f807003553b3a23b32d5cd0085da6c"
+    },
+    {
+      "identity": "mncs_environment_session_activity_relation_contract_69d8223",
+      "kind": "projection-documentation-source",
+      "repository": "mncs-environment",
+      "commit": "69d822357238566d85c0351591cc20ef0a0d3e54",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "1d4e5e1853e748701291a196cfb43dd1c7d23264cd5000103df0f2e092b4858f"
+    }
+  ],
+  "not_measured": [
+    "whether the preflight was followed by a Git merge or push",
+    "whether this direct relation reduced agent coordination work",
+    "whether any of the eight overlaps were live when the event occurred",
+    "whether the same relation is useful across other activity groups or sessions",
+    "whether subsequent development outcomes changed because this evidence was easier to inspect"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
