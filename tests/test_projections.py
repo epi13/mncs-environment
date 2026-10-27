@@ -979,6 +979,128 @@ class DiscoveryTests(ProjectionFixture):
             projections_module.input_digest(self.target_doc, ["nope"]))
 
 
+class SemanticWhyInterpretationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(
+            prefix="mncs-semantic-why-test-")
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name)
+        self.machine = {
+            "id": "fixture:machine-view",
+            "repository": "fixture",
+            "checkout": str(root),
+            "schema_version": projections_module.semantic_sources.SCHEMA,
+            "renderer": {"identity": "machine.project-view"},
+            "output_kind": "whole-file",
+        }
+        self.overview = {
+            **self.machine,
+            "id": "fixture:overview",
+            "renderer": {"identity": "human.overview"},
+            "output_kind": "region",
+        }
+        self.session = SimpleNamespace(snapshot={
+            "workspace": {"root": str(root)},
+            "projection_epoch": {"evidence_ref": "mncs-store:fixture:projections:latest"},
+        })
+        self.model = {
+            "identity": "sha256:current-semantic-state",
+            "sources": [{"slot": "manifest", "identity": "sha256:manifest"}],
+        }
+        self.row = {
+            "status": "deferred",
+            "canonical_digest": "sha256:accepted-semantic-state",
+            "output_diagnostic": {"classification": "manual-divergence"},
+            "source": {
+                "owned_digest": "sha256:accepted-output",
+                "renderer": self.overview["renderer"],
+                "semantic": {"sources": [
+                    {"slot": "manifest", "identity": "sha256:old-manifest"},
+                ]},
+            },
+        }
+        self.evidence = {
+            "finished_at": "2026-10-27T20:00:00+00:00",
+            "results": [{
+                "projection": "fixture:overview",
+                "outcome": "deferred",
+                "plan": {"gate_reason_name": "manual-divergence"},
+                "output_diagnostic": {
+                    "classification": "manual-divergence",
+                    "candidate_render_bytes_digest": "sha256:candidate",
+                },
+                "source": {"head": "fixture-head"},
+            }],
+        }
+
+    def _query(self, *, projection_id=None):
+        with (
+            mock.patch.object(projections_module, "_workspace_root",
+                              return_value=Path(self.temp.name)),
+            mock.patch.object(projections_module,
+                              "discover_selected_declarations",
+                              return_value=([self.machine, self.overview], [])),
+            mock.patch.object(projections_module, "source_state",
+                              return_value=self.model),
+            mock.patch.object(projections_module, "_read_shared_row",
+                              return_value=self.row) as read_row,
+            mock.patch.object(projections_module.semantic_sources,
+                              "output_identity",
+                              return_value="sha256:observed-output"),
+            mock.patch.object(projections_module, "diagnose_projection",
+                              return_value={"code": 0, "diagnostic": None}),
+            mock.patch.object(projections_module, "read_evidence",
+                              return_value={"evidence": self.evidence}),
+        ):
+            result = projections_module.interpretation(
+                self.session, "fixture", "why", projection_id=projection_id)
+        return result, read_row
+
+    def test_exact_semantic_projection_is_inspected_read_only(self):
+        result, read_row = self._query(projection_id="fixture:overview")
+
+        self.assertEqual(result["declaration"]["id"], "fixture:overview")
+        self.assertEqual(result["current_semantic_state"], self.model)
+        self.assertEqual(result["last_verified"], self.row)
+        self.assertEqual(result["output_identity"], "sha256:observed-output")
+        self.assertEqual(result["health"], {"code": 0, "diagnostic": None})
+        self.assertEqual(result["advanced_subjects"], ["manifest"])
+        self.assertEqual(result["latest_pass_observation"]["status"], "observed")
+        self.assertEqual(result["latest_pass_observation"]["gate_reason"],
+                         "manual-divergence")
+        self.assertEqual(
+            result["latest_pass_observation"]["output_diagnostic"]
+            ["candidate_render_bytes_digest"],
+            "sha256:candidate",
+        )
+        self.assertEqual(read_row.call_args.args[1], "fixture:overview")
+
+    def test_default_why_route_retains_machine_view(self):
+        result, read_row = self._query()
+
+        self.assertEqual(result["declaration"]["id"], "fixture:machine-view")
+        self.assertEqual(read_row.call_args.args[1], "fixture:machine-view")
+
+    def test_unknown_projection_id_is_not_reinterpreted(self):
+        with (
+            mock.patch.object(projections_module, "_workspace_root",
+                              return_value=Path(self.temp.name)),
+            mock.patch.object(projections_module,
+                              "discover_selected_declarations",
+                              return_value=([self.machine, self.overview], [])),
+        ):
+            with self.assertRaisesRegex(ValueError, "no semantic projection"):
+                projections_module.interpretation(
+                    self.session, "fixture", "why",
+                    projection_id="fixture:unknown")
+
+    def test_selector_is_limited_to_why_interpretation(self):
+        with self.assertRaisesRegex(ValueError, "requires the why interpretation"):
+            projections_module.interpretation(
+                self.session, "fixture", "capabilities",
+                projection_id="fixture:overview")
+
+
 class ClassifyOutputTests(unittest.TestCase):
     def test_baseline_less_occupied_target_is_protected(self):
         with tempfile.TemporaryDirectory() as directory:

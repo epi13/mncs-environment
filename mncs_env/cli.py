@@ -393,6 +393,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_projections(args: argparse.Namespace) -> int:
+    if getattr(args, 'projection', None) and args.interpret != 'why':
+        return fail('--projection requires --interpret why')
     if args.evidence and args.interpret:
         return fail(
             "--evidence applies only to an unfiltered ambient projection read",
@@ -458,6 +460,7 @@ def cmd_projections(args: argparse.Namespace) -> int:
                         args.doctor_gap_limit
                         if args.doctor_gap_limit is not None else 0
                     ),
+                    projection_id=getattr(args, 'projection', None),
                 )
                 if args.interpret == "environmental-capability":
                     out(
@@ -2486,6 +2489,10 @@ def build_parser() -> argparse.ArgumentParser:
         'capabilities', 'dependencies', 'blockers', 'architecture',
         'structure', 'why', 'environmental-capability'))
     projections.add_argument('--repository')
+    projections.add_argument(
+        '--projection',
+        help='select an exact declared projection for --interpret why',
+    )
     projections.add_argument(
         '--history-pages', type=int, default=1,
         help="include this many bounded campaign evidence pages in environmental capability analysis (1-4)",

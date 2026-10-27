@@ -118,6 +118,28 @@ Related surfaces:
   becomes eligible again when that retry deadline arrives. Quiet ticks reuse
   the epoch; the entry lock is held per tick, never across the sleep.
 
+## Projection-specific diagnosis
+
+The read-only `why` interpretation can inspect an exact semantic projection by
+its declared id. It returns that declaration, its current semantic source
+identity, the last shared projection state row, the current output identity,
+the bounded Doctor health diagnosis, and that projection's entry in the latest
+session pass when present. The pass entry can include the exact output
+divergence comparison and references the immutable evidence record. This is
+useful when one projection is deferred or divergent; the query does not
+regenerate, adopt, or modify its output. An absent or unreadable pass record is
+reported as unavailable rather than inferred.
+
+```bash
+./scripts/mncs-env projections <session> \
+  --interpret why --repository mncs-environment \
+  --projection mncs-environment:overview
+```
+
+Without `--projection`, `why` retains its default machine project-view
+interpretation. The selector must identify a semantic projection declared by
+the selected repository.
+
 ## Environmental capability interpretation
 
 The same projection interface can derive an on-demand view of real work

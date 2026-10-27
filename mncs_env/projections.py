@@ -1112,6 +1112,44 @@ def _state_rows(session) -> dict[str, dict[str, Any]]:
     return dict(rows) if isinstance(rows, dict) else {}
 
 
+def _latest_projection_observation(session, projection_id: str) -> dict[str, Any]:
+    """Project one exact target from the latest bounded ambient evidence."""
+    epoch = session.snapshot.get("projection_epoch") or {}
+    reference = epoch.get("evidence_ref")
+    if not isinstance(reference, str) or not reference:
+        return {"status": "unavailable", "reason": "no-recorded-pass"}
+    try:
+        evidence = read_evidence(session).get("evidence")
+    except (OSError, ValueError, RuntimeError):
+        return {"status": "unavailable", "reason": "evidence-read-failed",
+                "evidence_ref": reference}
+    if not isinstance(evidence, dict):
+        return {"status": "unavailable", "reason": "evidence-not-readable",
+                "evidence_ref": reference}
+    results = evidence.get("results")
+    if not isinstance(results, list):
+        return {"status": "unavailable", "reason": "evidence-results-unavailable",
+                "evidence_ref": reference}
+    record = next((item for item in reversed(results)
+                   if isinstance(item, dict)
+                   and item.get("projection") == projection_id), None)
+    if record is None:
+        return {"status": "not-in-latest-pass", "evidence_ref": reference,
+                "finished_at": evidence.get("finished_at")}
+    plan = record.get("plan") or {}
+    if not isinstance(plan, dict):
+        plan = {}
+    return {
+        "status": "observed",
+        "evidence_ref": reference,
+        "finished_at": evidence.get("finished_at"),
+        "outcome": record.get("outcome"),
+        "gate_reason": plan.get("gate_reason_name", record.get("gate_reason")),
+        "output_diagnostic": record.get("output_diagnostic"),
+        "source": record.get("source"),
+    }
+
+
 def _read_shared_row(session, projection_id: str) -> dict[str, Any] | None:
     """Latest shared row, or None when the shared backend is down.
 
@@ -1321,8 +1359,11 @@ def interpretation(
     session_event_before_sequence=None,
     session_event_limit=capability_intelligence.MAX_SESSION_EVENT_WINDOW,
     doctor_gap_limit=0,
+    projection_id=None,
 ):
     """Ephemeral query over the same canonical subjects as outward views."""
+    if projection_id is not None and route != 'why':
+        raise ValueError('projection selection requires the why interpretation')
     if route == "environmental-capability":
         result = capability_intelligence.project(
             session, max_result_bytes=(
@@ -1356,8 +1397,16 @@ def interpretation(
     if route == 'structure':
         from .structure import inspect_structure
         return inspect_structure(session, Path(candidates[0]['checkout']))
-    wanted = 'human.roadmap' if route == 'blockers' else 'machine.project-view'
-    declaration = next((d for d in candidates if d['renderer']['identity'] == wanted), None)
+    if projection_id is not None:
+        declaration = next((d for d in candidates if d['id'] == projection_id), None)
+        if declaration is None:
+            raise ValueError(
+                f'no semantic projection {projection_id!r} in repository {repository!r}'
+            )
+    else:
+        wanted = 'human.roadmap' if route == 'blockers' else 'machine.project-view'
+        declaration = next((d for d in candidates
+                            if d['renderer']['identity'] == wanted), None)
     if declaration is None:
         raise ValueError('no applicable semantic interpretation')
     routes = {'capabilities': 'query.capabilities', 'dependencies': 'query.dependencies',
@@ -1387,6 +1436,8 @@ def interpretation(
         return {'declaration': declaration, 'current_semantic_state': model,
                 'last_verified': row, 'output_identity': actual, 'health': health,
                 'advanced_subjects': advanced,
+                'latest_pass_observation': _latest_projection_observation(
+                    session, declaration['id']),
                 'current': (health or {}).get('code') == 0}
     directory = _artifact_directory(session, 'interpretations')
     path = directory / 'semantic.json'

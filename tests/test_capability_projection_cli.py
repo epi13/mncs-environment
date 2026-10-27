@@ -42,6 +42,27 @@ class EnvironmentalCapabilityProjectionCliTests(unittest.TestCase):
         self.assertEqual(call.kwargs["evidence_limit"], 12)
         self.assertEqual(call.kwargs["session_event_limit"], 64)
 
+    def test_why_route_passes_exact_projection_id(self) -> None:
+        call = self._run_projection([
+            "projections", "ses_example", "--interpret", "why",
+            "--repository", "mncs-environment",
+            "--projection", "mncs-environment:overview",
+        ])
+
+        self.assertEqual(call.kwargs["projection_id"], "mncs-environment:overview")
+
+    def test_projection_selector_requires_why_route(self) -> None:
+        args = cli.build_parser().parse_args([
+            "projections", "ses_example", "--interpret", "capabilities",
+            "--repository", "mncs-environment",
+            "--projection", "mncs-environment:overview",
+        ])
+        errors = StringIO()
+        with redirect_stderr(errors):
+            self.assertEqual(cli.cmd_projections(args), 2)
+
+        self.assertIn("requires --interpret why", errors.getvalue())
+
     def test_environmental_capability_output_stays_within_transport_byte_limit(self) -> None:
         args = cli.build_parser().parse_args([
             "projections", "ses_example", "--interpret", "environmental-capability",
