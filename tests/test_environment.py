@@ -2042,6 +2042,38 @@ class ClaimTests(unittest.TestCase):
                 sessions.AuthorityDenied, "repo-protected is protected"
             ):
                 session.acquire_claim("repo-protected", reason="protected target")
+            rejected_claim_events = [
+                event for event in session._log()
+                if event.get("type") == "lease.acquisition-rejected"
+            ]
+            self.assertEqual(len(rejected_claim_events), 2)
+            self.assertEqual(
+                [event.get("payload", {}).get("repository")
+                 for event in rejected_claim_events],
+                ["repo-outside-scope", "repo-protected"],
+            )
+            self.assertTrue(all(
+                event.get("payload", {}).get("claim_publication_status")
+                == "not-published"
+                and "reason" not in event.get("payload", {})
+                for event in rejected_claim_events
+            ))
+            for _ in range(2):
+                with self.assertRaisesRegex(
+                    sessions.AuthorityDenied, "repo-protected is protected"
+                ):
+                    session.acquire_claim(
+                        "repo-protected", request_id="claim-rejection-idempotent",
+                    )
+            rejected_claim_events = [
+                event for event in session._log()
+                if event.get("type") == "lease.acquisition-rejected"
+            ]
+            self.assertEqual(len(rejected_claim_events), 3)
+            self.assertEqual(
+                rejected_claim_events[-1]["payload"]["request_id"],
+                "claim-rejection-idempotent",
+            )
             claim = session.acquire_claim(
                 "repo-allowed", scope={"kind": "paths", "paths": ["src/unit.mncs"]},
                 reason="authorized scoped claim", request_id="claim-authority-acquire",
@@ -2058,6 +2090,17 @@ class ClaimTests(unittest.TestCase):
             )
             self.assertEqual(retried["identity"], claim["identity"])
             self.assertEqual(len(store.read_claims()), claim_record_count)
+
+            event_count = len(session._log())
+            with mock.patch.object(
+                session, "_acquire_claim",
+                side_effect=sessions.AuthorityDenied("fenced denial"),
+            ):
+                with self.assertRaises(sessions.AuthorityDenied):
+                    session.acquire_claim(
+                        "repo-allowed", expected_store_generation=17,
+                    )
+            self.assertEqual(len(session._log()), event_count)
             self.assertTrue(session.release_claim(
                 "repo-allowed", claim_id=claim["claim_id"],
                 request_id="claim-authority-release",

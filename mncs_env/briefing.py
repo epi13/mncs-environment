@@ -54,6 +54,9 @@ EVENT_CLASSES = {
         "coordination", "an operation needs a coordination prerequisite",
     ),
     "lease.acquired": ("ownership", "claim ownership changed"),
+    "lease.acquisition-rejected": (
+        "coordination", "a claim request was rejected before publication",
+    ),
     "lease.recovered-and-acquired": ("ownership", "stale claim safely recovered"),
     "lease.released": ("ownership", "claim ownership changed"),
     "lease.transferred": ("ownership", "claim ownership changed"),

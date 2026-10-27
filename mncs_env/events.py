@@ -56,6 +56,7 @@ TYPES = (
     "authority.proposal-eligible",
     "authority.scope-granted",
     "lease.acquired",
+    "lease.acquisition-rejected",
     "lease.recovered-and-acquired",
     "lease.recovered-for-operation",
     "lease.owner-recovered",

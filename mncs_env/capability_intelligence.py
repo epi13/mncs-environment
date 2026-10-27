@@ -252,6 +252,7 @@ MAX_SESSION_CLAIM_LIFECYCLE_EVENTS_PER_CORRELATION = 4
 MAX_SESSION_AUTHORITY_CLAIM_LOOKUPS = 4
 CLAIM_COORDINATION_EVENT_ACTIONS = {
     "lease.acquired": "acquired",
+    "lease.acquisition-rejected": "acquisition-rejected",
     "lease.owner-recovered": "owner-recovered",
     "lease.released": "released",
     "lease.release_noop": "release-noop",
@@ -13498,6 +13499,7 @@ def _claim_coordination_event_projection(
         "action": action,
         "status": {
             "acquired": "claim-acquired",
+            "acquisition-rejected": "claim-acquisition-rejected",
             "owner-recovered": "claim-acquired-by-authorized-recovery",
             "released": "claim-release-recorded",
             "release-noop": "claim-release-no-op",
@@ -13519,6 +13521,10 @@ def _claim_coordination_event_projection(
         ),
         "event_reference": reference,
         "interpretation": (
+            "The event records that claim acquisition was rejected before a claim "
+            "was published. Its bounded failure code is not a complete cause or "
+            "an estimate of agent burden."
+            if action == "acquisition-rejected" else
             "This records a claim coordination transition at event time; it does "
             "not establish the claim's current state or whether the associated "
             "development work succeeded."
@@ -13546,6 +13552,29 @@ def _claim_coordination_event_projection(
         row["basis"] = basis
     if released_count is not None:
         row["released_count"] = released_count
+    if action == "acquisition-rejected":
+        failure_category = payload.get("failure_category")
+        failure_code = payload.get("failure_code")
+        scope_kind = payload.get("scope_kind")
+        branch_precondition_status = payload.get("branch_precondition_status")
+        if (failure_category not in {
+                "eligibility", "adoption", "conflict", "checkout-validation",
+            }
+                or not isinstance(failure_code, str)
+                or re.fullmatch(r"[a-z][a-z0-9._-]{0,95}", failure_code) is None
+                or scope_kind not in {"unspecified", "worktree", "paths"}
+                or branch_precondition_status not in {
+                    "not-applicable", "provided", "omitted",
+                }
+                or payload.get("claim_publication_status") != "not-published"):
+            return None
+        row.update({
+            "failure_category": failure_category,
+            "failure_code": failure_code,
+            "scope_kind": scope_kind,
+            "branch_precondition_status": branch_precondition_status,
+            "claim_publication_status": "not-published",
+        })
     if successor_claim_id is not None:
         row["successor_claim_id"] = successor_claim_id
     for source_key, output_key in (

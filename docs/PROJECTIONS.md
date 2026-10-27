@@ -680,8 +680,13 @@ provenance for an accepted claim transition, not evidence that the subsequent
 implementation objective succeeded.
 
 `session_activity.claim_coordination` exposes up to sixteen newest claim
-acquisition, release, transfer, and owner-recovery lifecycle transitions in
-the same selected event page. Each row retains the exact event reference,
+acquisition, rejected-acquisition, release, transfer, and owner-recovery
+lifecycle events in the same selected event page. A rejected acquisition
+records a bounded category and diagnostic code only when the claim failed
+before publication; it omits the requested reason and checkout path. Its event
+does not prove the complete cause or quantify agent burden. Generation-fenced
+rejections are not separately written, because doing so would advance the
+Store generation after the caller's failed precondition. Each row retains the exact event reference,
 event-time campaign/work-intent references when available, and validated
 repository-relative scope; checkout paths and human-provided reason text are
 omitted. Historical events without objective references remain explicitly

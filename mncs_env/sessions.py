@@ -6696,7 +6696,128 @@ class Session:
                 )
             )
 
+    def _record_claim_acquisition_rejection(
+        self, repository: str, *, basis: str, scope: dict[str, Any] | None,
+        request_id: str | None, error: Exception,
+    ) -> None:
+        """Append a bounded event for a rejected, non-generation-fenced claim."""
+        if isinstance(error, AuthorityDenied):
+            category = "eligibility"
+            fallback_code = "authority-denied"
+        elif isinstance(error, claims_module.ClaimAdoptionRequired):
+            category = "adoption"
+            fallback_code = "adoption-required"
+        elif isinstance(error, claims_module.ClaimConflict):
+            category = "conflict"
+            fallback_code = "claim-conflict"
+        elif isinstance(error, workspace_module.WorkspaceResolutionError):
+            category = "checkout-validation"
+            fallback_code = "working-checkout-unavailable"
+        else:
+            return
+
+        diagnostics = getattr(error, "diagnostics", None)
+        raw_code = diagnostics.get("code") if isinstance(diagnostics, dict) else None
+        failure_code = (
+            raw_code if isinstance(raw_code, str)
+            and re.fullmatch(r"[a-z][a-z0-9._-]{0,95}", raw_code)
+            else fallback_code
+        )
+        repository_valid = (
+            isinstance(repository, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,119}", repository)
+            is not None
+            and repository not in {".", ".."}
+        )
+        scope_kind = (
+            scope.get("kind") if isinstance(scope, dict)
+            and scope.get("kind") in {"worktree", "paths"} else "unspecified"
+        )
+        branch_precondition_status = (
+            "not-applicable" if scope_kind == "unspecified" else
+            "provided" if isinstance(scope, dict)
+            and isinstance(scope.get("branch"), str) and scope["branch"] else
+            "omitted"
+        )
+        payload: dict[str, Any] = {
+            "action": "acquire",
+            "failure_category": category,
+            "failure_code": failure_code,
+            "scope_kind": scope_kind,
+            "branch_precondition_status": branch_precondition_status,
+            "claim_publication_status": "not-published",
+            **self._authority_event_context(),
+        }
+        if repository_valid:
+            payload["repository"] = repository
+        if basis in {
+            claims_module.BASIS_EXPLICIT,
+            claims_module.BASIS_INTENT_SCOPE,
+            claims_module.BASIS_RECOVERY,
+            claims_module.BASIS_ADOPTION,
+            claims_module.BASIS_TRANSFER,
+        }:
+            payload["basis"] = basis
+        event_kwargs: dict[str, str] = {}
+        if (isinstance(request_id, str) and 0 < len(request_id) <= 160
+                and "\x00" not in request_id):
+            event_kwargs = {
+                "request_id": request_id,
+                "operation_digest": digest_hex({
+                    "operation": "claim-acquisition-rejected",
+                    "payload": payload,
+                }),
+            }
+        self._emit(
+            "lease.acquisition-rejected",
+            str(self.snapshot.get("consumer_id", "unknown")),
+            payload,
+            **event_kwargs,
+        )
+        self._save()
+
     def acquire_claim(
+        self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
+        reason: str = "", ttl_hours: int = 24,
+        scope: dict[str, Any] | None = None,
+        checkout_facts: dict[str, Any] | None = None,
+        workspace_root: str | None = None,
+        request_id: str | None = None,
+        expected_store_generation: int | None = None,
+        _owner_recovery_authorization: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Run the claim transition and retain safe evidence of rejection."""
+        try:
+            return self._acquire_claim(
+                repository, basis=basis, reason=reason, ttl_hours=ttl_hours,
+                scope=scope, checkout_facts=checkout_facts,
+                workspace_root=workspace_root, request_id=request_id,
+                expected_store_generation=expected_store_generation,
+                _owner_recovery_authorization=_owner_recovery_authorization,
+            )
+        except (
+            claims_module.ClaimConflict,
+            claims_module.ClaimAdoptionRequired,
+            AuthorityDenied,
+            workspace_module.WorkspaceResolutionError,
+        ) as error:
+            # A separate event write would invalidate the caller's Store
+            # generation fence. Guarded requests therefore remain side-effect
+            # free on rejection and report the conflict to their caller.
+            if (expected_store_generation is None
+                    and _owner_recovery_authorization is None):
+                try:
+                    self._record_claim_acquisition_rejection(
+                        repository, basis=basis, scope=scope,
+                        request_id=request_id, error=error,
+                    )
+                except Exception:
+                    # Never replace the original eligibility or consistency
+                    # failure with a best-effort evidence-write failure.
+                    pass
+            raise
+
+    def _acquire_claim(
         self, repository: str, *, basis: str = claims_module.BASIS_EXPLICIT,
         reason: str = "", ttl_hours: int = 24,
         scope: dict[str, Any] | None = None,

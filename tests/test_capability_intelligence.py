@@ -7387,8 +7387,24 @@ def test_claim_coordination_projects_bounded_objective_linked_transitions(
             },
         },
         {
-            "identity": "evt_untyped_event_name",
+            "identity": "evt_claim_coordination_rejected",
             "sequence": 6,
+            "type": "lease.acquisition-rejected",
+            "payload": {
+                "repository": "mncs-environment",
+                "failure_category": "checkout-validation",
+                "failure_code": "working-checkout-unavailable",
+                "scope_kind": "worktree",
+                "branch_precondition_status": "omitted",
+                "claim_publication_status": "not-published",
+                "campaign_id": "cmp_coordination_campaign",
+                "work_intent_id": "int_coordination_intent",
+                "reason": "private reason must not enter the projection",
+            },
+        },
+        {
+            "identity": "evt_untyped_event_name",
+            "sequence": 7,
             "type": [],
             "payload": {},
         },
@@ -7399,10 +7415,10 @@ def test_claim_coordination_projects_bounded_objective_linked_transitions(
     }
 
     activity = capability_intelligence.project(session)["session_activity"]
-    assert activity["claim_coordination_count"] == 2
-    assert activity["source"]["claim_coordination_events_considered"] == 2
+    assert activity["claim_coordination_count"] == 3
+    assert activity["source"]["claim_coordination_events_considered"] == 3
     assert activity["source"]["claim_coordination_records_invalid"] == 0
-    acquired, released = activity["claim_coordination"][::-1]
+    acquired, released, rejected = activity["claim_coordination"][::-1]
     assert acquired["event_reference"]["identity"] == (
         "evt_claim_coordination_acquired"
     )
@@ -7422,6 +7438,15 @@ def test_claim_coordination_projects_bounded_objective_linked_transitions(
     assert released["event_reference"]["identity"] == (
         "evt_claim_coordination_release"
     )
+    assert rejected["event_reference"]["identity"] == (
+        "evt_claim_coordination_rejected"
+    )
+    assert rejected["action"] == "acquisition-rejected"
+    assert rejected["failure_category"] == "checkout-validation"
+    assert rejected["failure_code"] == "working-checkout-unavailable"
+    assert rejected["claim_publication_status"] == "not-published"
+    assert rejected["work_intent_id"] == "int_coordination_intent"
+    assert "reason" not in rejected
     assert private_checkout not in json.dumps(activity)
     assert "private reason" not in json.dumps(activity)
     assert all("successful" not in item["status"]
@@ -7431,11 +7456,12 @@ def test_claim_coordination_projects_bounded_objective_linked_transitions(
         session, max_result_bytes=10_000,
     )["session_activity"]
     assert compact["claim_coordination"][0]["event_reference"]["identity"] == (
-        "evt_claim_coordination_release"
+        "evt_claim_coordination_rejected"
     )
-    assert compact["claim_coordination"][1]["work_intent_id"] == (
+    assert compact["claim_coordination"][0]["work_intent_id"] == (
         "int_coordination_intent"
     )
+    assert compact["claim_coordination"][0]["action"] == "acquisition-rejected"
     assert private_checkout not in json.dumps(compact)
 
 
