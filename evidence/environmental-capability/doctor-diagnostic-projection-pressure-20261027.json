@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_diagnostic_projection_pressure_20261027",
+  "captured_at": "2026-10-27T17:03:32Z",
+  "measurement_basis": "existing-ECI-interface-inspection-correlated-with-authentic-immutable-Doctor-evidence",
+  "observation": {
+    "kind": "environmental-integration-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection and Doctor evidence",
+    "request": {
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "doctor_evidence_identity": "ses_a752e1c55fb4ca6f:doctor:00810587a47c3a86e87f41dd4ab10c5fffae656d9ac8b9cb67579f404743fe70",
+      "doctor_epoch_snapshot_sequence": 495,
+      "session_snapshot_sequence": 496,
+      "classified_gap_record_count": 18,
+      "classified_gap_code": "provider-invocation-undeclared",
+      "distinct_capability_count": 18,
+      "same_unavailable_digest_history_record_count": 7
+    },
+    "outcome": {
+      "limitation": "The existing environmental-capability projection summarized Doctor health and epoch history but did not expose the classified gap reasons or affected capability identifiers. An agent had to inspect the separate Doctor evidence to connect a provider limitation to the active environment and work intent.",
+      "evidence_interpretation": "The immutable Doctor record contains 18 classified capability gaps in one code group. Seven rows in the same bounded Doctor history share the unavailable-set digest. This is repeated evidence in one session, not independent-session recurrence or proof that all classifications share one root cause.",
+      "recurrence": "one campaign session; recurrence across independent sessions is not established",
+      "snapshot_relation": "The Doctor epoch was recorded at snapshot 495; the ECI session snapshot is 496. The one-revision difference is preserved and does not prove the provider state remained unchanged."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_doctor_diagnostic_projection_visibility_20261027",
+    "title": "Environmental capability analysis required a separate Doctor read to inspect classified provider gaps",
+    "category": "environmental-service-accountability-and-discoverability",
+    "subsystem": "mncs-environment capability intelligence and Doctor diagnostic evidence",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose bounded, verified Doctor classifications through the existing environmental-capability projection, preserving source identity, epoch binding, snapshot revision, and the distinction between one-session repetition and cross-session recurrence."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_db4cbf53dfeb7d3c",
+    "campaign_evidence_count_before_recording": 63
+  },
+  "supporting_sources": [
+    {
+      "kind": "doctor-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:doctor:00810587a47c3a86e87f41dd4ab10c5fffae656d9ac8b9cb67579f404743fe70",
+      "schema": "mncs.environment.doctor-evidence/1",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "pre-change-projection-capability",
+      "identity": "mncs_environment_doctor_gap_projection_7aeb26d",
+      "repository": "mncs-environment",
+      "commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e882990e9e26bc70cd364976d7b709a8b69df03556ccee0db0dd487c0c1d548c"
+    }
+  ],
+  "measurement_limits": [
+    "The source epoch and ECI snapshot differ by one revision; the later ECI read does not establish that Doctor state remained unchanged.",
+    "The seven matching unavailable-set rows belong to one session and do not establish cross-session recurrence.",
+    "Doctor classifications are diagnostic evidence, not independent proof of a defect or its root cause.",
+    "Agent identity, receipt, intervention time, and whether a separate Doctor query was avoidable were not measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_diagnostic_projection_verification_20261027",
+  "captured_at": "2026-10-27T17:03:32Z",
+  "measurement_basis": "focused-regression-tests-vertical-proof-lint-and-source-check",
+  "observation": {
+    "kind": "environmental-projection-verification",
+    "source_interface": "MNCS Environment targeted pytest, vertical proof, and Ruff",
+    "request": {
+      "implementation_commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "focused_command": "python3 -m pytest tests/test_capability_intelligence.py tests/test_environment.py -q -k 'doctor_gap_projection_verifies_and_groups_immutable_evidence or session_doctor_health_history_is_bounded_and_revision_linked or session_projection_coherence_history_is_bounded_and_linked or projection_cli_accepts_opt_in_bounded_doctor_gap_details'",
+      "focused_passed": 4,
+      "focused_failed": 0,
+      "focused_deselected": 436,
+      "capability_module_command": "python3 -m pytest tests/test_capability_intelligence.py tests/test_environment.py -q",
+      "capability_module_tests_collected": 160,
+      "combined_run_status": "interrupted-during-environment-tests-after-345-total-passes",
+      "combined_run_elapsed_seconds": 222.66,
+      "cli_parser_test_command": "python3 -m pytest tests/test_environment.py -q -k projection_cli_accepts_opt_in_bounded_doctor_gap_details",
+      "cli_parser_test_passed": 1,
+      "vertical_proof_command": "python3 scripts/vertical_proof.py",
+      "vertical_proof_status": "passed",
+      "lint_command": "ruff check mncs_env/cli.py",
+      "lint_status": "passed",
+      "source_diff_check_status": "passed"
+    },
+    "outcome": {
+      "verified_properties": [
+        "The default Doctor-health projection does not read immutable Doctor evidence; an explicit bounded request performs one strict read.",
+        "Classified gaps are grouped and capability examples are bounded; the source content identity, epoch binding, and snapshot relation are preserved.",
+        "Mismatched immutable content identity fails closed without returning diagnostic details.",
+        "Response compaction preserves verified source context and stays within the configured projection response bound.",
+        "The CLI accepts an opt-in Doctor gap example limit, and the existing Environment vertical proof still passes."
+      ],
+      "test_scope_note": "The combined run completed all 160 capability-intelligence tests and 185 Environment tests before it was stopped during the remaining Environment tests. The combined suite is not reported as complete. The four directly relevant tests were rerun and passed."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_db4cbf53dfeb7d3c",
+    "campaign_evidence_count_before_recording": 63
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_doctor_gap_projection_7aeb26d",
+      "repository": "mncs-environment",
+      "commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e882990e9e26bc70cd364976d7b709a8b69df03556ccee0db0dd487c0c1d548c"
+    },
+    {
+      "kind": "test-source",
+      "identity": "mncs_environment_doctor_gap_projection_tests_7aeb26d",
+      "repository": "mncs-environment",
+      "commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "959c077e8ce866e993e4f8777e682f220b7a2a1aa1e117581982ec017c6525d6"
+    },
+    {
+      "kind": "documentation-source",
+      "identity": "mncs_environment_doctor_gap_projection_docs_7aeb26d",
+      "repository": "mncs-environment",
+      "commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "13f5f287a0acf15ddfb56d05eb221dc0d103740621294d2047f8ad8fde5862ff"
+    }
+  ],
+  "measurement_limits": [
+    "The combined Environment test suite did not finish; its partial pass count is not a complete suite result.",
+    "The vertical proof verifies existing Environment session/provider composition, not long-term Doctor service correctness.",
+    "No performance benchmark, agent receipt, intervention-burden reduction, or independent-session recurrence is established."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

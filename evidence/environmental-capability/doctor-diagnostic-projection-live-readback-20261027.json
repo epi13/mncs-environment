@@ -1,0 +1,143 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_diagnostic_projection_live_readback_20261027",
+  "captured_at": "2026-10-27T17:03:32Z",
+  "measurement_basis": "post-implementation-live-ECI-readback-with-bounded-Doctor-and-projection-history-evidence",
+  "observation": {
+    "kind": "environmental-diagnostic-and-ambient-service-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_a752e1c55fb4ca6f --interpret environmental-capability --evidence-limit 1 --session-event-limit 64 --doctor-gap-limit 8",
+      "implementation_commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "session_snapshot_sequence": 496,
+      "event_window_limit": 64,
+      "doctor_gap_limit": 8
+    },
+    "outcome": {
+      "projection_identity": "eci_4812d99d29dfb7d5",
+      "content_digest": "5b589acafe298c7920b9e1f4adfb31c1",
+      "projection_status": "partial",
+      "response_truncated": true,
+      "doctor_diagnostic_status": "observed",
+      "doctor_source": {
+        "identity": "ses_a752e1c55fb4ca6f:doctor:00810587a47c3a86e87f41dd4ab10c5fffae656d9ac8b9cb67579f404743fe70",
+        "schema": "mncs.environment.doctor-evidence/1",
+        "content_digest": "00810587a47c3a86e87f41dd4ab10c5fffae656d9ac8b9cb67579f404743fe70",
+        "content_integrity_status": "verified",
+        "doctor_epoch_digest": "714ec5029e57fbe0",
+        "epoch_binding_status": "matched",
+        "doctor_epoch_snapshot_sequence": 495,
+        "doctor_epoch_snapshot_relation": "earlier-snapshot-revision",
+        "unavailable_set_digest": "b13b242300687e0f"
+      },
+      "doctor_diagnostic_summary": {
+        "classified_gap_record_count": 18,
+        "valid_gap_record_count": 18,
+        "invalid_gap_record_count": 0,
+        "code_group_count": 1,
+        "distinct_capability_count": 18,
+        "gap_examples_projected": 8,
+        "capability_examples_omitted": 10,
+        "same_unavailable_digest_history_record_count": 7,
+        "cross_session_recurrence_status": "not-established"
+      },
+      "doctor_gap_code": "provider-invocation-undeclared",
+      "doctor_gap_capability_examples": [
+        "mncs-store:binding-observation",
+        "mncs-store:commit-feed",
+        "mncs-store:durable-publication",
+        "mncs-store:persistent-object",
+        "mncs-store:projection-state",
+        "mncs-store:provenance",
+        "mncs-store:publication-receipt",
+        "mncs-store:scalable-content"
+      ],
+      "projection_coherence_history": {
+        "status": "observed",
+        "source_snapshot_sequence": 496,
+        "history_record_count": 4,
+        "evidence_reference_issue_count": 0,
+        "history": [
+          {
+            "recorded_at": "2026-10-27T08:43:13+00:00",
+            "evidence_identity": "ses_a752e1c55fb4ca6f:projections:48a9a47fd5fc30ce0e17c5115a6d507039875528e21bea0417fd0d68240421b4",
+            "pending": 10,
+            "reconciled": 0,
+            "elapsed_seconds": 9.811
+          },
+          {
+            "recorded_at": "2026-10-27T13:19:44+00:00",
+            "evidence_identity": "ses_a752e1c55fb4ca6f:projections:be5928c4e01481367900a415e46e8f30aa0724bb216ca1892d260f56ead29c09",
+            "pending": 10,
+            "reconciled": 0,
+            "elapsed_seconds": 9.993
+          },
+          {
+            "recorded_at": "2026-10-27T15:20:56+00:00",
+            "evidence_identity": "ses_a752e1c55fb4ca6f:projections:4bdbf79d9a6777a2b49ac11c786945ca988e5e7c456a79888b2d3283afde01d1",
+            "pending": 10,
+            "reconciled": 0,
+            "elapsed_seconds": 9.811
+          },
+          {
+            "recorded_at": "2026-10-27T16:46:45+00:00",
+            "evidence_identity": "ses_a752e1c55fb4ca6f:projections:cea5964a337115e6b468be668315931d5e749a04368b8f72b50fb7382329d1d9",
+            "pending": 10,
+            "reconciled": 0,
+            "elapsed_seconds": 9.974
+          }
+        ],
+        "latest_gate_reason": "structure-verdict-provider-unbound",
+        "latest_missing_provider_capability": "mncs-doctor:projection-health",
+        "latest_deferred_result_count": 10,
+        "latest_detailed_gate_source": "latest immutable projection pass evidence"
+      },
+      "effectiveness_assessment": "not-assessed"
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_db4cbf53dfeb7d3c",
+    "campaign_evidence_count_before_recording": 63
+  },
+  "supporting_sources": [
+    {
+      "kind": "doctor-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:doctor:00810587a47c3a86e87f41dd4ab10c5fffae656d9ac8b9cb67579f404743fe70",
+      "schema": "mncs.environment.doctor-evidence/1"
+    },
+    {
+      "kind": "projection-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:projections:cea5964a337115e6b468be668315931d5e749a04368b8f72b50fb7382329d1d9",
+      "schema": "mncs.environment.session-evidence/1"
+    },
+    {
+      "kind": "prior-ambient-projection-pass-evidence",
+      "evidence_identities": [
+        "ses_a752e1c55fb4ca6f:projections:48a9a47fd5fc30ce0e17c5115a6d507039875528e21bea0417fd0d68240421b4",
+        "ses_a752e1c55fb4ca6f:projections:be5928c4e01481367900a415e46e8f30aa0724bb216ca1892d260f56ead29c09",
+        "ses_a752e1c55fb4ca6f:projections:4bdbf79d9a6777a2b49ac11c786945ca988e5e7c456a79888b2d3283afde01d1"
+      ]
+    }
+  ],
+  "measurement_limits": [
+    "Doctor evidence is an immutable verified Store record, but its epoch snapshot precedes the ECI session snapshot by one revision.",
+    "The four projection passes come from one session. Older projection history exposes counts and source references; the exact provider gate was read from the latest pass only.",
+    "Recorded pass elapsed seconds measure ambient pass duration, not isolated compute cost or agent intervention.",
+    "The ECI response is partial and truncated. It does not establish agent receipt, independent-session recurrence, root cause of provider binding failure, or improvement effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

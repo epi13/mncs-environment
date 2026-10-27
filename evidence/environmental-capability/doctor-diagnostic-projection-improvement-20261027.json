@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_doctor_diagnostic_projection_improvement_20261027",
+  "captured_at": "2026-10-27T17:03:32Z",
+  "measurement_basis": "implementation-verification-and-post-commit-live-ECI-readback",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_doctor_diagnostic_projection_visibility_20261027",
+      "implementation_commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "verification_observation_identity": "ev_environment_doctor_diagnostic_projection_verification_20261027",
+      "subsequent_observation_identity": "ev_environment_doctor_diagnostic_projection_live_readback_20261027"
+    },
+    "outcome": {
+      "implementation_scope": "Optional bounded projection of immutable Doctor classified gaps into environmental-capability session activity.",
+      "implementation_change": "Added --doctor-gap-limit to the existing ECI projection. The default performs no Doctor evidence fetch. A nonzero limit loads the exact immutable Doctor record through the strict Store reader, verifies content-derived identity and binding to the session epoch, groups classified gaps by code, caps capability examples and groups, and preserves source snapshot and bounded same-session digest history. Sensitive free-form diagnostic reasons and workspace paths are not copied into the projection.",
+      "verified_change": "All 160 capability-intelligence tests passed in the combined run; the four focused Doctor/history/CLI tests passed again; the Environment vertical proof and CLI lint passed. The post-commit ECI readback verified the Doctor source record and exposed 18 classified gaps in one bounded group with eight examples and ten omitted. It preserved the earlier-snapshot revision and did not claim cross-session recurrence.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The projection makes verified Doctor classifications discoverable through the existing ECI interface. No independent later agent activity establishes that it reduced intervention or improved downstream service quality. A separate ambient projection provider-binding pressure remains unresolved."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_doctor_diagnostic_projection_visibility_20261027",
+    "addresses_hypothesis_identity": "ph_environment_doctor_diagnostic_projection_visibility_20261027",
+    "implementation_reference": {
+      "identity": "mncs_environment_doctor_gap_projection_7aeb26d",
+      "repository": "mncs-environment",
+      "commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e882990e9e26bc70cd364976d7b709a8b69df03556ccee0db0dd487c0c1d548c"
+    },
+    "verification_observation_identity": "ev_environment_doctor_diagnostic_projection_verification_20261027",
+    "subsequent_observation_identity": "ev_environment_doctor_diagnostic_projection_live_readback_20261027",
+    "basis": "The strict source-record identity check, epoch binding, bounded grouping, default no-read behavior, mismatch fail-closed behavior, and compaction limits are covered by focused tests. The live ECI projection uses the same authenticated session source, reports verified content identity, and preserves measurement uncertainty.",
+    "not_measured": [
+      "cross-session recurrence or generality across other Doctor classifications",
+      "agent discovery, receipt, or usability across different models and runtimes",
+      "time or tool calls saved by avoiding a separate Doctor evidence query",
+      "whether the diagnostic group identifies a real provider contract defect",
+      "resolution of the separate mncs-doctor:projection-health ambient binding deferral",
+      "long-term service quality or intervention-burden reduction"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_db4cbf53dfeb7d3c",
+    "campaign_evidence_count_before_recording": 63
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_doctor_diagnostic_projection_pressure_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_doctor_diagnostic_projection_verification_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "subsequent-observation",
+      "identity": "ev_environment_doctor_diagnostic_projection_live_readback_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "unresolved-pressure-observation",
+      "identity": "ev_environment_projection_provider_deferral_pressure_20261027",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "implementation-source",
+      "identity": "mncs_environment_doctor_gap_projection_7aeb26d",
+      "repository": "mncs-environment",
+      "commit": "7aeb26d7414c54ba3f0f5162e1f9f09f3a3ea44d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e882990e9e26bc70cd364976d7b709a8b69df03556ccee0db0dd487c0c1d548c"
+    }
+  ],
+  "measurement_limits": [
+    "The live readback is from the implementing campaign session and is not independent evidence of downstream effectiveness.",
+    "The combined Environment test suite was interrupted before completion; the capability-intelligence module and targeted regression tests passed.",
+    "The distinct projection-provider deferral remains unresolved and is recorded as a next investigation, not as a defect proven by this implementation."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

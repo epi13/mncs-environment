@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_provider_deferral_pressure_20261027",
+  "captured_at": "2026-10-27T17:03:32Z",
+  "measurement_basis": "four-authenticated-same-session-ambient-projection-history-records-and-current-pass-evidence",
+  "observation": {
+    "kind": "ambient-service-deferral-pressure",
+    "source_interface": "MNCS Environment projection-coherence history and immutable pass evidence",
+    "request": {
+      "session_id": "ses_a752e1c55fb4ca6f",
+      "campaign_id": "cmp_7f550d193225b7be",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "session_snapshot_sequence": 496,
+      "pass_count": 4,
+      "recorded_at": [
+        "2026-10-27T08:43:13+00:00",
+        "2026-10-27T13:19:44+00:00",
+        "2026-10-27T15:20:56+00:00",
+        "2026-10-27T16:46:45+00:00"
+      ],
+      "recorded_elapsed_seconds": [9.811, 9.993, 9.811, 9.974],
+      "derived_sum_recorded_elapsed_seconds": 39.589,
+      "per_pass_summary": {
+        "pending": 10,
+        "reconciled": 0,
+        "blockers": 0,
+        "degraded": 0
+      },
+      "latest_pass_gate_reason": "structure-verdict-provider-unbound",
+      "latest_pass_missing_provider_capability": "mncs-doctor:projection-health",
+      "latest_pass_deferred_result_count": 10
+    },
+    "outcome": {
+      "limitation": "Four recorded ambient projection passes each reported 10 pending outputs and zero reconciliations. The latest immutable pass classified all 10 results as deferred because the structure-verdict provider was unbound; its diagnostic names mncs-doctor:projection-health.",
+      "evidence_interpretation": "This is a recurring same-session service deferral and an actionable provider-discovery/binding investigation. The pass summaries for the three older records preserve counts but not their per-projection diagnostics, so the exact gate reason is established for the latest record only.",
+      "next_investigation": "Determine why the read-only Doctor projection-health provider is not available to the Environment projection service, while preserving checkout boundaries and preventing read-provider discovery from widening write authority.",
+      "cause_status": "not-established",
+      "effectiveness_status": "unresolved"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_projection_provider_binding_20261027",
+    "title": "Ambient projection refresh repeatedly deferred work while the Doctor health provider was unbound",
+    "category": "ambient-service-fulfillment-and-provider-discoverability",
+    "subsystem": "mncs-environment projection coherence and Doctor provider binding",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Trace declared read-only provider dependencies through workspace selection, session binding, and ambient projection execution; make required providers available through existing contracts without granting write access to their repositories."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id": "chk_db4cbf53dfeb7d3c",
+    "campaign_evidence_count_before_recording": 63
+  },
+  "supporting_sources": [
+    {
+      "kind": "projection-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:projections:48a9a47fd5fc30ce0e17c5115a6d507039875528e21bea0417fd0d68240421b4",
+      "recorded_at": "2026-10-27T08:43:13+00:00",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "projection-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:projections:be5928c4e01481367900a415e46e8f30aa0724bb216ca1892d260f56ead29c09",
+      "recorded_at": "2026-10-27T13:19:44+00:00",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "projection-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:projections:4bdbf79d9a6777a2b49ac11c786945ca988e5e7c456a79888b2d3283afde01d1",
+      "recorded_at": "2026-10-27T15:20:56+00:00",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "projection-immutable-evidence-record",
+      "identity": "ses_a752e1c55fb4ca6f:projections:cea5964a337115e6b468be668315931d5e749a04368b8f72b50fb7382329d1d9",
+      "recorded_at": "2026-10-27T16:46:45+00:00",
+      "repository": "mncs-environment"
+    }
+  ],
+  "measurement_limits": [
+    "The four records belong to one campaign session, not four independent sessions.",
+    "Only the latest pass preserves the exact per-projection gate diagnostics in this readback; older passes establish repeated pending and reconciliation counts only.",
+    "The derived 39.589-second sum adds recorded ambient-pass elapsed values; it is not isolated projection CPU time or measured agent intervention.",
+    "A deferred projection may be a safe coordination outcome. The evidence identifies a provider-unbound condition but does not establish why the provider was unavailable or that the projection content was unsafe to refresh.",
+    "No remediation has been made and no effectiveness claim is established."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "definition_id": "env_712fb160746dea51"
+  }
+}
