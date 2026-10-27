@@ -1,0 +1,182 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_unselected_proposal_worktree_preflight_20261027",
+  "captured_at": "2026-10-27T04:08:41Z",
+  "measurement_basis": "authenticated Environment proposal preflight, environmental-capability projection readback, focused authority regressions, and existing real-provider proofs",
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "Environmental capability intelligence, reduced authority friction, and evidence-based improvement of the environment's capacity to serve agents.",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51",
+    "campaign_state_checkpoint_id_before_recording": "chk_022acfa95e8a86e6",
+    "campaign_evidence_count_before_recording": 2
+  },
+  "observation": {
+    "kind": "unselected-proposal-worktree-preflight",
+    "source_interface": "mncs-env authority --scope-json and projections --interpret environmental-capability",
+    "request": {
+      "action": "write eligibility preflight",
+      "repository": "mncs-environment",
+      "scope_kind": "registered non-main worktree",
+      "selected_checkout": "main",
+      "persistent_claim_supplied": false
+    },
+    "outcome": {
+      "live_preflight": {
+        "event_reference": {
+          "identity": "evt_b8db33bfe581cafa",
+          "sequence": 19,
+          "type": "authority.proposal-eligible"
+        },
+        "eligibility_basis": "registered-non-main-worktree-no-persistent-claim",
+        "persistent_claim_required": false,
+        "operation_executed": false,
+        "coordination_only_claim_count": 5,
+        "fresh_preflight_state": {
+          "observation_basis": "fresh-registered-checkout-inspection",
+          "checkout_identity": "checkout:45689bcd6bb25f36",
+          "branch": "campaign/agent-observation-delivery-loop-20261025",
+          "branch_status": "attached",
+          "head": "c49a1cb5c02f474d17c950d3305a49a7e07057fa",
+          "head_status": "measured",
+          "working_tree_status": "clean"
+        }
+      },
+      "projection_readback": {
+        "interface": "mncs-env projections ses_8d2eedabac6a6feb --interpret environmental-capability --evidence-limit 2 --session-event-before-sequence 20 --session-event-limit 4",
+        "status": "partial",
+        "proposal_eligibility_count": 3,
+        "event_reference_found": true,
+        "event_reference": {
+          "identity": "evt_b8db33bfe581cafa",
+          "sequence": 19,
+          "type": "authority.proposal-eligible"
+        },
+        "preflight_state_preserved": true
+      },
+      "unselected_worktree_regression": {
+        "test_identity": "test_unselected_explicit_proposal_checkout_is_freshly_observed_without_claim",
+        "prior_workspace_projection_contains_worktree": false,
+        "selected_checkout_branch": "main",
+        "verifier_receives_expected_branch": true,
+        "eligibility": "allow",
+        "interpretation_limit": "The test replaces Git registration inspection with a bounded verifier stub. The live CLI readback separately verifies a real registered, unselected worktree already present in its workspace projection."
+      },
+      "verification": {
+        "focused_regressions": {
+          "status": "passed",
+          "passed": 7,
+          "failed": 0
+        },
+        "campaign_proofs": {
+          "status": "passed",
+          "passed": 17,
+          "failed": 0
+        },
+        "vertical_proof": "passed",
+        "full_test_suite": {
+          "status": "pre-existing-failures-observed",
+          "passed": 1084,
+          "skipped": 46,
+          "failed": 30,
+          "representative_failures_reproduced_at_base_commit": [
+            "test_incremental.test_mutation_boundary_reads_foreign_claim_instead_of_cached_permission",
+            "test_projection_verification.VerifyAuthorityTests.test_verify_denied_on_foreign_claim_overlap",
+            "test_projections.AmbientWholeFileTests.test_canonical_advance_reconciles_only_affected",
+            "test_projections.RegionTests.test_region_projection_preserves_prose",
+            "test_doctor.RepositoryRemediationTests.test_adopted_dirty_checkout_remediates"
+          ]
+        }
+      },
+      "interpretation": "An explicit authority preflight now refreshes the named registered worktree and records its branch, HEAD, and working-tree state without requiring a persistent claim or executing an edit. The projection relates the actual event to this session and preserves the preflight evidence. The test fixture establishes the previously unobserved-worktree code path; it does not establish that historical agents encountered or were denied by this exact condition.",
+      "effectiveness_assessment": "not-assessed"
+    },
+    "source_session_context": {
+      "campaign_id": "cmp_7f550d193225b7be",
+      "session_id": "ses_8d2eedabac6a6feb",
+      "work_intent_id": "int_e9a2959ffe2e952c",
+      "environment_id": "renv_230757227e164f69"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_unselected_worktree_preflight_requires_fresh_observation",
+    "title": "An unselected registered worktree requires prior workspace projection before local proposal eligibility can be evaluated",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment authority and workspace observation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Allow an explicit non-main worktree proposal scope to be freshly checked against Git registration and branch state without requiring selection or a persistent claim."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_unselected_worktree_proposal_preflight_20261027",
+    "addresses_hypothesis_identity": "ph_environment_unselected_worktree_preflight_requires_fresh_observation",
+    "implementation_reference": {
+      "identity": "mncs_environment_explicit_unselected_proposal_preflight_e2dcde4",
+      "repository": "mncs-environment",
+      "commit": "e2dcde42ef4a52729587521c5feb17b7ef397964",
+      "path": "mncs_env/sessions.py",
+      "sha256": "66ed9547c664583d5cceff629d968116911fa331d393c9aba8d0c44b80702164"
+    },
+    "verification_observation_identity": "ev_environment_unselected_proposal_worktree_preflight_20261027",
+    "subsequent_observation_identity": null,
+    "basis": "The authority CLI marks an explicit proposal scope as non-executing preflight work. Session.check freshly verifies the exact registered checkout and branch, records bounded preflight state, and leaves provider effect checks on their existing path. Focused tests, the real CLI event, the ECI readback, and the multi-agent campaign proof verify the new behavior.",
+    "not_measured": [
+      "independent agents' discovery and adoption of the explicit proposal path",
+      "whether this change reduces coordination calls or waiting over time",
+      "actual edits or integrations performed after the eligibility event",
+      "conflict handling for concurrent modifications to the same checkout",
+      "long-term recurrence of this pressure across agent models and sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "committed-authority-cli-and-session-implementation",
+      "identity": "mncs_environment_explicit_unselected_proposal_preflight_e2dcde4",
+      "repository": "mncs-environment",
+      "commit": "e2dcde42ef4a52729587521c5feb17b7ef397964",
+      "path": "mncs_env/cli.py",
+      "sha256": "5c6379abb869bb16db8760547d4c125cc72c6c746925762d807592f94383f2a8"
+    },
+    {
+      "kind": "committed-regression-tests",
+      "identity": "mncs_environment_explicit_unselected_proposal_tests_e2dcde4",
+      "repository": "mncs-environment",
+      "commit": "e2dcde42ef4a52729587521c5feb17b7ef397964",
+      "path": "tests/test_environment.py",
+      "sha256": "1af75a2ef02591753d035eb0999a72fb699d831035d3e19fbe8d2f11843b3167"
+    },
+    {
+      "kind": "committed-cli-contract-test",
+      "identity": "mncs_environment_proposal_preflight_cli_test_e2dcde4",
+      "repository": "mncs-environment",
+      "commit": "e2dcde42ef4a52729587521c5feb17b7ef397964",
+      "path": "tests/test_authority_policy_guidance.py",
+      "sha256": "0ec6a238d77232713313f227905a4d062a306e4ba34d52be5b5690e3ffacb8d1"
+    },
+    {
+      "kind": "committed-multi-agent-proof",
+      "identity": "mncs_environment_coordination_defer_proof_e2dcde4",
+      "repository": "mncs-environment",
+      "commit": "e2dcde42ef4a52729587521c5feb17b7ef397964",
+      "path": "scripts/campaign_proofs.py",
+      "sha256": "6dbb537b873c6bff3ad465e0172996aaba1b8b42ec740d1899129680c54b9fac"
+    },
+    {
+      "kind": "committed-agent-facing-contract-documentation",
+      "identity": "mncs_environment_unselected_proposal_preflight_docs_e2dcde4",
+      "repository": "mncs-environment",
+      "commit": "e2dcde42ef4a52729587521c5feb17b7ef397964",
+      "path": "docs/ENTRY.md",
+      "sha256": "079863f049a256af95c8d214aba8ff249c5c2d058b0a1c115608316845635f77"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "session_id": "ses_8d2eedabac6a6feb",
+    "consumer_id": "codex-environment-capability-intelligence",
+    "environment_id": "renv_230757227e164f69",
+    "definition_id": "env_712fb160746dea51"
+  }
+}

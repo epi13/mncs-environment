@@ -79,6 +79,16 @@ compiler support, and runtime provider. These references make the candidate
 implementation inspectable; they do not establish consumer integration or
 implementation responsibility for an owner-declared host task.
 
+The 2026-10-27 readback
+[`unselected-proposal-worktree-preflight-20261027.json`](../evidence/environmental-capability/unselected-proposal-worktree-preflight-20261027.json)
+connects an explicit, unselected worktree proposal to a fresh registered
+checkout observation and its `authority.proposal-eligible` event. The
+Environmental Capability projection reconstructs the same branch, HEAD,
+checkout identity, and clean-tree evidence without a persistent claim or an
+executed edit. A focused fixture covers the case where the earlier workspace
+projection omitted the worktree; a later independent agent's adoption and any
+reduction in coordination overhead remain unmeasured.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact
