@@ -1,7 +1,7 @@
 {
   "schema_version": "mncs-family.repository-manifest/v0alpha1",
   "repository": "mncs-environment",
-  "revision": 11,
+  "revision": 12,
   "manifest_location": "in-repository",
   "authority": {
     "note": "mncs-environment owns session composition, authority projection, and campaign lifecycle orchestration."
@@ -210,6 +210,17 @@
         "evidence_refs": [
           "mncs_env/coherence.py",
           ".mncs/coherence-passes.json"
+        ]
+      },
+      {
+        "contract": "mncs-automation.automation-reconciliation",
+        "envelope": {
+          "op": "any"
+        },
+        "required": false,
+        "scope": "workspace-read-only native planning for projection reconciliation",
+        "evidence_refs": [
+          "mncs_env/projections.py"
         ]
       },
       {

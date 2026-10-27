@@ -4603,6 +4603,19 @@ class CapabilityTests(unittest.TestCase):
                 "mncs-language",
             )
 
+    def test_projection_service_dependencies_are_manifest_consumptions(self) -> None:
+        repository_root = Path(__file__).resolve().parents[1]
+        consumers = capabilities.declared_consumed_contracts({
+            "mncs-environment": repository_root,
+        })
+        for contract in (
+            "mncs-doctor:projection-health",
+            "mncs-doc:documentation-projection",
+            "mncs-automation:automation-reconciliation",
+        ):
+            self.assertIn(contract, consumers)
+            self.assertEqual(consumers[contract], ["mncs-environment"])
+
     def test_consumed_readonly_provider_binds_without_selected_or_write_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory)
