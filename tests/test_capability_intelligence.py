@@ -2911,6 +2911,30 @@ def test_compact_projection_retains_newest_observation_tail(tmp_path: Path) -> N
     )
 
 
+def test_compact_projection_prioritizes_standalone_campaign_evidence(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_standalone_compaction",
+        "ses_standalone_compaction",
+        "cmp_standalone_compaction",
+    )
+    _drop_pressure_hypothesis(record)
+    session, _state = _session(tmp_path, [record])
+    projection = capability_intelligence.project(session)
+    projection["session_activity"]["oversized_secondary_context"] = "x" * 100_000
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, 24_000,
+    )
+
+    assert [item["identity"] for item in compact["observations"]] == [
+        "ev_environment_standalone_compaction",
+    ]
+    assert "oversized_secondary_context" not in compact["session_activity"]
+    assert len(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode()) <= 24_000
+
+
 def test_compact_projection_keeps_pressure_observations_outside_newest_tail(
     tmp_path: Path,
 ) -> None:

@@ -9403,14 +9403,12 @@ def _compact_projection(
                             <= max_result_bytes):
                         result = candidate
                         continue
-        has_applied_pointer_correction = any(
-            isinstance(item, dict)
-            and isinstance(item.get("evidence_reference_correction"), dict)
-            and item["evidence_reference_correction"].get("status")
-            == "applied-to-exact-unavailable-target"
-            for item in result["observations"]
-        )
-        if (has_applied_pointer_correction
+        # Preserve selected campaign evidence even when it has not yet been
+        # correlated with a pressure hypothesis or improvement relation.
+        # Secondary session context can be reconstructed from its own
+        # projection; removing the only source row makes the selected evidence
+        # page difficult to inspect and connect to the current work.
+        if (result["observations"]
                 and max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES):
             candidate = deepcopy(result)
             evidence_priority_activity = (
