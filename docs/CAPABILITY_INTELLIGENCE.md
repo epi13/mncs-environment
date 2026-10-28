@@ -449,3 +449,37 @@ a lead for inspection, not a migration conclusion. The readback is preserved in
 [`unmatched-native-pressure-context-readback-20261026.json`](../evidence/environmental-capability/unmatched-native-pressure-context-readback-20261026.json).
 The expanded identity and responsibility view is in
 [`pressure-identity-context-readback-20261026.json`](../evidence/environmental-capability/pressure-identity-context-readback-20261026.json).
+
+## Bounded correction-target readback
+
+The 2026-10-28 ECI correction-target evidence path connects a page-budget
+pressure observation, the bounded exact-target-read implementation, its
+regression verification, and a subsequent live readback. In the same
+authenticated projection window, the prior implementation left the pressure
+correction unresolved because its exact target was skipped by the normal page
+budget. The updated projection made one bounded exact read: applied
+corrections increased from one to two and unresolved corrections fell from
+two to one. Compact views also retain the remaining rejected correction's
+reason and exact source pointer after dropping its full row.
+
+The regression suite passed 182 tests. Exact correction-target reads are
+capped at four per projection and share the existing observation-read
+deadline. The projection also retains the correction summaries when response
+compaction removes full correction rows. This establishes bounded projection
+behavior and source traceability; it does not establish reduced agent burden
+or that the remaining correction is valid. The live projection is still
+`partial`, one unrelated correction remains unresolved, and the improvement
+relation's effectiveness is `not-assessed`.
+
+The linked records are
+[`eci-correction-target-read-pressure-20261028.json`](../evidence/environmental-capability/eci-correction-target-read-pressure-20261028.json),
+[`eci-correction-target-read-verification-20261028.json`](../evidence/environmental-capability/eci-correction-target-read-verification-20261028.json),
+[`eci-correction-target-read-budget-verification-20261028.json`](../evidence/environmental-capability/eci-correction-target-read-budget-verification-20261028.json),
+and
+[`eci-correction-target-read-improvement-20261028.json`](../evidence/environmental-capability/eci-correction-target-read-improvement-20261028.json).
+The current bounded projection exposes the pressure occurrence and the
+improvement relation through `mncs-env projections --interpret
+environmental-capability`; source preflight validated all four selected
+campaign records and verified the eight selected source pointers. Because the
+response is partial and compacts three observation rows, inspect the exact
+linked evidence records before drawing broader conclusions.
