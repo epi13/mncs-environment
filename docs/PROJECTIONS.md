@@ -1543,8 +1543,10 @@ within the selected event window. The view is an operation-accountability
 projection: recorded eligibility and receipts do not independently verify the
 repository state, establish agent need or intervention burden, or demonstrate
 that an ambient service fulfilled an opportunity. The compact ECI response
-retains a bounded operation link and its event provenance when detailed session
-activity is omitted.
+retains up to two bounded operation rows, one target receipt per row, and their
+event provenance when detailed session activity is omitted. If additional
+operations fall outside that response budget, the omitted count remains
+explicit.
 
 `session_activity.projection_coherence_history` exposes the selected session's
 recorded projection-pass summaries and their evidence references, together

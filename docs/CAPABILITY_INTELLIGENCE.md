@@ -301,6 +301,15 @@ out. The compact response does not establish that the attempted definition
 corrections applied. Recurrence and agent-intervention burden remain
 unmeasured.
 
+The later
+[`eci-retirement-operation-projection-readback-20261028.json`](../evidence/environmental-capability/eci-retirement-operation-projection-readback-20261028.json)
+records a same-window compaction comparison. Before the change, the bounded ECI
+response retained one of two retirement-operation rows beside the selected
+pressure and improvement relation. ECI now retains both operation receipts and
+their event references in that same view; the focused capability-intelligence
+suite passes. Two campaign source pointers remain unverified in the compact
+result, and the readback still does not establish reduced agent intervention.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact
