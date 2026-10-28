@@ -71,6 +71,81 @@ def runners():
     return counts, {name: lambda name=name: run(name) for name in counts}
 
 
+def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
+    def resource_usage(counter):
+        return {
+            "schema_version": coherence.resources.PROCESS_RESOURCE_USAGE_SCHEMA,
+            "status": "measured",
+            "measurement_basis": "process-counters-bracketing-owner-runner",
+            "pid": 505,
+            "process_start_ticks": 42,
+            "elapsed_seconds": 0.1,
+            "cpu_user_ticks": counter,
+            "cpu_system_ticks": 1,
+            "rss_start_bytes": 4096,
+            "rss_end_bytes": 4096,
+            "rss_high_water_start_bytes": 4096,
+            "rss_high_water_end_bytes": 4096,
+            "rss_high_water_growth_bytes": 0,
+            "io_bytes": {
+                "status": "measured",
+                "reason_code": None,
+                "rchar": 2,
+                "wchar": 3,
+                "read_bytes": counter,
+                "write_bytes": 4,
+                "cancelled_write_bytes": 0,
+            },
+            "measurement_limits": [
+                "Counters cover the scheduler process and exclude spawned child processes.",
+            ],
+        }
+
+    def trace_rows(start, count):
+        return {
+            "mode": "targeted_update",
+            "trace_persistence_status": "session-snapshot",
+            "scheduled": [{
+                "owner": "projections",
+                "pass": "projections",
+                "service_execution_id": f"ase_{index:032x}",
+                "run_elapsed_seconds": 0.1,
+                "process_resource_usage": resource_usage(index),
+            } for index in range(start, start + count)],
+            "skipped": [],
+            "owner_failures": [],
+        }
+
+    first = coherence._append_owner_execution_history(
+        None, trace_rows(0, 16), trace_sequence=1,
+        session_id="ses_incremental_fixture",
+    )
+    first_projection = coherence.project_owner_execution_history(first)
+    assert first_projection["status"] == "observed"
+    assert first_projection["coverage_status"] == "bounded-since-enabled"
+    assert first_projection["record_count"] == 16
+    assert first_projection["omitted_count"] == 0
+    assert first_projection["rows"][0]["process_resource_usage"][
+        "cpu_user_ticks"
+    ] == 0
+
+    second = coherence._append_owner_execution_history(
+        first, trace_rows(16, 2), trace_sequence=2,
+        session_id="ses_incremental_fixture",
+    )
+    second_projection = coherence.project_owner_execution_history(second)
+    assert second_projection["status"] == "observed"
+    assert second_projection["record_count"] == 16
+    assert second_projection["omitted_count"] == 2
+    assert second_projection["trace_sequence"] == 2
+    assert second_projection["rows"][0]["service_execution_id"] == (
+        f"ase_{2:032x}"
+    )
+    assert second_projection["rows"][-1]["service_execution_id"] == (
+        f"ase_{17:032x}"
+    )
+
+
 def test_warm_tick_has_zero_processes_and_writes(participant):
     counts, owned = runners()
     _, initial_trace = coherence.tick(participant, {}, owned)
@@ -929,6 +1004,16 @@ def test_store_replay_report_survives_route_and_postpass_observation_failure(
         "reconciliation_incomplete_or_store_advanced"
     )
     assert trace["mode"] == "bounded_reconciliation"
+    persisted_history = coherence.project_owner_execution_history(
+        participant.snapshot["coherence"]["owner_execution_history"],
+    )
+    assert persisted_history["status"] == "observed"
+    assert persisted_history["record_count"] == 7
+    assert {
+        row["service_execution_id"] for row in persisted_history["rows"]
+    } == {
+        row["service_execution_id"] for row in trace["scheduled"]
+    }
 
 
 def test_store_snapshot_conflict_replays_semantic_work_until_retry_commits(participant):

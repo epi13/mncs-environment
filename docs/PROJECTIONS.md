@@ -1574,6 +1574,16 @@ owner interval, exclude child processes, and do not establish that the owner
 caused all measured activity or that the invocations consumed the reported
 resources. Older traces remain readable and report that the sample was not
 recorded.
+The session snapshot also retains at most 16 path-free owner execution rows
+across persisted scheduler passes. Their coverage is marked
+`bounded-since-enabled`, and older omitted rows are counted; history before
+this field was introduced is not reconstructed. A scoped invocation whose ID
+has left `last_trace` can still relate to an exact retained row through
+`retained_trace_relation`, `retained_trace_sequence`, and the corresponding
+retained outcome and resource fields. `latest_trace_relation` continues to
+describe only the latest trace. This history improves continuity within one
+session but does not provide cross-session recurrence or prove that a service
+was needed or fulfilled an agent need.
 
 `session_activity.retirement_activity` relates the selected session's
 `environment.retirement.requested`, `environment.retirement.target-completed`,

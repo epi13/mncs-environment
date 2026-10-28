@@ -9303,6 +9303,25 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
         }],
         "skipped": [],
         "owner_failures": [],
+    }, "owner_execution_history": {
+        "schema_version": (
+            capability_intelligence.coherence_module
+            .OWNER_EXECUTION_HISTORY_SCHEMA
+        ),
+        "coverage_status": "bounded-since-enabled",
+        "limit": 16,
+        "trace_sequence": 4,
+        "omitted_count": 0,
+        "rows": [{
+            "owner": "verification",
+            "service_execution_id": execution_id,
+            "trace_sequence": 3,
+            "owner_outcome_status": "no-failure-reported",
+            "verification_status": "not-established",
+            "run_elapsed_seconds": 0.1,
+            "process_resource_usage_status": "measured",
+            "process_resource_usage": process_resource_usage,
+        }],
     }}
     events = [
         {
@@ -9425,6 +9444,46 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
         "not-recorded-on-trace"
     )
     assert "latest_trace_process_resource_usage" not in unmeasured
+
+    session.snapshot["coherence"]["last_trace"]["scheduled"][0][
+        "service_execution_id"
+    ] = "ase_" + "e" * 32
+    retained_projection = capability_intelligence.project(session)
+    retained_activity = retained_projection["session_activity"][
+        "ambient_owner_pass_activity"
+    ]
+    retained_group = retained_activity["execution_groups"][0]
+    assert retained_group["latest_trace_relation"] == "not-in-latest-trace"
+    assert retained_group["retained_trace_relation"] == (
+        "exact-retained-trace-match"
+    )
+    assert retained_group["retained_trace_sequence"] == 3
+    assert retained_group[
+        "retained_trace_process_resource_usage_status"
+    ] == "measured"
+    assert retained_group["retained_trace_process_resource_usage"] == (
+        process_resource_usage
+    )
+    history_source = retained_projection["session_activity"][
+        "ambient_service_execution"
+    ]["source"]
+    assert history_source["owner_execution_history_status"] == "observed"
+    assert history_source[
+        "owner_execution_history_coverage_status"
+    ] == "bounded-since-enabled"
+    assert history_source["owner_execution_history_record_count"] == 1
+
+    compact_retained = capability_intelligence.project(
+        session, max_result_bytes=10_000,
+    )["session_activity"]["ambient_owner_pass_activity"][
+        "execution_groups"
+    ][0]
+    assert compact_retained["retained_trace_relation"] == (
+        "exact-retained-trace-match"
+    )
+    assert compact_retained[
+        "retained_trace_process_resource_usage"
+    ]["io_bytes"]["write_bytes"] == 256
 
 
 def test_ambient_owner_pass_mismatched_completion_context_is_not_joined(

@@ -27,6 +27,10 @@ SCHEMA = "mncs.environment.incremental-coherence/1"
 INPUTS_PATH = Path(__file__).resolve().parents[1] / ".mncs/coherence-passes.json"
 MAX_WAVES = 3
 MAX_TRACE_OWNER_ROWS = 16
+MAX_OWNER_EXECUTION_HISTORY = 16
+OWNER_EXECUTION_HISTORY_SCHEMA = (
+    "mncs.environment.owner-execution-history/1"
+)
 MAX_TRACE_TRIGGER_KINDS = 8
 MAX_TRACE_TRIGGER_SUBJECT_IDENTITIES = 8
 MAX_TRACE_RESULT_FIELDS = 16
@@ -522,6 +526,214 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
     if omitted_failure_count:
         result["owner_failure_records_omitted"] = omitted_failure_count
     return result
+
+
+def project_owner_execution_history(value) -> dict:
+    """Validate the bounded session history of exact owner execution rows."""
+    unavailable = {
+        "schema_version": OWNER_EXECUTION_HISTORY_SCHEMA,
+        "status": "not-recorded",
+        "coverage_status": "not-recorded",
+        "limit": MAX_OWNER_EXECUTION_HISTORY,
+        "record_count": 0,
+        "omitted_count": 0,
+        "invalid_record_count": 0,
+        "trace_sequence": 0,
+        "rows": [],
+    }
+    if value is None:
+        return unavailable
+    if (not isinstance(value, dict)
+            or value.get("schema_version") != OWNER_EXECUTION_HISTORY_SCHEMA):
+        return {**unavailable, "status": "invalid", "invalid_record_count": 1}
+    coverage_status = value.get("coverage_status")
+    if coverage_status != "bounded-since-enabled":
+        coverage_status = "unknown"
+    limit = value.get("limit")
+    if type(limit) is not int or not 1 <= limit <= MAX_OWNER_EXECUTION_HISTORY:
+        limit = MAX_OWNER_EXECUTION_HISTORY
+    omitted = value.get("omitted_count", 0)
+    if type(omitted) is not int or omitted < 0:
+        omitted = 0
+        invalid_metadata = 1
+    else:
+        invalid_metadata = 0
+    trace_sequence = value.get("trace_sequence", 0)
+    if type(trace_sequence) is not int or trace_sequence < 0:
+        trace_sequence = 0
+        invalid_metadata += 1
+
+    try:
+        declared_passes = set(declarations().get("passes", {}))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        declared_passes = set()
+    raw_rows = value.get("rows")
+    if not isinstance(raw_rows, list):
+        raw_rows = []
+        invalid_metadata += 1
+    rows = []
+    seen_execution_ids = set()
+    invalid_count = invalid_metadata
+    for raw in raw_rows[:MAX_OWNER_EXECUTION_HISTORY]:
+        if not isinstance(raw, dict):
+            invalid_count += 1
+            continue
+        owner = raw.get("owner")
+        execution_id = raw.get("service_execution_id")
+        sequence = raw.get("trace_sequence")
+        if (not isinstance(owner, str) or owner not in declared_passes
+                or not isinstance(execution_id, str)
+                or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None
+                or type(sequence) is not int or sequence < 1
+                or execution_id in seen_execution_ids):
+            invalid_count += 1
+            continue
+        resource_status = raw.get("process_resource_usage_status")
+        if resource_status not in {
+            "measured", "partial", "unavailable", "not-recorded-on-trace",
+            "invalid-trace-record",
+        }:
+            invalid_count += 1
+            continue
+        process_usage = resources.compact_process_usage(
+            raw.get("process_resource_usage"),
+        )
+        if process_usage is not None:
+            if process_usage.get("status") != resource_status:
+                invalid_count += 1
+                continue
+        elif resource_status not in {
+            "not-recorded-on-trace", "invalid-trace-record",
+        }:
+            invalid_count += 1
+            continue
+        elapsed = raw.get("run_elapsed_seconds")
+        if (elapsed is not None
+                and (type(elapsed) not in (int, float)
+                     or not 0 <= elapsed <= 86400)):
+            invalid_count += 1
+            continue
+        outcome = raw.get("owner_outcome_status")
+        if outcome not in {
+            "failure-reported", "no-failure-reported", "unknown",
+        }:
+            outcome = "unknown"
+        verification = raw.get("verification_status")
+        if verification != "not-established":
+            verification = "unknown"
+        row = {
+            "owner": owner,
+            "service_execution_id": execution_id,
+            "trace_sequence": sequence,
+            "owner_outcome_status": outcome,
+            "verification_status": verification,
+            "process_resource_usage_status": resource_status,
+        }
+        if type(elapsed) in (int, float):
+            row["run_elapsed_seconds"] = round(float(elapsed), 3)
+        if process_usage is not None:
+            row["process_resource_usage"] = process_usage
+        seen_execution_ids.add(execution_id)
+        rows.append(row)
+    invalid_count += max(0, len(raw_rows) - MAX_OWNER_EXECUTION_HISTORY)
+    status = "partial" if invalid_count else "observed"
+    if coverage_status == "unknown":
+        status = "partial"
+    return {
+        "schema_version": OWNER_EXECUTION_HISTORY_SCHEMA,
+        "status": status,
+        "coverage_status": coverage_status,
+        "limit": limit,
+        "record_count": len(rows),
+        "omitted_count": omitted + max(
+            0, len(raw_rows) - MAX_OWNER_EXECUTION_HISTORY,
+        ),
+        "invalid_record_count": invalid_count,
+        "trace_sequence": trace_sequence,
+        "rows": rows,
+    }
+
+
+def _append_owner_execution_history(
+    previous, trace: dict, *, trace_sequence: int, session_id: str,
+) -> dict:
+    """Append path-free owner evidence and retain only the newest 16 rows."""
+    prior = project_owner_execution_history(previous)
+    retained = {
+        row["service_execution_id"]: row for row in prior["rows"]
+    }
+    projected_trace = project_trace(trace, session_id=session_id)
+    projected_rows = (
+        projected_trace.get("scheduled_passes", [])
+        if isinstance(projected_trace, dict) else []
+    )
+    raw_scheduled = trace.get("scheduled")
+    raw_by_execution = {
+        row.get("service_execution_id"): row
+        for row in raw_scheduled if isinstance(row, dict)
+        and isinstance(row.get("service_execution_id"), str)
+    } if isinstance(raw_scheduled, list) else {}
+    seen_current = set()
+    invalid_current = 0
+    for projected in projected_rows:
+        execution_id = projected.get("service_execution_id")
+        owner = projected.get("owner")
+        raw = raw_by_execution.get(execution_id)
+        if (not isinstance(execution_id, str) or not isinstance(owner, str)
+                or not isinstance(raw, dict) or execution_id in seen_current):
+            invalid_current += 1
+            continue
+        seen_current.add(execution_id)
+        has_sample = "process_resource_usage" in raw
+        process_usage = resources.compact_process_usage(
+            raw.get("process_resource_usage"),
+        )
+        resource_status = (
+            process_usage["status"] if process_usage is not None else
+            "invalid-trace-record" if has_sample else "not-recorded-on-trace"
+        )
+        row = {
+            "owner": owner,
+            "service_execution_id": execution_id,
+            "trace_sequence": trace_sequence,
+            "owner_outcome_status": projected.get(
+                "owner_outcome_status", "unknown",
+            ),
+            "verification_status": projected.get(
+                "verification_status", "unknown",
+            ),
+            "process_resource_usage_status": resource_status,
+        }
+        elapsed = projected.get("run_elapsed_seconds")
+        if type(elapsed) in (int, float):
+            row["run_elapsed_seconds"] = elapsed
+        if process_usage is not None:
+            row["process_resource_usage"] = process_usage
+        retained.pop(execution_id, None)
+        retained[execution_id] = row
+    all_rows = list(retained.values())
+    dropped = max(0, len(all_rows) - MAX_OWNER_EXECUTION_HISTORY)
+    rows = all_rows[-MAX_OWNER_EXECUTION_HISTORY:]
+    omitted = min(
+        10**12,
+        prior["omitted_count"] + prior["invalid_record_count"] + dropped
+        + invalid_current,
+    )
+    projected_invalid = 0
+    if isinstance(projected_trace, dict):
+        projected_invalid += projected_trace.get(
+            "scheduled_pass_records_invalid", 0,
+        )
+        projected_invalid += projected_trace.get("scheduled_passes_omitted", 0)
+    omitted = min(10**12, omitted + projected_invalid)
+    return {
+        "schema_version": OWNER_EXECUTION_HISTORY_SCHEMA,
+        "coverage_status": "bounded-since-enabled",
+        "limit": MAX_OWNER_EXECUTION_HISTORY,
+        "trace_sequence": trace_sequence,
+        "omitted_count": omitted,
+        "rows": rows,
+    }
 
 
 def declarations() -> dict:
@@ -1478,6 +1690,17 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                  "policy_receipt": receipt, "last_trace": report, "deadlines": deadlines,
                  "stable": stable and semantic_known, "store_cursor": cursor, "semantic_cursors": semantic_cursors,
                  "file_cursor": cursor}
+        prior_owner_history = project_owner_execution_history(
+            previous.get("owner_execution_history"),
+        )
+        history_sequence = min(
+            10**12, prior_owner_history["trace_sequence"] + 1,
+        )
+        state["owner_execution_history"] = _append_owner_execution_history(
+            previous.get("owner_execution_history"), report,
+            trace_sequence=history_sequence,
+            session_id=session.session_id,
+        )
         # Keep the replay cursor captured BEFORE effects. Own writes are
         # filtered by the feed. A concurrent peer publication must be replayed
         # on the next tick, including publications during a long owner pass.

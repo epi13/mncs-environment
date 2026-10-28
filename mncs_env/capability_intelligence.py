@@ -24,6 +24,7 @@ from typing import Any
 
 from . import authority as authority_module
 from . import claims as claims_module
+from . import coherence as coherence_module
 from . import evidence_store
 from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
@@ -3260,6 +3261,12 @@ def _compact_ambient_service_execution_overview(
             "kind", "session_id", "environment_id", "snapshot_sequence",
             "campaign_id", "work_intent_id", "trace_status",
             "owner_pass_decision_coverage",
+            "owner_execution_history_status",
+            "owner_execution_history_coverage_status",
+            "owner_execution_history_record_count",
+            "owner_execution_history_limit",
+            "owner_execution_history_omitted_count",
+            "owner_execution_history_invalid_record_count",
         ) if key in source
     }
     execution = value.get("execution")
@@ -9738,6 +9745,13 @@ def _compact_projection(
                     "latest_trace_verification_status",
                     "latest_trace_failure_observation_status",
                     "latest_trace_run_elapsed_seconds",
+                    "retained_trace_relation",
+                    "retained_trace_coverage_status",
+                    "retained_trace_sequence",
+                    "retained_trace_owner_outcome_status",
+                    "retained_trace_verification_status",
+                    "retained_trace_run_elapsed_seconds",
+                    "retained_trace_process_resource_usage_status",
                     "completion_context_missing_count",
                     "completion_context_mismatch_count",
                 )
@@ -9768,6 +9782,32 @@ def _compact_projection(
             elif group.get("latest_trace_process_resource_usage") is not None:
                 compact_group[
                     "latest_trace_process_resource_usage_status"
+                ] = "invalid-trace-record"
+            retained_usage_status = group.get(
+                "retained_trace_process_resource_usage_status",
+            )
+            if retained_usage_status in {
+                "measured", "partial", "unavailable",
+                "not-recorded-on-trace", "invalid-trace-record",
+            }:
+                compact_group[
+                    "retained_trace_process_resource_usage_status"
+                ] = retained_usage_status
+            elif retained_usage_status is not None:
+                compact_group[
+                    "retained_trace_process_resource_usage_status"
+                ] = "invalid-trace-record"
+            retained_usage = _compact_owner_process_usage(
+                group.get("retained_trace_process_resource_usage"),
+            )
+            if (retained_usage is not None
+                    and retained_usage.get("status") == retained_usage_status):
+                compact_group[
+                    "retained_trace_process_resource_usage"
+                ] = retained_usage
+            elif group.get("retained_trace_process_resource_usage") is not None:
+                compact_group[
+                    "retained_trace_process_resource_usage_status"
                 ] = "invalid-trace-record"
             status_counts = group.get("outcome_status_counts")
             if isinstance(status_counts, dict):
@@ -21701,10 +21741,19 @@ def _service_ambient_owner_pass_observation(
                     "latest_trace_failure_observation_status",
                     "latest_trace_run_elapsed_seconds",
                     "latest_trace_process_resource_usage_status",
+                    "retained_trace_relation",
+                    "retained_trace_coverage_status",
+                    "retained_trace_owner_outcome_status",
+                    "retained_trace_verification_status",
+                    "retained_trace_process_resource_usage_status",
                 )
                 if isinstance(execution.get(key), str)
                 or (key == "latest_trace_run_elapsed_seconds"
                     and type(execution.get(key)) in (int, float))
+                or (key in {
+                    "retained_trace_sequence",
+                    "retained_trace_run_elapsed_seconds",
+                } and type(execution.get(key)) in (int, float))
             }
             if execution_reference:
                 if execution_reference not in owner_pass_executions:
@@ -24151,11 +24200,28 @@ def _ambient_owner_result_store_source(
 def _session_ambient_service_execution(
     session: Any, snapshot: dict[str, Any],
 ) -> dict[str, Any]:
-    """Project the latest bounded incremental owner-pass scheduler trace."""
+    """Project the latest trace and bounded retained owner executions."""
     raw_coherence = snapshot.get("coherence")
     coherence = raw_coherence if isinstance(raw_coherence, dict) else {}
     raw_trace = coherence.get("last_trace")
     session_id = getattr(session, "session_id", None)
+    owner_history = coherence_module.project_owner_execution_history(
+        coherence.get("owner_execution_history"),
+    )
+    owner_history_source = {
+        "owner_execution_history_status": owner_history["status"],
+        "owner_execution_history_coverage_status": owner_history[
+            "coverage_status"
+        ],
+        "owner_execution_history_record_count": owner_history["record_count"],
+        "owner_execution_history_limit": owner_history["limit"],
+        "owner_execution_history_omitted_count": owner_history[
+            "omitted_count"
+        ],
+        "owner_execution_history_invalid_record_count": owner_history[
+            "invalid_record_count"
+        ],
+    }
     if not isinstance(raw_trace, dict):
         has_trace_slot = (
             "coherence" in snapshot and not isinstance(raw_coherence, dict)
@@ -24175,6 +24241,7 @@ def _session_ambient_service_execution(
                     and snapshot["snapshot_sequence"] >= 0 else None
                 ),
                 "trace_status": "missing-or-invalid",
+                **owner_history_source,
             },
             "execution": None,
             "measurement_limits": [
@@ -24391,6 +24458,7 @@ def _session_ambient_service_execution(
             execution.get("owner_pass_decision_coverage", "unavailable")
             if isinstance(execution, dict) else "unavailable"
         ),
+        **owner_history_source,
     }
     return {
         "status": (
@@ -24711,9 +24779,9 @@ def _session_invoke_request_surface(payload: Any) -> tuple[str | None, str]:
 
 def _session_ambient_owner_pass_activity(
     records: list[dict[str, Any]], invocation_count: int,
-    trace_view: dict[str, Any],
+    trace_view: dict[str, Any], owner_execution_history: Any = None,
 ) -> dict[str, Any]:
-    """Join explicitly scoped invocations to the latest stored scheduler trace."""
+    """Join scoped invocations to latest or bounded retained owner traces."""
     execution = trace_view.get("execution")
     execution = execution if isinstance(execution, dict) else None
     scheduled = execution.get("scheduled_passes", []) if execution else []
@@ -24723,6 +24791,16 @@ def _session_ambient_owner_pass_activity(
         if (isinstance(row, dict)
                 and isinstance(row.get("service_execution_id"), str)):
             trace_rows.setdefault(row["service_execution_id"], []).append(row)
+    history_view = coherence_module.project_owner_execution_history(
+        owner_execution_history,
+    )
+    history_rows = history_view.get("rows", [])
+    history_rows = history_rows if isinstance(history_rows, list) else []
+    retained_trace_rows = {
+        row["service_execution_id"]: row for row in history_rows
+        if isinstance(row, dict)
+        and isinstance(row.get("service_execution_id"), str)
+    }
 
     groups: dict[tuple[str, str], dict[str, Any]] = {}
     unclassified_capabilities: dict[tuple[str, ...], dict[str, Any]] = {}
@@ -25032,6 +25110,50 @@ def _session_ambient_owner_pass_activity(
                         process_usage["status"]
                     )
                     item["latest_trace_process_resource_usage"] = process_usage
+        elif not matches:
+            retained_trace = retained_trace_rows.get(execution_id)
+            if isinstance(retained_trace, dict):
+                if retained_trace.get("owner") != group["owner_pass"]:
+                    item["retained_trace_relation"] = (
+                        "execution-owner-mismatch"
+                    )
+                else:
+                    item["retained_trace_relation"] = (
+                        "exact-retained-trace-match"
+                    )
+                    item["retained_trace_coverage_status"] = (
+                        history_view.get("coverage_status", "unknown")
+                    )
+                    item["retained_trace_sequence"] = retained_trace[
+                        "trace_sequence"
+                    ]
+                    item["retained_trace_owner_outcome_status"] = (
+                        retained_trace.get(
+                            "owner_outcome_status", "unknown",
+                        )
+                    )
+                    item["retained_trace_verification_status"] = (
+                        retained_trace.get("verification_status", "unknown")
+                    )
+                    elapsed = retained_trace.get("run_elapsed_seconds")
+                    if type(elapsed) in (int, float):
+                        item["retained_trace_run_elapsed_seconds"] = round(
+                            float(elapsed), 3,
+                        )
+                    resource_status = retained_trace.get(
+                        "process_resource_usage_status",
+                    )
+                    item[
+                        "retained_trace_process_resource_usage_status"
+                    ] = resource_status
+                    process_usage = resources_module.compact_process_usage(
+                        retained_trace.get("process_resource_usage"),
+                    )
+                    if (process_usage is not None
+                            and process_usage.get("status") == resource_status):
+                        item["retained_trace_process_resource_usage"] = (
+                            process_usage
+                        )
         capability_groups = sorted(
             group["_capabilities"].values(),
             key=lambda row: row["invocation_count"], reverse=True,
@@ -25107,7 +25229,7 @@ def _session_ambient_owner_pass_activity(
         ),
         "measurement_limits": [
             "A scoped invocation links Session.invoke to an owner pass; it does not establish fulfillment, agent receipt, or reduced intervention burden.",
-            "Unclassified calls are not attributed to an agent or manual work. The event window and latest stored trace are bounded; an absent match can reflect an entry-only or replaced trace.",
+            "Unclassified calls are not attributed to an agent or manual work. The event window and retained owner traces are bounded since history collection began; an absent match can reflect incomplete or expired history.",
             "Provider status and return code are not independent verification of downstream state; unobserved opportunities and external calls remain unknown.",
         ],
     }
@@ -25135,6 +25257,9 @@ def _session_activity(
     diagnostic_activity = _session_diagnostic_activity(
         snapshot, session.session_id,
     )
+    raw_coherence = snapshot.get("coherence")
+    raw_coherence = raw_coherence if isinstance(raw_coherence, dict) else {}
+    owner_execution_history = raw_coherence.get("owner_execution_history")
     ambient_service_execution = _session_ambient_service_execution(
         session, snapshot,
     )
@@ -25215,7 +25340,7 @@ def _session_activity(
     if not callable(reader):
         resource_samples = _session_resource_samples(session, snapshot, [])
         ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
-            [], 0, ambient_service_execution,
+            [], 0, ambient_service_execution, owner_execution_history,
         )
         ambient_owner_pass_activity["status"] = "unavailable"
         return {
@@ -25279,7 +25404,7 @@ def _session_activity(
             or type(page.get("truncated")) is not bool):
         resource_samples = _session_resource_samples(session, snapshot, [])
         ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
-            [], 0, ambient_service_execution,
+            [], 0, ambient_service_execution, owner_execution_history,
         )
         ambient_owner_pass_activity["status"] = "unavailable"
         return {
@@ -25988,7 +26113,7 @@ def _session_activity(
     )
     ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
         ambient_owner_pass_records, len(invocation_events),
-        ambient_service_execution,
+        ambient_service_execution, owner_execution_history,
     )
     ambient_owner_pass_activity_digest = (
         digest_hex(ambient_owner_pass_activity)
