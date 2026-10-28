@@ -6004,6 +6004,61 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(required_summary["status"], "blocked")
             self.assertEqual(required_summary["required_unknown"], ["c"])
 
+    def test_declared_composition_toolchain_gap_is_structured(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = root / "mncs-test"
+            (provider / "bin").mkdir(parents=True)
+            executable = provider / "bin" / "runner"
+            executable.write_text("#!/bin/sh\n")
+            executable.chmod(0o755)
+            (provider / ".mncs").mkdir()
+            (provider / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-test",
+                "contracts": {"provides": [{
+                    "contract": "canonical-vm-tests",
+                    "version": "1",
+                    "effects": ["verify"],
+                    "invocation": {
+                        "kind": "executable",
+                        "path": "bin/runner",
+                        "toolchains": {
+                            "MNCS_COMPILER_CHECKOUT": {
+                                "repository": "mncs-compiler",
+                                "path": ".",
+                            },
+                        },
+                    },
+                }]},
+            }))
+            bindings = capabilities.discover_capabilities(
+                root, repository_roots={"mncs-test": provider},
+            )
+            binding = next(
+                row for row in bindings
+                if row["capability"] == "mncs-test:canonical-vm-tests"
+            )
+            issue = {
+                "schema_version": (
+                    "mncs.environment.invocation-resolution-issue/1"
+                ),
+                "code": "repository-checkout-not-selected",
+                "dependency": {
+                    "repository": "mncs-compiler",
+                    "path": ".",
+                },
+                "resolution_scope": "selected-checkout-closure",
+                "status": "unresolved",
+                "environment_name": "MNCS_COMPILER_CHECKOUT",
+            }
+            self.assertEqual(
+                binding["provenance"]["addressing_resolution_issue"], issue,
+            )
+            probed = capabilities.probe_availability(binding)
+            self.assertEqual(probed["availability"]["code"],
+                             "provider-invocation-unresolvable")
+            self.assertEqual(probed["availability"]["resolution_issue"], issue)
+
     def test_toolchain_env_exported(self) -> None:
         binding = capabilities.probe_availability(
             capabilities.bind(provider="p", capability="c", contract_revision="1",

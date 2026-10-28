@@ -2381,6 +2381,51 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
     return result
 
 
+def _compact_invocation_resolution_issue(value: Any) -> dict[str, Any] | None:
+    """Retain exact, relative provider dependency context without host paths."""
+    if (not isinstance(value, dict)
+            or value.get("schema_version")
+            != "mncs.environment.invocation-resolution-issue/1"
+            or value.get("status") != "unresolved"):
+        return None
+    code = value.get("code")
+    if code not in {
+        "repository-checkout-not-selected",
+        "repository-checkout-not-present",
+        "dependency-path-not-present",
+        "dependency-path-escapes-checkout",
+    }:
+        return None
+    scope = value.get("resolution_scope")
+    if scope not in {"selected-checkout-closure", "workspace-repository"}:
+        return None
+    dependency = value.get("dependency")
+    if not isinstance(dependency, dict):
+        return None
+    repository = dependency.get("repository")
+    path = dependency.get("path")
+    if (not isinstance(repository, str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", repository) is None
+            or not isinstance(path, str) or not path or len(path) > 256
+            or any(ord(char) < 32 for char in path)):
+        return None
+    relative = Path(path)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    result: dict[str, Any] = {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": code,
+        "dependency": {"repository": repository, "path": relative.as_posix()},
+        "resolution_scope": scope,
+        "status": "unresolved",
+    }
+    environment_name = value.get("environment_name")
+    if (isinstance(environment_name, str)
+            and re.fullmatch(r"[A-Z][A-Z0-9_]*", environment_name)):
+        result["environment_name"] = environment_name
+    return result
+
+
 def _compact_provider_execution_readiness(value: Any) -> dict[str, Any] | None:
     """Keep source-backed executor readiness context without inferring readiness."""
     if not isinstance(value, dict):
@@ -2488,6 +2533,13 @@ def _compact_provider_execution_readiness(value: Any) -> dict[str, Any] | None:
                     field = item.get(key)
                     if isinstance(field, str) and field:
                         compact_item[key] = _short_text(field, 192)
+                resolution_issue = _compact_invocation_resolution_issue(
+                    item.get("availability_resolution_issue"),
+                )
+                if resolution_issue is not None:
+                    compact_item["availability_resolution_issue"] = (
+                        resolution_issue
+                    )
                 compact_unavailable.append(compact_item)
             compact_provider_context["unavailable_bindings"] = compact_unavailable
             omitted = provider_context.get("unavailable_bindings_omitted_count")
@@ -2706,6 +2758,10 @@ def _provider_execution_readiness_context(
                 **({"availability_reason": binding["availability_reason"]}
                     if isinstance(binding.get("availability_reason"), str)
                     else {}),
+                **({"availability_resolution_issue": issue}
+                   if (issue := _compact_invocation_resolution_issue(
+                       binding.get("availability_resolution_issue"),
+                   )) is not None else {}),
             }
             for binding in unavailable[:4]
         ],
@@ -3737,9 +3793,16 @@ def _ambient_verification_executor_readiness_relation(
                 "basis": "same-provider-identity-in-current-session-binding-snapshot",
                 "dependency_status": "not-established",
                 "unavailable_bindings": [
-                    {key: item[key] for key in (
-                        "capability", "availability_status", "availability_code",
-                    ) if isinstance(item.get(key), str)}
+                    {
+                        **{key: item[key] for key in (
+                            "capability", "availability_status",
+                            "availability_code",
+                        ) if isinstance(item.get(key), str)},
+                        **({"availability_resolution_issue": issue}
+                           if (issue := _compact_invocation_resolution_issue(
+                               item.get("availability_resolution_issue"),
+                           )) is not None else {}),
+                    }
                     for item in unavailable[:2]
                     if isinstance(item, dict)
                     and isinstance(item.get("capability"), str)
@@ -15929,6 +15992,11 @@ def _capability_delivery_view(
             binding_record["availability_reason"] = _short_text(
                 availability["reason"], 192,
             )
+        resolution_issue = _compact_invocation_resolution_issue(
+            availability.get("resolution_issue"),
+        )
+        if resolution_issue is not None:
+            binding_record["availability_resolution_issue"] = resolution_issue
         provenance = raw.get("provenance")
         provenance = provenance if isinstance(provenance, dict) else {}
         checkout = provenance.get("checkout")

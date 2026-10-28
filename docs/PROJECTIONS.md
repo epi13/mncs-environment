@@ -1230,9 +1230,13 @@ substrate availability and verification class, the observed provider checkout
 state, declared toolchain checkout states, and a compact view of other
 capability bindings from the same provider. This helps distinguish an
 available executor entrypoint from a provider whose selected checkout or
-declared toolchain is not ready. Same-provider capability rows are correlated
-by provider identity only; they do not establish a dependency or explain the
-executor's outcome. The context always reports `readiness_status:
+declared toolchain is not ready. When a provider-declared repository toolchain
+cannot be resolved, `availability_resolution_issue` preserves its repository,
+relative path, environment variable when declared, and whether the checkout is
+outside the selected closure or its path is absent. This bounded structured
+detail contains no host checkout path. Same-provider capability rows are
+correlated by provider identity only; they do not establish a dependency or
+explain the executor's outcome. The context always reports `readiness_status:
 not-established`: it does not establish that the executor can run, that an
 opportunity was eligible, that the agent received the capability, or that
 ambient fulfillment occurred. Checkout and toolchain fields are observations

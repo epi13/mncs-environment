@@ -6137,6 +6137,14 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
             }],
         },
     }
+    resolution_issue = {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": "repository-checkout-not-selected",
+        "dependency": {"repository": "mncs-compiler", "path": "."},
+        "resolution_scope": "selected-checkout-closure",
+        "status": "unresolved",
+        "environment_name": "MNCS_COMPILER_CHECKOUT",
+    }
     canonical_vm_binding = {
         "binding_id": "cap_canonical_vm_tests",
         "provider": "mncs-test",
@@ -6149,6 +6157,7 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
                 "composition toolchain unresolvable: "
                 "mncs-compiler checkout is unavailable in the selected closure"
             ),
+            "resolution_issue": resolution_issue,
         },
     }
     snapshot = {
@@ -6256,6 +6265,9 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     assert "mncs-compiler" in related["unavailable_bindings"][0][
         "availability_reason"
     ]
+    assert related["unavailable_bindings"][0][
+        "availability_resolution_issue"
+    ] == resolution_issue
     assert verification_context["obligations"][1][
         "binding_relation_status"
     ] == "not-present-in-current-binding-snapshot"
@@ -7684,6 +7696,14 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         unverified_activity,
     ) == []
     executor_capability = executor_obligations[0]["capability_identity"]
+    resolution_issue = {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": "repository-checkout-not-selected",
+        "dependency": {"repository": "mncs-compiler", "path": "."},
+        "resolution_scope": "selected-checkout-closure",
+        "status": "unresolved",
+        "environment_name": "MNCS_COMPILER_CHECKOUT",
+    }
     executor_delivery = capability_intelligence._capability_delivery_view(
         {"bindings": [{
             "binding_id": "cap_native_provider_execution",
@@ -7708,6 +7728,7 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
                 "status": "unavailable", "verification": "substrate",
                 "code": "provider-invocation-unresolvable",
                 "reason": "composition toolchain unresolvable: mncs-compiler",
+                "resolution_issue": resolution_issue,
             },
         }]},
         [], [], [], event_window_truncated=False,
@@ -7750,6 +7771,9 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert compact_readiness["same_provider_capability_context"][
         "unavailable_bindings"
     ][0]["capability"] == "mncs-test:canonical-vm-tests"
+    assert compact_readiness["same_provider_capability_context"][
+        "unavailable_bindings"
+    ][0]["availability_resolution_issue"] == resolution_issue
     assert compact_obligation["agent_intervention_burden_status"] == (
         "not-measured"
     )
@@ -7867,6 +7891,9 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert readiness_link["same_provider_capability_context"][
         "unavailable_bindings"
     ][0]["capability"] == "mncs-test:canonical-vm-tests"
+    assert readiness_link["same_provider_capability_context"][
+        "unavailable_bindings"
+    ][0]["availability_resolution_issue"] == resolution_issue
     assert readiness_relation["causal_status"] == "not-established"
     assert readiness_relation["agent_intervention_burden_status"] == (
         "not-measured"

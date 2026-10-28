@@ -230,6 +230,109 @@ def _selected_repository_toolchain(
     return str(candidate) if candidate.exists() else None
 
 
+def _repository_toolchain_resolution_issue(
+    toolchain: Any,
+    workspace: Path,
+    repository_roots: dict[str, Path] | None,
+    *,
+    environment_name: str | None = None,
+) -> dict[str, Any] | None:
+    """Describe a declared repository input that the selected closure lacks."""
+    if not isinstance(toolchain, dict):
+        return None
+    repository = toolchain.get("repository")
+    relative_raw = toolchain.get("path", ".")
+    if (not isinstance(repository, str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", repository) is None
+            or repository in {".", ".."}
+            or not isinstance(relative_raw, str) or not relative_raw):
+        return None
+    relative = Path(relative_raw)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    dependency = {"repository": repository, "path": relative.as_posix()}
+    scope = (
+        "selected-checkout-closure"
+        if repository_roots is not None else "workspace-repository"
+    )
+    code: str | None = None
+    if repository_roots is not None:
+        base_value = repository_roots.get(repository)
+        if base_value is None:
+            code = "repository-checkout-not-selected"
+            base = None
+        else:
+            base = Path(base_value).resolve()
+    else:
+        base = (workspace / repository).resolve()
+    if code is None and base is not None:
+        if not base.is_dir():
+            code = "repository-checkout-not-present"
+        else:
+            candidate = (base / relative).resolve()
+            try:
+                candidate.relative_to(base)
+            except ValueError:
+                code = "dependency-path-escapes-checkout"
+            else:
+                if not candidate.exists():
+                    code = "dependency-path-not-present"
+    if code is None:
+        return None
+    issue: dict[str, Any] = {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": code,
+        "dependency": dependency,
+        "resolution_scope": scope,
+        "status": "unresolved",
+    }
+    if (isinstance(environment_name, str)
+            and re.fullmatch(r"[A-Z][A-Z0-9_]*", environment_name)):
+        issue["environment_name"] = environment_name
+    return issue
+
+
+def _validated_invocation_resolution_issue(value: Any) -> dict[str, Any] | None:
+    """Accept only bounded, relative dependency context for public evidence."""
+    if not isinstance(value, dict) or value.get("schema_version") != (
+        "mncs.environment.invocation-resolution-issue/1"
+    ) or value.get("status") != "unresolved":
+        return None
+    codes = {
+        "repository-checkout-not-selected",
+        "repository-checkout-not-present",
+        "dependency-path-not-present",
+        "dependency-path-escapes-checkout",
+    }
+    scopes = {"selected-checkout-closure", "workspace-repository"}
+    code = value.get("code")
+    scope = value.get("resolution_scope")
+    dependency = value.get("dependency")
+    if code not in codes or scope not in scopes or not isinstance(dependency, dict):
+        return None
+    repository = dependency.get("repository")
+    path = dependency.get("path")
+    if (not isinstance(repository, str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", repository) is None
+            or not isinstance(path, str) or len(path) > 256):
+        return None
+    relative = Path(path)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    result: dict[str, Any] = {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": code,
+        "dependency": {"repository": repository, "path": relative.as_posix()},
+        "resolution_scope": scope,
+        "status": "unresolved",
+    }
+    environment_name = value.get("environment_name")
+    if (isinstance(environment_name, str)
+            and re.fullmatch(r"[A-Z][A-Z0-9_]*", environment_name)):
+        result["environment_name"] = environment_name
+    return result
+
+
 def declared_repository_toolchain_references(
     repository_roots: dict[str, Path | str],
 ) -> dict[str, list[dict[str, str]]]:
@@ -343,7 +446,8 @@ def descriptor_invocation(
 
     Returns ``{"address", "toolchain_address", "toolchain_env",
     "fixed_argv", "adapter_library_paths",
-    ``timeout_seconds``, ``addressing", "detail"}``. ``addressing`` is ``"descriptor"`` when the
+    ``timeout_seconds``, ``addressing", ``detail"``, and an optional
+    structured ``resolution_issue``. ``addressing`` is ``"descriptor"`` when the
     entry carries a usable declaration, else ``"none"`` with ``detail``
     naming the failure so availability can distinguish a missing
     declaration from an unresolvable one. Paths in ``path``
@@ -365,8 +469,14 @@ def descriptor_invocation(
              "addressing": "none",
              "detail": None}
 
-    def unusable(detail):
-        return dict(empty, detail=detail)
+    def unusable(detail, resolution_issue=None):
+        result = dict(empty, detail=detail)
+        validated_issue = _validated_invocation_resolution_issue(
+            resolution_issue,
+        )
+        if validated_issue is not None:
+            result["resolution_issue"] = validated_issue
+        return result
 
     spec = entry.get("invocation")
     if not isinstance(spec, dict):
@@ -417,8 +527,14 @@ def descriptor_invocation(
             toolchain_address = str(candidate)
     if ((isinstance(toolchain, dict) or isinstance(toolchain, str) and toolchain)
             and toolchain_address is None):
-        return unusable("toolchain unresolvable in authorized checkout closure: %r"
-                        % (toolchain,))
+        resolution_issue = _repository_toolchain_resolution_issue(
+            toolchain, workspace, repository_roots,
+            environment_name=toolchain_env,
+        )
+        return unusable(
+            f"toolchain unresolvable in authorized checkout closure: {toolchain!r}",
+            resolution_issue,
+        )
     fixed_env: dict[str, str] = {}
     declared_toolchains = spec.get("toolchains", {})
     if not isinstance(declared_toolchains, dict):
@@ -429,7 +545,14 @@ def descriptor_invocation(
             return unusable("invalid or protected invocation toolchain environment name")
         selected = _selected_repository_toolchain(selection, workspace, repository_roots)
         if selected is None:
-            return unusable("composition toolchain unresolvable in authorized checkout closure: %r" % (selection,))
+            resolution_issue = _repository_toolchain_resolution_issue(
+                selection, workspace, repository_roots,
+                environment_name=variable,
+            )
+            return unusable(
+                f"composition toolchain unresolvable in authorized checkout closure: {selection!r}",
+                resolution_issue,
+            )
         fixed_env[variable] = selected
     adapter_library_paths: list[str] = []
     raw_roots = spec.get("adapter_library_paths", [])
@@ -515,6 +638,15 @@ def probe_availability(binding: dict[str, Any]) -> dict[str, Any]:
             "observed_at": utcnow(),
         }
     awaitable["availability"]["substrate_key"] = availability_substrate_key(binding)
+    provenance = binding.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    resolution_issue = _validated_invocation_resolution_issue(
+        provenance.get("addressing_resolution_issue"),
+    )
+    if (resolution_issue is not None
+            and awaitable["availability"].get("code")
+            == "provider-invocation-unresolvable"):
+        awaitable["availability"]["resolution_issue"] = resolution_issue
     return awaitable
 
 
@@ -1088,6 +1220,11 @@ def _from_semantic_contracts(
             ),
             "adapter_library_paths": declared["adapter_library_paths"],
         }
+        resolution_issue = _validated_invocation_resolution_issue(
+            declared.get("resolution_issue"),
+        )
+        if resolution_issue is not None:
+            provenance["addressing_resolution_issue"] = resolution_issue
         if provider_evidence_path is not None:
             provenance["provider_declared_evidence_path"] = (
                 provider_evidence_path
@@ -1193,15 +1330,22 @@ def _from_manifest(
             event_types=["unknown"],
             timeout_seconds=declared["timeout_seconds"],
             output_limit_bytes=output_limit_bytes,
-            provenance={"source": f"{repo.name}/.mncs/project.json",
-                        "kind": entry.get("kind"), "stability": entry.get("stability"),
-                        "addressing": addressing,
-                        "declared_invocation": isinstance(
-                            entry.get("invocation"), dict,
-                        ),
-                        "manifest_tests": declared_tests,
-                        "addressing_detail": declared.get("detail"),
-                        "artifact_contract": entry.get("artifact_contract")},
+            provenance={
+                "source": f"{repo.name}/.mncs/project.json",
+                "kind": entry.get("kind"),
+                "stability": entry.get("stability"),
+                "addressing": addressing,
+                "declared_invocation": isinstance(
+                    entry.get("invocation"), dict,
+                ),
+                "manifest_tests": declared_tests,
+                "addressing_detail": declared.get("detail"),
+                **({"addressing_resolution_issue": issue}
+                   if (issue := _validated_invocation_resolution_issue(
+                       declared.get("resolution_issue"),
+                   )) is not None else {}),
+                "artifact_contract": entry.get("artifact_contract"),
+            },
             provider_root=str(repo),
         )
         out.append(record)
