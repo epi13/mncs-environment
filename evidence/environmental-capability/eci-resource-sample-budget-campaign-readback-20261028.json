@@ -1,0 +1,107 @@
+{
+  "captured_at": "2026-10-28T06:22:51Z",
+  "identity": "ev_environment_eci_resource_sample_budget_campaign_readback_20261028",
+  "measurement_basis": "post-checkpoint-ECI-campaign-evidence-projection-readback",
+  "observation": {
+    "kind": "post-implementation-ECI-projection-readback",
+    "outcome": {
+      "campaign_evidence_count": 62,
+      "campaign_state_checkpoint_id": "chk_eb2a00253b022ee4",
+      "effectiveness_assessment": "not-assessed",
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "improvement_relation_count": 1,
+      "improvement_relation_identity": "im_environment_eci_resource_sample_budget_20261028",
+      "interpretation_limit": "The bounded selected evidence page exposes the authentic pressure, implementation, verification, and same-session readback relationship. The response remains partial; recurrence, agent receipt, intervention burden, and longer-term effectiveness are not established.",
+      "observation_count": 4,
+      "pressure_hypothesis_count": 1,
+      "pressure_hypothesis_identity": "ph_environment_eci_resource_sample_budget_context",
+      "pressure_recurrence_status": "not-established",
+      "projection_status": "partial",
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "unavailable_observation_count": 0,
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "verified_observation_count": 4
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_eb2a00253b022ee4",
+      "evidence_limit": 4,
+      "evidence_offset": 58,
+      "operation": "Read the campaign evidence page appended for the verified ECI resource-sample context improvement.",
+      "projection_content_digest": "457f9b0f456482412e26c250814f4f49",
+      "projection_identity": "eci_f71c2a7f5ad4e913"
+    },
+    "source_interface": "MNCS Environment projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain one newest verified resource sample with objective, event, and Store provenance in bounded summary and evidence-priority responses, while preserving host-only measurement limits.",
+    "category": "environmental-observability",
+    "identity": "ph_environment_eci_resource_sample_budget_context",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability-intelligence session-activity projection",
+    "title": "ECI evidence-priority compaction drops recorded resource context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 62,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_eb2a00253b022ee4",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:7acb2036d851",
+      "claim:mncs-environment:worktree:1ce2dd856e0f"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "10d33a55ec9ade10caea5ad0eef138c1b16464ef",
+      "identity": "ev_environment_eci_resource_sample_budget_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-pressure-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "ed3d4f672dc1b42d837ca3f1c6f21f628ab718af1fd09ffd3f1f93c5612bc6af"
+    },
+    {
+      "commit": "10d33a55ec9ade10caea5ad0eef138c1b16464ef",
+      "identity": "ev_environment_eci_resource_sample_budget_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-verification-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "0c3d55e17a6247772337d0f6534d7a0f89d3b5c2b32a64e53bdf62db3e47de26"
+    },
+    {
+      "commit": "10d33a55ec9ade10caea5ad0eef138c1b16464ef",
+      "identity": "ev_environment_eci_resource_sample_budget_readback_20261028",
+      "kind": "post-implementation-ECI-readback",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-readback-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "68bb848587ceadfe57add9cfcd7e36a0058c4225701f2268be91f9808517327a"
+    },
+    {
+      "commit": "10d33a55ec9ade10caea5ad0eef138c1b16464ef",
+      "identity": "ev_environment_eci_resource_sample_budget_improvement_20261028",
+      "kind": "campaign-improvement-relation",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-improvement-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "c17738e05719b5289a2f3c371f7d65724ba1636065037a2f503dd225bc8132e3"
+    },
+    {
+      "content_digest": "457f9b0f456482412e26c250814f4f49",
+      "identity": "eci_f71c2a7f5ad4e913",
+      "kind": "campaign-projection-readback",
+      "repository": "mncs-environment"
+    }
+  ]
+}
