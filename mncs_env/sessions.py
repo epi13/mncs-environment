@@ -1309,6 +1309,11 @@ def continuation_observations(
                 > CAMPAIGN_DELIVERY_REPOSITORIES_MAX,
             },
         }
+        observation_preflight = state.get("observation_preflight")
+        if isinstance(observation_preflight, dict):
+            campaign_state_projection["observation_preflight"] = (
+                observation_preflight
+            )
 
     return {
         "claim_ids": own_claim_ids[-16:],
@@ -10501,6 +10506,11 @@ class Session:
             continuation["evidence_truncated"] = persisted_campaign_state.get(
                 "evidence_truncated", False
             )
+            observation_preflight = persisted_campaign_state.get(
+                "observation_preflight",
+            )
+            if isinstance(observation_preflight, dict):
+                continuation["observation_preflight"] = observation_preflight
         if observations["foreign_claims_count"]:
             continuation.update({
                 "foreign_claims": observations["foreign_claims"],

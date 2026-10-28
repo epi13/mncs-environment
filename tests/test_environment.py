@@ -10533,6 +10533,16 @@ class SessionTests(unittest.TestCase):
                 session.campaign_state()["observation_preflight"],
                 accepted["campaign_state"]["observation_preflight"],
             )
+            self.assertEqual(
+                session.context()["continuation"]["observation_preflight"],
+                accepted["campaign_state"]["observation_preflight"],
+            )
+            self.assertEqual(
+                sessions.continuation_observations(
+                    session.store, session.snapshot, session.session_id,
+                )["campaign_state"]["observation_preflight"],
+                accepted["campaign_state"]["observation_preflight"],
+            )
 
     def test_checkpoint_records_when_environment_observation_preflight_is_unavailable(
         self,
@@ -10630,6 +10640,9 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(capsule["evidence_count"], len(evidence))
             self.assertTrue(capsule["evidence_truncated"])
             self.assertEqual(capsule["delivery"]["status"], "delivered")
+            self.assertEqual(
+                capsule["observation_preflight"]["status"], "not-applicable",
+            )
             self.assertEqual(capsule["campaign_state_checkpoint_id"], checkpoint["identity"])
             self.assertEqual(
                 capsule["campaign_state_provenance"],
