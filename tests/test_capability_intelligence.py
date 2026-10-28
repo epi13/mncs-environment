@@ -6303,7 +6303,7 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     assert "source_reference" not in compact_observations["items"][0]
     owner_summary = compact_observations["owner_decision_summary"]
     assert owner_summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/2"
+        "mncs.environment.owner-pass-decision-summary/3"
     )
     assert owner_summary["status"] == "partial"
     assert owner_summary["source_observation_count"] == 7
@@ -6433,6 +6433,31 @@ def test_owner_pass_decision_summary_preserves_partial_source_coverage() -> None
         "owner_decision_summary": summary,
     })
     assert compacted_again == summary
+    version_two = deepcopy(summary)
+    version_two["schema_version"] = (
+        "mncs.environment.owner-pass-decision-summary/2"
+    )
+    for owner in version_two["owners"]:
+        owner.pop("observed_source_content_integrity_status_counts", None)
+    assert capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 3,
+        "items": [],
+        "owner_decision_summary": version_two,
+    }) == version_two
+
+    version_one = deepcopy(version_two)
+    version_one["schema_version"] = (
+        "mncs.environment.owner-pass-decision-summary/1"
+    )
+    for owner in version_one["owners"]:
+        owner.pop("result_evidence", None)
+    assert capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 3,
+        "items": [],
+        "owner_decision_summary": version_one,
+    }) == version_one
 
     owners = (
         "doctor", "semantics", "actions", "verification", "diagnostics",
@@ -6466,7 +6491,7 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
                 "service_execution_id": "ase_" + "a" * 32,
                 "result_identity": "a" * 64,
                 "source_reference_status": "store-record",
-                "source_content_integrity_status": "verified",
+                "source_content_integrity_status": "content-integrity-verified",
                 "source_reference": (
                     "mncs-store:ses_evidence:incremental-coherence:doctor:"
                     + "a" * 64
@@ -6485,6 +6510,7 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
                 "outcome_status": "failure-reported",
                 "result_status": "result-recorded",
                 "verification_status": "verified",
+                "source_content_integrity_status": "source-read-budget-exhausted",
                 "service_execution_id": "ase_" + "b" * 32,
                 "result_identity": "b" * 64,
                 "source_reference_status": "store-record",
@@ -6517,6 +6543,9 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
             "observed_verification_status_counts": {
                 "not-established": 2,
             },
+            "observed_source_content_integrity_status_counts": {
+                "content-integrity-verified": 1,
+            },
             "result_evidence": {
                 "references": [{
                     "service_execution_id": "ase_" + "a" * 32,
@@ -6536,6 +6565,9 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
             "observed_result_status_counts": {"result-recorded": 1},
             "observed_outcome_status_counts": {"failure-reported": 1},
             "observed_verification_status_counts": {"verified": 1},
+            "observed_source_content_integrity_status_counts": {
+                "source-read-budget-exhausted": 1,
+            },
             "result_evidence": {
                 "references": [{
                     "service_execution_id": "ase_" + "b" * 32,
@@ -6592,7 +6624,7 @@ def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() ->
 
     assert summary is not None
     assert summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/2"
+        "mncs.environment.owner-pass-decision-summary/3"
     )
     evidence = summary["owners"][0]["result_evidence"]
     assert evidence["unreferenced_result_count"] == 1
@@ -8633,6 +8665,97 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         )
     assert mismatched_link["status"] == "source-integrity-failure"
     assert mismatched_link["source_integrity_status"] == "not-verified"
+
+
+def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> None:
+    integrity = {
+        "scope": "selected-session-owner-result-store-content",
+        "coverage_status": "partial",
+        "store_result_record_count": 2,
+        "content_integrity_verified_count": 1,
+        "content_integrity_unverified_count": 1,
+        "content_integrity_not_checked_count": 1,
+        "result_records_omitted": 0,
+        "limit": 8,
+        "integrity_elapsed_seconds": 0.02,
+        "read_time_budget_seconds": 0.5,
+        "status_counts": {
+            "content-integrity-verified": 1,
+            "source-read-budget-exhausted": 1,
+        },
+        "interpretation_limit": (
+            "Store content integrity does not establish service correctness."
+        ),
+    }
+    owners = []
+    for owner, suffix, integrity_status in (
+        ("doctor", "a", "content-integrity-verified"),
+        ("verification", "b", "source-read-budget-exhausted"),
+    ):
+        identity = suffix * 64
+        owners.append({
+            "owner_pass": owner,
+            "decision": "scheduled",
+            "result_status": "result-recorded",
+            "service_execution_id": "ase_" + suffix * 32,
+            "result_identity": identity,
+            "source_reference_status": "store-record",
+            "source_reference": "mncs-store:ses_integrity:" + identity,
+            "source_content_integrity_status": integrity_status,
+            "outcome_status": "no-failure-reported",
+            "verification_status": "not-established",
+        })
+    activity = {
+        "status": "partial",
+        "service_accountability": {
+            "status": "observed",
+            "summary": {
+                "environment_service_execution": {
+                    "status": "observed",
+                    "scope": "selected-session-environment-owner-pass-contract",
+                    "source": {"projection_digest": "c" * 16},
+                    "summary": {
+                        "owner_result_content_integrity": integrity,
+                        "owner_pass_observations": {
+                            "status": "recorded",
+                            "count": len(owners),
+                            "limit": 16,
+                            "omitted_count": 0,
+                            "decision_coverage": "complete",
+                            "items": owners,
+                        },
+                    },
+                },
+            },
+        },
+    }
+
+    overview = (
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            activity,
+        )
+    )
+
+    assert overview is not None
+    summary = overview["service_accountability"]["summary"][
+        "environment_service_execution"
+    ]["summary"]
+    assert summary["owner_result_content_integrity"] == (
+        capability_intelligence._compact_owner_result_content_integrity(
+            integrity,
+        )
+    )
+    owner_summary = summary["owner_pass_observations"]["owner_decision_summary"]
+    assert owner_summary["schema_version"] == (
+        "mncs.environment.owner-pass-decision-summary/3"
+    )
+    assert [
+        owner["observed_source_content_integrity_status_counts"]
+        for owner in owner_summary["owners"]
+    ] == [
+        {"content-integrity-verified": 1},
+        {"source-read-budget-exhausted": 1},
+    ]
 
 
 def test_evidence_priority_summary_retains_verification_provider_readiness() -> None:

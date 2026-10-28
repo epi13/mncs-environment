@@ -5199,6 +5199,17 @@ def _compact_session_activity_evidence_priority_overview(
                         )
                         if key in execution_summary
                     }
+                    owner_result_integrity = (
+                        _compact_owner_result_content_integrity(
+                            execution_summary.get(
+                                "owner_result_content_integrity",
+                            ),
+                        )
+                    )
+                    if owner_result_integrity is not None:
+                        compact_execution_summary[
+                            "owner_result_content_integrity"
+                        ] = owner_result_integrity
                     failure_details = _compact_environment_owner_failure_details(
                         execution_summary.get("owner_failure_details"),
                     )
@@ -5321,9 +5332,9 @@ def _compact_owner_pass_decision_summary(
     """Retain bounded per-service scheduler decisions in compact ECI views.
 
     The summary identifies which Environment owners had recorded scheduled or
-    skipped decisions, plus the result and verification states present in the
-    returned source observations. It deliberately says nothing about agent
-    need, fulfillment, or intervention burden.
+    skipped decisions, plus result, verification, and source content-integrity
+    states present in the returned source observations. It deliberately says
+    nothing about agent need, fulfillment, or intervention burden.
     """
     if not isinstance(value, dict):
         return None
@@ -5332,6 +5343,7 @@ def _compact_owner_pass_decision_summary(
         "observed_result_status_counts",
         "observed_outcome_status_counts",
         "observed_verification_status_counts",
+        "observed_source_content_integrity_status_counts",
     )
 
     def compact_status_counts(raw: Any) -> dict[str, int] | None:
@@ -5419,6 +5431,7 @@ def _compact_owner_pass_decision_summary(
             schema_version in {
                 "mncs.environment.owner-pass-decision-summary/1",
                 "mncs.environment.owner-pass-decision-summary/2",
+                "mncs.environment.owner-pass-decision-summary/3",
             }
             and status in {"complete", "partial", "coverage-unknown"}
             and (source_count is None or type(source_count) is int and source_count >= 0)
@@ -5480,11 +5493,15 @@ def _compact_owner_pass_decision_summary(
                     validated_owner["result_evidence"] = result_evidence
                 elif owner.get("result_evidence") is not None:
                     break
-                elif (schema_version ==
-                      "mncs.environment.owner-pass-decision-summary/2"
-                      and (compact_status_counts(
-                          owner.get("observed_result_status_counts"),
-                      ) or {}).get("result-recorded", 0)):
+                elif (
+                    schema_version in {
+                        "mncs.environment.owner-pass-decision-summary/2",
+                        "mncs.environment.owner-pass-decision-summary/3",
+                    }
+                    and (compact_status_counts(
+                        owner.get("observed_result_status_counts"),
+                    ) or {}).get("result-recorded", 0)
+                ):
                     break
                 validated_owners.append(validated_owner)
             else:
@@ -5541,6 +5558,10 @@ def _compact_owner_pass_decision_summary(
             ("observed_result_status_counts", "result_status"),
             ("observed_outcome_status_counts", "outcome_status"),
             ("observed_verification_status_counts", "verification_status"),
+            (
+                "observed_source_content_integrity_status_counts",
+                "source_content_integrity_status",
+            ),
         ):
             status_value = item.get(source_field)
             if (not isinstance(status_value, str)
@@ -5631,7 +5652,7 @@ def _compact_owner_pass_decision_summary(
     else:
         status = "complete"
     return {
-        "schema_version": "mncs.environment.owner-pass-decision-summary/2",
+        "schema_version": "mncs.environment.owner-pass-decision-summary/3",
         "status": status,
         "source_observation_count": source_count,
         "source_omitted_observation_count": source_omitted,

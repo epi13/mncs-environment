@@ -1455,15 +1455,16 @@ row and marked `result_reference_in_owner_summary`; the summary remains the
 single compact reference path. This lets an agent discover which Environment
 services ran without expanding the full session history. The summary covers
 scheduler decisions only; it does not establish service opportunities,
-fulfillment, agent receipt, or intervention reduction. Partial and unknown source
-coverage remain explicit. Schema version 2 also preserves one exact Store result
-reference per owner, paired with the service execution and result identities.
-It reports how many returned results have exact references and how many
-references were omitted by the bound. The per-owner outcome and verification
-counts remain alongside the pointer. Missing references remain visible as
-partial evidence; an exact Store reference alone does not claim content
-integrity or independent verification. Older version 1 summaries remain
-readable without being upgraded from partial context.
+fulfillment, agent receipt, or intervention reduction. Partial and unknown
+source coverage remain explicit. Schema version 2 preserves one exact Store
+result reference per owner, paired with the service execution and result
+identities. It reports how many returned results have exact references and how
+many references were omitted by the bound. Version 3 adds per-owner source
+content-integrity status counts and retains the bounded aggregate integrity
+coverage in evidence-priority responses. These are checks of the stored result
+digest and linked identity; they do not establish service correctness, agent
+receipt, or fulfillment. Older version 1 and 2 summaries remain readable
+without being upgraded from partial context.
 For recorded verification owner results, the same exact Store relation also
 surfaces bounded obligation and outcome counts, reason-code counts, and up to
 eight non-passing obligation summaries under `verification_result_details`.
