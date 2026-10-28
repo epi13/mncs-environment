@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_cost_correlation_readback_20261028",
+  "captured_at": "2026-10-28T15:01:23Z",
+  "measurement_basis": "deterministic-correlated-projection-tests-and-bounded-campaign-state-read",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d1d7696fe98549fb",
+    "campaign_evidence_count_before_recording": 154,
+    "implementation_commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:60cacfba7c41"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-service-cost-correlation-projection-readback",
+    "source_interface": "MNCS Environment environmental-capability projection and durable campaign-state read",
+    "request": {
+      "verification_observation_identity": "ev_environment_ambient_service_cost_correlation_verification_20261028",
+      "campaign_state_checkpoint_id": "chk_d1d7696fe98549fb",
+      "campaign_evidence_count": 154,
+      "campaign_event_window_limit": 256,
+      "campaign_event_window_end_sequence": 1581
+    },
+    "outcome": {
+      "fixture_projection": "Exact invocation-to-execution matching exposes the trace resource sample in the same ECI execution group; compact output retains a privacy-reduced summary at an 8 KB response limit.",
+      "bounded_live_session_projection": {
+        "scoped_invocation_count": 14,
+        "execution_group_count": 2,
+        "latest_trace_relations": [
+          "not-in-latest-trace",
+          "not-in-latest-trace"
+        ],
+        "live_owner_resource_sample_status": "not-observed"
+      },
+      "interpretation": "The implementation provides an end-to-end evidence path through the existing projection and the deterministic tests verify it. The durable session currently has two recent execution groups but neither matches its latest stored trace, so its recorded events provide no live owner-resource delta. No missing history or cause has been inferred."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_cost_correlation_20261028",
+    "title": "Correlated ambient service activity does not expose owner resource costs",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability intelligence and ambient owner traces",
+    "owner": "mncs-environment",
+    "basis": "The recorded session has recent scoped owner-pass calls, but their execution identities do not match the latest stored scheduler trace, so that session cannot demonstrate live per-owner costs.",
+    "actionable_recommendation": "Allow a future ordinary owner pass to populate this exact correlation and retain its source trace evidence for readback."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_service_cost_correlation_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-cost-correlation-verification-20261028.json"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_resource_accountability_readback_20261028",
+      "kind": "prior-operational-projection-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-resource-accountability-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "Projection readback for the new relationship uses deterministic fixture tests; the current durable session has no latest-trace match for its event groups.",
+    "No fresh resident tick or live owner resource delta was generated due to its previously observed resource cost.",
+    "Service fulfillment, agent receipt, resource causality, and burden reduction remain unmeasured."
+  ]
+}

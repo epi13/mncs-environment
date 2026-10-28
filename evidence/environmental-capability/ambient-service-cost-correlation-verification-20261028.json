@@ -1,0 +1,105 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_cost_correlation_verification_20261028",
+  "captured_at": "2026-10-28T15:01:23Z",
+  "measurement_basis": "targeted-session-projection-resource-and-incremental-verification",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d1d7696fe98549fb",
+    "campaign_evidence_count_before_recording": 154,
+    "implementation_commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:60cacfba7c41"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-service-cost-projection-regression-verification",
+    "source_interface": "MNCS Environment pytest, Python compileall, and Git diff checks",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_resources.py tests/test_incremental.py tests/test_capability_intelligence.py",
+        "python -m compileall -q mncs_env tests",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "226 passed, 21 skipped in 6.43s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "A scoped capability event group joins to a trace row only through the exact service execution identity and exposes that row's validated resource measurement.",
+        "An older trace without a resource sample remains readable and reports not-recorded-on-trace; malformed data is not accepted as a measurement.",
+        "Compact ECI responses retain a bounded CPU, RSS high-water growth, and storage read/write summary beside the exact execution identity under an 8 KB limit.",
+        "Partial measurements preserve partial status and explicit null counter fields rather than presenting missing counters as zero.",
+        "The selected-session service-readiness projection exposes resource-measurement status alongside its execution reference without duplicating the full counter record.",
+        "Compact service-accountability caveats are shortened without asserting fulfillment, receipt, burden reduction, or causality."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_ambient_service_cost_correlation_ab1bb42",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "067710935d202555602cf909a03c2ca8564134766cf0fcb8688f9de1d5fe559b"
+      },
+      "regression_test_reference": {
+        "identity": "mncs_environment_ambient_service_cost_projection_tests_ab1bb42",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+        "path": "tests/test_capability_intelligence.py",
+        "sha256": "10e8c8ed12ba460f6d1328a47d69c0c8da83e363d83c84f0d4eba67a9cc6c7b5"
+      },
+      "projection_documentation_reference": {
+        "identity": "mncs_environment_ambient_service_cost_projection_docs_ab1bb42",
+        "kind": "projection-documentation",
+        "repository": "mncs-environment",
+        "commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+        "path": "docs/PROJECTIONS.md",
+        "sha256": "5519d6fd510c4a63f76f2f92ff2306c8afb4bf527081252fd052bc1056765e28"
+      }
+    },
+    "scope_limit": "The whole repository suite was not run; the 21 existing environment-dependent cases remained skipped. No resident owner tick was run in this slice."
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_cost_correlation_20261028",
+    "title": "Correlated ambient service activity does not expose owner resource costs",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability intelligence and ambient owner traces",
+    "owner": "mncs-environment",
+    "basis": "A trace resource sample must be correlated through the same exact execution identity as the service activity to be useful in the ECI projection.",
+    "actionable_recommendation": "Retain validated bounded resource evidence in full and compact ECI views while preserving explicit measurement limits."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_service_cost_correlation_ab1bb42",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "067710935d202555602cf909a03c2ca8564134766cf0fcb8688f9de1d5fe559b"
+    },
+    {
+      "identity": "mncs_environment_ambient_service_cost_projection_tests_ab1bb42",
+      "kind": "regression-test-source",
+      "repository": "mncs-environment",
+      "commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "10e8c8ed12ba460f6d1328a47d69c0c8da83e363d83c84f0d4eba67a9cc6c7b5"
+    }
+  ],
+  "measurement_limits": [
+    "Regression verification proves deterministic joining, validation, and bounded projection behavior, not a live service cost or agent burden reduction.",
+    "The skipped cases depend on external repositories or executor capabilities not exercised by these targeted suites."
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_cost_correlation_improvement_20261028",
+  "captured_at": "2026-10-28T15:01:23Z",
+  "measurement_basis": "source-linked-implementation-and-regression-verification",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d1d7696fe98549fb",
+    "campaign_evidence_count_before_recording": 154,
+    "implementation_commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:60cacfba7c41"
+    ]
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability intelligence, owner trace, and service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_service_cost_correlation_20261028",
+      "verification_observation_identity": "ev_environment_ambient_service_cost_correlation_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_service_cost_correlation_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-and-commit-verified",
+      "verification_status": "targeted-regression-suites-passed",
+      "readback_status": "fixture-correlation-verified-live-trace-match-pending",
+      "effectiveness_assessment": "The existing exact service-execution join now carries validated owner-process resource evidence into full ECI activity groups and a compact response summary. Duplicate uncertainty text is compacted so the resource relationship survives the tested 8 KB output budget. This improves inspectability of environmental work and cost context; it does not demonstrate service fulfillment, lower cost, or reduced agent intervention.",
+      "interpretation_limit": "A future ordinary owner execution with matching scoped service events is required before the projection can be read back with live per-owner cost evidence."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_cost_correlation_20261028",
+    "title": "Correlated ambient service activity does not expose owner resource costs",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability intelligence and ambient owner traces",
+    "owner": "mncs-environment",
+    "basis": "Capability invocation groups and owner resource deltas existed in related but separate ECI and trace records.",
+    "actionable_recommendation": "Use the exact service execution identity to correlate the validated resource sample with agent-facing ambient activity, keeping the compact projection bounded and explicit about attribution limits."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_service_cost_correlation_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_service_cost_correlation_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_service_cost_correlation_ab1bb42",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "067710935d202555602cf909a03c2ca8564134766cf0fcb8688f9de1d5fe559b"
+    },
+    "verification_observation_identity": "ev_environment_ambient_service_cost_correlation_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_service_cost_correlation_readback_20261028",
+    "basis": "The regression path joins scoped service events to the exact trace execution identity, validates the process-resource record, preserves partial and unavailable measurement state, and retains a bounded cost summary under the ECI response budget.",
+    "effectiveness_assessment": "exact-resource-to-service-projection-path-implemented; live-service-cost-and-agent-burden-not-assessed",
+    "not_measured": [
+      "A fresh operational owner resource sample correlated with capability events.",
+      "Child-process or host-wide resource consumption attributable to service work.",
+      "Whether an environmental service fulfilled an agent's need or reduced manual orchestration.",
+      "Whether service latency, resource consumption, or intervention burden improved.",
+      "Whether the observed process activity had any relationship to filesystem metadata pressure."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_service_cost_correlation_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-cost-correlation-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_service_cost_correlation_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-cost-correlation-verification-20261028.json"
+    },
+    {
+      "kind": "projection-readback-observation",
+      "identity": "ev_environment_ambient_service_cost_correlation_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-cost-correlation-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The implementation and fixture relationship passed verification, but a live matching owner trace has not been observed.",
+    "Process counters are correlated to an owner interval, not proven to be caused by one service call.",
+    "Service fulfillment, agent receipt, burden reduction, and long-term effectiveness remain unmeasured."
+  ]
+}

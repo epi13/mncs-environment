@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_cost_correlation_pressure_20261028",
+  "captured_at": "2026-10-28T15:01:23Z",
+  "measurement_basis": "exact-owner-execution-correlation-and-bounded-projection-review",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d1d7696fe98549fb",
+    "campaign_evidence_count_before_recording": 154,
+    "implementation_commit": "ab1bb42666857d3d951bb890f6c976154619ed08",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:60cacfba7c41"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-service-cost-correlation-gap",
+    "source_interface": "MNCS Environment capability-intelligence and owner-pass trace projections",
+    "request": {
+      "existing_relationship": "Scoped capability invocations were correlated with owner passes by exact service execution identity.",
+      "missing_relationship": "The correlated projection omitted the process-resource sample already carried by a newer owner trace.",
+      "response_budget_pressure": "At an 8 KB ECI response limit, duplicate service-accountability caveats caused the exact owner activity group to be removed before it could expose a cost summary."
+    },
+    "outcome": {
+      "interpretation": "A resource sample beside a trace row is not useful to another agent unless the existing invocation-to-execution relationship carries it into the inspectable ECI view. Compact response prioritization also needs to preserve that exact relationship under its documented byte limit.",
+      "scope": "Source review and deterministic projection behavior; the observation does not establish a live owner cost or an environmental service failure."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_cost_correlation_20261028",
+    "title": "Correlated ambient service activity does not expose owner resource costs",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability intelligence and ambient owner traces",
+    "owner": "mncs-environment",
+    "basis": "The ECI projection linked capability events to exact owner execution IDs and outcomes, while the newer owner trace carried a bounded process-resource sample that was not exposed beside those correlated events. An 8 KB response test also showed the exact activity group could be dropped under duplicate context overhead.",
+    "actionable_recommendation": "Join validated resource samples to their exact trace-correlated owner activity, compact counters without process identity, and keep the evidence visible within the existing ECI response budget."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_owner_resource_accountability_improvement_20261028",
+      "kind": "prior-resource-observability-improvement",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-resource-accountability-improvement-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "No fresh live owner execution has yet produced a resource sample correlated to agent-facing service activity.",
+    "Scheduler-process counters exclude children and do not show that a service caused all measured activity.",
+    "No service fulfillment, agent receipt, intervention-burden reduction, or cost improvement is established."
+  ]
+}
