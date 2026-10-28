@@ -133,7 +133,7 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
         }
 
     legacy_history = {
-        "schema_version": coherence.OWNER_EXECUTION_HISTORY_SCHEMA,
+        "schema_version": coherence.LEGACY_OWNER_EXECUTION_HISTORY_SCHEMA,
         "coverage_status": "bounded-since-enabled",
         "limit": coherence.MAX_OWNER_EXECUTION_HISTORY,
         "trace_sequence": 1,
@@ -216,6 +216,144 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
     assert fourth_projection["rows"][-1][
         "owner_result_observation_status"
     ] == "not-recorded-in-results"
+
+
+def test_owner_execution_history_retains_exact_verification_source_links():
+    session_id = "ses_incremental_fixture"
+    execution_id = "ase_" + "1" * 32
+    owner_result_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + "2" * 64
+    )
+    verification_reference = (
+        f"mncs-store:{session_id}:verification:" + "3" * 64
+    )
+    trace = {
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "scheduled": [{
+            "owner": "verification",
+            "pass": "verification",
+            "service_execution_id": execution_id,
+            "run_elapsed_seconds": 0.25,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": [{
+            "owner": "verification",
+            "service_execution_id": execution_id,
+            "result_status": "result-recorded",
+            "verification_status": "not-established",
+            "result_identity": "4" * 64,
+            "source_reference_status": "store-record",
+            "source_reference": owner_result_reference,
+            "verification_evidence_reference_status": "store-record",
+            "verification_evidence_reference": verification_reference,
+            "result_reused": False,
+        }],
+    }
+
+    history = coherence._append_owner_execution_history(
+        None, trace, trace_sequence=1, session_id=session_id,
+    )
+    projected = coherence.project_owner_execution_history(
+        history, session_id=session_id,
+    )
+
+    assert history["schema_version"] == (
+        "mncs.environment.owner-execution-history/2"
+    )
+    assert projected["status"] == "observed"
+    row = projected["rows"][0]
+    assert row["owner_result_reference"] == owner_result_reference
+    assert row["owner_result_reference_status"] == "store-record"
+    assert row["verification_evidence_reference"] == verification_reference
+    assert row["verification_evidence_reference_status"] == "store-record"
+    assert row["owner_result_reused"] is False
+
+    invalid_history = {
+        **history,
+        "rows": [{
+            **history["rows"][0],
+            "verification_evidence_reference": (
+                "mncs-store:ses_other_session:verification:" + "5" * 64
+            ),
+        }],
+    }
+    invalid_projection = coherence.project_owner_execution_history(
+        invalid_history, session_id=session_id,
+    )
+    assert invalid_projection["status"] == "partial"
+    assert invalid_projection["rows"] == []
+
+
+def test_owner_pass_result_carries_session_scoped_verification_reference():
+    session_id = "ses_incremental_fixture"
+    execution_id = "ase_" + "6" * 32
+    verification_reference = (
+        f"mncs-store:{session_id}:verification:" + "7" * 64
+    )
+    block = {
+        "status": "observed",
+        "operation_status": "complete",
+        "summary": {"executed": 1, "failed": 0},
+        "evidence": verification_reference,
+    }
+    result_identity = coherence.digest_hex(block, length=64)
+    owner_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + coherence.digest_hex({"block": block}, length=64)
+    )
+    rows = coherence._owner_pass_results(
+        SimpleNamespace(session_id=session_id),
+        [{
+            "owner": "verification",
+            "service_execution_id": execution_id,
+        }],
+        {"verification": block},
+        {"verification": {
+            "identity": result_identity,
+            "reference": owner_reference,
+        }},
+        persisted=True,
+    )
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "scheduled": [{
+            "owner": "verification",
+            "service_execution_id": execution_id,
+            "disposition": 1,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": rows,
+    }, session_id=session_id)
+
+    assert projected is not None
+    result = projected["owner_pass_results"]["results"][0]
+    assert result["source_reference"] == owner_reference
+    assert result["verification_evidence_reference_status"] == "store-record"
+    assert result["verification_evidence_reference"] == verification_reference
+
+    foreign_block = {
+        **block,
+        "evidence": "mncs-store:ses_foreign:verification:" + "8" * 64,
+    }
+    foreign_rows = coherence._owner_pass_results(
+        SimpleNamespace(session_id=session_id),
+        [{
+            "owner": "verification",
+            "service_execution_id": execution_id,
+        }],
+        {"verification": foreign_block},
+        None,
+        persisted=False,
+    )
+    assert foreign_rows[0]["verification_evidence_reference_status"] == (
+        "invalid-reference"
+    )
+    assert "verification_evidence_reference" not in foreign_rows[0]
 
 
 def test_warm_tick_has_zero_processes_and_writes(participant):

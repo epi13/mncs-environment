@@ -25200,12 +25200,13 @@ def _session_projection_coherence_history(
 
 def _session_verification_activity(
     session: Any, snapshot: dict[str, Any], ambient_service_execution: Any,
+    owner_execution_history: Any = None,
 ) -> dict[str, Any]:
     """Relate recorded verification history to the selected session objective.
 
-    History summaries are read from the session snapshot. Immutable verification
-    evidence is not re-read here; exact source references are joined to the
-    latest retained owner-pass result when that result already exposes them.
+    History summaries are read from the session snapshot. Exact evidence
+    references join to the latest owner-pass trace and bounded retained owner
+    execution history; historical source contents are not re-read here.
     """
     timestamp_pattern = re.compile(
         r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
@@ -25318,6 +25319,22 @@ def _session_verification_activity(
     if type(owner_result_omissions) is not int or owner_result_omissions < 0:
         owner_result_omissions = 0
     owner_result_omissions += max(0, len(raw_owner_rows) - len(owner_rows))
+    owner_history = coherence_module.project_owner_execution_history(
+        owner_execution_history, session_id=session_id,
+    )
+    raw_retained_owner_rows = owner_history.get("rows", [])
+    raw_retained_owner_rows = (
+        raw_retained_owner_rows
+        if isinstance(raw_retained_owner_rows, list) else []
+    )
+    retained_owner_rows = [
+        row for row in raw_retained_owner_rows
+        if isinstance(row, dict) and row.get("owner") == "verification"
+    ]
+    retained_owner_history_omissions = owner_history.get("omitted_count", 0)
+    if (type(retained_owner_history_omissions) is not int
+            or retained_owner_history_omissions < 0):
+        retained_owner_history_omissions = 0
     trace_status = (
         ambient_service_execution.get("status")
         if isinstance(ambient_service_execution, dict) else "unavailable"
@@ -25331,6 +25348,8 @@ def _session_verification_activity(
     invalid_reference_count = 0
     reference_issue_count = 0
     exact_link_count = 0
+    latest_exact_link_count = 0
+    retained_exact_link_count = 0
     history: list[dict[str, Any]] = []
     mode_counts = {"ambient": 0, "explicit": 0}
     for offset, item in enumerate(reversed(selected), start=1):
@@ -25364,7 +25383,7 @@ def _session_verification_activity(
         if pointer is not None:
             row["evidence_reference"] = pointer
 
-        matching_results: list[dict[str, Any]] = []
+        latest_matching_results: list[dict[str, Any]] = []
         raw_reference = item.get("evidence_ref")
         if pointer_status == "reference-identified" and isinstance(
             raw_reference, str,
@@ -25428,33 +25447,155 @@ def _session_verification_activity(
                 if (isinstance(result_identity, str)
                         and re.fullmatch(r"[0-9a-f]{64}", result_identity)):
                     match["owner_result_identity"] = result_identity
+                reused = owner_row.get("result_reused")
+                if type(reused) is bool:
+                    match["owner_result_reused"] = reused
                 verification_status = owner_row.get("verification_status")
                 if (isinstance(verification_status, str)
                         and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", verification_status)):
                     match["scheduler_verification_status"] = verification_status
-                matching_results.append(match)
+                latest_matching_results.append(match)
 
-        if len(matching_results) == 1:
+        latest_execution_ids = {
+            owner_row.get("service_execution_id")
+            for owner_row in owner_rows
+            if isinstance(owner_row, dict)
+            and owner_row.get("owner") == "verification"
+            and isinstance(owner_row.get("service_execution_id"), str)
+        }
+        retained_matching_results: list[dict[str, Any]] = []
+        if (pointer_status == "reference-identified"
+                and isinstance(raw_reference, str)):
+            verification_pointer = _validate_session_store_source({
+                "kind": "immutable-verification-evidence",
+                "session_id": session_id,
+                "reference": raw_reference,
+                "schema": "mncs.environment.verification/1",
+                "owner": "verification",
+            })
+            if verification_pointer is not None:
+                for retained_row in retained_owner_rows:
+                    execution_id = retained_row.get("service_execution_id")
+                    if (not isinstance(execution_id, str)
+                            or execution_id in latest_execution_ids
+                            or retained_row.get(
+                                "owner_result_observation_status",
+                            ) != "recorded"
+                            or retained_row.get("owner_result_status")
+                            != "result-recorded"
+                            or retained_row.get(
+                                "verification_evidence_reference_status",
+                            ) != "store-record"
+                            or retained_row.get(
+                                "verification_evidence_reference",
+                            ) != raw_reference):
+                        continue
+                    owner_pointer, owner_pointer_status = (
+                        _ambient_owner_result_store_source(session, {
+                            "owner": "verification",
+                            "result_status": retained_row.get(
+                                "owner_result_status",
+                            ),
+                            "result_identity": retained_row.get(
+                                "owner_result_identity",
+                            ),
+                            "source_reference_status": retained_row.get(
+                                "owner_result_reference_status",
+                            ),
+                            "source_reference": retained_row.get(
+                                "owner_result_reference",
+                            ),
+                        })
+                    )
+                    match = {
+                        "owner_pass": "verification",
+                        "service_execution_id": execution_id,
+                        "verification_evidence_reference": (
+                            verification_pointer["reference"]
+                        ),
+                        "verification_evidence_integrity_status": (
+                            "not-rechecked-in-retained-history"
+                        ),
+                        "owner_result_content_integrity_status": (
+                            "not-rechecked-in-retained-history"
+                        ),
+                        "owner_result_reference_status": (
+                            "reference-identified"
+                            if owner_pointer is not None
+                            else owner_pointer_status
+                        ),
+                    }
+                    if owner_pointer is not None:
+                        match["owner_result_reference"] = owner_pointer[
+                            "reference"
+                        ]
+                    result_identity = retained_row.get("owner_result_identity")
+                    if (isinstance(result_identity, str)
+                            and re.fullmatch(r"[0-9a-f]{64}", result_identity)):
+                        match["owner_result_identity"] = result_identity
+                    if type(retained_row.get("owner_result_reused")) is bool:
+                        match["owner_result_reused"] = retained_row[
+                            "owner_result_reused"
+                        ]
+                    trace_sequence = retained_row.get("trace_sequence")
+                    if type(trace_sequence) is int and trace_sequence > 0:
+                        match["retained_trace_sequence"] = trace_sequence
+                    retained_matching_results.append(match)
+
+        matching_results = [
+            *latest_matching_results, *retained_matching_results,
+        ]
+        if len(matching_results) == 1 and latest_matching_results:
             relation_status = "exact-reference-match"
             exact_link_count += 1
+            latest_exact_link_count += 1
+        elif len(matching_results) == 1:
+            relation_status = "exact-reference-match-in-retained-owner-history"
+            exact_link_count += 1
+            retained_exact_link_count += 1
         elif len(matching_results) > 1:
             relation_status = "ambiguous-exact-reference-match"
         elif pointer_status != "reference-identified":
             relation_status = "not-assessable-invalid-reference"
-        elif not trace_available:
+        elif (not trace_available
+              and owner_history.get("status") not in {"observed", "partial"}):
             relation_status = "owner-pass-trace-unavailable"
         else:
-            relation_status = "no-exact-reference-match-in-latest-trace"
+            relation_status = (
+                "no-exact-reference-match-in-latest-or-retained-history"
+            )
         row["latest_owner_pass_relation"] = {
             "status": relation_status,
-            "search_scope": "latest-current-session-incremental-owner-pass-trace",
+            "search_scope": (
+                "latest-current-session-incremental-owner-pass-trace-and-"
+                "bounded-retained-owner-execution-history"
+            ),
             "matching_result_count": len(matching_results),
             "results": matching_results[:2],
+            "latest_trace_matching_result_count": len(
+                latest_matching_results,
+            ),
+            "retained_history_matching_result_count": len(
+                retained_matching_results,
+            ),
             "search_coverage_status": (
-                "partial" if owner_result_omissions
-                else "complete-for-returned-trace-results"
-            ) if trace_available else "unavailable",
+                "exact-match-in-latest-trace"
+                if latest_matching_results else (
+                    "partial" if (
+                        owner_result_omissions
+                        or retained_owner_history_omissions
+                        or owner_history.get("invalid_record_count", 0)
+                        or owner_history.get("coverage_status") != (
+                            "bounded-since-enabled"
+                        )
+                    ) else "bounded-since-owner-history-enabled"
+                ) if owner_history.get("status") in {"observed", "partial"}
+                else "latest-trace-only" if trace_available else "unavailable"
+            ),
             "owner_result_records_omitted": owner_result_omissions,
+            "retained_owner_history_records_omitted": (
+                retained_owner_history_omissions
+            ),
             "causal_status": "not-established",
         }
         history.append(row)
@@ -25472,7 +25613,7 @@ def _session_verification_activity(
         status = "not-recorded-in-session"
     elif (provenance_status != "identified" or history_omitted
           or invalid_history_count or invalid_reference_count
-          or reference_issue_count):
+          or reference_issue_count or owner_history.get("status") == "partial"):
         status = "partial"
     return {
         "schema_version": "mncs.environment.session-verification-activity/1",
@@ -25496,6 +25637,21 @@ def _session_verification_activity(
             "owner_pass_trace_status": trace_status,
             "owner_pass_result_records_examined": len(owner_rows),
             "owner_pass_result_records_omitted": owner_result_omissions,
+            "owner_execution_history_status": owner_history.get(
+                "status", "unavailable",
+            ),
+            "owner_execution_history_coverage_status": owner_history.get(
+                "coverage_status", "unavailable",
+            ),
+            "owner_execution_history_record_count": owner_history.get(
+                "record_count", 0,
+            ),
+            "owner_execution_history_omitted_count": (
+                retained_owner_history_omissions
+            ),
+            "owner_execution_history_invalid_record_count": owner_history.get(
+                "invalid_record_count", 0,
+            ),
         },
         "summary": {
             "history_record_count": history_record_count,
@@ -25503,6 +25659,12 @@ def _session_verification_activity(
             "history_records_omitted": history_omitted,
             "mode_counts_projected": mode_counts,
             "exact_owner_pass_reference_match_count": exact_link_count,
+            "latest_trace_exact_owner_pass_reference_match_count": (
+                latest_exact_link_count
+            ),
+            "retained_history_exact_owner_pass_reference_match_count": (
+                retained_exact_link_count
+            ),
             "verification_correctness_status": "not-established",
             "ambient_fulfillment_status": "not-established",
             "agent_intervention_burden_status": "not-measured",
@@ -25510,7 +25672,7 @@ def _session_verification_activity(
         "history": history,
         "measurement_limits": [
             "Verification summaries and references are read from the selected session snapshot; immutable evidence is not re-read or independently verified by this activity view.",
-            "Owner-pass links require exact evidence-reference equality and search only the latest retained owner-pass trace; absence of a match does not establish that no related verification occurred.",
+            "Owner-pass links require exact evidence-reference equality and search the latest trace plus bounded retained execution history. Historical source content is not re-read here; absent matches may fall outside retention or predate history enablement.",
             "Verification outcomes do not establish environmental service fulfillment, correctness beyond their declared checks, agent receipt, or reduced intervention burden.",
         ],
     }
@@ -25562,7 +25724,7 @@ def _session_ambient_service_execution(
     raw_trace = coherence.get("last_trace")
     session_id = getattr(session, "session_id", None)
     owner_history = coherence_module.project_owner_execution_history(
-        coherence.get("owner_execution_history"),
+        coherence.get("owner_execution_history"), session_id=session_id,
     )
     owner_history_source = {
         "owner_execution_history_status": owner_history["status"],
@@ -26201,6 +26363,10 @@ def _session_ambient_owner_pass_activity(
     }
     history_view = coherence_module.project_owner_execution_history(
         owner_execution_history,
+        session_id=(
+            trace_view.get("source", {}).get("session_id")
+            if isinstance(trace_view.get("source"), dict) else None
+        ),
     )
     history_rows = history_view.get("rows", [])
     history_rows = history_rows if isinstance(history_rows, list) else []
@@ -26723,6 +26889,7 @@ def _session_activity(
     )
     verification_activity = _session_verification_activity(
         session, snapshot, ambient_service_execution,
+        owner_execution_history,
     )
     has_verification_activity = (
         verification_activity.get("status") != "not-recorded-in-session"

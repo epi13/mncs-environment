@@ -29,6 +29,9 @@ MAX_WAVES = 3
 MAX_TRACE_OWNER_ROWS = 16
 MAX_OWNER_EXECUTION_HISTORY = 16
 OWNER_EXECUTION_HISTORY_SCHEMA = (
+    "mncs.environment.owner-execution-history/2"
+)
+LEGACY_OWNER_EXECUTION_HISTORY_SCHEMA = (
     "mncs.environment.owner-execution-history/1"
 )
 OWNER_RESULT_STATUSES = {
@@ -37,7 +40,8 @@ OWNER_RESULT_STATUSES = {
 }
 OWNER_RESULT_REFERENCE_STATUSES = {
     "store-record", "session-artifact", "trace-not-persisted",
-    "not-recorded", "identity-mismatch", "invalid-reference",
+    "not-recorded", "not-recorded-in-history", "identity-mismatch",
+    "invalid-reference",
 }
 MAX_TRACE_TRIGGER_KINDS = 8
 MAX_TRACE_TRIGGER_SUBJECT_IDENTITIES = 8
@@ -421,6 +425,46 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
                       reference,
                   )):
                 row["source_reference"] = reference
+            verification_reference_status = item.get(
+                "verification_evidence_reference_status",
+            )
+            verification_reference = item.get(
+                "verification_evidence_reference",
+            )
+            if owner == "verification":
+                if verification_reference_status is None:
+                    if verification_reference is not None:
+                        invalid_owner_result_count += 1
+                        verification_reference_status = "invalid-reference"
+                    else:
+                        verification_reference_status = "not-recorded-on-trace"
+                elif verification_reference_status in {
+                    "store-record", "session-artifact",
+                }:
+                    checked_reference, checked_status = (
+                        _safe_verification_evidence_reference(
+                            safe_session_id, verification_reference,
+                        )
+                    )
+                    if checked_status != verification_reference_status:
+                        invalid_owner_result_count += 1
+                        verification_reference_status = "invalid-reference"
+                    else:
+                        row["verification_evidence_reference"] = (
+                            checked_reference
+                        )
+                elif verification_reference_status not in {
+                    "not-recorded", "not-recorded-on-trace",
+                    "not-recorded-in-history", "invalid-reference",
+                } or verification_reference is not None:
+                    invalid_owner_result_count += 1
+                    verification_reference_status = "invalid-reference"
+                row["verification_evidence_reference_status"] = (
+                    verification_reference_status
+                )
+            elif (verification_reference_status is not None
+                  or verification_reference is not None):
+                invalid_owner_result_count += 1
             operation_status = item.get("operation_status")
             if (isinstance(operation_status, str)
                     and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", operation_status)):
@@ -536,7 +580,9 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
     return result
 
 
-def project_owner_execution_history(value) -> dict:
+def project_owner_execution_history(
+    value, *, session_id: str | None = None,
+) -> dict:
     """Validate the bounded session history of exact owner execution rows."""
     unavailable = {
         "schema_version": OWNER_EXECUTION_HISTORY_SCHEMA,
@@ -552,7 +598,10 @@ def project_owner_execution_history(value) -> dict:
     if value is None:
         return unavailable
     if (not isinstance(value, dict)
-            or value.get("schema_version") != OWNER_EXECUTION_HISTORY_SCHEMA):
+            or value.get("schema_version") not in {
+                OWNER_EXECUTION_HISTORY_SCHEMA,
+                LEGACY_OWNER_EXECUTION_HISTORY_SCHEMA,
+            }):
         return {**unavailable, "status": "invalid", "invalid_record_count": 1}
     coverage_status = value.get("coverage_status")
     if coverage_status != "bounded-since-enabled":
@@ -690,6 +739,79 @@ def project_owner_execution_history(value) -> dict:
             row["owner_result_status"] = owner_result_status
         if owner_result_identity is not None:
             row["owner_result_identity"] = owner_result_identity
+        owner_result_reference = raw.get("owner_result_reference")
+        if owner_result_reference is not None:
+            valid_owner_reference = False
+            if (owner_result_reference_status == "store-record"
+                    and isinstance(owner_result_reference, str)):
+                owner_reference_pattern = (
+                    rf"mncs-store:{re.escape(session_id)}:"
+                    rf"incremental-coherence:{re.escape(owner)}:[0-9a-f]{{64}}"
+                    if isinstance(session_id, str) else
+                    rf"mncs-store:ses_[A-Za-z0-9_-]{{1,128}}:"
+                    rf"incremental-coherence:{re.escape(owner)}:[0-9a-f]{{64}}"
+                )
+                valid_owner_reference = re.fullmatch(
+                    owner_reference_pattern, owner_result_reference,
+                ) is not None
+            elif (owner_result_reference_status == "session-artifact"
+                  and isinstance(owner_result_reference, str)):
+                session_pattern = (
+                    re.escape(session_id) if isinstance(session_id, str)
+                    else r"ses_[A-Za-z0-9_-]{1,128}"
+                )
+                valid_owner_reference = re.fullmatch(
+                    rf"sessions/{session_pattern}/coherence-results/"
+                    r"[0-9a-f]{64}\.json",
+                    owner_result_reference,
+                ) is not None
+            if not valid_owner_reference:
+                invalid_count += 1
+                continue
+            row["owner_result_reference"] = owner_result_reference
+        elif owner_result_reference_status in {"store-record", "session-artifact"}:
+            # Legacy rows preserve the reference status but did not retain the
+            # exact pointer. Keep that distinction instead of fabricating one.
+            row["owner_result_reference_status"] = (
+                "not-recorded-in-history"
+            )
+        verification_reference_status = raw.get(
+            "verification_evidence_reference_status",
+            "not-recorded-in-history",
+        )
+        if verification_reference_status not in {
+            "store-record", "session-artifact", "not-recorded",
+            "not-recorded-on-trace", "not-recorded-in-history",
+            "invalid-reference",
+        }:
+            invalid_count += 1
+            continue
+        verification_reference = raw.get(
+            "verification_evidence_reference",
+        )
+        if owner != "verification" and (
+            verification_reference is not None
+            or "verification_evidence_reference_status" in raw
+        ):
+            invalid_count += 1
+            continue
+        if verification_reference_status in {"store-record", "session-artifact"}:
+            checked_reference, checked_status = (
+                _safe_verification_evidence_reference(
+                    session_id, verification_reference,
+                )
+            )
+            if checked_status != verification_reference_status:
+                invalid_count += 1
+                continue
+            row["verification_evidence_reference"] = checked_reference
+        elif verification_reference is not None:
+            invalid_count += 1
+            continue
+        if owner == "verification":
+            row["verification_evidence_reference_status"] = (
+                verification_reference_status
+            )
         if type(owner_result_reused) is bool:
             row["owner_result_reused"] = owner_result_reused
         if type(elapsed) in (int, float):
@@ -721,7 +843,9 @@ def _append_owner_execution_history(
     previous, trace: dict, *, trace_sequence: int, session_id: str,
 ) -> dict:
     """Append path-free owner evidence and retain only the newest 16 rows."""
-    prior = project_owner_execution_history(previous)
+    prior = project_owner_execution_history(
+        previous, session_id=session_id,
+    )
     retained = {
         row["service_execution_id"]: row for row in prior["rows"]
     }
@@ -794,12 +918,32 @@ def _append_owner_execution_history(
             row["owner_result_reference_status"] = owner_result.get(
                 "source_reference_status", "not-recorded",
             )
+            owner_reference = owner_result.get("source_reference")
+            if (owner_result.get("source_reference_status")
+                    in {"store-record", "session-artifact"}
+                    and isinstance(owner_reference, str)):
+                row["owner_result_reference"] = owner_reference
             result_identity = owner_result.get("result_identity")
             if isinstance(result_identity, str):
                 row["owner_result_identity"] = result_identity
             result_reused = owner_result.get("result_reused")
             if type(result_reused) is bool:
                 row["owner_result_reused"] = result_reused
+            if owner == "verification":
+                evidence_reference_status = owner_result.get(
+                    "verification_evidence_reference_status",
+                    "not-recorded-on-trace",
+                )
+                row["verification_evidence_reference_status"] = (
+                    evidence_reference_status
+                )
+                evidence_reference = owner_result.get(
+                    "verification_evidence_reference",
+                )
+                if isinstance(evidence_reference, str):
+                    row["verification_evidence_reference"] = (
+                        evidence_reference
+                    )
         else:
             row["owner_result_observation_status"] = (
                 "not-recorded-in-results"
@@ -1347,6 +1491,30 @@ def _safe_result_reference(session, owner: str, identity: str, block: dict,
     return None, "invalid-reference"
 
 
+def _safe_verification_evidence_reference(
+    session_id: str | None, reference: object,
+) -> tuple[str | None, str]:
+    """Accept only a verification evidence pointer scoped to this session."""
+    if reference is None:
+        return None, "not-recorded"
+    if (not isinstance(session_id, str)
+            or re.fullmatch(r"ses_[A-Za-z0-9_-]{1,128}", session_id) is None
+            or not isinstance(reference, str)):
+        return None, "invalid-reference"
+    store_prefix = f"mncs-store:{session_id}:verification:"
+    if reference.startswith(store_prefix):
+        if re.fullmatch(r"[0-9a-f]{64}", reference[len(store_prefix):]):
+            return reference, "store-record"
+        return None, "invalid-reference"
+    artifact_pattern = (
+        rf"sessions/{re.escape(session_id)}/verification-artifacts/evidence/"
+        r"verification-(?:ambient|explicit)-[0-9a-f]{12}\.json"
+    )
+    if re.fullmatch(artifact_pattern, reference) is not None:
+        return reference, "session-artifact"
+    return None, "invalid-reference"
+
+
 def _owner_pass_results(session, scheduled: list[dict], results: dict,
                         result_refs: dict | None, *, persisted: bool) -> list[dict]:
     """Tie each scheduled runner return to its bounded content-addressed result."""
@@ -1392,6 +1560,19 @@ def _owner_pass_results(session, scheduled: list[dict], results: dict,
             "result_identity": identity,
             "result_reused": block.get("reused") is True,
         })
+        if owner == "verification":
+            verification_reference, verification_reference_status = (
+                _safe_verification_evidence_reference(
+                    session.session_id, block.get("evidence"),
+                )
+            )
+            row["verification_evidence_reference_status"] = (
+                verification_reference_status
+            )
+            if verification_reference is not None:
+                row["verification_evidence_reference"] = (
+                    verification_reference
+                )
         operation_status = block.get("operation_status")
         if (isinstance(operation_status, str)
                 and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", operation_status)):
@@ -1796,6 +1977,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                  "file_cursor": cursor}
         prior_owner_history = project_owner_execution_history(
             previous.get("owner_execution_history"),
+            session_id=session.session_id,
         )
         history_sequence = min(
             10**12, prior_owner_history["trace_sequence"] + 1,

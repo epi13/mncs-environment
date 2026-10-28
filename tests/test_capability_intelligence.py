@@ -9183,6 +9183,13 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
     unmatched_verification_reference = (
         f"mncs-store:{session_id}:verification:" + "b" * 64
     )
+    retained_verification_reference = (
+        f"mncs-store:{session_id}:verification:" + "c" * 64
+    )
+    retained_owner_result_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + "d" * 64
+    )
     owner_result_reference = (
         f"mncs-store:{session_id}:incremental-coherence:verification:"
         + "c" * 64
@@ -9257,7 +9264,46 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
                 },
                 "evidence_ref": exact_verification_reference,
             },
+            {
+                "at": "2026-10-28T12:00:00Z",
+                "mode": "ambient",
+                "summary": {
+                    "obligations": 4, "executed": 1,
+                    "failed": 0, "blockers": 0,
+                },
+                "evidence_ref": retained_verification_reference,
+            },
         ],
+        "coherence": {
+            "owner_execution_history": {
+                "schema_version": (
+                    "mncs.environment.owner-execution-history/2"
+                ),
+                "coverage_status": "bounded-since-enabled",
+                "limit": 16,
+                "trace_sequence": 4,
+                "omitted_count": 0,
+                "rows": [{
+                    "owner": "verification",
+                    "service_execution_id": "ase_" + "f" * 32,
+                    "trace_sequence": 3,
+                    "owner_outcome_status": "no-failure-reported",
+                    "verification_status": "not-established",
+                    "owner_result_observation_status": "recorded",
+                    "owner_result_status": "result-recorded",
+                    "owner_result_verification_status": "not-established",
+                    "owner_result_reference_status": "store-record",
+                    "owner_result_reference": retained_owner_result_reference,
+                    "owner_result_identity": "e" * 64,
+                    "owner_result_reused": False,
+                    "process_resource_usage_status": "not-recorded-on-trace",
+                    "verification_evidence_reference_status": "store-record",
+                    "verification_evidence_reference": (
+                        retained_verification_reference
+                    ),
+                }],
+            },
+        },
     }
     session.snapshot = snapshot
 
@@ -9279,13 +9325,29 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
     assert verification_activity["source"]["invalid_history_record_count"] == 1
     assert verification_activity["summary"][
         "exact_owner_pass_reference_match_count"
+    ] == 2
+    assert verification_activity["summary"][
+        "latest_trace_exact_owner_pass_reference_match_count"
     ] == 1
-    exact_row, unmatched_row = verification_activity["history"]
+    assert verification_activity["summary"][
+        "retained_history_exact_owner_pass_reference_match_count"
+    ] == 1
+    history_by_reference = {
+        item["evidence_reference"]["reference"]: item
+        for item in verification_activity["history"]
+        if isinstance(item.get("evidence_reference"), dict)
+    }
+    exact_row = history_by_reference[exact_verification_reference]
+    retained_row = history_by_reference[retained_verification_reference]
+    unmatched_row = history_by_reference[unmatched_verification_reference]
     assert exact_row["evidence_reference"]["reference"] == (
         exact_verification_reference
     )
     exact_relation = exact_row["latest_owner_pass_relation"]
     assert exact_relation["status"] == "exact-reference-match"
+    assert exact_relation["search_coverage_status"] == (
+        "exact-match-in-latest-trace"
+    )
     assert exact_relation["results"][0]["service_execution_id"] == (
         "ase_" + "d" * 32
     )
@@ -9295,8 +9357,21 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
     assert exact_relation["results"][0][
         "owner_result_content_integrity_status"
     ] == "content-integrity-verified"
+    retained_relation = retained_row["latest_owner_pass_relation"]
+    assert retained_relation["status"] == (
+        "exact-reference-match-in-retained-owner-history"
+    )
+    assert retained_relation["results"][0]["service_execution_id"] == (
+        "ase_" + "f" * 32
+    )
+    assert retained_relation["results"][0][
+        "owner_result_reference"
+    ] == retained_owner_result_reference
+    assert retained_relation["results"][0][
+        "owner_result_content_integrity_status"
+    ] == "not-rechecked-in-retained-history"
     assert unmatched_row["latest_owner_pass_relation"]["status"] == (
-        "no-exact-reference-match-in-latest-trace"
+        "no-exact-reference-match-in-latest-or-retained-history"
     )
     assert verification_activity["summary"]["ambient_fulfillment_status"] == (
         "not-established"
@@ -9327,11 +9402,20 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
     compact_history = compact_projection["session_activity"][
         "verification_activity"
     ]["history"]
-    assert compact_history[0]["latest_owner_pass_relation"]["status"] == (
+    compact_history_by_reference = {
+        item["evidence_reference"]["reference"]: item
+        for item in compact_history
+        if isinstance(item.get("evidence_reference"), dict)
+    }
+    assert compact_history_by_reference[exact_verification_reference][
+        "latest_owner_pass_relation"
+    ]["status"] == (
         "exact-reference-match"
     )
-    assert compact_history[0]["evidence_reference"]["reference"] == (
-        exact_verification_reference
+    assert compact_history_by_reference[retained_verification_reference][
+        "latest_owner_pass_relation"
+    ]["status"] == (
+        "exact-reference-match-in-retained-owner-history"
     )
 
     for compact in (
@@ -9344,12 +9428,19 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
     ):
         assert compact is not None
         compact_verification = compact["verification_activity"]
-        assert compact_verification["history"][0][
+        compact_history_by_reference = {
+            item["evidence_reference"]["reference"]: item
+            for item in compact_verification["history"]
+            if isinstance(item.get("evidence_reference"), dict)
+        }
+        assert compact_history_by_reference[exact_verification_reference][
             "latest_owner_pass_relation"
         ]["status"] == "exact-reference-match"
-        assert compact_verification["history"][0]["evidence_reference"][
-            "reference"
-        ] == exact_verification_reference
+        assert compact_history_by_reference[retained_verification_reference][
+            "latest_owner_pass_relation"
+        ]["status"] == (
+            "exact-reference-match-in-retained-owner-history"
+        )
 
 
 def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> None:
@@ -9815,6 +9906,10 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
             "owner_result_status": "result-recorded",
             "owner_result_verification_status": "not-established",
             "owner_result_reference_status": "store-record",
+            "owner_result_reference": (
+                f"mncs-store:{session.session_id}:incremental-coherence:"
+                f"verification:{owner_result_identity}"
+            ),
             "owner_result_identity": owner_result_identity,
             "owner_result_reused": False,
             "run_elapsed_seconds": 0.1,
