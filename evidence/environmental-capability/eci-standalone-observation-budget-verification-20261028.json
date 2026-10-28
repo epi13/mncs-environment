@@ -1,0 +1,64 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_standalone_observation_budget_verification_20261028",
+  "captured_at": "2026-10-28T07:43:54Z",
+  "measurement_basis": "focused-standalone-evidence-compaction-regression-tests",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "56a3f61f1200e4e0a49b814e04c08863613e2573"
+  },
+  "observation": {
+    "kind": "standalone-campaign-observation-budget-regression-verification",
+    "source_interface": "MNCS Environment pytest",
+    "request": {
+      "command": "PYTHONPATH=. python -m pytest -q tests/test_capability_intelligence.py -k 'compact_projection_prioritizes_standalone_campaign_evidence or append_only_evidence_reference_correction'",
+      "test_file": "tests/test_capability_intelligence.py"
+    },
+    "outcome": {
+      "result": "3 passed, 174 deselected",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "A selected campaign observation without a pressure hypothesis remains visible when secondary session context would otherwise cause the observation to be compacted out.",
+        "The oversized secondary context is summarized away and the compact JSON remains within the requested 24000-byte response budget.",
+        "The existing append-only pointer-correction tests still retain both the recovered source row and its correction row under oversized secondary context."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_standalone_observation_budget_priority_56a3f61",
+        "repository": "mncs-environment",
+        "commit": "56a3f61f1200e4e0a49b814e04c08863613e2573",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "92890f1f36c1a84de98151021dc7d13b8c3743257313803cd3800acb32fe33e2"
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "56a3f61f1200e4e0a49b814e04c08863613e2573",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "92890f1f36c1a84de98151021dc7d13b8c3743257313803cd3800acb32fe33e2"
+    },
+    {
+      "kind": "regression-test",
+      "repository": "mncs-environment",
+      "commit": "56a3f61f1200e4e0a49b814e04c08863613e2573",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "e69f82dd6ced21ae5a7977faccf15f5bd6333bf98ab774acd112d0a7f9da0522"
+    }
+  ],
+  "measurement_limits": [
+    "The focused tests establish response selection and the byte budget for a constructed compaction case; they do not establish lower response latency or resource use across all ECI shapes.",
+    "The full repository suite was not run for this bounded implementation slice.",
+    "The tests do not measure agent intervention burden or longer-term recurrence."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

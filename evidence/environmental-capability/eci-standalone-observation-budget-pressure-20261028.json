@@ -1,0 +1,70 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028",
+  "captured_at": "2026-10-28T07:43:54Z",
+  "measurement_basis": "retrospective-record-of-live-ECI-pre-change-single-selected-record-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "observation": {
+    "kind": "verified-standalone-campaign-observation-compacted-out",
+    "source_interface": "MNCS Environment ECI projection",
+    "request": {
+      "projection_identity": "eci_bb540d14af85edbc",
+      "campaign_state_checkpoint_id": "chk_37df90366cc0682e",
+      "evidence_page_offset": 78,
+      "evidence_page_limit": 1,
+      "history_pages": 1,
+      "session_event_before_sequence": 637,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "response_status": "partial",
+      "observation_records_considered": 1,
+      "observation_records_verified": 1,
+      "observation_records_unavailable": 0,
+      "observation_records_compacted_out_count": 1,
+      "returned_observation_count": 0,
+      "selected_observation_identity": "ev_environment_eci_pointer_correction_budget_readback_20261028"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_standalone_observation_budget",
+    "title": "ECI response budgeting can omit a verified standalone campaign observation",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment environmental capability projection",
+    "owner": "mncs-environment",
+    "basis": "The bounded page selected one authentic campaign record and ECI verified it, but the response compacted the only observation row out while secondary session context occupied the response.",
+    "actionable_recommendation": "When secondary session context makes a bounded ECI response too large, summarize that context before discarding the selected campaign observation, including observations that lack a pressure hypothesis or improvement relation.",
+    "recurrence": "one reproduced selected-window response; recurrence across other evidence pages or sessions is not established",
+    "not_measured": [
+      "agent time or tool calls caused by the omitted row",
+      "frequency of this behavior across other response shapes",
+      "whether the omission changed a development outcome"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "selected-campaign-observation-reference",
+      "identity": "ev_environment_eci_pointer_correction_budget_readback_20261028",
+      "repository": "mncs-environment",
+      "commit": "c8e1e891f613e08ec9dad442813318bd55002325",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-readback-20261028.json",
+      "sha256": "718d52d29dcc4c02cd1269955c6c5f3755f6a8df99bb7ea4256ddc59e6480c3d"
+    }
+  ],
+  "measurement_limits": [
+    "This is a response-budget visibility observation; the selected source record was available and integrity-verified, not missing or corrupt.",
+    "The observation does not establish agent receipt, intervention burden, or cross-session recurrence."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
