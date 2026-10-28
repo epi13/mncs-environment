@@ -284,6 +284,16 @@ row. The focused correction tests pass, and live readback
 unchanged digest. Its session activity summary records two completed
 retirement receipts; this does not measure agent intervention burden.
 
+The paired campaign readback in
+[`eci-pointer-correction-budget-readback-20261028.json`](../evidence/environmental-capability/eci-pointer-correction-budget-readback-20261028.json)
+confirms the narrow correction query returns both integrity-verified rows.
+The wider selected window exposes the revised implementation link, but remains
+partial: one historical link is unverified, the shared pressure has conflicting
+recommendation text, and nine of ten verified observation rows are compacted
+out. The compact response does not establish that the attempted definition
+corrections applied. Recurrence and agent-intervention burden remain
+unmeasured.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact

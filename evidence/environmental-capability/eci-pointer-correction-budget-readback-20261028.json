@@ -1,0 +1,147 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pointer_correction_budget_readback_20261028",
+  "captured_at": "2026-10-28T07:35:53Z",
+  "measurement_basis": "post-change-ECI-exact-page-and-campaign-window-readbacks",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7"
+  },
+  "observation": {
+    "kind": "eci-pointer-correction-budget-live-readback",
+    "source_interface": "MNCS Environment ECI projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_095edad5c54fe484",
+      "queries": [
+        {
+          "projection_identity": "eci_20906bc7f42c7f70",
+          "history_pages": 1,
+          "evidence_page_offset": 69,
+          "evidence_page_limit": 2,
+          "session_event_before_sequence": 637,
+          "session_event_limit": 8
+        },
+        {
+          "projection_identity": "eci_56ae9f0ee9ff660e",
+          "history_pages": 2,
+          "evidence_page_offset": 73,
+          "evidence_page_limit": 5,
+          "session_event_before_sequence": 637,
+          "session_event_limit": 1
+        }
+      ]
+    },
+    "outcome": {
+      "exact_pointer_correction_readback": {
+        "projection_status": "partial",
+        "campaign_evidence_records_verified": 2,
+        "campaign_evidence_records_unavailable": 0,
+        "pointer_corrections_applied": 1,
+        "pointer_corrections_unverified": 0,
+        "source_pointer_content_integrity_verified": 4,
+        "source_pointer_content_integrity_not_verified": 0,
+        "returned_observation_rows": [
+          {
+            "identity": "ev_environment_eci_retirement_operation_accountability_20261028",
+            "correction_status": "recovered-from-append-only-correction",
+            "commit": "6ec0bc0ad729bf0b00d5d41faec6994c6f4dd3fc",
+            "sha256": "85c7e4a0cb09e15e470833d1b385b9257b000954f78ca105abfebd9064505d60"
+          },
+          {
+            "identity": "ev_environment_eci_retirement_operation_pointer_correction_20261028",
+            "correction_status": "applied-to-exact-unavailable-target",
+            "commit": "f7f29b29562593937643484f3f733f17b5beb40e",
+            "sha256": "546a3db0e551d72481cdba0a6090878f70f878670842516234576593bc35711e"
+          }
+        ],
+        "recorded_retirement_operation_count": 2,
+        "recorded_operation_receipt_count": 2,
+        "recorded_retired_target_count": 2
+      },
+      "campaign_window_readback": {
+        "projection_status": "partial",
+        "evidence_page_offsets": [73, 68],
+        "evidence_page_limits": [5, 5],
+        "evidence_history_checkpoint_consistent": true,
+        "observation_records_verified": 10,
+        "observation_records_unavailable": 0,
+        "observation_records_compacted_out_count": 9,
+        "source_pointer_content_integrity_verified_count": 13,
+        "source_pointer_content_integrity_not_verified_count": 0,
+        "improvement_relations_unverified_count": 1,
+        "pressure_hypothesis": {
+          "identity": "ph_environment_eci_pointer_correction_budget",
+          "observation_count": 1,
+          "distinct_session_count": 1,
+          "recurrence_status": "not-established",
+          "definition_status": "conflicting-recorded-definitions",
+          "definition_conflict_fields": ["recommendation"]
+        },
+        "valid_revised_improvement_relation": {
+          "identity": "im_environment_eci_pointer_correction_budget_verified_20261028",
+          "implementation_commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7",
+          "implementation_sha256": "0d6ab209bd08e69f5bea386612e7e3bf73936521a7a569792abde4973c3cbd19",
+          "implementation_integrity": "content-integrity-verified",
+          "verification_identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+          "verification_record_status": "record-integrity-verified-in-projection",
+          "effectiveness_assessment": "not-assessed",
+          "subsequent_readback_status_before_this_record": "not-present-in-projection"
+        },
+        "record_correction_counts": "omitted-from-compact-response",
+        "response_truncated": true
+      },
+      "assessment": "The bounded exact-page readback now exposes the recovered source and pointer-correction rows with integrity-verified references. In the wider campaign window, ECI exposes the correct revised implementation source and verification link but retains one unverified historical relation, a recommendation-definition conflict, and nine compacted observation rows. The selected output does not establish that the definition corrections applied.",
+      "agent_intervention_burden_status": "not-measured",
+      "ambient_fulfillment_status": "not-measured"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "pre-change-pressure-observation",
+      "identity": "ev_environment_eci_pointer_correction_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "969c8a60b50e2187f4cce9ea4069affaf7da8a8b",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-pressure-20261028.json",
+      "sha256": "0dfd44403005458ca9c0b0ed7fe7c03387b046a76b4f31e79c09aa6ca07b5908"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "969c8a60b50e2187f4cce9ea4069affaf7da8a8b",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-verification-20261028.json",
+      "sha256": "a2f1bc6e5b52e05895a097be245722eb752963b0249dc38759f3c9b5a4c5bc8b"
+    },
+    {
+      "kind": "revised-improvement-relation",
+      "identity": "ev_environment_eci_pointer_correction_budget_improvement_revision_20261028",
+      "repository": "mncs-environment",
+      "commit": "b24de1b182b48a44dff4a4cc38e1b31b44257800",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-improvement-revision-20261028.json",
+      "sha256": "b4619f034699923c3028d7ac66a2e661b4d2234c3292d8478f737128188d8ec2"
+    },
+    {
+      "kind": "verification-source-correction",
+      "identity": "ev_environment_eci_pointer_correction_budget_verification_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "b24de1b182b48a44dff4a4cc38e1b31b44257800",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-verification-correction-20261028.json",
+      "sha256": "361e6b33eec010aac76e5f8622a706699c46f1583493707865706832bc64ba49"
+    }
+  ],
+  "measurement_limits": [
+    "The exact-page and campaign-window queries have different selected evidence scopes; the former verifies pointer recovery while the latter reports campaign pressure and improvement relationships.",
+    "The campaign-window response is partial and compacts most selected observations; it does not show whether the two recommendation corrections applied.",
+    "One recorded pressure occurrence does not establish recurrence across sessions.",
+    "Neither the tests nor the readbacks measure reduced agent intervention or sustained effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
