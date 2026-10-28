@@ -1,0 +1,71 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_recommendation_correction_20261028",
+  "captured_at": "2026-10-28T06:51:50Z",
+  "measurement_basis": "live-ECI-conflict-readback-and-append-only-correction-of-one-recorded-recommendation",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef"
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI pressure-definition correction projection",
+    "request": {
+      "operation": "correct_campaign_observation_contract",
+      "target_observation_identity": "ev_environment_eci_retirement_claim_gate_improvement_20261028",
+      "corrected_field_paths": [
+        "pressure_hypothesis.actionable_recommendation"
+      ],
+      "observed_projection_identity": "eci_6e5177547393ea6c",
+      "observed_conflict_fields": ["recommendation"]
+    },
+    "outcome": {
+      "status": "correction-recorded",
+      "replacement_values": {
+        "pressure_hypothesis.actionable_recommendation": "Admit explicit branch, registered-worktree, and metadata-prune operations from writable repository rights; keep exact target validation, applicable live-claim conflict checks, Git conditional updates, and separate delete escalation in the adapter and policy contracts."
+      },
+      "reason": "Normalize the supporting improvement record's recommendation to the occurrence record so the derived pressure has one consistent actionable definition."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_retirement_claim_gate_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-improvement-20261028.json",
+      "sha256": "f2e49cfb8dc20438cd92e844c8c0a0bcf9a3c05a5e8299e427a5c0c84e243f41"
+    },
+    "corrected_field_paths": [
+      "pressure_hypothesis.actionable_recommendation"
+    ],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "Admit explicit branch, registered-worktree, and metadata-prune operations from writable repository rights; keep exact target validation, applicable live-claim conflict checks, Git conditional updates, and separate delete escalation in the adapter and policy contracts."
+    },
+    "reason": "The improvement addresses the occurrence pressure. Normalize its recommendation to the occurrence record so ECI derives one consistent actionable definition."
+  },
+  "supporting_sources": [
+    {
+      "kind": "corrected-observation-target",
+      "identity": "ev_environment_eci_retirement_claim_gate_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-improvement-20261028.json",
+      "sha256": "f2e49cfb8dc20438cd92e844c8c0a0bcf9a3c05a5e8299e427a5c0c84e243f41"
+    }
+  ],
+  "measurement_limits": [
+    "This correction records the recommendation selected from the pressure occurrence; it does not change source behavior or validate the pressure's wider recurrence.",
+    "The campaign projection found a conflict in one campaign page; no cross-campaign definition conflict was measured.",
+    "Improvement effectiveness and agent intervention reduction remain unassessed."
+  ]
+}
