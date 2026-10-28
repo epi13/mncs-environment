@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_family_execution_link_verification_20261028",
+  "captured_at": "2026-10-28T00:04:00Z",
+  "measurement_basis": "targeted-family-and-capability-intelligence-regressions-plus-live-projection-readback",
+  "observation": {
+    "kind": "ambient-family-execution-link-verification",
+    "source_interface": "MNCS Environment focused pytest suite, Python compilation, diff check, and environmental-capability projection",
+    "request": {
+      "implementation_commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "verification_cases": [
+        "Family pass stores the exact active Family owner execution identity",
+        "cached Family summary updates to the current execution identity",
+        "direct Family invocation clears stale owner execution context",
+        "ECI links only an exact Family owner and service execution ID match",
+        "mismatched execution identities remain explicitly unlinked",
+        "compact ECI responses preserve the bounded execution relationship"
+      ],
+      "live_projection_readback": {
+        "session_id": "ses_c7628be9292eab08",
+        "projection_identity": "eci_7dcbfd8cf8894353",
+        "family_summary_digest": "67c5bc9616e3d762",
+        "owner_pass_relation_status": "not-recorded",
+        "interpretation": "This persisted summary came from a direct pass before execution-context capture was implemented. The live projection correctly leaves it unlinked; no scheduled Family pass was rerun for this readback."
+      }
+    },
+    "outcome": {
+      "targeted_tests": {
+        "command": "python3 -m pytest -q tests/test_capability_intelligence.py tests/test_family.py",
+        "passed": 182,
+        "failed": 0,
+        "skipped": 22,
+        "status": "passed"
+      },
+      "static_checks": {
+        "py_compile_status": "passed",
+        "git_diff_check_status": "passed",
+        "ruff_select_status": "existing-findings",
+        "ruff_findings": 5,
+        "ruff_interpretation": "The selected Ruff check reported five existing F401/F841 findings on unchanged lines in the checked files; it emitted no finding on the added code."
+      },
+      "exact_link_regression": {
+        "matching_owner_and_execution_id": "matched-with-result-identity",
+        "mismatched_execution_id": "not-present-in-latest-owner-pass-trace",
+        "verification_status": "not-established",
+        "agent_intervention_burden_status": "not-measured"
+      },
+      "analysis_limit": "The regression tests validate exact correlation and safe unlinked states. The live readback validates backward-compatible handling of an older direct-pass snapshot, not a new live scheduled match, correctness of the Family domain result, agent receipt, or burden reduction."
+    }
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "identity": "mncs_environment_family_owner_context_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "mncs_env/family.py",
+      "sha256": "e1494344d74c21a7baeb76e04ff501fa60f97dbfdec4a9a504f7a805c91094f6"
+    },
+    {
+      "kind": "projection",
+      "identity": "mncs_environment_family_owner_relation_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ff1b2a1f597acc525f315c6745f98552a4042598d37908799634e35c7fac6735"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_family_owner_context_test_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "tests/test_family.py",
+      "sha256": "8b45e71399c6206f9ecd47fb354bb029f4cabaf68be4c3c551816891275f5ff8"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_family_owner_projection_test_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "330bb083b323da837b85d994ec55a8ec85f5d9552da64996f1c7ebbc580f9db1"
+    }
+  ],
+  "not_measured": [
+    "agent discovery, receipt, or use of the Family service",
+    "eligible Family service opportunities",
+    "agent intervention burden or its reduction",
+    "independent correctness verification of the Family result",
+    "longitudinal correlation coverage across sessions",
+    "a new live scheduler invocation using the execution-link implementation"
+  ]
+}
