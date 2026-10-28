@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_result_traceability_verification_20261028",
+  "captured_at": "2026-10-28T13:50:18Z",
+  "measurement_basis": "capability-intelligence-module-regression-suite-and-source-integrity-checks",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_eae66f8e3219613f",
+    "campaign_evidence_count_before_recording": 138,
+    "implementation_commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:d639e76893e3",
+      "claim:mncs-environment:worktree:bb5a1423de9a"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-service-result-traceability-regression-verification",
+    "source_interface": "MNCS Environment pytest and Python compileall",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_capability_intelligence.py",
+        "python -m compileall -q mncs_env tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "191 passed in 7.44s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "Owner summaries retain one exact Store reference per owner with the service execution and result identities.",
+        "Missing and response-budget-omitted references remain separately visible.",
+        "A second compaction preserves validated version 2 references; version 1 summaries remain readable.",
+        "Evidence-priority response compaction keeps a single reference path when the detail row duplicates the per-owner summary pointer.",
+        "The strict 8 KB response-budget regression preserves the linked campaign evidence path."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_ambient_service_result_traceability_41dd723",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "e45f217fd766fcba273a6f02b17c218634c0dc4a49926ce90102c989f3477f4d"
+      },
+      "scope_limit": "The capability-intelligence test module was run; the full repository suite was not rerun.",
+      "regression_test_reference": {
+        "identity": "mncs_environment_capability_intelligence_tests_41dd723",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+        "path": "tests/test_capability_intelligence.py",
+        "sha256": "c0aa42f399ea16038efd60b9ac05fb246ee343959e90a543d0fd35cbf5d902ec"
+      }
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_result_traceability_20261028",
+    "title": "Compact service summaries omit exact result provenance for most returned owners",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The prior selected-session readback returned seven owner rows but only one detail row; the baseline schema grouped owner statuses without carrying exact result references in the per-owner summary.",
+    "actionable_recommendation": "Retain a bounded exact Store reference per owner, paired with execution and result identities, while preserving source coverage and not implying integrity or verification."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_service_result_traceability_41dd723",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e45f217fd766fcba273a6f02b17c218634c0dc4a49926ce90102c989f3477f4d"
+    },
+    {
+      "identity": "mncs_environment_capability_intelligence_tests_41dd723",
+      "kind": "regression-test-source",
+      "repository": "mncs-environment",
+      "commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "c0aa42f399ea16038efd60b9ac05fb246ee343959e90a543d0fd35cbf5d902ec"
+    }
+  ],
+  "measurement_limits": [
+    "Tests verify bounded reference projection and compaction behavior, not service correctness or fulfillment.",
+    "Agent receipt, avoided intervention, cross-session recurrence, and burden reduction remain unmeasured."
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_result_traceability_improvement_20261028",
+  "captured_at": "2026-10-28T13:50:18Z",
+  "measurement_basis": "source-linked-ambient-service-pressure-implementation-verification-and-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_eae66f8e3219613f",
+    "campaign_evidence_count_before_recording": 138,
+    "implementation_commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:d639e76893e3",
+      "claim:mncs-environment:worktree:bb5a1423de9a"
+    ]
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_service_result_traceability_20261028",
+      "verification_observation_identity": "ev_environment_ambient_service_result_traceability_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_service_result_traceability_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "verification_status": "capability-intelligence-module-passed",
+      "readback_status": "seven-owner-exact-source-linkage-visible",
+      "effectiveness_assessment": "result-pointer-traceability-verified; service-fulfillment-and-agent-burden-not-assessed",
+      "interpretation_limit": "The change makes each returned owner result inspectable through its exact Store pointer and paired execution/result identities. It does not show that an owner fulfilled an agent opportunity, that a result was useful, or that the change reduced agent work."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_result_traceability_20261028",
+    "title": "Compact service summaries omit exact result provenance for most returned owners",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The prior selected-session readback returned seven owner rows but only one detail row; the baseline schema grouped owner statuses without carrying exact result references in the per-owner summary.",
+    "actionable_recommendation": "Retain a bounded exact Store reference per owner, paired with execution and result identities, while preserving source coverage and not implying integrity or verification."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_service_result_traceability_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_service_result_traceability_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_service_result_traceability_41dd723",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e45f217fd766fcba273a6f02b17c218634c0dc4a49926ce90102c989f3477f4d"
+    },
+    "verification_observation_identity": "ev_environment_ambient_service_result_traceability_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_service_result_traceability_readback_20261028",
+    "basis": "The capability-intelligence module regression suite passes, and a live selected-session ECI projection retains one exact Store result reference for each of seven returned owners with complete source coverage for that trace.",
+    "effectiveness_assessment": "compact-result-provenance-discoverability-verified; intervention-burden-and-service-fulfillment-not-assessed",
+    "not_measured": [
+      "Whether agents needed or received any of these owner-pass services.",
+      "Whether the new references prevented manual retrieval or reconstruction.",
+      "Correctness or independent verification of the six owner results not expanded in detail.",
+      "Cross-session recurrence and subsequent service outcomes."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_service_result_traceability_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-result-traceability-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_service_result_traceability_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-result-traceability-verification-20261028.json"
+    },
+    {
+      "kind": "subsequent-live-readback",
+      "identity": "ev_environment_ambient_service_result_traceability_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-result-traceability-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The successful change establishes bounded discoverability, not service fulfillment or agent benefit.",
+    "The projection was one selected session and its latest returned Environment owner-pass trace.",
+    "The broader repository verification suite was not run."
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_service_result_traceability_pressure_20261028",
+  "captured_at": "2026-10-28T13:50:18Z",
+  "measurement_basis": "baseline-source-inspection-and-prior-live-ECI-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_eae66f8e3219613f",
+    "campaign_evidence_count_before_recording": 138,
+    "implementation_commit": "41dd72365855aeb6b25b28e98490d997b6e2ce47",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:d639e76893e3",
+      "claim:mncs-environment:worktree:bb5a1423de9a"
+    ]
+  },
+  "observation": {
+    "kind": "environmental-service-result-traceability-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "baseline_commit": "886ca61ff4ff72a03ca41222af3c9f8084d2d786",
+      "baseline_source": {
+        "repository": "mncs-environment",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "84eb8ff9ce1e43c8b15943d1f3a328ff6c10fb98c1e47a34acee54bac586b6e6",
+        "owner_summary_schema": "mncs.environment.owner-pass-decision-summary/1"
+      },
+      "prior_readback": {
+        "identity": "ev_environment_eci_owner_pass_outcome_readback_20261028",
+        "projection_identity": "eci_819a55d52e816f06",
+        "repository": "mncs-environment",
+        "path": "evidence/environmental-capability/eci-owner-pass-outcome-readback-20261028.json",
+        "commit": "69b1a952f708154a5924b97ab6e9ff720c43ea05",
+        "sha256": "0948a12ff4a8719ee1d113c3e63c52802541ab8c2737de312a038842b1d83a3b"
+      }
+    },
+    "outcome": {
+      "prior_owner_rows_returned": 7,
+      "prior_detail_rows_returned": 1,
+      "prior_detail_rows_omitted": 6,
+      "prior_summary_exact_result_references": "not-preserved-by-schema/1",
+      "interpretation": "The compact view preserved owner status counts but did not retain a durable result pointer for each owner. This is a traceability gap, not evidence of service failure or agent burden."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_service_result_traceability_20261028",
+    "title": "Compact service summaries omit exact result provenance for most returned owners",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The prior selected-session readback returned seven owner rows but only one detail row; the baseline schema grouped owner statuses without carrying exact result references in the per-owner summary.",
+    "actionable_recommendation": "Retain a bounded exact Store reference per owner, paired with execution and result identities, while preserving source coverage and not implying integrity or verification."
+  },
+  "supporting_sources": [
+    {
+      "kind": "prior-live-readback",
+      "identity": "ev_environment_eci_owner_pass_outcome_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-pass-outcome-readback-20261028.json"
+    },
+    {
+      "kind": "baseline-implementation",
+      "repository": "mncs-environment",
+      "commit": "886ca61ff4ff72a03ca41222af3c9f8084d2d786",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "84eb8ff9ce1e43c8b15943d1f3a328ff6c10fb98c1e47a34acee54bac586b6e6"
+    }
+  ],
+  "measurement_limits": [
+    "The prior selected-session readback did not persist a separate raw projection artifact.",
+    "The missing pointer relation did not establish that an agent needed a result or performed extra work.",
+    "Service fulfillment, agent receipt, correctness, and intervention burden were not measured."
+  ]
+}
