@@ -1210,6 +1210,26 @@ but does not prove that a corresponding runner is available or runnable.
 other recorded kinds are marked as not expecting this provider binding, and
 older records remain unknown. This makes binding absence interpretable without
 turning it into a failure claim.
+
+For a unique exact provider match, the relation also includes a bounded
+`provider_execution_readiness` context. It preserves the executor binding's
+substrate availability and verification class, the observed provider checkout
+state, declared toolchain checkout states, and a compact view of other
+capability bindings from the same provider. This helps distinguish an
+available executor entrypoint from a provider whose selected checkout or
+declared toolchain is not ready. Same-provider capability rows are correlated
+by provider identity only; they do not establish a dependency or explain the
+executor's outcome. The context always reports `readiness_status:
+not-established`: it does not establish that the executor can run, that an
+opportunity was eligible, that the agent received the capability, or that
+ambient fulfillment occurred. Checkout and toolchain fields are observations
+from the current session binding snapshot, not historical state. The
+same-provider view also identifies whether the binding inventory scan was
+complete; counts from an incomplete scan are explicitly scoped to observed
+records. When the ECI response uses its evidence-priority summary, it retains
+up to two integrity-verified obligation relationships and their bounded readiness
+context, with omitted counts. The source verification and owner-result Store
+references remain available so an agent can inspect the underlying evidence.
 These source classifications do not by themselves establish an environmental
 defect, explain its cause, or show that the bound provider was selected or
 could have run. Older records without the kind remain `not-recorded` rather

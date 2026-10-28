@@ -5832,10 +5832,38 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
             "status": "available", "verification": "substrate",
             "observed_at": "2026-10-27T00:00:00Z",
         },
+        "provenance": {
+            "checkout": {
+                "branch": "main", "head": "a" * 40, "clean": False,
+                "source_ref": "explicit-workspace-selection",
+            },
+            "toolchain_checkouts": [{
+                "repository": "mncs-test", "head": "a" * 40,
+                "branch": "main", "clean": False, "read_only": False,
+                "source_ref": "selected-checkout",
+            }],
+        },
+    }
+    canonical_vm_binding = {
+        "binding_id": "cap_canonical_vm_tests",
+        "provider": "mncs-test",
+        "capability": "mncs-test:canonical-vm-tests",
+        "contract_revision": "1",
+        "availability": {
+            "status": "unavailable", "verification": "substrate",
+            "code": "provider-invocation-unresolvable",
+            "reason": (
+                "composition toolchain unresolvable: "
+                "mncs-compiler checkout is unavailable in the selected closure"
+            ),
+        },
     }
     snapshot = {
         "environment_id": "renv_service_probe_inventory",
-        "bindings": [*irrelevant_bindings, probe_binding, verification_binding],
+        "bindings": [
+            *irrelevant_bindings, probe_binding,
+            verification_binding, canonical_vm_binding,
+        ],
     }
 
     delivery = capability_intelligence._capability_delivery_view(
@@ -5882,9 +5910,9 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     )
 
     assert delivery["binding_count"] == (
-        capability_intelligence.MAX_SESSION_ACTIVITY_BINDINGS + 10
+        capability_intelligence.MAX_SESSION_ACTIVITY_BINDINGS + 11
     )
-    assert delivery["bindings_omitted"] == 10
+    assert delivery["bindings_omitted"] == 11
     assert delivery["binding_details_selection_basis"].startswith(
         "declared-service-probes-then-integrity-verified-verification-executors"
     )
@@ -5916,6 +5944,25 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     assert obligation_relation["verification_executor_kind_status"] == "recorded"
     assert obligation_relation["ambient_fulfillment_status"] == "not-established"
     assert obligation_relation["agent_intervention_burden_status"] == "not-measured"
+    readiness = obligation_relation["provider_execution_readiness"]
+    assert readiness["source"] == "current-session-binding-snapshot"
+    assert readiness["readiness_status"] == "not-established"
+    assert readiness["binding_scan_complete"] is True
+    assert readiness["executor_availability_status"] == "available"
+    assert readiness["executor_availability_verification"] == "substrate"
+    assert readiness["provider_checkout_clean_status"] == "observed-dirty"
+    assert readiness["toolchain_checkouts"][0]["repository"] == "mncs-test"
+    related = readiness["same_provider_capability_context"]
+    assert related["readiness_status"] == "not-established"
+    assert related["binding_scan_complete"] is True
+    assert related["count_scope"] == "complete-current-provider-bindings"
+    assert related["availability_status_counts"] == {"unavailable": 1}
+    assert related["unavailable_bindings"][0]["capability"] == (
+        "mncs-test:canonical-vm-tests"
+    )
+    assert "mncs-compiler" in related["unavailable_bindings"][0][
+        "availability_reason"
+    ]
     assert verification_context["obligations"][1][
         "binding_relation_status"
     ] == "not-present-in-current-binding-snapshot"
@@ -7353,6 +7400,22 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
             "availability": {
                 "status": "available", "verification": "substrate",
             },
+            "provenance": {
+                "checkout": {
+                    "branch": "main", "head": "b" * 40,
+                    "clean": False,
+                },
+            },
+        }, {
+            "binding_id": "cap_canonical_vm_tests",
+            "provider": "mncs-test",
+            "capability": "mncs-test:canonical-vm-tests",
+            "contract_revision": "1",
+            "availability": {
+                "status": "unavailable", "verification": "substrate",
+                "code": "provider-invocation-unresolvable",
+                "reason": "composition toolchain unresolvable: mncs-compiler",
+            },
         }]},
         [], [], [], event_window_truncated=False,
         event_page_scoped=False, invocation_summaries_omitted=0,
@@ -7386,6 +7449,14 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert compact_obligation["binding"]["binding_id"] == (
         "cap_native_provider_execution"
     )
+    compact_readiness = compact_obligation["provider_execution_readiness"]
+    assert compact_readiness["readiness_status"] == "not-established"
+    assert compact_readiness["provider_checkout"]["clean_status"] == (
+        "observed-dirty"
+    )
+    assert compact_readiness["same_provider_capability_context"][
+        "unavailable_bindings"
+    ][0]["capability"] == "mncs-test:canonical-vm-tests"
     assert compact_obligation["agent_intervention_burden_status"] == (
         "not-measured"
     )
@@ -7608,6 +7679,140 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         )
     assert mismatched_link["status"] == "source-integrity-failure"
     assert mismatched_link["source_integrity_status"] == "not-verified"
+
+
+def test_evidence_priority_summary_retains_verification_provider_readiness() -> None:
+    obligation = "mncs-test.native-application-build-vm"
+    verification_reference = "mncs-store:ses_readiness:verification:" + "a" * 64
+    owner_reference = "mncs-store:ses_readiness:owner-result:" + "b" * 64
+    capability = "mncs-test:verification-executor/" + obligation
+    activity = {
+        "status": "partial",
+        "capability_delivery": {
+            "verification_executor_context": {
+                "status": "observed",
+                "scope": (
+                    "selected-session-integrity-verified-unmeasurable-"
+                    "verification-obligations"
+                ),
+                "obligation_count": 1,
+                "obligations_returned": 1,
+                "binding_scan_complete": True,
+                "obligations": [{
+                    "repository": "mncs-test",
+                    "obligation_identity": obligation,
+                    "unmeasurable_reason": "executor-not-native",
+                    "obligation_example_status": "complete",
+                    "verification_outcome": "excluded",
+                    "verification_outcome_status": "recorded",
+                    "verification_reason": "executor_not_runnable",
+                    "verification_reason_status": "recorded",
+                    "verification_executor_kind": "external_integration",
+                    "verification_executor_kind_status": "recorded",
+                    "capability_identity": capability,
+                    "binding_relation_status": (
+                        "exact-provider-obligation-binding"
+                    ),
+                    "binding_expectation_status": (
+                        "expected-for-external-integration"
+                    ),
+                    "verification_evidence_reference": verification_reference,
+                    "verification_source_integrity_status": "verified",
+                    "owner_result_reference": owner_reference,
+                    "owner_result_content_integrity_status": (
+                        "content-integrity-verified"
+                    ),
+                    "provider_execution_readiness": {
+                        "status": "observed",
+                        "source": "current-session-binding-snapshot",
+                        "executor_capability": capability,
+                        "readiness_status": "not-established",
+                        "binding_scan_complete": True,
+                        "executor_availability_status": "available",
+                        "executor_availability_verification": "substrate",
+                        "provider_checkout_clean_status": "observed-dirty",
+                        "provider_checkout": {
+                            "clean_status": "observed-dirty",
+                            "head": "c" * 40,
+                        },
+                        "same_provider_capability_context": {
+                            "status": "observed",
+                            "basis": (
+                                "same-provider-identity-in-current-session-"
+                                "binding-snapshot"
+                            ),
+                            "readiness_status": "not-established",
+                            "binding_count": 1,
+                            "count_scope": "complete-current-provider-bindings",
+                            "binding_scan_complete": True,
+                            "availability_status_counts": {"unavailable": 1},
+                            "unavailable_bindings": [{
+                                "capability": "mncs-test:canonical-vm-tests",
+                                "availability_status": "unavailable",
+                                "availability_reason": (
+                                    "composition toolchain unresolvable: "
+                                    "mncs-compiler"
+                                ),
+                            }],
+                        },
+                    },
+                }],
+            },
+        },
+    }
+
+    overviews = (
+        capability_intelligence._compact_session_activity_budget_overview(
+            activity,
+        ),
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            activity,
+        ),
+    )
+    for overview in overviews:
+        assert overview is not None
+        relation = overview["capability_delivery"][
+            "verification_executor_context"
+        ]["obligations"][0]
+        assert relation["obligation_identity"] == obligation
+        assert relation["verification_evidence_reference"] == verification_reference
+        readiness = relation["provider_execution_readiness"]
+        assert readiness["provider_checkout_clean_status"] == "observed-dirty"
+        unavailable = readiness["same_provider_capability_context"][
+            "unavailable_bindings"
+        ][0]
+        assert unavailable["capability"] == "mncs-test:canonical-vm-tests"
+        assert "mncs-compiler" in unavailable["availability_reason"]
+        assert relation["ambient_fulfillment_status"] == "not-established"
+
+    partial_readiness = capability_intelligence._provider_execution_readiness_context(
+        {
+            "provider": "mncs-test",
+            "capability": capability,
+            "availability_status": "available",
+            "availability_verification": "substrate",
+        },
+        [{
+            "provider": "mncs-test",
+            "capability": "mncs-test:canonical-vm-tests",
+            "availability_status": "unavailable",
+        }],
+        capability,
+        binding_scan_complete=False,
+    )
+    compact_partial = (
+        capability_intelligence._compact_provider_execution_readiness(
+            partial_readiness,
+        )
+    )
+    assert compact_partial is not None
+    assert compact_partial["binding_scan_complete"] is False
+    assert compact_partial["same_provider_capability_context"]["status"] == (
+        "partial"
+    )
+    assert compact_partial["same_provider_capability_context"][
+        "count_scope"
+    ] == "observed-scanned-binding-records"
 
 
 def test_family_ambient_observation_links_exact_owner_pass_result(

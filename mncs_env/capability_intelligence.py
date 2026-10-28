@@ -2374,6 +2374,339 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
     return result
 
 
+def _compact_provider_execution_readiness(value: Any) -> dict[str, Any] | None:
+    """Keep source-backed executor readiness context without inferring readiness."""
+    if not isinstance(value, dict):
+        return None
+    result: dict[str, Any] = {
+        "status": "observed",
+        "source": "current-session-binding-snapshot",
+        "readiness_status": "not-established",
+    }
+    if type(value.get("binding_scan_complete")) is bool:
+        result["binding_scan_complete"] = value["binding_scan_complete"]
+    for key in (
+        "executor_availability_status", "executor_availability_verification",
+        "executor_availability_code", "executor_availability_observed_at",
+        "provider_checkout_clean_status", "provider_checkout_branch",
+        "provider_checkout_head", "provider_checkout_source_ref",
+    ):
+        field = value.get(key)
+        if isinstance(field, str) and field:
+            result[key] = _short_text(field, 192)
+    checkout = value.get("provider_checkout")
+    if isinstance(checkout, dict):
+        clean_status = checkout.get("clean_status")
+        compact_checkout: dict[str, Any] = {
+            "clean_status": clean_status if clean_status in {
+                "observed-clean", "observed-dirty", "not-recorded",
+            } else "not-recorded",
+        }
+        for key in ("branch", "head", "source_ref"):
+            field = checkout.get(key)
+            if isinstance(field, str) and field:
+                compact_checkout[key] = _short_text(field, 192)
+        result["provider_checkout"] = compact_checkout
+    raw_toolchains = value.get("toolchain_checkouts")
+    if isinstance(raw_toolchains, list):
+        toolchains = []
+        for item in raw_toolchains[:4]:
+            if not isinstance(item, dict):
+                continue
+            repository = item.get("repository")
+            if (not isinstance(repository, str)
+                    or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", repository) is None):
+                continue
+            compact_item: dict[str, Any] = {"repository": repository}
+            for key in ("head", "branch", "source_ref"):
+                field = item.get(key)
+                if isinstance(field, str) and field:
+                    compact_item[key] = _short_text(field, 192)
+            if item.get("clean_status") in {
+                "observed-clean", "observed-dirty", "not-recorded",
+            }:
+                compact_item["clean_status"] = item["clean_status"]
+            if type(item.get("read_only")) is bool:
+                compact_item["read_only"] = item["read_only"]
+            toolchains.append(compact_item)
+        result["toolchain_checkouts"] = toolchains
+        omitted = value.get("toolchain_checkouts_omitted_count")
+        if type(omitted) is int and omitted >= 0:
+            result["toolchain_checkouts_omitted_count"] = omitted
+    provider_context = value.get("same_provider_capability_context")
+    if isinstance(provider_context, dict):
+        provider_status = provider_context.get("status")
+        if (not isinstance(provider_status, str)
+                or provider_status not in {"observed", "partial"}):
+            provider_status = "observed"
+        compact_provider_context: dict[str, Any] = {
+            "status": provider_status,
+            "basis": "same-provider-identity-in-current-session-binding-snapshot",
+            "readiness_status": "not-established",
+        }
+        if type(provider_context.get("binding_scan_complete")) is bool:
+            compact_provider_context["binding_scan_complete"] = provider_context[
+                "binding_scan_complete"
+            ]
+        count_scope = provider_context.get("count_scope")
+        if isinstance(count_scope, str) and count_scope in {
+            "complete-current-provider-bindings",
+            "observed-scanned-binding-records",
+        }:
+            compact_provider_context["count_scope"] = count_scope
+        count = provider_context.get("binding_count")
+        if type(count) is int and count >= 0:
+            compact_provider_context["binding_count"] = count
+        status_counts = provider_context.get("availability_status_counts")
+        if isinstance(status_counts, dict):
+            compact_provider_context["availability_status_counts"] = {
+                _short_text(key, 48): count
+                for key, count in sorted(status_counts.items())[:4]
+                if isinstance(key, str) and type(count) is int and count >= 0
+            }
+        unavailable = provider_context.get("unavailable_bindings")
+        if isinstance(unavailable, list):
+            compact_unavailable = []
+            for item in unavailable[:4]:
+                if not isinstance(item, dict):
+                    continue
+                capability = item.get("capability")
+                if not isinstance(capability, str) or not capability:
+                    continue
+                compact_item = {"capability": _short_text(capability, 192)}
+                for key in (
+                    "availability_status", "availability_verification",
+                    "availability_code", "availability_reason",
+                ):
+                    field = item.get(key)
+                    if isinstance(field, str) and field:
+                        compact_item[key] = _short_text(field, 192)
+                compact_unavailable.append(compact_item)
+            compact_provider_context["unavailable_bindings"] = compact_unavailable
+            omitted = provider_context.get("unavailable_bindings_omitted_count")
+            if type(omitted) is int and omitted >= 0:
+                compact_provider_context["unavailable_bindings_omitted_count"] = omitted
+        result["same_provider_capability_context"] = compact_provider_context
+    return result
+
+
+def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
+    """Retain a small, source-linked verification readiness path in summaries."""
+    if (not isinstance(value, dict)
+            or value.get("status") != "observed"
+            or value.get("scope")
+            != "selected-session-integrity-verified-unmeasurable-verification-obligations"):
+        return None
+    raw_obligations = value.get("obligations")
+    if not isinstance(raw_obligations, list):
+        return None
+    result: dict[str, Any] = {
+        "status": "observed",
+        "scope": value["scope"],
+        "binding_scan_complete": value.get("binding_scan_complete") is True,
+    }
+    for key in ("obligation_count", "obligations_returned"):
+        count = value.get(key)
+        if type(count) is int and count >= 0:
+            result[key] = count
+    compact_obligations = []
+    existing_omitted = value.get("obligations_omitted_by_response_budget", 0)
+    if type(existing_omitted) is not int or existing_omitted < 0:
+        existing_omitted = 0
+    omitted_by_budget = existing_omitted
+    for relation in raw_obligations:
+        if not isinstance(relation, dict):
+            continue
+        repository = relation.get("repository")
+        obligation = relation.get("obligation_identity")
+        capability = relation.get("capability_identity")
+        if (not isinstance(repository, str)
+                or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", repository) is None
+                or not isinstance(obligation, str)
+                or re.fullmatch(r"[a-z][a-z0-9.-]{0,159}", obligation) is None
+                or not obligation.startswith(repository + ".")
+                or capability != f"{repository}:verification-executor/{obligation}"
+                or relation.get("verification_source_integrity_status") != "verified"
+                or relation.get("owner_result_content_integrity_status")
+                != "content-integrity-verified"):
+            continue
+        compact_relation: dict[str, Any] = {
+            "repository": repository,
+            "obligation_identity": obligation,
+            "capability_identity": capability,
+            "verification_source_integrity_status": "verified",
+            "owner_result_content_integrity_status": "content-integrity-verified",
+            "causal_status": "not-established",
+            "ambient_fulfillment_status": "not-established",
+            "agent_receipt_status": "not-established",
+            "agent_intervention_burden_status": "not-measured",
+        }
+        unmeasurable_reason = relation.get("unmeasurable_reason")
+        if isinstance(unmeasurable_reason, str) and unmeasurable_reason:
+            compact_relation["unmeasurable_reason"] = _short_text(
+                unmeasurable_reason, 128,
+            )
+        example_status = relation.get("obligation_example_status")
+        if example_status in {
+            "complete", "partial", "not-present", "not-recorded",
+        }:
+            compact_relation["obligation_example_status"] = example_status
+        for key in (
+            "verification_outcome", "verification_reason",
+            "verification_executor_kind",
+        ):
+            field = relation.get(key)
+            status_key = f"{key}_status"
+            if (isinstance(field, str) and field
+                    and relation.get(status_key) == "recorded"):
+                compact_relation[key] = _short_text(field, 128)
+                compact_relation[status_key] = "recorded"
+        for key in (
+            "binding_relation_status", "binding_expectation_status",
+        ):
+            field = relation.get(key)
+            if isinstance(field, str) and (
+                (key == "binding_relation_status" and field in {
+                    "exact-provider-obligation-binding",
+                    "ambiguous-multiple-provider-bindings",
+                    "provider-attribution-mismatch",
+                    "not-present-in-current-binding-snapshot",
+                    "not-observed-in-incomplete-binding-snapshot",
+                }) or (key == "binding_expectation_status" and field in {
+                    "expected-for-external-integration",
+                    "not-expected-for-declared-executor-kind",
+                    "executor-kind-not-recorded",
+                })
+            ):
+                compact_relation[key] = _short_text(field, 96)
+        for key in (
+            "verification_evidence_reference", "owner_result_reference",
+        ):
+            reference = relation.get(key)
+            if (isinstance(reference, str)
+                    and re.fullmatch(
+                        r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                    ) is not None
+                    and re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])):
+                compact_relation[key] = reference
+        readiness = _compact_provider_execution_readiness(
+            relation.get("provider_execution_readiness"),
+        )
+        if readiness is not None:
+            compact_relation["provider_execution_readiness"] = readiness
+        if ("verification_evidence_reference" not in compact_relation
+                or "owner_result_reference" not in compact_relation):
+            continue
+        if len(compact_obligations) >= 2:
+            omitted_by_budget += 1
+            continue
+        compact_obligations.append(compact_relation)
+    if not compact_obligations:
+        return None
+    result["obligations"] = compact_obligations
+    result["obligations_returned"] = len(compact_obligations)
+    if omitted_by_budget:
+        result["obligations_omitted_by_response_budget"] = omitted_by_budget
+        result["obligations_truncated_by_response_budget"] = True
+    result["measurement_limits"] = [
+        "The bounded context links integrity-verified obligation evidence to current bindings; it does not establish execution readiness or fulfillment.",
+        "Same-provider capability context is identity-correlated and does not establish dependency or cause.",
+    ]
+    return result
+
+
+def _provider_execution_readiness_context(
+    executor_binding: dict[str, Any], provider_bindings: list[dict[str, Any]],
+    executor_capability: str, *, binding_scan_complete: bool,
+) -> dict[str, Any]:
+    """Project binding and same-provider facts without treating them as readiness."""
+    context: dict[str, Any] = {
+        "status": "observed",
+        "source": "current-session-binding-snapshot",
+        "executor_capability": executor_capability,
+        "readiness_status": "not-established",
+        "executor_availability_status": executor_binding.get(
+            "availability_status", "not-recorded",
+        ),
+        "executor_availability_verification": executor_binding.get(
+            "availability_verification", "not-recorded",
+        ),
+        "binding_scan_complete": binding_scan_complete,
+    }
+    for key in (
+        "availability_code", "availability_reason", "availability_observed_at",
+    ):
+        value = executor_binding.get(key)
+        if isinstance(value, str) and value:
+            context[f"executor_{key}"] = value
+    checkout = executor_binding.get("provider_checkout")
+    if isinstance(checkout, dict):
+        context["provider_checkout"] = checkout
+        context["provider_checkout_clean_status"] = checkout.get(
+            "clean_status", "not-recorded",
+        )
+    toolchains = executor_binding.get("toolchain_checkouts")
+    if isinstance(toolchains, list):
+        context["toolchain_checkouts"] = toolchains[:4]
+        context["toolchain_checkouts_omitted_count"] = (
+            executor_binding.get("toolchain_checkouts_omitted_count", 0)
+            + max(0, len(toolchains) - 4)
+            if type(executor_binding.get("toolchain_checkouts_omitted_count", 0)) is int
+            else max(0, len(toolchains) - 4)
+        )
+
+    related = [
+        binding for binding in provider_bindings
+        if (binding.get("provider") == executor_binding.get("provider")
+            and binding.get("capability") != executor_capability)
+    ]
+    related.sort(key=lambda binding: (
+        {"unavailable": 0, "unknown": 1, "unrecorded": 2,
+         "available": 3}.get(str(binding.get("availability_status")), 4),
+        str(binding.get("capability", "")),
+    ))
+    status_counts: dict[str, int] = {}
+    for binding in related:
+        status = binding.get("availability_status")
+        status = status if isinstance(status, str) else "unrecorded"
+        status_counts[status] = status_counts.get(status, 0) + 1
+    unavailable = [
+        binding for binding in related
+        if binding.get("availability_status") == "unavailable"
+    ]
+    context["same_provider_capability_context"] = {
+        "status": "observed" if binding_scan_complete else "partial",
+        "basis": "same-provider-identity-in-current-session-binding-snapshot",
+        "readiness_status": "not-established",
+        "binding_count": len(related),
+        "count_scope": (
+            "complete-current-provider-bindings" if binding_scan_complete
+            else "observed-scanned-binding-records"
+        ),
+        "binding_scan_complete": binding_scan_complete,
+        "availability_status_counts": dict(sorted(status_counts.items())[:4]),
+        "unavailable_bindings": [
+            {
+                "capability": binding["capability"],
+                "availability_status": "unavailable",
+                **({"availability_verification": binding[
+                    "availability_verification"]}
+                    if isinstance(binding.get("availability_verification"), str)
+                    else {}),
+                **({"availability_code": binding["availability_code"]}
+                    if isinstance(binding.get("availability_code"), str)
+                    else {}),
+                **({"availability_reason": binding["availability_reason"]}
+                    if isinstance(binding.get("availability_reason"), str)
+                    else {}),
+            }
+            for binding in unavailable[:4]
+        ],
+        "unavailable_bindings_omitted_count": max(0, len(unavailable) - 4),
+    }
+    return context
+
+
 def _compact_count_map(value: Any, *, key_limit: int = 64) -> dict[str, int]:
     if not isinstance(value, dict):
         return {}
@@ -4104,6 +4437,19 @@ def _compact_session_activity_budget_overview(
             }
         result["doctor_health_history"] = compact_doctor
 
+    capability_delivery = activity.get("capability_delivery")
+    verification_context = (
+        capability_delivery.get("verification_executor_context")
+        if isinstance(capability_delivery, dict) else None
+    )
+    compact_verification_context = _compact_verification_executor_context(
+        verification_context,
+    )
+    if compact_verification_context is not None:
+        result["capability_delivery"] = {
+            "verification_executor_context": compact_verification_context,
+        }
+
     for key in (
         "repository_ref_transition_count", "repository_ref_transitions_truncated",
     ):
@@ -4261,6 +4607,16 @@ def _compact_session_activity_evidence_priority_overview(
                 )
             compact_accountability["summary"] = compact_summary
         result["service_accountability"] = compact_accountability
+
+    capability_delivery = activity.get("capability_delivery")
+    compact_verification_context = (
+        capability_delivery.get("verification_executor_context")
+        if isinstance(capability_delivery, dict) else None
+    )
+    if isinstance(compact_verification_context, dict):
+        result["capability_delivery"] = {
+            "verification_executor_context": compact_verification_context,
+        }
 
     result["detail_status"] = "evidence-priority-response-budget"
     result["evidence_priority_summary_only"] = True
@@ -6488,6 +6844,11 @@ def _compact_projection(
                         if type(binding.get(key)) is int and binding[key] >= 0:
                             compact_binding[key] = binding[key]
                     compact_relation["binding"] = compact_binding
+                    readiness = _compact_provider_execution_readiness(
+                        relation.get("provider_execution_readiness"),
+                    )
+                    if readiness is not None:
+                        compact_relation["provider_execution_readiness"] = readiness
                 if type(relation.get("binding_details_selected")) is bool:
                     compact_relation["binding_details_selected"] = relation[
                         "binding_details_selected"
@@ -15037,6 +15398,70 @@ def _capability_delivery_view(
                 availability["observed_at"], 96,
             )} if isinstance(availability.get("observed_at"), str) else {}),
         }
+        if isinstance(availability.get("code"), str):
+            binding_record["availability_code"] = _short_text(
+                availability["code"], 80,
+            )
+        if isinstance(availability.get("reason"), str):
+            binding_record["availability_reason"] = _short_text(
+                availability["reason"], 192,
+            )
+        provenance = raw.get("provenance")
+        provenance = provenance if isinstance(provenance, dict) else {}
+        checkout = provenance.get("checkout")
+        if isinstance(checkout, dict):
+            clean = checkout.get("clean")
+            binding_record["provider_checkout"] = {
+                "clean_status": (
+                    "observed-clean" if clean is True else
+                    "observed-dirty" if clean is False else "not-recorded"
+                ),
+                **({"head": checkout["authoritative_head"]}
+                   if isinstance(checkout.get("authoritative_head"), str)
+                   and _COMMIT.fullmatch(checkout["authoritative_head"])
+                   else {"head": checkout["head"]}
+                   if isinstance(checkout.get("head"), str)
+                   and _COMMIT.fullmatch(checkout["head"]) else {}),
+                **({"branch": _short_text(checkout["branch"], 96)}
+                   if isinstance(checkout.get("branch"), str) else {}),
+                **({"source_ref": _short_text(checkout["source_ref"], 96)}
+                   if isinstance(checkout.get("source_ref"), str) else {}),
+            }
+        toolchains = provenance.get("toolchain_checkouts")
+        if isinstance(toolchains, list):
+            compact_toolchains = []
+            for dependency in toolchains[:8]:
+                if not isinstance(dependency, dict):
+                    continue
+                dependency_repository = dependency.get("repository")
+                if (not isinstance(dependency_repository, str)
+                        or re.fullmatch(
+                            r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}",
+                            dependency_repository,
+                        ) is None):
+                    continue
+                row: dict[str, Any] = {"repository": dependency_repository}
+                dependency_head = dependency.get("head")
+                if isinstance(dependency_head, str) and _COMMIT.fullmatch(
+                    dependency_head,
+                ):
+                    row["head"] = dependency_head
+                for key in ("branch", "source_ref"):
+                    field = dependency.get(key)
+                    if isinstance(field, str) and field:
+                        row[key] = _short_text(field, 96)
+                clean = dependency.get("clean")
+                row["clean_status"] = (
+                    "observed-clean" if clean is True else
+                    "observed-dirty" if clean is False else "not-recorded"
+                )
+                if type(dependency.get("read_only")) is bool:
+                    row["read_only"] = dependency["read_only"]
+                compact_toolchains.append(row)
+            binding_record["toolchain_checkouts"] = compact_toolchains
+            binding_record["toolchain_checkouts_omitted_count"] = max(
+                0, len(toolchains) - len(compact_toolchains),
+            )
         if provider_declarations:
             binding_record["provider_declarations"] = provider_declarations
         if declaration_omitted_count:
@@ -15545,6 +15970,16 @@ def _capability_delivery_view(
         }
         if provider_matches:
             binding = provider_matches[0]
+            if len(provider_matches) == 1:
+                relation["provider_execution_readiness"] = (
+                    _provider_execution_readiness_context(
+                        binding,
+                        [record for record in binding_records
+                         if record.get("provider") == candidate["repository"]],
+                        capability,
+                        binding_scan_complete=binding_scan_complete,
+                    )
+                )
             binding_summary = _compact_delivery_binding(binding)
             if binding_summary is not None:
                 relation["binding"] = {
