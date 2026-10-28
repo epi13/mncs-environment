@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_pass_verification_rollup_verification_20261028",
+  "captured_at": "2026-10-28T17:57:37Z",
+  "measurement_basis": "focused-post-change-capability-intelligence-test-run",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "8766dc50008e861b34b64cbd08c2a21a395a719f"
+  },
+  "observation": {
+    "kind": "environmental-service-accountability-focused-verification",
+    "source_interface": "MNCS Environment capability-intelligence test suite",
+    "request": {
+      "command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "targeted_status_rollup_test": "test_service_accountability_rolls_up_scheduler_verification_status",
+      "test_file": "tests/test_capability_intelligence.py",
+      "implementation_commit": "8766dc50008e861b34b64cbd08c2a21a395a719f"
+    },
+    "outcome": {
+      "status": "passed",
+      "passed_test_count": 195,
+      "elapsed_seconds": 8.56,
+      "python_compile_status": "passed",
+      "git_diff_check_status": "passed",
+      "verified_behavior": [
+        "status counts distinguish not-recorded from not-established",
+        "status counts are grouped by owner",
+        "bounded service-accountability compaction retains both count views",
+        "evidence-priority session compaction retains both count views"
+      ]
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_owner_pass_verification_status_rollup_8766dc5",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "8766dc50008e861b34b64cbd08c2a21a395a719f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "6e02ee719221179b52cb97f82db4b0a64e54997c66ea72db1d95da39b7364e54"
+    },
+    {
+      "identity": "mncs_environment_owner_pass_verification_status_rollup_tests_8766dc5",
+      "kind": "source-code-test",
+      "repository": "mncs-environment",
+      "commit": "8766dc50008e861b34b64cbd08c2a21a395a719f",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "9e6626fe013225da53182b6a96d01982377c6516dc91e82f1ce37da1f2b08bae"
+    }
+  ],
+  "measurement_limits": [
+    "The focused suite verifies projection and compaction behavior; it is not independent verification of owner service correctness.",
+    "The tests do not establish agent receipt, intervention reduction, or cross-session recurrence."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_owner_pass_verification_status_summary_20261028",
+    "title": "Per-owner scheduled-pass verification statuses are buried in nested ECI detail",
+    "category": "environment-service-accountability-and-verification",
+    "subsystem": "MNCS Environment owner-pass service-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "One complete selected-session scheduler trace recorded verification as not established for seven owners, but the compact execution summary exposed that distribution only inside nested per-owner decision details.",
+    "actionable_recommendation": "Expose bounded scheduled-pass verification status counts by status and owner in the service execution summary, keeping missing values distinct from explicitly not-established states and preserving scheduler coverage.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "agent use of the nested owner decision summary",
+      "agent intervention burden or productivity",
+      "service correctness or fulfillment",
+      "recurrence across sessions"
+    ]
+  }
+}

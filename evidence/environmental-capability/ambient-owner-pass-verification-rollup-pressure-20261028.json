@@ -1,0 +1,115 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_owner_pass_verification_rollup_pressure_20261028",
+  "captured_at": "2026-10-28T17:57:37Z",
+  "measurement_basis": "in-session-live-ECI-readback; baseline-response-body-not-retained",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "8766dc50008e861b34b64cbd08c2a21a395a719f"
+  },
+  "observation": {
+    "kind": "environment-service-accountability-projection-pressure",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "baseline_projection_identity": "eci_da1b49bec4728092",
+      "baseline_projection_status": "partial",
+      "baseline_response_byte_count": 73174,
+      "response_limit_byte_count": 73728,
+      "owner_pass_decision_coverage": "complete",
+      "scheduled_owner_pass_count": 7,
+      "owner_verification_status_counts_by_owner": {
+        "actions": {"not-established": 1},
+        "diagnostics": {"not-established": 1},
+        "doctor": {"not-established": 1},
+        "family": {"not-established": 1},
+        "projections": {"not-established": 1},
+        "semantics": {"not-established": 1},
+        "verification": {"not-established": 1}
+      },
+      "direct_execution_summary_rollup_status": "not-returned",
+      "owner_result_content_integrity_verified_count": 7
+    },
+    "outcome": {
+      "status": "observed",
+      "interpretation": "The complete scheduler decision summary contained one not-established verification status for each of seven Environment owners, while the directly inspectable service execution summary did not expose a status rollup. The evidence supports a discoverability gap in the projection, not a service failure.",
+      "service_failure_status": "not-reported-in-owner-results",
+      "agent_intervention_burden_status": "not-measured"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:doctor:f2947b6a3ad8ea777bcebd4a4141a755d8c1760a19944b00a85a9af9df42f42b",
+      "result_identity": "b2aae1dc516f412b953deadf6b9bc157bd58672c2dccdabf1767261b13dc788e"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:semantics:4ef6dc651292c8e8b5df7100a01d5d7798d13fc6e33ca5156be9cb735aa29f98",
+      "result_identity": "73375e3133b9ef951b480101bc2aae2e581ef062d3f896a7592fb69a4855c41e"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:actions:9cf576fe853b130a49aaf9e55c4319001d6efa542a2de43074ea811ca976373f",
+      "result_identity": "5c4bc54a9d7425df1c0a956d9e2001798eb25a0d68ef2aa8327984a6c3c15eb1"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:diagnostics:4f487b3cefdb35abaefe539c77041b98fa32ef69e34eae58de70aae53fadf7bb",
+      "result_identity": "7c0c64bd4b2be68724c35564b24e7cb9b1b9d11b2396203a390528192b12f7b6"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:family:4e4e16012b06977739f09b2be5ada39df71eb0ef73b8632d300ab37b9f7ed9b8",
+      "result_identity": "9164cdcc3596da4ecec2c2d210a9f824dcaffd912a4f1ff4c96a82149174bd25"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:projections:e2c1a81ef2de3def467d1c7f255125aa1a9c74425ae1c3f819da1dd700a10328",
+      "result_identity": "e0d7e9618cfc154470cab449ec3ecf8b51266a0520dee454d17028649fcb2baf"
+    }
+  ],
+  "measurement_limits": [
+    "The baseline projection response body and content digest were not retained; its identity, byte count, and summarized fields came from the live session readback.",
+    "The seven owner-result records were content-integrity verified, which does not verify service correctness or fulfillment.",
+    "No agent receipt, intervention burden, cross-session recurrence, or causal relationship is established."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_owner_pass_verification_status_summary_20261028",
+    "title": "Per-owner scheduled-pass verification statuses are buried in nested ECI detail",
+    "category": "environment-service-accountability-and-verification",
+    "subsystem": "MNCS Environment owner-pass service-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "One complete selected-session scheduler trace recorded verification as not established for seven owners, but the compact execution summary exposed that distribution only inside nested per-owner decision details.",
+    "actionable_recommendation": "Expose bounded scheduled-pass verification status counts by status and owner in the service execution summary, keeping missing values distinct from explicitly not-established states and preserving scheduler coverage.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "agent use of the nested owner decision summary",
+      "agent intervention burden or productivity",
+      "service correctness or fulfillment",
+      "recurrence across sessions"
+    ]
+  }
+}
