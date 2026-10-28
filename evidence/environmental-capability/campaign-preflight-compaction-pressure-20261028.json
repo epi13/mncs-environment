@@ -1,0 +1,69 @@
+{
+  "captured_at": "2026-10-28T09:39:27Z",
+  "identity": "ev_environment_campaign_preflight_compaction_pressure_20261028",
+  "measurement_basis": "paired-campaign-state-and-live-ECI-readback-before-compaction-fix",
+  "measurement_limits": [
+    "One campaign checkpoint and one selected-session ECI route exposed the loss; recurrence across sessions is not established.",
+    "No agent time, tool-call overhead, or intervention burden was measured.",
+    "The old ECI response was already partial; only the missing compact source field is asserted."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-projection-compaction-gap",
+    "outcome": {
+      "campaign_state_preflight_reference_count": 1,
+      "campaign_state_preflight_status": "validated",
+      "interpretation": "The campaign state retained the checked outcome, while the live ECI route dropped it when selecting the evidence-priority compact view.",
+      "pre_change_ECI_preflight_field": "not-present-under-evidence-priority-compaction",
+      "pre_change_ECI_projection_status": "partial"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3ddf2d606c311104",
+      "operation": "compare accepted campaign-state preflight summary with compact ECI source",
+      "pre_change_projection_identity": "eci_b5d15c3c777c9b65"
+    },
+    "source_interface": "MNCS campaign-state and environmental-capability ECI projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain the bounded campaign observation preflight result in evidence-priority response compaction and verify it through the real ECI route.",
+    "basis": "A campaign-state summary was present but the ECI evidence-priority compaction path rebuilt its source allowlist without retaining the new field.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_projection_compaction_loss_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment ECI evidence-priority response compaction",
+    "title": "ECI evidence-priority compaction dropped campaign preflight outcome"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_c2d1ef45b03f9f1c",
+      "campaign_state_checkpoint_id": "chk_3ddf2d606c311104",
+      "identity": "eci_b5d15c3c777c9b65",
+      "kind": "prior-ECI-projection-readback",
+      "preflight_field_status": "not-present",
+      "repository": "mncs-environment",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "identity": "src_environment_campaign_preflight_outcome_568ed6c",
+      "kind": "pre-fix-implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3cbdcf0f23e5ac49c29cd94a3bb0b4a82cf3bad4c88e0738467983fc259b3d10"
+    }
+  ]
+}

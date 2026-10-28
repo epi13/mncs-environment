@@ -1,0 +1,80 @@
+{
+  "captured_at": "2026-10-28T09:39:27Z",
+  "identity": "ev_environment_campaign_preflight_compaction_improvement_20261028",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_campaign_preflight_projection_compaction_loss_20261028",
+    "basis": "The existing evidence-priority compaction helper now retains the bounded campaign preflight result. Its focused regression passes, and the actual ECI route exposes validated status and counts through its partial, truncated response at the same checkpoint. This verifies the integration change without establishing burden reduction or longer-term effectiveness.",
+    "identity": "im_environment_campaign_preflight_compaction_20261028",
+    "implementation_reference": {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_e3e0aaa",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "9fee9be9d17b8b0dbbcda01ce7b45c04601a99a5c6b94c9e52bacf70033be4ff"
+    },
+    "not_measured": [
+      "agent receipt or use of the retained summary",
+      "intervention-burden reduction or time and tool-call savings",
+      "recurrence and effectiveness across independent sessions",
+      "ambient service fulfillment for other service domains"
+    ],
+    "subsequent_observation_identity": "ev_environment_campaign_preflight_compaction_readback_20261028",
+    "verification_observation_identity": "ev_environment_campaign_preflight_compaction_verification_20261028"
+  },
+  "measurement_basis": "verified-compaction-fix-and-subsequent-live-projection",
+  "measurement_limits": [
+    "The relation establishes a tested integration fix and one subsequent projection readback, not universal correctness.",
+    "Ambient fulfillment across other services, agent receipt, and intervention-burden reduction remain unknown.",
+    "Recurrence and effectiveness across independent sessions are not established."
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "Added campaign_observation_preflight to the existing compact evidence source allowlist.",
+      "implementation_scope": "Bounded campaign preflight outcome retained through ECI evidence-priority response compaction.",
+      "interpretation_limit": "The readback establishes field visibility and integrity only; it does not measure whether agents use the field or whether service burden falls.",
+      "verified_change": "Focused regression passed, and the live ECI route retained the validated summary at the same campaign checkpoint where its earlier response omitted the field."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_campaign_preflight_projection_compaction_loss_20261028",
+      "implementation_commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "subsequent_observation_identity": "ev_environment_campaign_preflight_compaction_readback_20261028",
+      "verification_observation_identity": "ev_environment_campaign_preflight_compaction_verification_20261028"
+    },
+    "source_interface": "MNCS Environment ECI evidence-priority compaction"
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_e3e0aaa",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "9fee9be9d17b8b0dbbcda01ce7b45c04601a99a5c6b94c9e52bacf70033be4ff"
+    },
+    {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_test_e3e0aaa",
+      "kind": "verification-source",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "43ef89d868249fd1f3e1867cabbea1ef34a982aeeb09ac8a294805240f97f87b"
+    }
+  ]
+}

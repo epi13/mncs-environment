@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-10-28T09:39:27Z",
+  "identity": "ev_environment_campaign_preflight_compaction_readback_20261028",
+  "measurement_basis": "live-ECI-route-after-compaction-fix",
+  "measurement_limits": [
+    "This is one selected campaign-session projection, not an ambient fulfillment ratio.",
+    "The output remains partial and response-truncated; the bounded source field and pressure summary were retained.",
+    "No agent receipt, intervention burden, or longer-term effectiveness is measured."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-projection-compaction-readback",
+    "outcome": {
+      "observation_records_unavailable": 0,
+      "observation_records_verified": 8,
+      "post_change_preflight": {
+        "reason": "selected-checkout-blob-and-observation-contract-verified",
+        "reference_count": 1,
+        "status": "validated",
+        "validated_reference_count": 1
+      },
+      "pre_change_preflight_field_status": "not-present-under-evidence-priority-compaction",
+      "pressure_definition_status": "consistent",
+      "recurrence_status": "not-established",
+      "response_truncated": true
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3ddf2d606c311104",
+      "command": "python scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 8 --session-event-limit 64",
+      "implementation_commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "post_change_projection_identity": "eci_debfeebaf5e31dfe",
+      "pre_change_projection_identity": "eci_b5d15c3c777c9b65"
+    },
+    "source_interface": "mncs-env projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain the bounded campaign observation preflight result in evidence-priority response compaction and verify it through the real ECI route.",
+    "basis": "The post-change compact projection preserves the bounded outcome at the same campaign-state checkpoint that the pre-change route omitted it.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_projection_compaction_loss_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment ECI evidence-priority response compaction",
+    "title": "ECI evidence-priority compaction dropped campaign preflight outcome"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_e3e0aaa",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "9fee9be9d17b8b0dbbcda01ce7b45c04601a99a5c6b94c9e52bacf70033be4ff"
+    },
+    {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_test_e3e0aaa",
+      "kind": "verification-source",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "43ef89d868249fd1f3e1867cabbea1ef34a982aeeb09ac8a294805240f97f87b"
+    }
+  ]
+}

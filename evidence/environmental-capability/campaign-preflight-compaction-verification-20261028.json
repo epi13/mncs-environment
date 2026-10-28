@@ -1,0 +1,79 @@
+{
+  "captured_at": "2026-10-28T09:39:27Z",
+  "identity": "ev_environment_campaign_preflight_compaction_verification_20261028",
+  "measurement_basis": "focused-response-compaction-regression-and-live-ECI-route",
+  "measurement_limits": [
+    "Two focused ECI tests passed; this was not a full repository suite.",
+    "The live projection remains partial and truncated, so only its retained bounded source summary is asserted.",
+    "The verification does not establish agent receipt, burden reduction, or cross-session effectiveness."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-projection-compaction-verification",
+    "outcome": {
+      "compileall": "passed",
+      "focused_test_count": 2,
+      "git_diff_check": "passed",
+      "live_observation_records_unavailable": 0,
+      "live_observation_records_verified": 8,
+      "live_preflight_status": "validated",
+      "live_projection_identity": "eci_debfeebaf5e31dfe",
+      "live_projection_status": "partial",
+      "pressure_definition_status": "consistent",
+      "ruff_select_up031": "passed",
+      "status": "passed",
+      "verified_properties": [
+        "Evidence-priority source retention preserves campaign_observation_preflight.",
+        "The compact ECI response exposes validated candidate counts at the same campaign-state checkpoint.",
+        "The append-only pressure correction is applied to its integrity-verified target and the pressure definition is consistent."
+      ]
+    },
+    "request": {
+      "implementation_commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "projection_command": "python scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 8 --session-event-limit 64",
+      "test_command": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py -k 'observation_correction_cannot_rewrite_valid_pressure_recommendation or campaign_state_and_projection_interfaces_expose_the_derived_view'"
+    },
+    "source_interface": "MNCS Environment targeted pytest and live ECI projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain the bounded campaign observation preflight result in evidence-priority response compaction and verify it through the real ECI route.",
+    "basis": "Focused regression and the live projection verify the field is retained through the response-budget path that previously omitted it.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_projection_compaction_loss_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment ECI evidence-priority response compaction",
+    "title": "ECI evidence-priority compaction dropped campaign preflight outcome"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_e3e0aaa",
+      "kind": "implementation-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "9fee9be9d17b8b0dbbcda01ce7b45c04601a99a5c6b94c9e52bacf70033be4ff"
+    },
+    {
+      "commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "identity": "src_environment_campaign_preflight_compaction_test_e3e0aaa",
+      "kind": "verification-source",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "43ef89d868249fd1f3e1867cabbea1ef34a982aeeb09ac8a294805240f97f87b"
+    }
+  ]
+}
