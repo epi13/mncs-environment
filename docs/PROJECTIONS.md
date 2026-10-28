@@ -1167,11 +1167,17 @@ recorded. The current diagnostic epoch is compared with the newest history
 reference. A same-session file reference is retained only for the diagnostic
 artifact path and filename shape produced by the existing writer. The
 projection does not read or integrity-check diagnostic artifacts; inspect the
-exact reference for witness details. Campaign, WorkIntent, Environment, and
-definition identities are explicitly based on the current session snapshot,
-not asserted as the context at the time of each historical diagnosis. Counts
-and elapsed diagnostic time describe the diagnostic service's records; they
-do not establish root cause, repair, agent effort, or burden reduction. The
+exact reference for witness details. New diagnostic runs persist bounded
+`recording_context` IDs with both the immutable evidence and session history:
+session, campaign, WorkIntent, consumer, Environment, definition, and explicit
+Environment version when available. The projection retains that context on
+each history row only when its session ID matches the selected session. It
+marks legacy rows without captured context and invalid or cross-session
+context separately. Top-level campaign, WorkIntent, Environment, and definition
+IDs remain current-session snapshot context, not historical attribution. These
+IDs are provenance metadata, not an independent identity attestation. Counts
+and elapsed diagnostic time describe the diagnostic service's records; they do
+not establish root cause, repair, agent effort, or burden reduction. The
 projection is bounded and demand-driven with the other session activity, and
 does not add a telemetry store. The field is omitted when neither a diagnostic
 history nor epoch is present; absence does not imply that diagnostics were

@@ -814,6 +814,7 @@ def _finish(session, started: str, clock_started: float,
     for key, value in (
         ("campaign_id", campaign.get("identity")),
         ("consumer_id", snapshot.get("consumer_id")),
+        ("work_intent_id", intent.get("identity")),
         ("environment_id", snapshot.get("environment_id")),
         ("definition_id", provenance.get("definition_id")),
         ("environment_version", snapshot.get("environment_version")),
@@ -824,7 +825,7 @@ def _finish(session, started: str, clock_started: float,
     evidence = {"schema_version": SCHEMA, "mode": mode, "depth": depth,
                 "started_at": started, "finished_at": utcnow(),
                 "related_work": related_work,
-                "recording_context": recording_context,
+                "recording_context": dict(recording_context),
                 "summary": summary, "results": results,
                 "failure": failure,
                 "coherence_summary": dict(native)}
@@ -834,7 +835,8 @@ def _finish(session, started: str, clock_started: float,
         session.snapshot["diagnostic_state"] = rows
     history = list(session.snapshot.get("diagnostic_history") or [])
     history.append({"at": utcnow(), "mode": mode, "depth": depth,
-                    "summary": dict(summary), "evidence_ref": evidence_ref})
+                    "summary": dict(summary), "evidence_ref": evidence_ref,
+                    "recording_context": dict(recording_context)})
     session.snapshot["diagnostic_history"] = history[-MAX_HISTORY:]
     # Transport/capture failures never cache their epoch: the next pass
     # must re-observe, not replay a degraded world. Recorded witnesses

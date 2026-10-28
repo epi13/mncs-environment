@@ -4616,18 +4616,32 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
         "epoch_reused": False,
         "elapsed_seconds": 0.125,
     }
+    event_context = {
+        "session_id": session.session_id,
+        "campaign_id": "cmp_diagnostic_at_event",
+        "work_intent_id": "int_diagnostic_at_event",
+        "consumer_id": "agent-at-event",
+        "environment_id": "renv_diagnostic_at_event",
+        "definition_id": "env_diagnostic_at_event",
+        "environment_version": "v17",
+    }
     session.snapshot["diagnostic_history"] = [{
         "at": "2026-10-27T20:00:00Z",
         "mode": "ambient",
         "depth": "standard",
         "summary": summary,
         "evidence_ref": evidence_reference,
+        "recording_context": event_context,
         "private_witness": "diagnostic-witness-private",
     }]
     session.snapshot["diagnostic_epoch"] = {
         "summary": summary,
         "evidence_ref": evidence_reference,
     }
+    session.snapshot["campaign"] = {"identity": "cmp_diagnostic_current"}
+    session.snapshot["intent"] = {"identity": "int_diagnostic_current"}
+    session.snapshot["environment_id"] = "renv_diagnostic_current"
+    session.snapshot["provenance"] = {"definition_id": "env_diagnostic_current"}
 
     result = capability_intelligence.project(session)
     activity = result["session_activity"]
@@ -4637,7 +4651,15 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
     assert diagnostics["source"]["current_epoch_relation"] == (
         "matches-latest-history-record"
     )
+    assert diagnostics["source"]["campaign_id"] == "cmp_diagnostic_current"
+    assert diagnostics["source"]["recording_context_coverage_status"] == (
+        "captured-at-event-for-returned-records"
+    )
     assert diagnostics["summary"]["latest_failure_count"] == 1
+    assert diagnostics["history"][0]["recording_context"] == event_context
+    assert diagnostics["history"][0]["recording_context_status"] == (
+        "captured-at-event"
+    )
     assert diagnostics["history"][0]["evidence_reference"] == {
         "kind": "session-store",
         "reference": evidence_reference,
@@ -4651,6 +4673,9 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
     assert overview["diagnostic_activity"]["history"][0][
         "evidence_reference"
     ]["reference"] == evidence_reference
+    assert overview["diagnostic_activity"]["history"][0][
+        "recording_context"
+    ] == event_context
 
     compact = capability_intelligence.project(
         session, max_result_bytes=8_000,
@@ -4660,6 +4685,9 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
     assert compact_diagnostics["history"][0]["evidence_reference"][
         "reference"
     ] == evidence_reference
+    assert compact_diagnostics["history"][0]["recording_context"] == (
+        event_context
+    )
     assert capability_intelligence._projection_response_size(compact) <= 8_000
 
     session.snapshot["diagnostic_history"].append({
@@ -4674,7 +4702,51 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
     )
     assert cross_session["status"] == "partial"
     assert cross_session["summary"]["invalid_reference_count"] == 1
+    assert cross_session["summary"]["recording_context_coverage_status"] == (
+        "partially-captured-at-event"
+    )
+    assert cross_session["summary"][
+        "recording_context_missing_record_count"
+    ] == 1
     assert "ses_other" not in json.dumps(cross_session)
+    compact_legacy_context = (
+        capability_intelligence._compact_session_diagnostic_activity(
+            cross_session,
+        )
+    )
+    assert compact_legacy_context["history"][0][
+        "recording_context_status"
+    ] == "not-recorded-at-event"
+
+    session.snapshot["diagnostic_history"].append({
+        "at": "2026-10-27T20:02:00Z",
+        "mode": "ambient",
+        "depth": "minimal",
+        "summary": {"failures": 0},
+        "evidence_ref": (
+            f"mncs-store:{session.session_id}:diagnostics:{'c' * 64}"
+        ),
+        "recording_context": {
+            "session_id": "ses_foreign_context",
+            "campaign_id": "cmp_foreign_context",
+        },
+    })
+    invalid_context = capability_intelligence._session_diagnostic_activity(
+        session.snapshot, session.session_id,
+    )
+    assert invalid_context["summary"]["invalid_recording_context_count"] == 1
+    assert invalid_context["history"][0]["recording_context_status"] == (
+        "invalid-or-cross-session-context"
+    )
+    compact_invalid_context = (
+        capability_intelligence._compact_session_diagnostic_activity(
+            invalid_context,
+        )
+    )
+    assert compact_invalid_context["history"][0][
+        "recording_context_status"
+    ] == "invalid-or-cross-session-context"
+    assert "ses_foreign_context" not in json.dumps(compact_invalid_context)
 
 
 def test_resource_sample_survives_last_resort_session_activity_compaction() -> None:

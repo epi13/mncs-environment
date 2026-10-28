@@ -7219,7 +7219,8 @@ def _compact_session_diagnostic_activity(value: Any) -> dict[str, Any] | None:
         for key in (
             "session_id", "campaign_id", "work_intent_id", "environment_id",
             "definition_id", "history_identity_digest", "selection_policy",
-            "current_epoch_relation",
+            "current_epoch_relation", "context_basis",
+            "recording_context_coverage_status",
         )
         if isinstance(source.get(key), str)
     }
@@ -7247,11 +7248,17 @@ def _compact_session_diagnostic_activity(value: Any) -> dict[str, Any] | None:
         for key in (
             "history_record_count", "history_records_returned",
             "history_records_omitted", "invalid_record_count",
-            "invalid_reference_count", "latest_failure_count",
+            "invalid_reference_count", "recording_context_captured_record_count",
+            "recording_context_missing_record_count",
+            "invalid_recording_context_count", "latest_failure_count",
             "latest_captured_count",
         )
         if type(summary.get(key)) is int and summary[key] >= 0
     }
+    if isinstance(summary.get("recording_context_coverage_status"), str):
+        compact_summary["recording_context_coverage_status"] = _short_text(
+            summary["recording_context_coverage_status"], 96,
+        )
     history = value.get("history")
     history = history if isinstance(history, list) else []
     rows = []
@@ -7263,7 +7270,7 @@ def _compact_session_diagnostic_activity(value: Any) -> dict[str, Any] | None:
             key: _short_text(row[key], 96)
             for key in (
                 "identity", "recorded_at", "mode", "depth",
-                "evidence_reference_status",
+                "evidence_reference_status", "recording_context_status",
             )
             if isinstance(row.get(key), str)
         }
@@ -7302,6 +7309,22 @@ def _compact_session_diagnostic_activity(value: Any) -> dict[str, Any] | None:
                 "kind": reference["kind"],
                 "reference": reference["reference"],
             }
+        if (row.get("recording_context") is None
+                and row.get("recording_context_status")
+                == "invalid-or-cross-session-context"):
+            recording_context, recording_context_status = (
+                None, "invalid-or-cross-session-context",
+            )
+        else:
+            recording_context, recording_context_status = (
+                _compact_diagnostic_recording_context(
+                    row.get("recording_context"), session_id,
+                ) if isinstance(session_id, str)
+                else (None, "invalid-or-cross-session-context")
+            )
+        compact_row["recording_context_status"] = recording_context_status
+        if recording_context is not None:
+            compact_row["recording_context"] = recording_context
         rows.append(compact_row)
     result = {
         "status": _short_text(value.get("status"), 96),
@@ -21770,6 +21793,30 @@ def _diagnostic_evidence_reference(
     return None
 
 
+def _compact_diagnostic_recording_context(
+    value: Any, session_id: str,
+) -> tuple[dict[str, str] | None, str]:
+    """Keep bounded event-time context only when it belongs to this session."""
+    if value is None:
+        return None, "not-recorded-at-event"
+    if not isinstance(value, dict):
+        return None, "invalid-or-cross-session-context"
+    recorded_session_id = value.get("session_id")
+    if (not isinstance(recorded_session_id, str)
+            or recorded_session_id != session_id):
+        return None, "invalid-or-cross-session-context"
+    compact = {"session_id": _short_text(recorded_session_id, 160)}
+    for key in (
+        "campaign_id", "work_intent_id", "consumer_id", "environment_id",
+        "definition_id", "environment_version",
+    ):
+        candidate = value.get(key)
+        if (isinstance(candidate, str) and candidate.strip()
+                and len(candidate) <= 160):
+            compact[key] = _short_text(candidate, 160)
+    return compact, "captured-at-event"
+
+
 def _session_diagnostic_activity(
     snapshot: dict[str, Any], session_id: str,
 ) -> dict[str, Any] | None:
@@ -21817,6 +21864,9 @@ def _session_diagnostic_activity(
     rows: list[dict[str, Any]] = []
     invalid_record_count = 0
     invalid_reference_count = 0
+    recording_context_captured_count = 0
+    recording_context_missing_count = 0
+    invalid_recording_context_count = 0
     for item in reversed(selected):
         if not isinstance(item, dict):
             invalid_record_count += 1
@@ -21828,6 +21878,17 @@ def _session_diagnostic_activity(
         if raw_reference and evidence_reference is None:
             invalid_reference_count += 1
         raw_summary = item.get("summary")
+        recording_context, recording_context_status = (
+            _compact_diagnostic_recording_context(
+                item.get("recording_context"), session_id,
+            )
+        )
+        if recording_context_status == "captured-at-event":
+            recording_context_captured_count += 1
+        elif recording_context_status == "not-recorded-at-event":
+            recording_context_missing_count += 1
+        else:
+            invalid_recording_context_count += 1
         compact_item = {
             "identity": "dgh_" + digest_hex({
                 "session_id": session_id,
@@ -21840,8 +21901,11 @@ def _session_diagnostic_activity(
                 and item.get("depth") in {"minimal", "standard", "deep"}
                 else None,
                 "evidence_reference": evidence_reference,
+                "recording_context": recording_context,
+                "recording_context_status": recording_context_status,
             }, length=16),
             "summary": compact_summary(raw_summary),
+            "recording_context_status": recording_context_status,
             "evidence_reference_status": (
                 "recorded" if evidence_reference is not None else
                 "invalid-or-cross-session" if raw_reference else
@@ -21857,6 +21921,8 @@ def _session_diagnostic_activity(
             compact_item["depth"] = depth
         if evidence_reference is not None:
             compact_item["evidence_reference"] = evidence_reference
+        if recording_context is not None:
+            compact_item["recording_context"] = recording_context
         rows.append(compact_item)
 
     epoch = raw_epoch if isinstance(raw_epoch, dict) else {}
@@ -21883,6 +21949,7 @@ def _session_diagnostic_activity(
     if rows:
         status = (
             "partial" if omitted or invalid_record_count or invalid_reference_count
+            or invalid_recording_context_count
             else "recorded"
         )
     elif epoch:
@@ -21894,6 +21961,17 @@ def _session_diagnostic_activity(
     else:
         status = "not-recorded-in-session"
 
+    if invalid_recording_context_count:
+        recording_context_coverage = "invalid-context-present"
+    elif recording_context_missing_count and recording_context_captured_count:
+        recording_context_coverage = "partially-captured-at-event"
+    elif recording_context_captured_count:
+        recording_context_coverage = "captured-at-event-for-returned-records"
+    elif recording_context_missing_count:
+        recording_context_coverage = "not-captured-at-event"
+    else:
+        recording_context_coverage = "no-history-records"
+
     source = {
         "session_id": _short_text(session_id, 160),
         "history_record_count": len(history),
@@ -21904,7 +21982,11 @@ def _session_diagnostic_activity(
         ),
         "selection_policy": "newest-session-diagnostic-history-first",
         "current_epoch_relation": epoch_relation,
-        "context_basis": "current-session-snapshot",
+        "context_basis": (
+            "event-time-recording-context-per-history-row-when-present; "
+            "current-session-snapshot-for-source-identifiers"
+        ),
+        "recording_context_coverage_status": recording_context_coverage,
     }
     for key, value in (
         ("campaign_id", campaign.get("identity")),
@@ -21930,13 +22012,23 @@ def _session_diagnostic_activity(
             "history_records_omitted": omitted,
             "invalid_record_count": invalid_record_count,
             "invalid_reference_count": invalid_reference_count,
+            "recording_context_captured_record_count": (
+                recording_context_captured_count
+            ),
+            "recording_context_missing_record_count": (
+                recording_context_missing_count
+            ),
+            "invalid_recording_context_count": (
+                invalid_recording_context_count
+            ),
+            "recording_context_coverage_status": recording_context_coverage,
             "latest_failure_count": latest_summary.get("failures"),
             "latest_captured_count": latest_summary.get("captured"),
         },
         "history": rows,
         "measurement_limits": [
             "Only bounded diagnostic summaries and same-session evidence references are projected; inspect the diagnostic evidence artifact for witness details.",
-            "Campaign, WorkIntent, Environment, and definition identities are current session snapshot context, not context captured when each diagnosis ran.",
+            "History rows use event-time recording context when present. Legacy rows lack that context; top-level campaign, WorkIntent, Environment, and definition identifiers describe the current session snapshot.",
             "Diagnostic counts and elapsed time do not establish event-window causality, root cause, resolution, agent effort, or burden reduction.",
         ],
     }

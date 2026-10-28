@@ -620,7 +620,12 @@ class LifecycleTests(DiagnosticsFixture):
             "definition_id": "env_diagnostic_fixture",
             "environment_id": "renv_diagnostic_fixture",
             "session_id": "ses_diagnostic_fixture",
+            "work_intent_id": "int_diagnostic_fixture",
         })
+        self.assertEqual(
+            self.session.snapshot["diagnostic_history"][-1]["recording_context"],
+            payload["evidence"]["recording_context"],
+        )
 
     def test_diagnostic_evidence_omits_unavailable_context(self):
         self.session.snapshot["campaign"] = None
