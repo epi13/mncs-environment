@@ -94,6 +94,7 @@
       "fingerprint_sources": [
         "mncs_env/cli.py",
         "mncs_env/capabilities.py",
+        "mncs_env/capability_intelligence.py",
         "mncs_env/sessions.py",
         "mncs_env/session_store.py",
         "mncs_env/store_backend.py",

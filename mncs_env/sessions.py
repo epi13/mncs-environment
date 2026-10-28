@@ -6616,6 +6616,14 @@ class Session:
             **binding_identity,
             "effect_target": admitted_effect_target,
             "returncode": result["returncode"],
+            "output_capture": {
+                "status": (
+                    "truncated" if result.get("truncated") is True else
+                    "complete" if result.get("truncated") is False else
+                    "not-recorded"
+                ),
+                "limit_bytes": output_limit_bytes,
+            },
             "input_artifacts": input_provenance,
             "parent_request_id": parent_request_id,
             "provider_request_id": provider_request_id,

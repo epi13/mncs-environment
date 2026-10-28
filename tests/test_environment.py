@@ -5162,6 +5162,10 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(campaign_state["effects"], ["read"])
         self.assertEqual(campaign_state["version"], "2")
         self.assertEqual(campaign_state["output_limit_bytes"], 131072)
+        self.assertIn(
+            "mncs_env/capability_intelligence.py",
+            campaign_state["fingerprint_sources"],
+        )
         self.assertIn("environmental_capability", campaign_state["output_scope"])
         self.assertIn("pressure hypotheses", campaign_state["output_scope"])
         self.assertIn("evidence offsets expose other pages", campaign_state["output_scope"])
@@ -7513,6 +7517,14 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(
                 provider.call_args.kwargs["output_limit_bytes"], 131072
             )
+            completion_event = next(
+                event for event in reversed(session._log())
+                if event.get("type") == "invocation.completed"
+            )
+            self.assertEqual(completion_event["payload"]["output_capture"], {
+                "status": "not-recorded",
+                "limit_bytes": 131072,
+            })
             invoked_event = next(
                 event for event in reversed(session._log())
                 if event.get("type") == "capability.invoked"
@@ -7539,11 +7551,12 @@ class SessionTests(unittest.TestCase):
                 "invoke",
                 return_value={
                     "status": "ok", "returncode": 0,
-                    "stdout": "ok", "stderr": "",
+                    "stdout": "ok", "stderr": "", "truncated": True,
                 },
             ):
                 result = session.invoke(
                     "session-reader", ["status"],
+                    output_limit_bytes=131072,
                     request_surface=(
                         sessions.invocation_context_module
                         .SESSION_INVOKE_REQUEST_SURFACE
@@ -7566,6 +7579,10 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(
                 completion["payload"]["request_surface"], expected_surface,
             )
+            self.assertEqual(completion["payload"]["output_capture"], {
+                "status": "truncated",
+                "limit_bytes": 131072,
+            })
             self.assertEqual(
                 session.snapshot["artifacts"][-1]["request_surface"],
                 expected_surface,

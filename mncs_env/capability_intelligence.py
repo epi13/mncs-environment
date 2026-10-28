@@ -29,7 +29,7 @@ from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
 from . import workspace as workspace_module
-from .capabilities import normalize_provider_evidence_path
+from .capabilities import MAX_OUTPUT_LIMIT_BYTES, normalize_provider_evidence_path
 from .identity import digest_hex
 from .sessions import (
     MAX_RPC_READ_ACTIVITY_OBSERVATIONS,
@@ -6022,6 +6022,24 @@ def _compact_projection(
                 for key in ("status", "provider", "binding_id", "contract_revision")
                 if isinstance(binding_identity.get(key), str)
             }
+        output_capture = item.get("output_capture")
+        if isinstance(output_capture, dict):
+            capture_status = output_capture.get("status")
+            if isinstance(capture_status, str):
+                compact_capture = {
+                    "status": _short_text(capture_status, 96),
+                }
+                limit_bytes = output_capture.get("limit_bytes")
+                if (type(limit_bytes) is int
+                        and 1 <= limit_bytes <= MAX_OUTPUT_LIMIT_BYTES):
+                    compact_capture["limit_bytes"] = limit_bytes
+                if output_capture.get("basis") == (
+                    "invocation.completed.output_capture"
+                ):
+                    compact_capture["basis"] = (
+                        "invocation.completed.output_capture"
+                    )
+                compact_item["output_capture"] = compact_capture
         for key in (
             "ambient_owner_pass_context",
             "ambient_owner_pass_completion_context",
@@ -6085,6 +6103,17 @@ def _compact_projection(
             compact_item["outcome_status_counts"] = {
                 _short_text(key, 64): value
                 for key, value in sorted(status_counts.items())[:8]
+                if isinstance(key, str) and type(value) is int and value >= 0
+            }
+        output_capture_status_counts = item.get(
+            "output_capture_status_counts",
+        )
+        if isinstance(output_capture_status_counts, dict):
+            compact_item["output_capture_status_counts"] = {
+                _short_text(key, 96): value
+                for key, value in sorted(
+                    output_capture_status_counts.items(),
+                )[:8]
                 if isinstance(key, str) and type(value) is int and value >= 0
             }
         references = item.get("supporting_events")
@@ -13816,6 +13845,33 @@ def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
     if isinstance(observed_at, str) and observed_at and len(observed_at) <= 96:
         reference["observed_at"] = observed_at
     return reference
+
+
+def _session_output_capture(completion: Any) -> dict[str, Any]:
+    """Project bounded capture status without treating old events as complete."""
+    if completion is None:
+        return {"status": "completion-not-present-in-selected-event-window"}
+    if not isinstance(completion, dict):
+        return {"status": "invalid-completion-event"}
+    payload = completion.get("payload")
+    if not isinstance(payload, dict):
+        return {"status": "invalid-completion-payload"}
+    capture = payload.get("output_capture")
+    if capture is None:
+        return {"status": "not-recorded-in-completion-event"}
+    if not isinstance(capture, dict):
+        return {"status": "invalid-output-capture-record"}
+    status = capture.get("status")
+    limit_bytes = capture.get("limit_bytes")
+    if (status not in {"complete", "truncated", "not-recorded"}
+            or type(limit_bytes) is not int
+            or not 1 <= limit_bytes <= MAX_OUTPUT_LIMIT_BYTES):
+        return {"status": "invalid-output-capture-record"}
+    return {
+        "status": status,
+        "limit_bytes": limit_bytes,
+        "basis": "invocation.completed.output_capture",
+    }
 
 
 def _coordination_diagnostic_relation(
@@ -22596,6 +22652,7 @@ def _session_activity(
             _session_invoke_request_surface(completion_payload)
             if completion is not None else (None, "not-recorded")
         )
+        output_capture = _session_output_capture(completion)
         if (request_surface_status == "invalid"
                 or completion_request_surface_status == "invalid"):
             request_surface_relation_status = "invalid-request-surface"
@@ -22636,6 +22693,7 @@ def _session_activity(
                 completion_payload.get("status")
                 if isinstance(completion_payload.get("status"), str) else None
             ),
+            "output_capture": output_capture,
             "returncode": (
                 completion_payload.get("returncode")
                 if type(completion_payload.get("returncode")) is int else None
@@ -22656,6 +22714,7 @@ def _session_activity(
                 _short_text(completion_payload.get("status"), 96)
                 if isinstance(completion_payload.get("status"), str) else None
             ),
+            "output_capture": output_capture,
             "returncode": (
                 completion_payload.get("returncode")
                 if type(completion_payload.get("returncode")) is int else None
@@ -22717,10 +22776,19 @@ def _session_activity(
     capabilities = []
     for capability, group in sorted(capability_groups.items()):
         status_counts: dict[str, int] = {}
+        output_capture_status_counts: dict[str, int] = {}
         for item in group:
             status = item.get("outcome_status")
             if isinstance(status, str):
                 status_counts[status] = status_counts.get(status, 0) + 1
+            capture = item.get("output_capture")
+            capture_status = (
+                capture.get("status") if isinstance(capture, dict) else None
+            )
+            if isinstance(capture_status, str):
+                output_capture_status_counts[capture_status] = (
+                    output_capture_status_counts.get(capture_status, 0) + 1
+                )
         binding_identity_count = sum(
             isinstance(item.get("binding_identity"), dict)
             and item["binding_identity"].get("status") == "complete"
@@ -22733,6 +22801,9 @@ def _session_activity(
                 item.get("completion_event") is not None for item in group
             ),
             "outcome_status_counts": status_counts,
+            "output_capture_status_counts": dict(sorted(
+                output_capture_status_counts.items(),
+            )),
             "supporting_events": [
                 item["invocation_event"]
                 for item in group[:MAX_CAPABILITY_SUPPORTING_EVENTS]

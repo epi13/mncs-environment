@@ -1471,6 +1471,15 @@ immutable proposal-eligibility or integration-eligibility observation; its
 absence is not evidence that the capability was read-only or that no effect
 occurred.
 
+New `invocation.completed` events also record `output_capture.status` and the
+bounded `output_capture.limit_bytes`, without copying provider output. ECI
+projects this as `session_activity.interactions[].output_capture` and groups
+the statuses by capability in `session_activity.capabilities[]`. The view
+distinguishes observed truncation, complete capture, missing metadata in older
+events, and a completion event outside the selected page. Complete capture
+establishes only that the configured output limit was not exceeded; it does
+not establish provider correctness, service fulfillment, or agent receipt.
+
 `context_operation_activity` also summarizes authenticated `session.context`
 RPC records. New `/2` records preserve a bounded summary of the returned
 capability list: available, unavailable, and unknown counts; truncation state;

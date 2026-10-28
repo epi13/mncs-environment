@@ -3401,6 +3401,10 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
             "payload": {
                 "capability": "mncs-compiler:build", "status": "failed",
                 "returncode": 2, "provider_request_id": request_id,
+                "output_capture": {
+                    "status": "truncated",
+                    "limit_bytes": 65536,
+                },
                 "effect_target": {
                     "operation_lease": {
                         "identity": "op_fixture",
@@ -3485,6 +3489,19 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
     assert prior["correlation_status"] == "matched-by-provider-request-id"
     assert prior["outcome_status"] == "failed"
     assert prior["returncode"] == 2
+    assert prior["output_capture"] == {
+        "status": "truncated",
+        "limit_bytes": 65536,
+        "basis": "invocation.completed.output_capture",
+    }
+    build_summary = next(
+        item for item in activity["capabilities"]
+        if item["capability"] == "mncs-compiler:build"
+    )
+    assert build_summary["output_capture_status_counts"] == {
+        "completion-not-present-in-selected-event-window": 1,
+        "truncated": 1,
+    }
     assert prior["effect_target"] == {
         "status": "recorded",
         "repository": "mncs-compiler",
@@ -3539,6 +3556,10 @@ def test_project_correlates_recent_capability_events_without_exposing_arguments(
         "invocation_count": 2,
         "completion_count": 1,
         "outcome_status_counts": {"failed": 1},
+            "output_capture_status_counts": {
+                "completion-not-present-in-selected-event-window": 1,
+                "truncated": 1,
+            },
         "supporting_events": [
             {"identity": "evt_capability_invoked_2", "sequence": 13,
              "type": "capability.invoked",
