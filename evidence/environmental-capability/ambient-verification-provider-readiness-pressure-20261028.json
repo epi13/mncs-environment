@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_provider_readiness_pressure_20261028",
+  "captured_at": "2026-10-28T05:36:02Z",
+  "measurement_basis": "same-session-ECI-compaction-readback-correlated-with-integrity-verified-verification-evidence-and-prior-main-compactor-source",
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+    "category": "environmental-service-accountability",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability delivery and verification readiness projection",
+    "title": "Budgeted ECI hides provider readiness context for an excluded verification obligation",
+    "actionable_recommendation": "Retain a bounded, provenance-linked verification executor and provider readiness relationship in the ECI evidence-priority response."
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment environmental-capability projection and selected-session ambient verification records",
+    "request": {
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "campaign_checkpoint_id": "chk_3b4d4d222d80ab68",
+      "campaign_evidence_count": 47,
+      "operation": "trace an excluded external verification obligation to its exact provider binding and determine whether the compact ECI exposes checkout and toolchain readiness context"
+    },
+    "outcome": {
+      "observed_limitation": "The pre-change evidence-priority ECI summary omitted session_activity.capability_delivery.verification_executor_context, so the exact executor binding and related provider capability state were not available in the compact analysis response.",
+      "observed_case": {
+        "repository": "mncs-test",
+        "obligation": "mncs-test.native-application-build-vm",
+        "verification_outcome": "excluded",
+        "verification_reason": "executor_not_runnable",
+        "verification_source_integrity_status": "verified",
+        "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+        "owner_result_content_integrity_status": "content-integrity-verified",
+        "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+      },
+      "baseline_evidence": "The pre-change live ECI query returned a budgeted summary without the verification executor relationship. Its response identity and digest were not retained, so this occurrence does not claim an immutable baseline projection artifact.",
+      "interpretation_limit": "The verified verification record establishes an excluded outcome, not an environmental defect or a measured agent burden. Same-provider capability evidence does not establish a dependency or cause. The Btrfs incident is unrelated to this executor-readiness observation."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_state_checkpoint_id_before_recording": "chk_3b4d4d222d80ab68",
+    "campaign_evidence_count_before_recording": 47,
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "claim_ids": ["claim:mncs-environment:worktree:401886ff1eaf"]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_eci_prechange_compaction_source_3444f40",
+      "kind": "pre-change-main-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "3444f40b55432b0336d5aaa17e6b162c5cd3e66e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f6a4ea0b2a39f4182706c81774816dfc366213ad0a6f6664e3332a22c8fadf2a"
+    },
+    {
+      "identity": "mncs-test-native-application-build-vm-verification-evidence",
+      "kind": "integrity-verified-verification-record",
+      "repository": "mncs-test",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c"
+    },
+    {
+      "identity": "mncs-test-native-application-build-vm-owner-result",
+      "kind": "content-integrity-verified-owner-result",
+      "repository": "mncs-test",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  }
+}

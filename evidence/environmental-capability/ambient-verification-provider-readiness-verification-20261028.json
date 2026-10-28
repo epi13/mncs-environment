@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_provider_readiness_verification_20261028",
+  "captured_at": "2026-10-28T05:36:02Z",
+  "measurement_basis": "focused-ECI-regression-suite-projection-conformance-and-authenticated-session-readback",
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+    "category": "environmental-service-accountability",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability delivery and verification readiness projection",
+    "title": "Budgeted ECI hides provider readiness context for an excluded verification obligation",
+    "actionable_recommendation": "Retain a bounded, provenance-linked verification executor and provider readiness relationship in the ECI evidence-priority response."
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment capability intelligence regression suite and declared projection conformance verifier",
+    "request": {
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m compileall -q mncs_env",
+        "git diff --check",
+        "python3 scripts/verify_projection_contracts.py --workspace /home/epi13/Documents/Projects --repository mncs-environment"
+      ],
+      "live_projection_identity": "eci_d32b940069c16510",
+      "live_projection_content_digest": "f98c5dce0ed4d88c50d60373b60bf686"
+    },
+    "outcome": {
+      "verification_status": "focused-verification-and-projection-conformance-passed",
+      "capability_intelligence_tests": "174 passed",
+      "compileall": "pass",
+      "diff_check": "pass",
+      "projection_conformance": {
+        "verdict": "pass",
+        "receipt_identity": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e",
+        "native_receipt": "f36ae687e5d46847ddcb18f5b7a14214cd91fa93fa3fd24b6e75a800b333e9db"
+      },
+      "verified_behavior": "The ECI evidence-priority summary retains up to two integrity-verified obligation relationships, their source references, exact provider binding context, provider checkout state, toolchain checkout state, same-provider availability context, scan completeness, and explicit not-established readiness and fulfillment statuses.",
+      "interpretation_limit": "Tests and the live projection verify representation and provenance paths. They do not establish that the executor ran, that the agent received or used it, that intervention burden decreased, or that the underlying provider is ready."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_state_checkpoint_id_before_recording": "chk_3b4d4d222d80ab68",
+    "campaign_evidence_count_before_recording": 47,
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "claim_ids": ["claim:mncs-environment:worktree:401886ff1eaf"]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_verification_readiness_implementation_5b5a9c8",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "769d40c03e3ea3a024f921e1abdcc06270bc82964e862e4e368e5f7b223a5da8"
+    },
+    {
+      "identity": "mncs_environment_ambient_verification_readiness_tests_5b5a9c8",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "b22f2dee050374434c56865c412ee6790d5fb7207201f495ad0d023cb0130056"
+    },
+    {
+      "identity": "mncs_environment_projection_conformance_receipt_20261028",
+      "kind": "independent-projection-conformance-receipt",
+      "repository": "mncs-environment",
+      "commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+      "reference": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e"
+    }
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  }
+}
