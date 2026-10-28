@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_summary_budget_improvement_20261028",
+  "captured_at": "2026-10-28T07:57:56Z",
+  "measurement_basis": "append-only-improvement-link-with-focused-verification-and-live-projection-follow-up",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI response compactor",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_correction_summary_budget",
+      "verification_observation_identity": "ev_environment_eci_correction_summary_budget_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_correction_summary_budget_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "effectiveness_assessment": "focused-verification-and-correction-provenance-readback-verified; agent-intervention reduction not assessed",
+      "interpretation_limit": "The change preserves selected correction counts and exact references in the compact path; it does not establish reduced agent effort or complete visibility of the broader projection."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_summary_budget",
+    "title": "ECI compaction can hide verified record-correction provenance",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment environmental capability projection",
+    "owner": "mncs-environment",
+    "basis": "A selected campaign page omitted the correction row and counts; the compaction change retains bounded correction counts and target-to-correction references for inspection.",
+    "actionable_recommendation": "When response compaction retains a linked campaign path, preserve bounded append-only record-correction counts and exact target and correction evidence references so agents can inspect how the projected definition was established.",
+    "recurrence": "one selected campaign-window response; recurrence across other response shapes or sessions is not established",
+    "not_measured": [
+      "agent time or tool calls caused by the omitted correction details",
+      "frequency of correction-summary omission across other evidence windows",
+      "whether the omission changed a development decision"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_correction_summary_budget_verified_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_correction_summary_budget",
+    "implementation_reference": {
+      "identity": "mncs_environment_correction_summary_budget_d04cf0f",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cb4c4802899783df62d2bba48e538a4583e0ca650632ce0e6ccd666b5f39163d"
+    },
+    "verification_observation_identity": "ev_environment_eci_correction_summary_budget_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_correction_summary_budget_readback_20261028",
+    "basis": "The exact implementation blob is integrity-addressed. The focused regression passes and the live ECI readback exposes correction counts of one total, one applied, zero unverified, plus exact target and correction references.",
+    "not_measured": [
+      "agent intervention burden or time saved",
+      "response behavior for unrelated evidence families",
+      "cross-session recurrence or causal effect on development outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_eci_correction_summary_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "212e18a16b4db25c7d473c9207caa327f799e2d5",
+      "path": "evidence/environmental-capability/eci-correction-summary-budget-pressure-20261028.json",
+      "sha256": "f6a4cb63fae40672b6e245eed06103b07e3ecbfab93ff9964ed1177b9b983baa"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_correction_summary_budget_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "212e18a16b4db25c7d473c9207caa327f799e2d5",
+      "path": "evidence/environmental-capability/eci-correction-summary-budget-verification-20261028.json",
+      "sha256": "4264bbf6b11b7866d3f0fef1ad560aa59ac89f32b11a1230cc741d727c316b0f"
+    },
+    {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_correction_summary_budget_d04cf0f",
+      "repository": "mncs-environment",
+      "commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cb4c4802899783df62d2bba48e538a4583e0ca650632ce0e6ccd666b5f39163d"
+    }
+  ],
+  "measurement_limits": [
+    "The live response remains partial and compacts four of five selected campaign records; this change preserves a bounded correction summary rather than every source row.",
+    "Verification and readback do not measure agent receipt, intervention reduction, recurrence, or sustained effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

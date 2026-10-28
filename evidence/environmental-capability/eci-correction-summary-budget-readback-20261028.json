@@ -1,0 +1,125 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_summary_budget_readback_20261028",
+  "captured_at": "2026-10-28T07:57:56Z",
+  "measurement_basis": "live-ECI-post-change-correction-summary-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282"
+  },
+  "observation": {
+    "kind": "eci-record-correction-summary-live-readback",
+    "source_interface": "MNCS Environment ECI projection",
+    "request": {
+      "projection_identity": "eci_8cf7930657ebb1b6",
+      "campaign_state_checkpoint_id": "chk_9e073e1251dbf8b3",
+      "history_pages": 1,
+      "evidence_page_offset": 79,
+      "evidence_page_limit": 5,
+      "session_event_before_sequence": 772,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 5,
+      "observation_records_verified": 5,
+      "observation_records_unavailable": 0,
+      "observation_records_compacted_out_count": 4,
+      "record_correction_count": 1,
+      "record_corrections_applied_count": 1,
+      "record_corrections_unverified_count": 0,
+      "record_correction_summaries": [
+        {
+          "identity": "ev_environment_eci_standalone_observation_budget_improvement_20261028",
+          "status": "corrected-by-verified-record",
+          "correction_observation_identity": "ev_environment_eci_standalone_observation_budget_improvement_definition_correction_20261028",
+          "evidence_reference": {
+            "repository": "mncs-environment",
+            "commit": "fc4d5dc8f97c95ba0df2aa49ab614a5d48e2c1c5",
+            "path": "evidence/environmental-capability/eci-standalone-observation-budget-improvement-20261028.json",
+            "sha256": "fc7b8d6fc1638b59ed2fe989d926291da18fa696e241dfc379ee13f6d99e42f0"
+          },
+          "correction_evidence_reference": {
+            "repository": "mncs-environment",
+            "commit": "4c9caaf0581d1f11dec6c2f0feb377f6a4b92918",
+            "path": "evidence/environmental-capability/eci-standalone-observation-budget-improvement-definition-correction-20261028.json",
+            "sha256": "53de6c4f4896f8e6f701f3b6af90d4021d843b93e2f93bf3e614549e4a306751"
+          }
+        },
+        {
+          "identity": "ev_environment_eci_standalone_observation_budget_improvement_definition_correction_20261028",
+          "status": "applied-to-verified-target",
+          "target_identity": "ev_environment_eci_standalone_observation_budget_improvement_20261028",
+          "evidence_reference": {
+            "repository": "mncs-environment",
+            "commit": "4c9caaf0581d1f11dec6c2f0feb377f6a4b92918",
+            "path": "evidence/environmental-capability/eci-standalone-observation-budget-improvement-definition-correction-20261028.json",
+            "sha256": "53de6c4f4896f8e6f701f3b6af90d4021d843b93e2f93bf3e614549e4a306751"
+          },
+          "target_reference": {
+            "repository": "mncs-environment",
+            "commit": "fc4d5dc8f97c95ba0df2aa49ab614a5d48e2c1c5",
+            "path": "evidence/environmental-capability/eci-standalone-observation-budget-improvement-20261028.json",
+            "sha256": "fc7b8d6fc1638b59ed2fe989d926291da18fa696e241dfc379ee13f6d99e42f0"
+          }
+        }
+      ],
+      "pressure_hypothesis_definition_status": "consistent",
+      "pressure_hypothesis_recurrence_status": "not-established",
+      "improvement_verification_record_status": "record-integrity-verified-in-projection",
+      "improvement_subsequent_record_status": "record-integrity-verified-in-projection",
+      "improvement_effectiveness_assessment": "not-assessed",
+      "source_pointer_content_integrity_verified_count": 6,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "response_byte_count": 175515,
+      "response_truncated": true
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_summary_budget",
+    "title": "ECI compaction can hide verified record-correction provenance",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment environmental capability projection",
+    "owner": "mncs-environment",
+    "basis": "After the compaction change, ECI preserved correction counts and exact target and correction references while keeping the pressure definition consistent.",
+    "actionable_recommendation": "When response compaction retains a linked campaign path, preserve bounded append-only record-correction counts and exact target and correction evidence references so agents can inspect how the projected definition was established.",
+    "recurrence": "one selected campaign-window response; recurrence across other response shapes or sessions is not established",
+    "not_measured": [
+      "agent time or tool calls caused by the omitted correction details",
+      "frequency of correction-summary omission across other evidence windows",
+      "whether the omission changed a development decision"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pre-change-pressure-observation",
+      "identity": "ev_environment_eci_correction_summary_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "212e18a16b4db25c7d473c9207caa327f799e2d5",
+      "path": "evidence/environmental-capability/eci-correction-summary-budget-pressure-20261028.json",
+      "sha256": "f6a4cb63fae40672b6e245eed06103b07e3ecbfab93ff9964ed1177b9b983baa"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_correction_summary_budget_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "212e18a16b4db25c7d473c9207caa327f799e2d5",
+      "path": "evidence/environmental-capability/eci-correction-summary-budget-verification-20261028.json",
+      "sha256": "4264bbf6b11b7866d3f0fef1ad560aa59ac89f32b11a1230cc741d727c316b0f"
+    }
+  ],
+  "measurement_limits": [
+    "ECI still compacts four of five source rows and the overall projection remains partial, while its bounded correction summary preserves the two exact correction endpoints.",
+    "One selected readback does not establish cross-session recurrence, agent receipt, intervention reduction, or sustained improvement effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
