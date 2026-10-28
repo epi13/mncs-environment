@@ -192,6 +192,15 @@ also advertises the same bounded command as
 `actions.environmental_capability_projection.argv` so agents can discover the
 analysis without running it during entry.
 
+When the selected campaign evidence includes the exact content-addressed MNCS
+Compiler language-module interface-cache consumption record, ECI adapts its
+bounded cache-stage and process measurements into an observation. It preserves
+the Compiler campaign/session as declared source context while `related_work`
+identifies the Environment reader. The source session is not cross-validated
+against runtime records, unavailable diagnostics and resource samples remain
+unavailable, and a successful workload does not by itself establish pressure,
+agent-attributed cost, or reduced intervention.
+
 The default remains one page. Historical reads follow authenticated
 previous-page cursors, stop if the checkpoint changes, and cap the scan at four
 pages. The 16 observation-read allowance is shared across those pages. It is

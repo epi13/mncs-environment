@@ -483,3 +483,25 @@ environmental-capability`; source preflight validated all four selected
 campaign records and verified the eight selected source pointers. Because the
 response is partial and compacts three observation rows, inspect the exact
 linked evidence records before drawing broader conclusions.
+
+## Compiler module-cache session evidence
+
+ECI recognizes the exact Compiler language-module interface-cache consumption
+record at `evidence/language-module-interface-cache-compiler-consumption-main-9505-20261023.json`.
+The adapter requires its schema and identity, bounded source-file hashes,
+Compiler campaign/session fields, stage observations, and reported
+verification result. The observation retains the Compiler campaign and session
+under `observation.source_session_context`; `related_work` remains the current
+Environment reader's campaign and session. The source session is explicitly
+`source-session-declared-not-cross-validated`, so a content-addressed report is
+not mistaken for an authenticated runtime session lookup.
+
+The projection separates source-reported bootstrap and runner process
+measurements, per-stage build/cache observations, and unavailable fields.
+Missing cgroup measurements remain missing. Work Intent, model, token usage,
+and Compiler-session diagnostics or resource samples are not inferred. The
+adapter creates no pressure hypothesis: a successful focused cache workload
+demonstrates a Compiler capability in that workload, but does not establish
+recurrence, agent-attributed resource pressure, a general speedup, or reduced
+agent burden. Inspect the exact source evidence pointer and the
+`measurement_summary` before interpreting its figures.

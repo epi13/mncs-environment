@@ -105,6 +105,15 @@ COMPILER_LANGUAGE_DEPENDENCY_SUMMARY_STAGES = (
     "fresh_process_comment_edit", "invalid_source",
     "reachable_imported_body_edit", "unchanged", "unreachable_body_edit",
 )
+COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_SCHEMA = (
+    "mncs.compiler.language-module-interface-cache-consumption/1"
+)
+COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_IDENTITY = (
+    "ev_compiler_language_module_interface_cache_consumption_main_9505_20261023"
+)
+COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_PATH = (
+    "evidence/language-module-interface-cache-compiler-consumption-main-9505-20261023.json"
+)
 COMPILER_NATIVE_APPLICATION_PROOF_SCHEMA = (
     "mncs.compiler.native-application-proof/2"
 )
@@ -10680,6 +10689,18 @@ def _is_compiler_dependency_summary_reference(reference: dict[str, str]) -> bool
     )
 
 
+def _is_compiler_language_module_interface_consumption_reference(
+    reference: dict[str, str],
+) -> bool:
+    return (
+        reference["repository"] == "mncs-compiler"
+        and reference["identity"]
+        == COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_IDENTITY
+        and reference["path"]
+        == COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_PATH
+    )
+
+
 def _is_compiler_native_application_proof_reference(
     reference: dict[str, str],
 ) -> bool:
@@ -10697,6 +10718,7 @@ def _is_observation_reference(reference: dict[str, str]) -> bool:
     return (
         _is_compiler_regression_reference(reference)
         or _is_compiler_dependency_summary_reference(reference)
+        or _is_compiler_language_module_interface_consumption_reference(reference)
         or _is_compiler_native_application_proof_reference(reference)
     )
 
@@ -11246,6 +11268,292 @@ def _compiler_dependency_summary_observation(
     }
 
 
+def _compiler_interface_consumption_metrics(
+    block: Any, prefix: str,
+) -> tuple[dict[str, int | float], dict[str, str], list[str]]:
+    if not isinstance(block, dict):
+        return {}, {}, []
+    measured: dict[str, int | float] = {}
+    availability: dict[str, str] = {}
+    qualifications: list[str] = []
+    fields = (
+        "wall_seconds", "user_seconds", "system_seconds", "cpu_seconds",
+        "peak_rss_kb", "peak_cgroup_memory_bytes",
+    )
+    for field in fields:
+        if field not in block:
+            continue
+        value = block[field]
+        key = f"{prefix}_{field}"
+        if value is None:
+            availability[key] = "null-in-source-record"
+        elif (type(value) is int and 0 <= value <= 10**18
+              or type(value) is float and math.isfinite(value)
+              and 0 <= value <= 10**18):
+            measured[key] = value
+    for field in ("note", "result"):
+        value = block.get(field)
+        if isinstance(value, str) and value:
+            qualifications.append(f"{prefix}: {_short_text(value, 256)}")
+    return measured, availability, qualifications
+
+
+def _compiler_language_module_interface_consumption_observation(
+    session: Any, reference: dict[str, str], source: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Project one exact Compiler cache-consumption record with scoped provenance."""
+    if (source.get("schema_version")
+            != COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_SCHEMA
+            or source.get("identity") != reference["identity"]):
+        return None
+    campaign = source.get("campaign")
+    implementation = source.get("implementation")
+    verification = source.get("verification")
+    if not all(isinstance(value, dict) for value in (
+            campaign, implementation, verification)):
+        return None
+    campaign_id = campaign.get("identity")
+    source_session_id = campaign.get("session_id")
+    checkpoint = campaign.get("checkpoint_before_change")
+    branch = implementation.get("branch")
+    revisions = (
+        implementation.get("base_revision"),
+        implementation.get("language_lock_revision"),
+        implementation.get("test_head"),
+    )
+    if (not isinstance(campaign_id, str) or not campaign_id or len(campaign_id) > 160
+            or not isinstance(source_session_id, str) or not source_session_id
+            or len(source_session_id) > 160
+            or not isinstance(checkpoint, str) or not checkpoint or len(checkpoint) > 160
+            or implementation.get("repository") != "mncs-compiler"
+            or not isinstance(branch, str) or not branch or len(branch) > 256
+            or any(not isinstance(value, str) or not _COMMIT.fullmatch(value)
+                   for value in revisions)):
+        return None
+    result = verification.get("result")
+    stages = verification.get("stage_observations")
+    files = implementation.get("source_files")
+    if (not isinstance(result, str) or not result.strip()
+            or not isinstance(stages, dict) or not 1 <= len(stages) <= 32
+            or not isinstance(files, dict) or not 1 <= len(files) <= 64):
+        return None
+
+    source_files = []
+    for name, digest in sorted(files.items()):
+        if (not isinstance(name, str) or not name or len(name) > 256
+                or "\\" in name or name.startswith("/")
+                or ".." in name.split("/")
+                or not isinstance(digest, str) or not _SHA256.fullmatch(digest)):
+            return None
+        source_files.append({"path": name, "sha256": digest})
+
+    stage_summaries = []
+    for name, stage in sorted(stages.items()):
+        if not isinstance(name, str) or not name or len(name) > 96:
+            return None
+        if not isinstance(stage, dict):
+            return None
+        summary: dict[str, Any] = {"name": name}
+        for field in ("cache_status", "status"):
+            value = stage.get(field)
+            if isinstance(value, str) and value:
+                summary[field] = value[:64]
+        published = stage.get("artifact_published")
+        if type(published) is bool:
+            summary["artifact_published"] = published
+        diagnostic_count = stage.get("diagnostic_count")
+        if type(diagnostic_count) is int and diagnostic_count >= 0:
+            summary["diagnostic_count"] = diagnostic_count
+        for group, metrics in (
+            ("build_metrics", stage.get("build_metrics")),
+            ("stage0_metrics", (stage.get("execution") or {}).get("stage0_metrics")
+             if isinstance(stage.get("execution"), dict) else None),
+        ):
+            if isinstance(metrics, dict):
+                selected = {
+                    field: value for field, value in metrics.items()
+                    if field in {
+                        "wall_seconds", "cpu_seconds", "peak_rss_bytes",
+                        "peak_cgroup_memory_bytes", "peak_open_file_descriptors",
+                        "peak_threads", "peak_child_processes", "request_sequence",
+                    } and (
+                        value is None and field == "peak_cgroup_memory_bytes"
+                        or type(value) in (int, float)
+                        and math.isfinite(value) and 0 <= value <= 10**18
+                    )
+                }
+                if selected:
+                    summary[group] = selected
+        execution = stage.get("execution")
+        if isinstance(execution, dict):
+            selected_execution = {
+                field: execution[field] for field in (
+                    "output_equal_to_stage0", "returned_value_count",
+                ) if (field == "output_equal_to_stage0"
+                      and type(execution.get(field)) is bool
+                      or field == "returned_value_count"
+                      and type(execution.get(field)) is int
+                      and execution[field] >= 0)
+            }
+            if selected_execution:
+                summary["execution"] = selected_execution
+        for group in ("semantic_work", "source_parse_work"):
+            values = stage.get(group)
+            if isinstance(values, dict):
+                selected = {
+                    field: value for field, value in values.items()
+                    if isinstance(field, str) and len(field) <= 96
+                    and (type(value) is bool
+                         or type(value) is int and 0 <= value <= 10**9)
+                }
+                if selected:
+                    summary[group] = selected
+        modules = stage.get("module_observation")
+        if isinstance(modules, dict):
+            selected_modules: dict[str, Any] = {
+                field: modules[field] for field in (
+                    "published_entry_count", "rejected_entry_count",
+                ) if type(modules.get(field)) is int and modules[field] >= 0
+            }
+            for field in (
+                "linked_module_subjects", "reused_module_subjects",
+                "invalidated_module_subjects",
+            ):
+                values = modules.get(field)
+                if isinstance(values, list):
+                    selected_modules[field] = [
+                        _short_text(value, 160) for value in values[:16]
+                        if isinstance(value, str) and value
+                    ]
+            if selected_modules:
+                summary["module_observation"] = selected_modules
+        stage_summaries.append(summary)
+
+    direct: dict[str, int | float] = {}
+    availability: dict[str, str] = {}
+    qualifications: list[str] = []
+    for field, prefix in (
+        ("bootstrap_build_measurement", "bootstrap_build"),
+        ("runner_measurement", "runner"),
+    ):
+        values, missing, notes = _compiler_interface_consumption_metrics(
+            verification.get(field), prefix,
+        )
+        direct.update(values)
+        availability.update(missing)
+        qualifications.extend(notes)
+
+    snapshot = session.snapshot
+    current_campaign = snapshot.get("campaign")
+    current_campaign = current_campaign if isinstance(current_campaign, dict) else {}
+    current_intent = snapshot.get("intent")
+    current_intent = current_intent if isinstance(current_intent, dict) else {}
+    current_session_id = getattr(session, "session_id", None)
+    current_campaign_id = current_campaign.get("identity")
+    if (not isinstance(current_session_id, str) or not current_session_id
+            or not isinstance(current_campaign_id, str) or not current_campaign_id):
+        return None
+    related_work = {"campaign_id": current_campaign_id, "session_id": current_session_id}
+    for key, value in (
+        ("work_intent_id", current_intent.get("identity")),
+        ("work_intent_goal", current_intent.get("goal")),
+        ("environment_id", snapshot.get("environment_id")),
+    ):
+        if isinstance(value, str) and value:
+            related_work[key] = value
+
+    language_revision = verification.get("locked_language_revision")
+    language_revision = (
+        language_revision if isinstance(language_revision, str)
+        and _COMMIT.fullmatch(language_revision)
+        else "unavailable-or-invalid-in-source-record"
+    )
+    canonical_binary = verification.get("canonical_vm_binary_sha256")
+    canonical_binary = (
+        canonical_binary if isinstance(canonical_binary, str)
+        and _SHA256.fullmatch(canonical_binary)
+        else "unavailable-or-invalid-in-source-record"
+    )
+    tracked_patch = implementation.get("tracked_patch_sha256")
+    tracked_patch = (
+        tracked_patch if isinstance(tracked_patch, str)
+        and _SHA256.fullmatch(tracked_patch)
+        else "unavailable-or-invalid-in-source-record"
+    )
+    source_context = {
+        "campaign_id": campaign_id,
+        "session_id": source_session_id,
+        "repository": "mncs-compiler",
+        "repository_branch": branch,
+        "repository_context_basis": (
+            "content-addressed-source-record; source session is declared"
+        ),
+    }
+    limitations = source.get("limitations")
+    limitations = [
+        _short_text(value, 384) for value in limitations[:8]
+        if isinstance(value, str) and value
+    ] if isinstance(limitations, list) else []
+    return {
+        "schema_version": OBSERVATION_SCHEMA,
+        "identity": reference["identity"],
+        "captured_at": "unavailable-in-source-record",
+        "measurement_basis": "bounded-derived-view-of-content-addressed-compiler-record/1",
+        "observation": {
+            "kind": "compiler-language-module-interface-cache-consumption",
+            "source_interface": "MNCS Compiler campaign evidence projection",
+            "request": {
+                "source_schema_version": COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_SCHEMA,
+                "campaign_checkpoint_before_change": checkpoint,
+                "compiler_branch": branch,
+                "compiler_base_revision": revisions[0],
+                "language_lock_revision": revisions[1],
+                "test_head": revisions[2],
+                "tracked_patch_sha256": tracked_patch,
+                "source_file_hashes": source_files,
+                "source_file_count": len(source_files),
+                "source_session_context_resolution": (
+                    "source-session-declared-not-cross-validated"
+                ),
+            },
+            "source_session_context": source_context,
+            "source_session_context_basis": "content-addressed-compiler-evidence-record",
+            "source_session_context_resolution": "source-session-declared-not-cross-validated",
+            "outcome": {
+                "source_reported_verification_result": result[:64],
+                "locked_language_revision": language_revision,
+                "canonical_vm_binary_sha256": canonical_binary,
+                "stage_summaries": stage_summaries,
+                "measurement_summary": {
+                    "direct_measurements": direct,
+                    "measurement_availability": {
+                        **availability,
+                        "source_capture_time": "not-recorded-in-source",
+                        "model_identity": "not-recorded-in-source",
+                        "token_usage": "not-recorded-in-source",
+                        "work_intent": "not-recorded-in-source",
+                        "compiler_session_diagnostics": "not-joined-by-this-projection",
+                        "compiler_session_resource_samples": "not-joined-by-this-projection",
+                    },
+                    "qualifications": qualifications[:8],
+                },
+                "resource_measurement_scope": (
+                    "source-reported bootstrap and runner host process metrics plus "
+                    "per-stage build metrics; not agent-wide resource use"
+                ),
+                "session_activity_join_status": "source session activity not-read",
+                "source_limitations": limitations,
+            },
+        },
+        "related_work": related_work,
+        "not_measured": [
+            "Compiler source session Work Intent, diagnostics, and resource samples",
+            "agent model identity, token usage, and total campaign duration",
+            "agent-attributed resource use, recurrence, or whether cost was necessary",
+        ],
+    }
+
+
 def _compiler_native_application_proof_observation(
     reference: dict[str, str], source: dict[str, Any],
     root: Path, *, repository_read_basis: str,
@@ -11561,6 +11869,9 @@ def _load_observation(
     if (checkout is None and (
             _is_compiler_native_application_proof_reference(reference)
             or _is_compiler_regression_reference(reference)
+            or _is_compiler_language_module_interface_consumption_reference(
+                reference,
+            )
             or declared_campaign_repository)):
         checkout = _workspace_read_only_checkout(
             session, reference["repository"], root, deadline,
@@ -11582,6 +11893,22 @@ def _load_observation(
         return None, "invalid-json"
     if not isinstance(record, dict):
         return None, "observation-contract-invalid"
+    if _is_compiler_language_module_interface_consumption_reference(reference):
+        adapted = _compiler_language_module_interface_consumption_observation(
+            session, reference, record,
+        )
+        if adapted is None:
+            return None, "observation-contract-invalid"
+        adapted_observation = adapted.get("observation")
+        if isinstance(adapted_observation, dict):
+            adapted_observation["source_repository_read_basis"] = (
+                repository_read_basis
+            )
+        if repository_read_basis == "workspace-read-only-checkout":
+            adapted["_projection_repository_read_basis"] = (
+                repository_read_basis
+            )
+        return adapted, "verified"
     if _is_compiler_dependency_summary_reference(reference):
         source_identity = record.get("identity")
         if source_identity is not None and source_identity != reference["identity"]:

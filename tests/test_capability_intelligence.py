@@ -166,6 +166,125 @@ def _add_compiler_dependency_summary_evidence(
     return reference
 
 
+def _add_compiler_language_module_interface_consumption_evidence(
+    session, state: dict, report: dict,
+) -> dict[str, str]:
+    root = Path(session.snapshot["workspace"]["root"])
+    checkout = root / "mncs-compiler"
+    if not checkout.exists():
+        checkout.mkdir()
+        _git(checkout, "init", "--quiet")
+        _git(checkout, "config", "user.name", "test")
+        _git(checkout, "config", "user.email", "test@example.invalid")
+    relative = capability_intelligence.COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_PATH
+    path = checkout / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(report, sort_keys=True, separators=(",", ":")).encode()
+    path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "compiler module cache evidence")
+    reference = {
+        "identity": capability_intelligence.COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_IDENTITY,
+        "repository": "mncs-compiler",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    session.snapshot["selected_checkouts"]["mncs-compiler"] = {
+        "path": str(checkout),
+    }
+    state["evidence"].append(reference)
+    state["evidence_count"] = len(state["evidence"])
+    return reference
+
+
+def _compiler_language_module_interface_consumption_report() -> dict:
+    return {
+        "schema_version": capability_intelligence.COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_SCHEMA,
+        "identity": capability_intelligence.COMPILER_LANGUAGE_MODULE_INTERFACE_CONSUMPTION_IDENTITY,
+        "campaign": {
+            "checkpoint_before_change": "chk_compiler_before_change",
+            "identity": "cmp_mncs_native_application_readiness_compiler_20261013",
+            "session_id": "ses_compiler_module_cache_source",
+        },
+        "implementation": {
+            "base_revision": "a" * 40,
+            "branch": "campaign/compiler-language-main-consumption-20261023",
+            "language_lock_revision": "b" * 40,
+            "repository": "mncs-compiler",
+            "source_files": {
+                "tools/test_vm_language_module_elaboration_cache.py": "c" * 64,
+            },
+            "test_head": "d" * 40,
+            "tracked_patch_sha256": "e" * 64,
+        },
+        "verification": {
+            "result": "passed",
+            "locked_language_revision": "b" * 40,
+            "canonical_vm_binary_sha256": "f" * 64,
+            "bootstrap_build_measurement": {
+                "wall_seconds": 552.41,
+                "user_seconds": 1068.17,
+                "system_seconds": 14.41,
+                "peak_rss_kb": 1498780,
+                "peak_cgroup_memory_bytes": None,
+            },
+            "runner_measurement": {
+                "wall_seconds": 5.2,
+                "user_seconds": 3.86,
+                "system_seconds": 1.4,
+                "peak_rss_kb": 96996,
+                "peak_cgroup_memory_bytes": None,
+            },
+            "stage_observations": {
+                "cold": {
+                    "cache_status": "miss",
+                    "build_metrics": {
+                        "wall_seconds": 0.803368,
+                        "peak_rss_bytes": 55169024,
+                        "peak_cgroup_memory_bytes": None,
+                        "peak_open_file_descriptors": 4,
+                        "peak_threads": 1,
+                    },
+                    "execution": {"output_equal_to_stage0": True},
+                    "module_observation": {
+                        "published_entry_count": 3,
+                        "reused_module_subjects": [],
+                    },
+                    "semantic_work": {
+                        "recomputed_fact_count": 30,
+                        "reused_fact_count": 0,
+                    },
+                    "source_parse_work": {"parsed_source_count": 4},
+                },
+                "fresh_process": {
+                    "cache_status": "hit",
+                    "build_metrics": {"wall_seconds": 0.623384},
+                    "execution": {"output_equal_to_stage0": True},
+                    "module_observation": {
+                        "published_entry_count": 0,
+                        "reused_module_subjects": ["mncs.test.assertions"],
+                    },
+                    "semantic_work": {
+                        "recomputed_fact_count": 0,
+                        "reused_fact_count": 30,
+                    },
+                    "source_parse_work": {"parsed_source_count": 0},
+                },
+                "invalid_source": {
+                    "status": "rejected",
+                    "artifact_published": False,
+                    "diagnostic_count": 1,
+                },
+            },
+        },
+        "semantic_proof": {"canonical_vm_matches_stage0": True},
+        "limitations": [
+            "One mncs-test workload; no general speedup or agent-wide resource claim.",
+        ],
+    }
+
+
 def _add_compiler_native_application_proof_evidence(
     session, state: dict, *, failed_case: bool = False,
     invalid_effect_contract: bool = False,
@@ -13700,6 +13819,143 @@ def test_compiler_language_dependency_summary_workload_is_projected_separately(
     ]["evicted_entry_count"] == 1
     assert stage_summaries["invalid_source"]["artifact_published"] is False
     assert observation["evidence_reference"] == reference
+
+
+def test_compiler_module_interface_consumption_preserves_source_context_and_scope(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    reference = _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    assert result["pressure_hypothesis_count"] == 0
+    observation = result["observations"][0]
+    assert observation["identity"] == reference["identity"]
+    assert observation["related_work"]["campaign_id"] == "cmp_projection_reader"
+    assert observation["related_work"]["session_id"] == "ses_projection_reader"
+    source_context = observation["observation"]["source_session_context"]
+    assert source_context["campaign_id"] == (
+        "cmp_mncs_native_application_readiness_compiler_20261013"
+    )
+    assert source_context["session_id"] == "ses_compiler_module_cache_source"
+    assert observation["observation"]["source_session_context_resolution"] == (
+        "source-session-declared-not-cross-validated"
+    )
+    outcome = observation["observation"]["outcome"]
+    assert outcome["source_reported_verification_result"] == "passed"
+    assert outcome["resource_measurement_scope"].startswith(
+        "source-reported bootstrap and runner host process metrics"
+    )
+    assert outcome["measurement_summary"]["direct_measurements"] == {
+        "bootstrap_build_peak_rss_kb": 1498780,
+        "bootstrap_build_system_seconds": 14.41,
+        "bootstrap_build_user_seconds": 1068.17,
+        "bootstrap_build_wall_seconds": 552.41,
+        "runner_peak_rss_kb": 96996,
+        "runner_system_seconds": 1.4,
+        "runner_user_seconds": 3.86,
+        "runner_wall_seconds": 5.2,
+    }
+    assert outcome["measurement_summary"]["measurement_availability"][
+        "bootstrap_build_peak_cgroup_memory_bytes"
+    ] == "null-in-source-record"
+    stages = {stage["name"]: stage for stage in outcome["stage_summaries"]}
+    assert stages["fresh_process"]["semantic_work"] == {
+        "recomputed_fact_count": 0,
+        "reused_fact_count": 30,
+    }
+    assert stages["fresh_process"]["source_parse_work"] == {
+        "parsed_source_count": 0,
+    }
+    assert stages["invalid_source"]["artifact_published"] is False
+    assert stages["cold"]["build_metrics"] == {
+        "wall_seconds": 0.803368,
+        "peak_rss_bytes": 55169024,
+        "peak_cgroup_memory_bytes": None,
+        "peak_open_file_descriptors": 4,
+        "peak_threads": 1,
+    }
+    assert observation["evidence_reference"] == reference
+    assert any(
+        "agent-attributed resource use" in item
+        for item in observation["measurement_limits"]
+    )
+
+
+def test_unselected_compiler_module_interface_consumption_is_read_only(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    reference = _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+    compiler = Path(session.snapshot["workspace"]["root"]) / "mncs-compiler"
+    session.snapshot["selected_checkouts"] = {
+        "mncs-environment": session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ],
+    }
+    _register_workspace_source(
+        session, compiler, reference, include_source_record=True,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["observation_count"] == 1
+    observation = result["observations"][0]
+    assert observation["evidence_reference"] == reference
+    assert observation["observation"]["source_repository_read_basis"] == (
+        "workspace-read-only-checkout"
+    )
+    assert session.snapshot["selected_checkouts"].keys() == {"mncs-environment"}
+    assert session.snapshot["authority"]["writable"] == ["mncs-environment"]
+    assert _git(compiler, "status", "--porcelain") == ""
+
+
+def test_compiler_module_interface_consumption_requires_declared_source_session(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    report["campaign"].pop("session_id")
+    _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "observation-contract-invalid"
+
+
+def test_compiler_module_interface_consumption_rejects_identity_mismatch(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    report["identity"] = "ev_wrong_compiler_source_identity"
+    _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "partial"
+    assert result["observation_count"] == 0
+    assert result["source"]["observation_reference_diagnostics"][0][
+        "verification"
+    ] == "observation-contract-invalid"
 
 
 def test_compiler_language_dependency_summary_requires_exact_source_schema(
