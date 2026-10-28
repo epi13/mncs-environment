@@ -7544,7 +7544,8 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     )
     assert readiness_relation["summary"] == {
         "integrity_verified_candidate_count": 1,
-        "provider_readiness_context_count": 1,
+        "provider_readiness_obligation_count": 1,
+        "provider_readiness_context_returned_count": 1,
         "exact_link_count": 1,
         "unmatched_candidate_count": 0,
         "unmatched_context_count": 0,

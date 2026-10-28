@@ -3766,7 +3766,8 @@ def _ambient_verification_executor_readiness_relation(
         "join_basis": "exact repository, obligation, executor capability, verification evidence Store reference, and owner-result Store reference",
         "summary": {
             "integrity_verified_candidate_count": len(candidates),
-            "provider_readiness_context_count": context_count,
+            "provider_readiness_obligation_count": context_count,
+            "provider_readiness_context_returned_count": len(context_rows),
             "exact_link_count": len(links),
             "unmatched_candidate_count": unmatched_candidates,
             "unmatched_context_count": unmatched_context,
