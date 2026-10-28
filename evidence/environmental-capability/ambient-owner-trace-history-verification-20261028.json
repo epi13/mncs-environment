@@ -1,0 +1,118 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_trace_history_verification_20261028",
+  "captured_at": "2026-10-28T15:32:55Z",
+  "measurement_basis": "bounded-history-regression-and-repository-verification",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_5d0a193c0eeb5e96",
+    "campaign_evidence_count_before_recording": 158,
+    "implementation_commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:ff87990a4a2b"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-trace-history-implementation-verification",
+    "source_interface": "MNCS Environment pytest, compileall, Git integrity checks, and vertical proof",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_resources.py tests/test_incremental.py tests/test_capability_intelligence.py",
+        "python -m pytest tests/ -q",
+        "python -m compileall -q mncs_env tests",
+        "git diff --check",
+        "python3 scripts/vertical_proof.py"
+      ]
+    },
+    "outcome": {
+      "targeted_test_result": "227 passed, 21 skipped in 7.93s",
+      "repository_test_result": "1221 passed, 46 skipped in 952.91s",
+      "vertical_proof_status": "passed",
+      "compileall_status": "passed",
+      "git_diff_check_status": "passed",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "Persisted coherence snapshots retain at most 16 validated owner execution rows; omitted historical rows are counted and no history before enablement is reconstructed.",
+        "Retained rows preserve the exact service execution identity, owner, trace sequence, outcome and explicit verification status, plus validated resource measurement state when present.",
+        "A scoped invocation can match a retained execution by exact identity and owner while latest_trace_relation remains latest-only.",
+        "The selected-session projection exposes retained resource status and sample, and the tested compact response preserves the relationship within its byte budget.",
+        "The existing vertical proof still resolves, enters, invokes a provider, enforces a protected write boundary, checkpoints, resumes, and hands off a session."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_ambient_owner_trace_history_8a37ba2",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+        "path": "mncs_env/coherence.py",
+        "sha256": "95a3a73920a3bc0db030993c00b0110dd2da81b059340e17aba0ef9b2695d7e9"
+      },
+      "projection_reference": {
+        "identity": "mncs_environment_ambient_owner_trace_projection_8a37ba2",
+        "kind": "source-code-projection",
+        "repository": "mncs-environment",
+        "commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "de4f36db990570dacb13a24e5da26b40e7292f522799e5b8fdacb89ac1a6861f"
+      },
+      "regression_test_references": [
+        {
+          "identity": "mncs_environment_owner_trace_history_tests_8a37ba2",
+          "kind": "regression-test-source",
+          "repository": "mncs-environment",
+          "commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+          "path": "tests/test_incremental.py",
+          "sha256": "21699f3e68955a6f35e2a8968d7957c0e00c446b6e401ba77538c7bba62ee63c"
+        },
+        {
+          "identity": "mncs_environment_owner_trace_correlation_tests_8a37ba2",
+          "kind": "regression-test-source",
+          "repository": "mncs-environment",
+          "commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+          "path": "tests/test_capability_intelligence.py",
+          "sha256": "26bb36684fc2d05706792b87fe87bf21d91a8c4dc0179a3c18a957b0850c0b35"
+        }
+      ],
+      "documentation_reference": {
+        "identity": "mncs_environment_owner_trace_history_docs_8a37ba2",
+        "kind": "projection-documentation",
+        "repository": "mncs-environment",
+        "commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+        "path": "docs/PROJECTIONS.md",
+        "sha256": "b7ff5be0d324197a7ee90d56516da37030e1246ea5ba7a5d80000fab2fbf4947"
+      }
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_trace_history_20261028",
+    "title": "Scoped ambient service evidence outlives the latest scheduler trace",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment owner-pass scheduler and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The verified implementation retains exact owner execution records across persisted scheduler traces and adds an explicit retained-trace relationship to the existing session projection.",
+    "actionable_recommendation": "Allow an ordinary persisted owner pass to populate the new field, then inspect a future session projection for live retained correlations."
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_owner_trace_history_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-trace-history-pressure-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "Regression fixtures verify the new retained-match path, but the current durable session has not run a persisted owner pass that populates this field.",
+    "Owner execution return and resource samples are not independent verification, service fulfillment, or evidence of reduced agent intervention.",
+    "The repository suite skipped 46 environment-dependent cases; the vertical proof passed independently."
+  ]
+}

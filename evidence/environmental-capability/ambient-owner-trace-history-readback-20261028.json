@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_trace_history_readback_20261028",
+  "captured_at": "2026-10-28T15:32:55Z",
+  "measurement_basis": "durable-campaign-state-projection-and-deterministic-retained-join-regression",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_5d0a193c0eeb5e96",
+    "campaign_evidence_count_before_recording": 158,
+    "implementation_commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:ff87990a4a2b"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-trace-history-projection-readback",
+    "source_interface": "MNCS Environment campaign-state capability-intelligence projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_5d0a193c0eeb5e96",
+      "campaign_evidence_count": 158,
+      "session_snapshot_sequence": 1083,
+      "owner_execution_history_status": "not-recorded",
+      "owner_execution_history_coverage_status": "not-recorded",
+      "owner_execution_history_record_count": 0,
+      "owner_execution_history_limit": 16,
+      "scoped_invocation_count": 14,
+      "execution_group_count": 2,
+      "latest_trace_relations": [
+        "not-in-latest-trace",
+        "not-in-latest-trace"
+      ]
+    },
+    "outcome": {
+      "fixture_projection": "The regression projection joins a scoped invocation to an exact retained execution ID, preserves latest_trace_relation=not-in-latest-trace, and exposes the retained sequence, outcome, verification status, and resource sample.",
+      "bounded_live_session_projection": "The persisted campaign session predates the new field: history status is not-recorded, row count is zero, and both existing event groups remain outside the latest trace.",
+      "interpretation": "The end-to-end retained-correlation path is verified with deterministic projection fixtures. Live campaign state accurately exposes that collection has not yet begun in this session; no retained history or success has been inferred."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_trace_history_20261028",
+    "title": "Scoped ambient service evidence outlives the latest scheduler trace",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment owner-pass scheduler and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "Read-only campaign-state projection confirms history is not recorded in the older persisted session snapshot, while the regression path demonstrates the new relationship.",
+    "actionable_recommendation": "Use the next normal persisted scheduler pass to establish live history coverage; do not run a costly pass solely to force a favorable readback."
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_owner_trace_history_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-trace-history-verification-20261028.json"
+    },
+    {
+      "kind": "prior-live-correlation-gap",
+      "identity": "ev_environment_ambient_owner_trace_history_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-trace-history-pressure-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The live projection predates retained-history collection and therefore cannot demonstrate a live retained trace match.",
+    "No owner tick was run solely to populate the new field; historical coverage remains unavailable until ordinary persisted scheduler activity occurs.",
+    "No service fulfillment, causal resource attribution, or agent burden reduction is established."
+  ]
+}

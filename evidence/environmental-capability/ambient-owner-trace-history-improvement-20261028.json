@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_trace_history_improvement_20261028",
+  "captured_at": "2026-10-28T15:32:55Z",
+  "measurement_basis": "source-linked-implementation-regression-and-live-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_5d0a193c0eeb5e96",
+    "campaign_evidence_count_before_recording": 158,
+    "implementation_commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:ff87990a4a2b"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-trace-history-improvement-link",
+    "source_interface": "MNCS Environment coherence persistence and capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_owner_trace_history_20261028",
+      "verification_observation_identity": "ev_environment_ambient_owner_trace_history_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_owner_trace_history_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-commit-and-blob-verified",
+      "verification_status": "repository-suite-and-vertical-proof-passed",
+      "readback_status": "fixture-retained-join-verified-live-history-not-yet-recorded",
+      "effectiveness_assessment": "The existing exact service execution relationship can now resolve against a bounded set of retained persisted owner rows and expose the matching outcome and resource evidence through the existing ECI projection. The deterministic path is covered by regression tests. The live session predates collection, so live correlation and agent burden reduction are not assessed.",
+      "interpretation_limit": "This slice improves evidence continuity and inspectability; it does not establish that ambient services fulfilled an agent need or reduced intervention."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_trace_history_20261028",
+    "title": "Scoped ambient service evidence outlives the latest scheduler trace",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment owner-pass scheduler and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "A bounded persisted history preserves the exact owner execution identities needed to correlate older scoped events without changing the meaning of the latest-trace relation.",
+    "actionable_recommendation": "Inspect the relationship after ordinary persisted owner work occurs, then use evidence about repeated missing correlations to prioritize further continuity improvements."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_owner_trace_history_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_owner_trace_history_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_owner_trace_history_8a37ba2",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+      "path": "mncs_env/coherence.py",
+      "sha256": "95a3a73920a3bc0db030993c00b0110dd2da81b059340e17aba0ef9b2695d7e9"
+    },
+    "verification_observation_identity": "ev_environment_ambient_owner_trace_history_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_owner_trace_history_readback_20261028",
+    "basis": "Persisted owner execution history is capped at 16 validated rows, counts omitted rows, begins at enablement, and allows the existing exact invocation context to resolve a retained execution while preserving the latest-only relation.",
+    "effectiveness_assessment": "bounded-retained-correlation-implemented-and-regression-verified; live-session-correlation-pending; agent-intervention-effect-not-assessed",
+    "not_measured": [
+      "A normal persisted owner execution populating the new history in the campaign session.",
+      "A live scoped service event matching one of the newly retained rows.",
+      "Service fulfillment, agent receipt, or reduced manual orchestration.",
+      "Cross-session recurrence, long-term effectiveness, or causal reduction in work."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_owner_trace_history_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-trace-history-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_owner_trace_history_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-trace-history-verification-20261028.json"
+    },
+    {
+      "kind": "projection-readback-observation",
+      "identity": "ev_environment_ambient_owner_trace_history_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-trace-history-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The durable session readback was produced from a snapshot created before this collection field existed.",
+    "The implementation and fixture relationship passed verification, but live retained-trace correlation has not yet been observed.",
+    "Owner-process resource counters do not establish service causality or host-wide cost."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_trace_history_pressure_20261028",
+  "captured_at": "2026-10-28T15:32:55Z",
+  "measurement_basis": "durable-campaign-projection-and-exact-execution-correlation-review",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_5d0a193c0eeb5e96",
+    "campaign_evidence_count_before_recording": 158,
+    "implementation_commit": "8a37ba2fc2853c48a90bdc2239a6f600b4809441",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:ff87990a4a2b"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-trace-retention-gap",
+    "source_interface": "MNCS Environment campaign-state capability-intelligence projection",
+    "request": {
+      "session_snapshot_sequence": 1083,
+      "scoped_invocation_count": 14,
+      "execution_group_count": 2,
+      "latest_trace_relations": [
+        "not-in-latest-trace",
+        "not-in-latest-trace"
+      ],
+      "owner_execution_history_status": "not-recorded",
+      "owner_execution_history_limit": 16
+    },
+    "outcome": {
+      "interpretation": "The session contains 14 explicitly scoped owner-pass calls in two groups, but both execution identities are absent from its single latest scheduler trace. Without retained trace rows the projection cannot connect these real service events to the older owner execution evidence.",
+      "scope": "This is an observed correlation gap in the current session projection. It does not establish that the service failed, that the scheduler caused the gap, or that the historical owner work fulfilled an agent need."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_trace_history_20261028",
+    "title": "Scoped ambient service evidence outlives the latest scheduler trace",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment owner-pass scheduler and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The durable session projection showed 14 scoped invocations in two groups, both with latest_trace_relation=not-in-latest-trace, while the snapshot reported owner execution history as not-recorded.",
+    "actionable_recommendation": "Retain a bounded, path-free history of exact persisted owner execution rows and expose a separately labeled retained-trace match when a scoped service event refers to an older execution."
+  },
+  "supporting_sources": [
+    {
+      "kind": "prior-live-projection-readback",
+      "identity": "ev_environment_ambient_service_cost_correlation_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-cost-correlation-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The campaign snapshot predates population of the new history field, so the live session does not yet demonstrate a retained-trace match.",
+    "The exact invocation-to-owner relationship does not establish service fulfillment, agent receipt, reduced intervention, or causality."
+  ]
+}
