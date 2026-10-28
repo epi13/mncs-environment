@@ -30,6 +30,9 @@ MAX_TRACE_OWNER_ROWS = 16
 MAX_TRACE_PENDING_EVENT_ROWS = 32
 MAX_OWNER_EXECUTION_HISTORY = 16
 OWNER_EXECUTION_HISTORY_SCHEMA = (
+    "mncs.environment.owner-execution-history/3"
+)
+PREVIOUS_OWNER_EXECUTION_HISTORY_SCHEMA = (
     "mncs.environment.owner-execution-history/2"
 )
 LEGACY_OWNER_EXECUTION_HISTORY_SCHEMA = (
@@ -138,6 +141,47 @@ def _validated_owner_pass_outcome(value: object) -> dict[str, object] | None:
         "reason_code": outcome["reason_code"],
         "agent_response_emitted": False,
     }
+
+
+def project_scheduler_input_chain(value: object) -> dict | None:
+    """Return the bounded scheduler input diagnosis, without raw failures."""
+    if (not isinstance(value, dict)
+            or value.get("schema_version") != SCHEDULER_INPUT_CHAIN_SCHEMA):
+        return None
+    status = value.get("status")
+    if status not in {
+        "inputs-established", "reconciliation-required", "route-unavailable",
+        "invalid",
+    }:
+        status = "invalid"
+    raw_reasons = value.get("reason_codes")
+    raw_reasons = raw_reasons if isinstance(raw_reasons, list) else []
+    reasons = []
+    for reason in raw_reasons[:len(SCHEDULER_INPUT_REASON_CODES)]:
+        if (isinstance(reason, str)
+                and reason in SCHEDULER_INPUT_REASON_CODES
+                and reason not in reasons):
+            reasons.append(reason)
+    omitted = value.get("reason_codes_omitted_count", 0)
+    if type(omitted) is not int or omitted < 0:
+        omitted = 0
+    reason_count = value.get("reason_code_count")
+    if type(reason_count) is not int or reason_count < 0:
+        reason_count = len(reasons) + omitted
+    omitted = max(
+        omitted, len(raw_reasons) - len(reasons), reason_count - len(reasons),
+    )
+    result = {
+        "schema_version": SCHEDULER_INPUT_CHAIN_SCHEMA,
+        "status": status,
+        "reason_codes": reasons,
+        "reason_code_count": max(reason_count, len(reasons) + omitted),
+        "reason_codes_omitted_count": omitted,
+    }
+    stage = value.get("route_failure_stage")
+    if stage in SCHEDULER_ROUTE_FAILURE_STAGES:
+        result["route_failure_stage"] = stage
+    return result
 
 
 def owner_pass_response(value):
@@ -386,40 +430,10 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
             "Trace persistence distinguishes the current entry response from the session snapshot; snapshot retention does not establish service fulfillment or independent verification.",
         ],
     }
-    raw_input_chain = value.get("scheduler_input_chain")
-    if (isinstance(raw_input_chain, dict)
-            and raw_input_chain.get("schema_version")
-            == SCHEDULER_INPUT_CHAIN_SCHEMA):
-        raw_reasons = raw_input_chain.get("reason_codes")
-        raw_reasons = raw_reasons if isinstance(raw_reasons, list) else []
-        reason_codes = []
-        for reason in raw_reasons[:len(SCHEDULER_INPUT_REASON_CODES)]:
-            if (isinstance(reason, str)
-                    and reason in SCHEDULER_INPUT_REASON_CODES
-                    and reason not in reason_codes):
-                reason_codes.append(reason)
-        omitted_reasons = raw_input_chain.get("reason_codes_omitted_count", 0)
-        if type(omitted_reasons) is not int or omitted_reasons < 0:
-            omitted_reasons = 0
-        omitted_reasons = max(
-            omitted_reasons, len(raw_reasons) - len(reason_codes),
-        )
-        chain_status = raw_input_chain.get("status")
-        if chain_status not in {
-                "inputs-established", "reconciliation-required",
-                "route-unavailable",
-        }:
-            chain_status = "invalid"
-        input_chain = {
-            "schema_version": SCHEDULER_INPUT_CHAIN_SCHEMA,
-            "status": chain_status,
-            "reason_codes": reason_codes,
-            "reason_code_count": len(reason_codes) + omitted_reasons,
-            "reason_codes_omitted_count": omitted_reasons,
-        }
-        failure_stage = raw_input_chain.get("route_failure_stage")
-        if failure_stage in SCHEDULER_ROUTE_FAILURE_STAGES:
-            input_chain["route_failure_stage"] = failure_stage
+    input_chain = project_scheduler_input_chain(
+        value.get("scheduler_input_chain"),
+    )
+    if input_chain is not None:
         result["scheduler_input_chain"] = input_chain
     raw_pending_events = value.get("pending_events")
     if isinstance(raw_pending_events, list):
@@ -762,6 +776,7 @@ def project_owner_execution_history(
     if (not isinstance(value, dict)
             or value.get("schema_version") not in {
                 OWNER_EXECUTION_HISTORY_SCHEMA,
+                PREVIOUS_OWNER_EXECUTION_HISTORY_SCHEMA,
                 LEGACY_OWNER_EXECUTION_HISTORY_SCHEMA,
             }):
         return {**unavailable, "status": "invalid", "invalid_record_count": 1}
@@ -897,6 +912,25 @@ def project_owner_execution_history(
             "owner_result_reference_status": owner_result_reference_status,
             "process_resource_usage_status": resource_status,
         }
+        scheduler_disposition_code = raw.get("scheduler_disposition_code")
+        if "scheduler_disposition_code" in raw:
+            if type(scheduler_disposition_code) is int and scheduler_disposition_code >= 0:
+                row["scheduler_disposition_code"] = scheduler_disposition_code
+                scheduler_disposition = SCHEDULER_DISPOSITIONS.get(
+                    scheduler_disposition_code,
+                )
+                if scheduler_disposition is not None:
+                    row["scheduler_disposition"] = scheduler_disposition
+            else:
+                invalid_count += 1
+        if "scheduler_input_chain" in raw:
+            input_chain = project_scheduler_input_chain(
+                raw.get("scheduler_input_chain"),
+            )
+            if input_chain is None:
+                invalid_count += 1
+            else:
+                row["scheduler_input_chain"] = input_chain
         if owner_result_status is not None:
             row["owner_result_status"] = owner_result_status
         if owner_result_identity is not None:
@@ -1070,6 +1104,18 @@ def _append_owner_execution_history(
             ),
             "process_resource_usage_status": resource_status,
         }
+        disposition_code = projected.get("scheduler_disposition_code")
+        if type(disposition_code) is int and disposition_code >= 0:
+            row["scheduler_disposition_code"] = disposition_code
+            disposition = projected.get("scheduler_disposition")
+            if disposition in SCHEDULER_DISPOSITIONS.values():
+                row["scheduler_disposition"] = disposition
+        input_chain = (
+            projected_trace.get("scheduler_input_chain")
+            if isinstance(projected_trace, dict) else None
+        )
+        if input_chain is not None:
+            row["scheduler_input_chain"] = input_chain
         owner_result = owner_results_by_execution.get((owner, execution_id))
         if isinstance(owner_result, dict):
             row["owner_result_observation_status"] = "recorded"

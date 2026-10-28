@@ -26,6 +26,14 @@ trace. Older traces have no such field and remain unclassified; missing causes
 are not reconstructed. These facts explain scheduler decisions, not agent need
 or service fulfillment.
 
+New bounded owner-execution history rows retain the scheduler disposition and
+validated input chain that produced that execution. This lets an exact
+capability-invocation match explain the conditions around a pass even after a
+later trace replaces `last_trace`. It reuses the existing sixteen-row session
+history; it adds no per-tick files or writes for unchanged quiet ticks. Older
+history rows remain without these fields rather than receiving reconstructed
+causes.
+
 The seven owners retain their existing authority: Doctor, Semantics, Actions,
 Test verification, Debug diagnostics, family collaboration and projections.
 A changed provider observation, semantic state, external evidence or verification

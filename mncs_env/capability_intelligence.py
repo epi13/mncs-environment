@@ -3548,40 +3548,7 @@ def _compact_service_accountability_overview(
 
 
 def _compact_scheduler_input_chain(value: Any) -> dict[str, Any] | None:
-    if (not isinstance(value, dict)
-            or value.get("schema_version")
-            != coherence_module.SCHEDULER_INPUT_CHAIN_SCHEMA
-            or value.get("status") not in {
-                "inputs-established", "reconciliation-required",
-                "route-unavailable", "invalid",
-            }):
-        return None
-    raw_reasons = value.get("reason_codes")
-    raw_reasons = raw_reasons if isinstance(raw_reasons, list) else []
-    reasons = [
-        reason for reason in raw_reasons[:12]
-        if isinstance(reason, str)
-        and reason in coherence_module.SCHEDULER_INPUT_REASON_CODES
-    ]
-    omitted = value.get("reason_codes_omitted_count", 0)
-    if type(omitted) is not int or omitted < 0:
-        omitted = 0
-    reason_count = value.get("reason_code_count")
-    if type(reason_count) is not int or reason_count < 0:
-        reason_count = len(reasons) + omitted
-    result = {
-        "schema_version": coherence_module.SCHEDULER_INPUT_CHAIN_SCHEMA,
-        "status": value["status"],
-        "reason_codes": reasons,
-        "reason_code_count": max(reason_count, len(reasons) + omitted),
-        "reason_codes_omitted_count": max(
-            omitted, reason_count - len(reasons),
-        ),
-    }
-    stage = value.get("route_failure_stage")
-    if stage in coherence_module.SCHEDULER_ROUTE_FAILURE_STAGES:
-        result["route_failure_stage"] = stage
-    return result
+    return coherence_module.project_scheduler_input_chain(value)
 
 
 def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
@@ -5333,17 +5300,23 @@ def _compact_owner_pass_activity_budget(value: Any) -> dict[str, Any] | None:
                 "service_execution_id", "owner_pass", "invocation_count",
                 "completion_count", "nonzero_returncode_count",
                 "latest_trace_relation", "latest_trace_owner_outcome_status",
+                "latest_trace_scheduler_disposition",
+                "latest_trace_scheduler_disposition_code",
                 "latest_trace_verification_status",
                 "latest_trace_failure_observation_status",
                 "latest_trace_run_elapsed_seconds",
+                "latest_trace_scheduler_input_chain",
                 "latest_trace_owner_result_observation_status",
                 "latest_trace_owner_result_status",
                 "latest_trace_owner_result_verification_status",
                 "latest_trace_process_resource_usage_status",
                 "retained_trace_relation", "retained_trace_coverage_status",
                 "retained_trace_sequence", "retained_trace_owner_outcome_status",
+                "retained_trace_scheduler_disposition",
+                "retained_trace_scheduler_disposition_code",
                 "retained_trace_verification_status",
                 "retained_trace_run_elapsed_seconds",
+                "retained_trace_scheduler_input_chain",
                 "retained_trace_owner_result_observation_status",
                 "retained_trace_owner_result_status",
                 "retained_trace_owner_result_verification_status",
@@ -5351,6 +5324,11 @@ def _compact_owner_pass_activity_budget(value: Any) -> dict[str, Any] | None:
             )
             if key in group
         }
+        for prefix in ("latest_trace", "retained_trace"):
+            chain_key = f"{prefix}_scheduler_input_chain"
+            chain = _compact_scheduler_input_chain(group.get(chain_key))
+            if chain is not None:
+                compact_group[chain_key] = chain
         for prefix in ("latest_trace", "retained_trace"):
             status_key = f"{prefix}_process_resource_usage_status"
             usage_key = f"{prefix}_process_resource_usage"
@@ -10889,19 +10867,25 @@ def _compact_projection(
                     "service_execution_id", "owner_pass",
                     "invocation_count", "completion_count",
                     "nonzero_returncode_count", "latest_trace_relation",
+                    "latest_trace_scheduler_disposition",
+                    "latest_trace_scheduler_disposition_code",
                     "latest_trace_owner_outcome_status",
                     "latest_trace_verification_status",
                     "latest_trace_failure_observation_status",
                     "latest_trace_run_elapsed_seconds",
+                    "latest_trace_scheduler_input_chain",
                     "latest_trace_owner_result_observation_status",
                     "latest_trace_owner_result_status",
                     "latest_trace_owner_result_verification_status",
                     "retained_trace_relation",
                     "retained_trace_coverage_status",
                     "retained_trace_sequence",
+                    "retained_trace_scheduler_disposition",
+                    "retained_trace_scheduler_disposition_code",
                     "retained_trace_owner_outcome_status",
                     "retained_trace_verification_status",
                     "retained_trace_run_elapsed_seconds",
+                    "retained_trace_scheduler_input_chain",
                     "retained_trace_owner_result_observation_status",
                     "retained_trace_owner_result_status",
                     "retained_trace_owner_result_verification_status",
@@ -10911,6 +10895,11 @@ def _compact_projection(
                 )
                 if key in group
             }
+            for prefix in ("latest_trace", "retained_trace"):
+                chain_key = f"{prefix}_scheduler_input_chain"
+                chain = _compact_scheduler_input_chain(group.get(chain_key))
+                if chain is not None:
+                    compact_group[chain_key] = chain
             process_usage_status = group.get(
                 "latest_trace_process_resource_usage_status",
             )
@@ -27649,6 +27638,19 @@ def _session_ambient_owner_pass_activity(
         }
         if trace_relation == "exact-latest-trace-match":
             trace_row = matches[0]
+            disposition_code = trace_row.get("scheduler_disposition_code")
+            if type(disposition_code) is int and disposition_code >= 0:
+                item["latest_trace_scheduler_disposition_code"] = (
+                    disposition_code
+                )
+            disposition = trace_row.get("scheduler_disposition")
+            if disposition in coherence_module.SCHEDULER_DISPOSITIONS.values():
+                item["latest_trace_scheduler_disposition"] = disposition
+            input_chain = _compact_scheduler_input_chain(
+                execution.get("scheduler_input_chain"),
+            )
+            if input_chain is not None:
+                item["latest_trace_scheduler_input_chain"] = input_chain
             owner_outcome_status = trace_row.get("owner_outcome_status")
             item["latest_trace_owner_outcome_status"] = (
                 owner_outcome_status
@@ -27739,6 +27741,27 @@ def _session_ambient_owner_pass_activity(
                     item["retained_trace_sequence"] = retained_trace[
                         "trace_sequence"
                     ]
+                    disposition_code = retained_trace.get(
+                        "scheduler_disposition_code",
+                    )
+                    if type(disposition_code) is int and disposition_code >= 0:
+                        item["retained_trace_scheduler_disposition_code"] = (
+                            disposition_code
+                        )
+                    disposition = retained_trace.get(
+                        "scheduler_disposition",
+                    )
+                    if disposition in coherence_module.SCHEDULER_DISPOSITIONS.values():
+                        item["retained_trace_scheduler_disposition"] = (
+                            disposition
+                        )
+                    input_chain = _compact_scheduler_input_chain(
+                        retained_trace.get("scheduler_input_chain"),
+                    )
+                    if input_chain is not None:
+                        item["retained_trace_scheduler_input_chain"] = (
+                            input_chain
+                        )
                     item["retained_trace_owner_outcome_status"] = (
                         retained_trace.get(
                             "owner_outcome_status", "unknown",

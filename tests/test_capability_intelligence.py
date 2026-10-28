@@ -9979,7 +9979,8 @@ def test_session_verification_activity_correlates_exact_history_and_survives_com
         "coherence": {
             "owner_execution_history": {
                 "schema_version": (
-                    "mncs.environment.owner-execution-history/2"
+                    capability_intelligence.coherence_module
+                    .PREVIOUS_OWNER_EXECUTION_HISTORY_SCHEMA
                 ),
                 "coverage_status": "bounded-since-enabled",
                 "limit": 16,
@@ -10557,15 +10558,23 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
         "owner_pass": "verification",
         "service_execution_id": execution_id,
     }
+    scheduler_input_chain = {
+        "schema_version": "mncs.environment.scheduler-input-chain/1",
+        "status": "reconciliation-required",
+        "reason_codes": ["store-replay-unavailable"],
+        "reason_code_count": 1,
+        "reason_codes_omitted_count": 0,
+    }
     session.snapshot["coherence"] = {"last_trace": {
         "mode": "targeted_update",
         "trace_persistence_status": "session-snapshot",
+        "scheduler_input_chain": scheduler_input_chain,
         "event_count": 1,
         "elapsed_seconds": 0.1,
         "scheduled": [{
             "pass": "verification",
             "owner": "verification",
-            "disposition": 1,
+            "disposition": 2,
             "wave": 0,
             "service_execution_id": execution_id,
             "owner_reused": False,
@@ -10602,6 +10611,8 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
             "owner": "verification",
             "service_execution_id": execution_id,
             "trace_sequence": 3,
+            "scheduler_disposition_code": 2,
+            "scheduler_input_chain": scheduler_input_chain,
             "owner_outcome_status": "no-failure-reported",
             "verification_status": "not-established",
             "owner_result_observation_status": "recorded",
@@ -10676,6 +10687,13 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert group["service_execution_id"] == execution_id
     assert group["owner_pass"] == "verification"
     assert group["latest_trace_relation"] == "exact-latest-trace-match"
+    assert group["latest_trace_scheduler_disposition_code"] == 2
+    assert group["latest_trace_scheduler_disposition"] == (
+        "bounded-reconciliation"
+    )
+    assert group["latest_trace_scheduler_input_chain"]["reason_codes"] == [
+        "store-replay-unavailable"
+    ]
     assert group["latest_trace_owner_outcome_status"] == "no-failure-reported"
     assert group["latest_trace_verification_status"] == "not-established"
     assert group["latest_trace_failure_observation_status"] == "complete"
@@ -10708,6 +10726,9 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert compact_activity["execution_groups"][0]["latest_trace_relation"] == (
         "exact-latest-trace-match"
     )
+    assert compact_activity["execution_groups"][0][
+        "latest_trace_scheduler_input_chain"
+    ]["reason_codes"] == ["store-replay-unavailable"]
     assert compact_activity["execution_groups"][0][
         "latest_trace_owner_outcome_status"
     ] == "no-failure-reported"
@@ -10770,6 +10791,13 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
         "exact-retained-trace-match"
     )
     assert retained_group["retained_trace_sequence"] == 3
+    assert retained_group["retained_trace_scheduler_disposition_code"] == 2
+    assert retained_group["retained_trace_scheduler_disposition"] == (
+        "bounded-reconciliation"
+    )
+    assert retained_group["retained_trace_scheduler_input_chain"][
+        "reason_codes"
+    ] == ["store-replay-unavailable"]
     assert retained_group[
         "retained_trace_process_resource_usage_status"
     ] == "measured"
@@ -10808,6 +10836,9 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert compact_retained["retained_trace_relation"] == (
         "exact-retained-trace-match"
     )
+    assert compact_retained["retained_trace_scheduler_input_chain"][
+        "reason_codes"
+    ] == ["store-replay-unavailable"]
     assert compact_retained[
         "retained_trace_process_resource_usage"
     ]["io_bytes"]["write_bytes"] == 256

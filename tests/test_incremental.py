@@ -105,6 +105,7 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
         scheduled = [{
             "owner": "projections",
             "pass": "projections",
+            "disposition": 2,
             "service_execution_id": f"ase_{index:032x}",
             "run_elapsed_seconds": 0.1,
             "process_resource_usage": resource_usage(index),
@@ -112,6 +113,12 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
         return {
             "mode": "targeted_update",
             "trace_persistence_status": "session-snapshot",
+            "scheduler_input_chain": {
+                "schema_version": coherence.SCHEDULER_INPUT_CHAIN_SCHEMA,
+                "status": "reconciliation-required",
+                "reason_codes": ["store-replay-unavailable"],
+                "reason_codes_omitted_count": 0,
+            },
             "scheduled": scheduled,
             "skipped": [],
             "owner_failures": [],
@@ -152,6 +159,7 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
         "owner_result_observation_status"
     ] == "unknown"
     assert "owner_result_status" not in legacy_projection["rows"][0]
+    assert "scheduler_input_chain" not in legacy_projection["rows"][0]
 
     first = coherence._append_owner_execution_history(
         None, trace_rows(0, 16), trace_sequence=1,
@@ -178,6 +186,12 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
     assert first_projection["rows"][0][
         "owner_result_verification_status"
     ] == "not-established"
+    assert first_projection["rows"][0]["scheduler_disposition"] == (
+        "bounded-reconciliation"
+    )
+    assert first_projection["rows"][0]["scheduler_input_chain"][
+        "reason_codes"
+    ] == ["store-replay-unavailable"]
 
     second = coherence._append_owner_execution_history(
         first, trace_rows(16, 2), trace_sequence=2,
@@ -261,7 +275,7 @@ def test_owner_execution_history_retains_exact_verification_source_links():
     )
 
     assert history["schema_version"] == (
-        "mncs.environment.owner-execution-history/2"
+        coherence.OWNER_EXECUTION_HISTORY_SCHEMA
     )
     assert projected["status"] == "observed"
     row = projected["rows"][0]
@@ -270,6 +284,7 @@ def test_owner_execution_history_retains_exact_verification_source_links():
     assert row["verification_evidence_reference"] == verification_reference
     assert row["verification_evidence_reference_status"] == "store-record"
     assert row["owner_result_reused"] is False
+    assert "scheduler_input_chain" not in row
 
     invalid_history = {
         **history,
@@ -670,6 +685,19 @@ def test_old_scheduler_trace_does_not_gain_reconstructed_input_causes():
     })
 
     assert "scheduler_input_chain" not in projected
+
+
+def test_scheduler_input_chain_keeps_compacted_reason_coverage():
+    projected = coherence.project_scheduler_input_chain({
+        "schema_version": coherence.SCHEDULER_INPUT_CHAIN_SCHEMA,
+        "status": "reconciliation-required",
+        "reason_codes": ["store-replay-unavailable"],
+        "reason_code_count": 3,
+        "reason_codes_omitted_count": 0,
+    })
+
+    assert projected["reason_code_count"] == 3
+    assert projected["reason_codes_omitted_count"] == 2
 
 
 def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference(

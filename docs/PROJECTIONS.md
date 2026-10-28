@@ -1690,7 +1690,12 @@ across persisted scheduler passes. Their coverage is marked
 this field was introduced is not reconstructed. A scoped invocation whose ID
 has left `last_trace` can still relate to an exact retained row through
 `retained_trace_relation`, `retained_trace_sequence`, and the corresponding
-retained outcome and resource fields. Retained rows also preserve the exact
+retained outcome and resource fields. New retained rows also preserve the
+recognized scheduler disposition and bounded `scheduler_input_chain`; the ECI
+invocation group exposes them as `retained_trace_scheduler_disposition` and
+`retained_trace_scheduler_input_chain`. Latest exact matches expose the same
+context under the `latest_trace_` prefix. Older rows without these fields stay
+unclassified. Retained rows also preserve the exact
 scheduler result classification, content identity, source-reference status,
 reuse flag, and explicit `not-established` verification status when those
 fields were present on the trace. The ECI view exposes these as
