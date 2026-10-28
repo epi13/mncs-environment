@@ -28,6 +28,7 @@ INPUTS_PATH = Path(__file__).resolve().parents[1] / ".mncs/coherence-passes.json
 MAX_WAVES = 3
 MAX_TRACE_OWNER_ROWS = 16
 MAX_TRACE_TRIGGER_KINDS = 8
+MAX_TRACE_TRIGGER_SUBJECT_IDENTITIES = 8
 MAX_TRACE_RESULT_FIELDS = 16
 OWNER_PASS_OUTCOME_SCHEMA = "mncs.environment.ambient-owner-pass-outcome/1"
 OWNER_PASS_QUIET_REASONS = frozenset({
@@ -195,6 +196,34 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
                 if len(kinds) == MAX_TRACE_TRIGGER_KINDS:
                     break
             row["trigger_kinds"] = kinds
+        raw_subjects = item.get("subjects")
+        if isinstance(raw_subjects, list):
+            reported_subject_count = nonnegative(item.get("subject_count"))
+            subject_count = max(
+                len(raw_subjects), reported_subject_count or 0,
+            )
+            subject_identities = []
+            invalid_subject_count = 0
+            for raw_subject in raw_subjects[:64]:
+                subject = safe_identity(raw_subject)
+                if (subject is None or "/" in subject or "\\" in subject):
+                    invalid_subject_count += 1
+                    continue
+                if subject not in subject_identities:
+                    subject_identities.append(subject)
+                if len(subject_identities) == MAX_TRACE_TRIGGER_SUBJECT_IDENTITIES:
+                    break
+            row["semantic_subject_identity_status"] = (
+                "complete"
+                if subject_count == len(subject_identities)
+                and invalid_subject_count == 0
+                else "partial"
+            )
+            row["semantic_subject_identity_count"] = subject_count
+            row["semantic_subject_identity_omitted_count"] = max(
+                0, subject_count - len(subject_identities),
+            )
+            row["semantic_subject_identities"] = subject_identities
         scheduled.append(row)
 
     raw_skipped = value.get("skipped")
@@ -1218,6 +1247,12 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     expired = {name for name, value in deadlines.items() if now_ms >= value}
     report = {"mode": "bootstrap_scan" if not previous else "targeted_update",
               "events": events[:32], "event_count": len(events), "scheduled": [], "skipped": [], **metrics}
+    if store_reset is not None:
+        report["store_replay"] = {
+            "disposition": "full_owner_reconciliation_required",
+            "candidate_cursor": store_reset.get("candidate_cursor"),
+            "reason": store_reset.get("reason", "bounded replay reset"),
+        }
     results, results_known = _load_results(session, previous.get("result_refs") or {})
     known = known and results_known
     names = list(spec["passes"])
@@ -1247,11 +1282,6 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             # Re-run all declared owners against their authoritative current
             # state before adopting the candidate high-water.
             codes = [2] * len(names)
-            report["store_replay"] = {
-                "disposition": "full_owner_reconciliation_required",
-                "candidate_cursor": store_reset.get("candidate_cursor"),
-                "reason": store_reset.get("reason", "bounded replay reset"),
-            }
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         codes, receipt = [2] * len(names), {}
         report["mode"] = "bounded_reconciliation"
@@ -1300,10 +1330,24 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 1 << index for index in spec["passes"][name]
             )
             owner_events = routed_events.get(name, [])
-            trigger_kinds = list(dict.fromkeys(
-                event["kind"] for event in owner_events
+            trigger_events = [
+                event for event in owner_events
                 if _event_mask([event], spec) & interest_mask
+            ]
+            trigger_kinds = list(dict.fromkeys(
+                event["kind"] for event in trigger_events
             ))[:MAX_TRACE_TRIGGER_KINDS]
+            trigger_subjects = sorted({
+                subject.get("identity")
+                for event in trigger_events
+                for subject in (
+                    event.get("semantic_subjects")
+                    if isinstance(event.get("semantic_subjects"), list)
+                    else []
+                )
+                if isinstance(subject, dict)
+                and isinstance(subject.get("identity"), str)
+            })
             report["scheduled"].append({"pass": name, "owner": name, "disposition": code, "wave": wave,
                 "service_execution_id": service_execution_id,
                 "owner_reused": bool((results[name] or {}).get("reused", False)),
@@ -1311,7 +1355,8 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 "invalidated_input_mask": rows[names.index(name)][3] if rows else None,
                 "timer_or_lifecycle_due": bool(rows[names.index(name)][7]) if rows else None,
                 "inputs": trigger_kinds,
-                "subjects": sorted({item.get("identity", "") for event in owner_events for item in event.get("semantic_subjects", []) if isinstance(item, dict)})[:64]})
+                "subjects": trigger_subjects[:64],
+                "subject_count": len(trigger_subjects)})
             if key and before != _domain_signature(session.snapshot.get(key)):
                 emitted.append({"kind": kind, "producer": name})
         if not emitted or len(scheduled) == len(names):

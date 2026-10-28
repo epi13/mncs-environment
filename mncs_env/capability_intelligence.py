@@ -279,6 +279,8 @@ MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
 MAX_ECI_OWNER_PASS_SUMMARY_ROWS = 8
 MAX_ECI_OWNER_PASS_RESULT_REFERENCES_PER_OWNER = 1
+MAX_ECI_OWNER_PASS_TRIGGER_RECORDS_PER_OWNER = 1
+MAX_ECI_OWNER_PASS_TRIGGER_SUBJECT_IDENTITIES = 2
 MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
 MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
 MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS = 8
@@ -4773,6 +4775,11 @@ def _compact_session_activity_budget_overview(
                                 "verification_status",
                                 "source_reference_status", "source_reference",
                                 "failure_evidence",
+                                "trigger_kinds", "timer_or_lifecycle_due",
+                                "semantic_subject_identity_status",
+                                "semantic_subject_identity_count",
+                                "semantic_subject_identity_omitted_count",
+                                "semantic_subject_identities",
                             )
                             if key in item
                         })
@@ -5416,6 +5423,87 @@ def _compact_owner_pass_decision_summary(
             result["references_omitted_count"] = references_omitted
         return result
 
+    def compact_trigger_evidence(raw: Any) -> dict[str, Any] | None:
+        if not isinstance(raw, dict):
+            return None
+        record_count = raw.get("record_count")
+        records_omitted = raw.get("records_omitted_count")
+        records = raw.get("records")
+        if (
+            type(record_count) is not int or record_count < 0
+            or type(records_omitted) is not int or records_omitted < 0
+            or not isinstance(records, list)
+            or len(records) > MAX_ECI_OWNER_PASS_TRIGGER_RECORDS_PER_OWNER
+            or record_count != len(records) + records_omitted
+        ):
+            return None
+        compact_records = []
+        seen_execution_ids = set()
+        for record in records:
+            if not isinstance(record, dict):
+                return None
+            execution_id = record.get("service_execution_id")
+            subject_status = record.get(
+                "semantic_subject_identity_status",
+            )
+            subject_count = record.get("semantic_subject_identity_count")
+            subjects_omitted = record.get(
+                "semantic_subject_identity_omitted_count",
+            )
+            raw_subjects = record.get("semantic_subject_identities")
+            if (
+                not isinstance(execution_id, str)
+                or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None
+                or execution_id in seen_execution_ids
+                or subject_status not in {"complete", "partial"}
+                or type(subject_count) is not int or subject_count < 0
+                or type(subjects_omitted) is not int or subjects_omitted < 0
+                or not isinstance(raw_subjects, list)
+                or len(raw_subjects) > MAX_ECI_OWNER_PASS_TRIGGER_SUBJECT_IDENTITIES
+                or subjects_omitted < max(0, subject_count - len(raw_subjects))
+            ):
+                return None
+            seen_execution_ids.add(execution_id)
+            subjects = []
+            for subject in raw_subjects:
+                if (
+                    not isinstance(subject, str) or len(subject) > 160
+                    or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", subject)
+                    is None
+                    or subject in subjects
+                ):
+                    return None
+                subjects.append(subject)
+            trigger_kinds = record.get("trigger_kinds", [])
+            if (
+                not isinstance(trigger_kinds, list)
+                or len(trigger_kinds) > 8
+                or any(
+                    not isinstance(kind, str)
+                    or re.fullmatch(r"[a-z][a-z0-9_.-]{0,79}", kind) is None
+                    for kind in trigger_kinds
+                )
+                or len(set(trigger_kinds)) != len(trigger_kinds)
+            ):
+                return None
+            compact_record = {
+                "service_execution_id": execution_id,
+                "trigger_kinds": list(trigger_kinds),
+                "semantic_subject_identity_status": subject_status,
+                "semantic_subject_identity_count": subject_count,
+                "semantic_subject_identity_omitted_count": subjects_omitted,
+                "semantic_subject_identities": subjects,
+            }
+            timer_due = record.get("timer_or_lifecycle_due")
+            if type(timer_due) is bool:
+                compact_record["timer_or_lifecycle_due"] = timer_due
+            compact_records.append(compact_record)
+        return {
+            "record_count": record_count,
+            "records": compact_records,
+            "records_omitted_count": records_omitted,
+        }
+
     prior = value.get("owner_decision_summary")
     if isinstance(prior, dict):
         schema_version = prior.get("schema_version")
@@ -5432,6 +5520,7 @@ def _compact_owner_pass_decision_summary(
                 "mncs.environment.owner-pass-decision-summary/1",
                 "mncs.environment.owner-pass-decision-summary/2",
                 "mncs.environment.owner-pass-decision-summary/3",
+                "mncs.environment.owner-pass-decision-summary/4",
             }
             and status in {"complete", "partial", "coverage-unknown"}
             and (source_count is None or type(source_count) is int and source_count >= 0)
@@ -5497,11 +5586,19 @@ def _compact_owner_pass_decision_summary(
                     schema_version in {
                         "mncs.environment.owner-pass-decision-summary/2",
                         "mncs.environment.owner-pass-decision-summary/3",
+                        "mncs.environment.owner-pass-decision-summary/4",
                     }
                     and (compact_status_counts(
                         owner.get("observed_result_status_counts"),
                     ) or {}).get("result-recorded", 0)
                 ):
+                    break
+                trigger_evidence = compact_trigger_evidence(
+                    owner.get("trigger_evidence"),
+                )
+                if trigger_evidence is not None:
+                    validated_owner["trigger_evidence"] = trigger_evidence
+                elif owner.get("trigger_evidence") is not None:
                     break
                 validated_owners.append(validated_owner)
             else:
@@ -5546,6 +5643,8 @@ def _compact_owner_pass_decision_summary(
             "recorded_result_count": 0,
             "exact_result_references": [],
             "seen_result_references": set(),
+            "trigger_evidence_records": [],
+            "trigger_evidence_record_count": 0,
         })
         decision = item.get("decision")
         if decision == "scheduled":
@@ -5605,6 +5704,67 @@ def _compact_owner_pass_decision_summary(
                         }
                         owner["exact_result_references"].append(reference)
 
+        subject_status = item.get("semantic_subject_identity_status")
+        subject_count = item.get("semantic_subject_identity_count")
+        raw_subjects = item.get("semantic_subject_identities")
+        subjects_omitted = item.get(
+            "semantic_subject_identity_omitted_count", 0,
+        )
+        execution_id = item.get("service_execution_id")
+        raw_trigger_kinds = item.get("trigger_kinds")
+        trigger_kinds = []
+        if isinstance(raw_trigger_kinds, list):
+            for kind in raw_trigger_kinds[:8]:
+                if (
+                    isinstance(kind, str)
+                    and re.fullmatch(r"[a-z][a-z0-9_.-]{0,79}", kind)
+                    and kind not in trigger_kinds
+                ):
+                    trigger_kinds.append(kind)
+        timer_due = item.get("timer_or_lifecycle_due")
+        if (
+            subject_status in {"complete", "partial"}
+            and type(subject_count) is int and subject_count >= 0
+            and isinstance(raw_subjects, list)
+            and type(subjects_omitted) is int and subjects_omitted >= 0
+            and isinstance(execution_id, str)
+            and re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is not None
+            and (trigger_kinds or subject_count > 0 or timer_due is True)
+        ):
+            subject_identities = []
+            for subject in raw_subjects[:8]:
+                if (
+                    isinstance(subject, str) and len(subject) <= 160
+                    and re.fullmatch(
+                        r"[A-Za-z0-9][A-Za-z0-9_.:-]*", subject,
+                    ) is not None
+                    and subject not in subject_identities
+                ):
+                    subject_identities.append(subject)
+            subject_limit = MAX_ECI_OWNER_PASS_TRIGGER_SUBJECT_IDENTITIES
+            subjects_omitted = max(
+                subjects_omitted,
+                max(0, subject_count - min(len(subject_identities), subject_limit)),
+            )
+            record = {
+                "service_execution_id": execution_id,
+                "trigger_kinds": trigger_kinds,
+                "semantic_subject_identity_status": (
+                    "complete" if subject_status == "complete"
+                    and subjects_omitted == 0 else "partial"
+                ),
+                "semantic_subject_identity_count": subject_count,
+                "semantic_subject_identity_omitted_count": subjects_omitted,
+                "semantic_subject_identities": subject_identities[:subject_limit],
+            }
+            if type(timer_due) is bool:
+                record["timer_or_lifecycle_due"] = timer_due
+            owner["trigger_evidence_record_count"] += 1
+            if len(owner["trigger_evidence_records"]) < (
+                MAX_ECI_OWNER_PASS_TRIGGER_RECORDS_PER_OWNER
+            ):
+                owner["trigger_evidence_records"].append(record)
+
     owner_rows = []
     for name, counts in list(owners.items())[:MAX_ECI_OWNER_PASS_SUMMARY_ROWS]:
         owner_row = {
@@ -5636,6 +5796,16 @@ def _compact_owner_pass_decision_summary(
                     unreferenced_result_count
                 )
             owner_row["result_evidence"] = result_evidence
+        trigger_record_count = counts.get("trigger_evidence_record_count", 0)
+        if trigger_record_count:
+            trigger_records = counts.get("trigger_evidence_records", [])
+            owner_row["trigger_evidence"] = {
+                "record_count": trigger_record_count,
+                "records": trigger_records,
+                "records_omitted_count": max(
+                    0, trigger_record_count - len(trigger_records),
+                ),
+            }
         owner_rows.append(owner_row)
     owner_count_omitted = max(0, len(owners) - len(owner_rows))
     unclassified_decision_count = sum(
@@ -5652,7 +5822,7 @@ def _compact_owner_pass_decision_summary(
     else:
         status = "complete"
     return {
-        "schema_version": "mncs.environment.owner-pass-decision-summary/3",
+        "schema_version": "mncs.environment.owner-pass-decision-summary/4",
         "status": status,
         "source_observation_count": source_count,
         "source_omitted_observation_count": source_omitted,
@@ -22031,6 +22201,47 @@ def _environment_service_execution_accountability(
                     if isinstance(kind, str)
                 ]
                 row["trigger_observation_status"] = "recorded"
+            raw_subjects = item.get("semantic_subject_identities")
+            if isinstance(raw_subjects, list):
+                subject_identities = []
+                for subject in raw_subjects[:8]:
+                    if (isinstance(subject, str)
+                            and len(subject) <= 160
+                            and re.fullmatch(
+                                r"[A-Za-z0-9][A-Za-z0-9_.:/-]*", subject,
+                            ) is not None
+                            and "/" not in subject
+                            and "\\" not in subject
+                            and subject not in subject_identities):
+                        subject_identities.append(subject)
+                reported_count = item.get(
+                    "semantic_subject_identity_count",
+                )
+                subject_count = (
+                    reported_count
+                    if type(reported_count) is int and reported_count >= 0
+                    else len(raw_subjects)
+                )
+                source_omitted = item.get(
+                    "semantic_subject_identity_omitted_count", 0,
+                )
+                if type(source_omitted) is not int or source_omitted < 0:
+                    source_omitted = 0
+                omitted = max(
+                    source_omitted,
+                    max(0, subject_count - len(subject_identities)),
+                )
+                source_status = item.get(
+                    "semantic_subject_identity_status",
+                )
+                row["semantic_subject_identity_status"] = (
+                    "complete"
+                    if source_status == "complete" and omitted == 0
+                    else "partial"
+                )
+                row["semantic_subject_identity_count"] = subject_count
+                row["semantic_subject_identity_omitted_count"] = omitted
+                row["semantic_subject_identities"] = subject_identities
             if type(item.get("timer_or_lifecycle_due")) is bool:
                 row["timer_or_lifecycle_due"] = item["timer_or_lifecycle_due"]
             if (type(item.get("run_elapsed_seconds")) in (int, float)

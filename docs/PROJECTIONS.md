@@ -1463,8 +1463,15 @@ many references were omitted by the bound. Version 3 adds per-owner source
 content-integrity status counts and retains the bounded aggregate integrity
 coverage in evidence-priority responses. These are checks of the stored result
 digest and linked identity; they do not establish service correctness, agent
-receipt, or fulfillment. Older version 1 and 2 summaries remain readable
-without being upgraded from partial context.
+receipt, or fulfillment. Version 4 preserves one bounded
+trigger-evidence record per owner when the scheduler records a trigger kind,
+semantic subject, or timer/lifecycle trigger. It links up to two sanitized,
+non-path subject identities and their omission count to the exact service
+execution identity and trigger kinds, including an explicit zero-subject
+observation. These are the scheduler's recorded event relationships; they do
+not establish that an agent needed the service, that the service fulfilled a
+need, or that an event caused the result. Older version 1 through 3 summaries
+remain readable without being upgraded from partial context.
 For recorded verification owner results, the same exact Store relation also
 surfaces bounded obligation and outcome counts, reason-code counts, and up to
 eight non-passing obligation summaries under `verification_result_details`.

@@ -6303,7 +6303,7 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     assert "source_reference" not in compact_observations["items"][0]
     owner_summary = compact_observations["owner_decision_summary"]
     assert owner_summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/3"
+        "mncs.environment.owner-pass-decision-summary/4"
     )
     assert owner_summary["status"] == "partial"
     assert owner_summary["source_observation_count"] == 7
@@ -6433,6 +6433,16 @@ def test_owner_pass_decision_summary_preserves_partial_source_coverage() -> None
         "owner_decision_summary": summary,
     })
     assert compacted_again == summary
+    version_three = deepcopy(summary)
+    version_three["schema_version"] = (
+        "mncs.environment.owner-pass-decision-summary/3"
+    )
+    assert capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 3,
+        "items": [],
+        "owner_decision_summary": version_three,
+    }) == version_three
     version_two = deepcopy(summary)
     version_two["schema_version"] = (
         "mncs.environment.owner-pass-decision-summary/2"
@@ -6496,6 +6506,15 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
                     "mncs-store:ses_evidence:incremental-coherence:doctor:"
                     + "a" * 64
                 ),
+                "trigger_kinds": ["source.changed"],
+                "semantic_subject_identity_status": "complete",
+                "semantic_subject_identity_count": 4,
+                "semantic_subject_identity_omitted_count": 0,
+                "semantic_subject_identities": [
+                    "mncs:compiler:parser", "mncs:compiler:resolve",
+                    "mncs:compiler:typecheck", "mncs:compiler:lower",
+                ],
+                "timer_or_lifecycle_due": False,
             },
             {
                 "owner_pass": "doctor",
@@ -6556,6 +6575,21 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
                     ),
                 }],
             },
+            "trigger_evidence": {
+                "record_count": 1,
+                "records": [{
+                    "service_execution_id": "ase_" + "a" * 32,
+                    "trigger_kinds": ["source.changed"],
+                    "semantic_subject_identity_status": "partial",
+                    "semantic_subject_identity_count": 4,
+                    "semantic_subject_identity_omitted_count": 2,
+                    "semantic_subject_identities": [
+                        "mncs:compiler:parser", "mncs:compiler:resolve",
+                    ],
+                    "timer_or_lifecycle_due": False,
+                }],
+                "records_omitted_count": 0,
+            },
         },
         {
             "owner_pass": "verification",
@@ -6588,6 +6622,39 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
         "owner_decision_summary": summary,
     })
     assert compacted_again == summary
+
+
+def test_owner_trigger_evidence_preserves_kind_when_subjects_are_empty() -> None:
+    summary = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 1,
+        "omitted_count": 0,
+        "items": [{
+            "owner_pass": "projections",
+            "decision": "scheduled",
+            "service_execution_id": "ase_" + "c" * 32,
+            "trigger_kinds": ["source.changed"],
+            "semantic_subject_identity_status": "complete",
+            "semantic_subject_identity_count": 0,
+            "semantic_subject_identity_omitted_count": 0,
+            "semantic_subject_identities": [],
+            "timer_or_lifecycle_due": False,
+        }],
+    })
+
+    assert summary is not None
+    assert summary["owners"][0]["trigger_evidence"] == {
+        "record_count": 1,
+        "records": [{
+            "service_execution_id": "ase_" + "c" * 32,
+            "trigger_kinds": ["source.changed"],
+            "semantic_subject_identity_status": "complete",
+            "semantic_subject_identity_count": 0,
+            "semantic_subject_identity_omitted_count": 0,
+            "semantic_subject_identities": [],
+            "timer_or_lifecycle_due": False,
+        }],
+        "records_omitted_count": 0,
+    }
 
 
 def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() -> None:
@@ -6624,7 +6691,7 @@ def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() ->
 
     assert summary is not None
     assert summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/3"
+        "mncs.environment.owner-pass-decision-summary/4"
     )
     evidence = summary["owners"][0]["result_evidence"]
     assert evidence["unreferenced_result_count"] == 1
@@ -7698,6 +7765,8 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
                 "service_execution_id": "ase_" + "e" * 32,
                 "run_elapsed_seconds": 0.2,
                 "inputs": ["source.changed"],
+                "subjects": ["mncs:compiler:parser"],
+                "subject_count": 1,
                 "checkout": "/private/project",
             }],
             "skipped": [{"pass": "doctor", "reason": "current inputs"}],
@@ -7743,6 +7812,12 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert view["execution"]["scheduled_passes"][0][
         "verification_status"
     ] == "not-established"
+    assert view["execution"]["scheduled_passes"][0][
+        "semantic_subject_identity_status"
+    ] == "complete"
+    assert view["execution"]["scheduled_passes"][0][
+        "semantic_subject_identities"
+    ] == ["mncs:compiler:parser"]
     assert view["execution"]["ambient_fulfillment"] == "not-established"
     assert view["execution"]["agent_need_opportunity_denominator"] == "not-recorded"
     family_observation = projection["session_activity"][
@@ -8705,6 +8780,15 @@ def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> 
             "outcome_status": "no-failure-reported",
             "verification_status": "not-established",
         })
+        if owner == "doctor":
+            owners[-1].update({
+                "trigger_kinds": ["semantic.changed"],
+                "semantic_subject_identity_status": "complete",
+                "semantic_subject_identity_count": 1,
+                "semantic_subject_identity_omitted_count": 0,
+                "semantic_subject_identities": ["mncs:module:lexer"],
+                "timer_or_lifecycle_due": False,
+            })
     activity = {
         "status": "partial",
         "service_accountability": {
@@ -8747,7 +8831,7 @@ def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> 
     )
     owner_summary = summary["owner_pass_observations"]["owner_decision_summary"]
     assert owner_summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/3"
+        "mncs.environment.owner-pass-decision-summary/4"
     )
     assert [
         owner["observed_source_content_integrity_status_counts"]
@@ -8756,6 +8840,15 @@ def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> 
         {"content-integrity-verified": 1},
         {"source-read-budget-exhausted": 1},
     ]
+    assert owner_summary["owners"][0]["trigger_evidence"]["records"] == [{
+        "service_execution_id": "ase_" + "a" * 32,
+        "trigger_kinds": ["semantic.changed"],
+        "semantic_subject_identity_status": "complete",
+        "semantic_subject_identity_count": 1,
+        "semantic_subject_identity_omitted_count": 0,
+        "semantic_subject_identities": ["mncs:module:lexer"],
+        "timer_or_lifecycle_due": False,
+    }]
 
 
 def test_evidence_priority_summary_retains_verification_provider_readiness() -> None:

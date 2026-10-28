@@ -197,6 +197,11 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
             "service_execution_id": "ase_" + "a" * 32,
             "run_elapsed_seconds": 0.125,
             "inputs": ["source.changed", "private/source.mncs"],
+            "subjects": [
+                "private/project/source.mncs",
+                *[f"mncs:module:{index}" for index in range(10)],
+            ],
+            "subject_count": 11,
             "checkout": private_path,
         }],
         "skipped": [{"pass": "doctor", "reason": "current inputs"}],
@@ -223,12 +228,25 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
         "ase_" + "a" * 32
     )
     assert projected["scheduled_passes"][0]["trigger_kinds"] == ["source.changed"]
+    assert projected["scheduled_passes"][0][
+        "semantic_subject_identity_status"
+    ] == "partial"
+    assert projected["scheduled_passes"][0][
+        "semantic_subject_identity_count"
+    ] == 11
+    assert projected["scheduled_passes"][0][
+        "semantic_subject_identity_omitted_count"
+    ] == 3
+    assert projected["scheduled_passes"][0][
+        "semantic_subject_identities"
+    ] == [f"mncs:module:{index}" for index in range(8)]
     assert projected["skipped_passes"] == [{
         "owner": "doctor", "reason": "current inputs",
     }]
     assert projected["ambient_fulfillment"] == "not-established"
     assert projected["agent_need_opportunity_denominator"] == "not-recorded"
     assert private_path not in json.dumps(projected)
+    assert "private/project/source.mncs" not in json.dumps(projected)
 
 
 def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference(
@@ -522,8 +540,22 @@ def test_later_owner_wave_records_its_derived_trigger(tmp_path, monkeypatch):
     def observe(_session, _prior):
         event_sample['count'] += 1
         events = (
-            [{'kind': 'source.changed', 'identity': 'fixture-source'}]
-            if event_sample['count'] == 1 else []
+            [
+                {
+                    'kind': 'source.changed',
+                    'identity': 'fixture-source',
+                    'semantic_subjects': [
+                        {'identity': 'mncs:compiler:lexer'},
+                    ],
+                },
+                {
+                    'kind': 'projection.changed',
+                    'identity': 'fixture-projection',
+                    'semantic_subjects': [
+                        {'identity': 'mncs:environment:projection'},
+                    ],
+                },
+            ] if event_sample['count'] == 1 else []
         )
         return (
             {'repositories': {}, 'artifacts': {}, 'libraries': {}},
@@ -579,6 +611,12 @@ def test_later_owner_wave_records_its_derived_trigger(tmp_path, monkeypatch):
     )
     assert family_pass['wave'] == 1
     assert family_pass['inputs'] == ['verification.changed']
+    verification_pass = next(
+        item for item in trace['scheduled'] if item['pass'] == 'verification'
+    )
+    assert verification_pass['inputs'] == ['source.changed']
+    assert verification_pass['subjects'] == ['mncs:compiler:lexer']
+    assert verification_pass['subject_count'] == 1
     verification_result = next(
         item for item in trace['owner_pass_results']
         if item['owner'] == 'verification'
@@ -794,6 +832,54 @@ def test_store_replay_reset_holds_cursor_until_full_owner_reconciliation(partici
     assert len(retried["scheduled"]) == 7
     assert retried["store_replay"]["disposition"] == "full_owner_reconciliation_complete"
     assert participant.snapshot["coherence"]["store_cursor"] == candidate
+
+
+def test_store_replay_report_survives_route_and_postpass_observation_failure(
+    tmp_path, monkeypatch,
+):
+    automation = tmp_path / "automation"
+    marker = automation / "native/mncs/automation/coherence.mncs"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("fixture provider presence")
+    monkeypatch.setenv("MNCS_AUTOMATION_ROOT", str(automation))
+    participant = Participant(tmp_path / "state", repository(tmp_path))
+    participant.store = SimpleNamespace(generation=lambda: 999)
+    monkeypatch.setattr(family, "scheduler_deadlines", lambda _session: [])
+    _, owned = runners()
+    old = "old-cursor"
+    reset = [{
+        "kind": "store.reconcile_required",
+        "candidate_cursor": "999",
+        "reason": "observation bound exceeded",
+    }]
+    store_results = iter(((reset, old, True), ([], old, False)))
+    monkeypatch.setattr(
+        coherence, "_observe",
+        lambda *_args: ({"repositories": {}}, [], True, {}),
+    )
+    monkeypatch.setattr(
+        coherence, "_store_events", lambda *_args: next(store_results),
+    )
+    monkeypatch.setattr(
+        coherence, "_policy_identity", lambda *_args: ("policy", {}),
+    )
+    monkeypatch.setattr(
+        coherence, "_load_results", lambda *_args: ({}, True),
+    )
+    monkeypatch.setattr(
+        coherence, "_owner_pass_results", lambda *_args, **_kwargs: {},
+    )
+    monkeypatch.setattr(
+        coherence, "_file_events",
+        lambda *_args: (_ for _ in ()).throw(KeyError("route")),
+    )
+    _, trace = coherence.tick(participant, {}, owned)
+
+    assert len(trace["scheduled"]) == 7
+    assert trace["store_replay"]["disposition"] == (
+        "reconciliation_incomplete_or_store_advanced"
+    )
+    assert trace["mode"] == "bounded_reconciliation"
 
 
 def test_store_snapshot_conflict_replays_semantic_work_until_retry_commits(participant):
