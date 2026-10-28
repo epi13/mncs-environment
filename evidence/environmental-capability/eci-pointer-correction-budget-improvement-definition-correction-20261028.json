@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pointer_correction_budget_improvement_definition_correction_20261028",
+  "captured_at": "2026-10-28T07:31:36Z",
+  "measurement_basis": "append-only-reconciliation-to-verified-occurrence-definition",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI pressure-definition reconciliation",
+    "request": {
+      "target_observation_identity": "ev_environment_eci_pointer_correction_budget_improvement_20261028",
+      "corrected_field_paths": ["pressure_hypothesis.actionable_recommendation"],
+      "basis_observation_identity": "ev_environment_eci_pointer_correction_budget_pressure_20261028"
+    },
+    "outcome": {
+      "status": "append-only-pressure-recommendation-correction-recorded",
+      "definition_field": "actionable_recommendation",
+      "replacement": "When a selected append-only pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_pointer_correction_budget_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "969c8a60b50e2187f4cce9ea4069affaf7da8a8b",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-improvement-20261028.json",
+      "sha256": "7e65d2f83098aa746d16d939b0371dcac308e2a483a0d45752156039179ac0a8"
+    },
+    "corrected_field_paths": ["pressure_hypothesis.actionable_recommendation"],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "When a selected append-only pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget."
+    },
+    "reason": "The pressure occurrence supplies the verified recommendation for this hypothesis identity. Align this supporting-context record to that exact definition without changing its implementation or verification relationship."
+  },
+  "supporting_sources": [
+    {
+      "kind": "verified-pressure-occurrence",
+      "identity": "ev_environment_eci_pointer_correction_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "969c8a60b50e2187f4cce9ea4069affaf7da8a8b",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-pressure-20261028.json",
+      "sha256": "0dfd44403005458ca9c0b0ed7fe7c03387b046a76b4f31e79c09aa6ca07b5908"
+    }
+  ],
+  "measurement_limits": [
+    "The correction aligns one pressure-definition field; it does not add another occurrence or establish recurrence.",
+    "Agent intervention burden and improvement durability remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
