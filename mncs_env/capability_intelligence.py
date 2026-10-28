@@ -2969,6 +2969,17 @@ def _compact_service_accountability_overview(
         }
             and key in summary and summary[key] is None)
     }
+    executor_readiness_relation = summary.get(
+        "ambient_verification_executor_readiness_relation",
+    )
+    if (isinstance(executor_readiness_relation, dict)
+            and executor_readiness_relation.get("schema_version")
+            == "mncs.environment.ambient-verification-readiness-link/1"
+            and isinstance(executor_readiness_relation.get("links"), list)
+            and len(executor_readiness_relation["links"]) <= 2):
+        compact_summary["ambient_verification_executor_readiness_relation"] = (
+            executor_readiness_relation
+        )
     for key in (
         "capability_relation_status_counts", "readiness_status_counts",
         "reconciliation_operation_status_counts",
@@ -3619,6 +3630,163 @@ def _verification_executor_obligation_candidates(
                 if len(candidates) >= MAX_AMBIENT_VERIFICATION_ISSUES:
                     return candidates
     return candidates
+
+
+def _ambient_verification_executor_readiness_relation(
+    ambient_service_execution: Any, capability_delivery: Any,
+) -> dict[str, Any] | None:
+    """Join verified ambient verification records to current provider context."""
+    candidates = _verification_executor_obligation_candidates(
+        ambient_service_execution,
+    )
+    if not isinstance(capability_delivery, dict):
+        return None
+    context = _compact_verification_executor_context(
+        capability_delivery.get("verification_executor_context"),
+    )
+    if context is None:
+        return None
+    context_rows = context.get("obligations")
+    context_rows = context_rows if isinstance(context_rows, list) else []
+
+    def key(row: Any) -> tuple[str, str, str, str, str] | None:
+        if not isinstance(row, dict):
+            return None
+        values = (
+            row.get("repository"), row.get("obligation_identity"),
+            row.get("capability_identity"),
+            row.get("verification_evidence_reference"),
+            row.get("owner_result_reference"),
+        )
+        return values if all(isinstance(value, str) and value for value in values) else None
+
+    candidates_by_key: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = {}
+    for row in candidates:
+        identity = key(row)
+        if identity is not None:
+            candidates_by_key.setdefault(identity, []).append(row)
+    context_by_key: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = {}
+    for row in context_rows:
+        identity = key(row)
+        if identity is not None:
+            context_by_key.setdefault(identity, []).append(row)
+
+    links = []
+    linked: set[tuple[str, str, str, str, str]] = set()
+    for identity, readiness_rows in context_by_key.items():
+        source_rows = candidates_by_key.get(identity, [])
+        if len(readiness_rows) != 1 or len(source_rows) != 1:
+            continue
+        readiness = readiness_rows[0].get("provider_execution_readiness")
+        readiness = readiness if isinstance(readiness, dict) else {}
+        checkout = readiness.get("provider_checkout")
+        checkout = checkout if isinstance(checkout, dict) else {}
+        provider_context = readiness.get("same_provider_capability_context")
+        provider_context = provider_context if isinstance(provider_context, dict) else {}
+        unavailable = provider_context.get("unavailable_bindings")
+        unavailable = unavailable if isinstance(unavailable, list) else []
+        link = {
+            "repository": identity[0],
+            "obligation_identity": identity[1],
+            "capability_identity": identity[2],
+            "verification_evidence_reference": identity[3],
+            "owner_result_reference": identity[4],
+            "verification_source_integrity_status": "verified",
+            "owner_result_content_integrity_status": "content-integrity-verified",
+            "verification_outcome": source_rows[0].get("verification_outcome"),
+            "verification_reason": source_rows[0].get("verification_reason"),
+            "unmeasurable_reason": source_rows[0].get("unmeasurable_reason"),
+            "binding_relation_status": readiness_rows[0].get(
+                "binding_relation_status", "not-recorded",
+            ),
+            "executor_availability_status": readiness.get(
+                "executor_availability_status", "not-recorded",
+            ),
+            "executor_availability_verification": readiness.get(
+                "executor_availability_verification", "not-recorded",
+            ),
+            "provider_readiness_status": "not-established",
+            "causal_status": "not-established",
+        }
+        if checkout:
+            link["provider_checkout"] = {
+                key: checkout[key]
+                for key in ("branch", "head", "clean_status")
+                if isinstance(checkout.get(key), str)
+            }
+        if provider_context:
+            link["same_provider_capability_context"] = {
+                "status": provider_context.get("status", "not-recorded"),
+                "basis": "same-provider-identity-in-current-session-binding-snapshot",
+                "dependency_status": "not-established",
+                "unavailable_bindings": [
+                    {key: item[key] for key in (
+                        "capability", "availability_status", "availability_code",
+                    ) if isinstance(item.get(key), str)}
+                    for item in unavailable[:2]
+                    if isinstance(item, dict)
+                    and isinstance(item.get("capability"), str)
+                ],
+            }
+        links.append(link)
+        linked.add(identity)
+        if len(links) == 2:
+            break
+
+    omitted = context.get("obligations_omitted_by_response_budget", 0)
+    omitted = omitted if type(omitted) is int and omitted >= 0 else 0
+    context_count = context.get("obligation_count")
+    if type(context_count) is not int or context_count < len(context_rows):
+        context_count = len(context_rows) + omitted
+    unmatched_context = sum(
+        len(rows) for identity, rows in context_by_key.items()
+        if identity not in linked
+    )
+    unmatched_candidates = sum(
+        len(rows) for identity, rows in candidates_by_key.items()
+        if identity not in linked
+    )
+    context_not_returned = sum(
+        len(rows) for identity, rows in candidates_by_key.items()
+        if identity not in context_by_key
+    )
+    complete = (
+        omitted == 0 and context_count == len(context_rows)
+        and len(links) == len(candidates)
+        and unmatched_context == 0 and unmatched_candidates == 0
+    )
+    return {
+        "schema_version": "mncs.environment.ambient-verification-readiness-link/1",
+        "status": "observed" if complete else "partial",
+        "scope": "selected-session-exact-verification-evidence-and-provider-readiness",
+        "source": {
+            "ambient_service_execution_digest": digest_hex(ambient_service_execution),
+            "binding_scan_complete": context.get("binding_scan_complete") is True,
+        },
+        "join_basis": "exact repository, obligation, executor capability, verification evidence Store reference, and owner-result Store reference",
+        "summary": {
+            "integrity_verified_candidate_count": len(candidates),
+            "provider_readiness_context_count": context_count,
+            "exact_link_count": len(links),
+            "unmatched_candidate_count": unmatched_candidates,
+            "unmatched_context_count": unmatched_context,
+            "response_budget_omitted_context_count": omitted,
+            "candidate_context_not_returned_count": context_not_returned,
+            "candidate_context_absence_attribution_status": (
+                "not-established" if context_not_returned else "not-applicable"
+            ),
+        },
+        "links": links,
+        "ambient_fulfillment_status": "not-established",
+        "agent_receipt_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "causal_status": "not-established",
+        "measurement_limits": [
+            "Exact source joins provide traceability; they do not establish that a provider caused the verification outcome or fulfilled an agent need.",
+            "Availability and checkout fields are current-session observations; readiness, agent receipt, and intervention burden remain unestablished or unmeasured.",
+            "Same-provider capability rows are identity-correlated and do not establish a dependency.",
+        ],
+    }
 
 
 def _compact_environment_owner_failure_details(
@@ -4532,6 +4700,17 @@ def _compact_session_activity_evidence_priority_overview(
                 )
                 if key in summary
             }
+            executor_readiness_relation = summary.get(
+                "ambient_verification_executor_readiness_relation",
+            )
+            if (isinstance(executor_readiness_relation, dict)
+                    and executor_readiness_relation.get("schema_version")
+                    == "mncs.environment.ambient-verification-readiness-link/1"
+                    and isinstance(executor_readiness_relation.get("links"), list)
+                    and len(executor_readiness_relation["links"]) <= 2):
+                compact_summary[
+                    "ambient_verification_executor_readiness_relation"
+                ] = executor_readiness_relation
             execution = summary.get("environment_service_execution")
             if isinstance(execution, dict):
                 compact_execution = {}
@@ -20189,6 +20368,12 @@ def _session_service_accountability(
     """Relate service declarations, scheduler evidence and session activity."""
     if not isinstance(service_readiness, dict):
         return None
+    delivery = capability_delivery if isinstance(capability_delivery, dict) else {}
+    executor_readiness_relation = (
+        _ambient_verification_executor_readiness_relation(
+            ambient_service_execution, delivery,
+        )
+    )
     raw_services = service_readiness.get("services")
     raw_services = raw_services if isinstance(raw_services, list) else []
     if not raw_services:
@@ -20240,6 +20425,43 @@ def _session_service_accountability(
         readiness_summary = (
             readiness_summary if isinstance(readiness_summary, dict) else {}
         )
+        summary = {
+            "declared_service_count": (
+                0 if declaration_status == "explicit-empty" else None
+            ),
+            "projected_service_count": 0,
+            "eligible_service_opportunity_count": None,
+            "ambient_fulfillment_status": "not-measured",
+            "agent_intervention_burden_status": "not-measured",
+            "agent_receipt_status": "not-established",
+            "outcome_quality_status": "not-established",
+            "readiness_probe_opportunity_count": readiness_summary.get(
+                "probe_opportunity_count", 0,
+            ),
+            "readiness_probe_observation_record_count": readiness_summary.get(
+                "probe_observation_record_count", 0,
+            ),
+            "readiness_probe_observation_missing_count": readiness_summary.get(
+                "probe_observation_missing_count", 0,
+            ),
+            "readiness_probe_observation_ambiguous_count": readiness_summary.get(
+                "probe_observation_ambiguous_count", 0,
+            ),
+            "readiness_probe_configuration_missing_count": readiness_summary.get(
+                "probe_configuration_missing_count", 0,
+            ),
+            "readiness_probe_observation_unmatched_count": readiness_summary.get(
+                "probe_observation_unmatched_count", 0,
+            ),
+            "readiness_probe_coverage_status": readiness_summary.get(
+                "probe_observation_coverage_status",
+                "no-declared-probe-opportunities",
+            ),
+        }
+        if executor_readiness_relation is not None:
+            summary["ambient_verification_executor_readiness_relation"] = (
+                executor_readiness_relation
+            )
         return {
             "schema_version": "mncs.environment.service-accountability/1",
             "status": (
@@ -20253,39 +20475,7 @@ def _session_service_accountability(
                 else "selected-session-environment-owner-pass-contract"
             ),
             "source": source,
-            "summary": {
-                "declared_service_count": (
-                    0 if declaration_status == "explicit-empty" else None
-                ),
-                "projected_service_count": 0,
-                "eligible_service_opportunity_count": None,
-                "ambient_fulfillment_status": "not-measured",
-                "agent_intervention_burden_status": "not-measured",
-                "agent_receipt_status": "not-established",
-                "outcome_quality_status": "not-established",
-                "readiness_probe_opportunity_count": readiness_summary.get(
-                    "probe_opportunity_count", 0,
-                ),
-                "readiness_probe_observation_record_count": readiness_summary.get(
-                    "probe_observation_record_count", 0,
-                ),
-                "readiness_probe_observation_missing_count": readiness_summary.get(
-                    "probe_observation_missing_count", 0,
-                ),
-                "readiness_probe_observation_ambiguous_count": readiness_summary.get(
-                    "probe_observation_ambiguous_count", 0,
-                ),
-                "readiness_probe_configuration_missing_count": readiness_summary.get(
-                    "probe_configuration_missing_count", 0,
-                ),
-                "readiness_probe_observation_unmatched_count": readiness_summary.get(
-                    "probe_observation_unmatched_count", 0,
-                ),
-                "readiness_probe_coverage_status": readiness_summary.get(
-                    "probe_observation_coverage_status",
-                    "no-declared-probe-opportunities",
-                ),
-            },
+            "summary": summary,
             "ambient_fulfillment": {
                 "status": "not-measured",
                 "eligible_opportunity_denominator": "not-recorded",
@@ -20316,7 +20506,6 @@ def _session_service_accountability(
             ],
         }
 
-    delivery = capability_delivery if isinstance(capability_delivery, dict) else {}
     raw_bindings = delivery.get("bindings")
     raw_bindings = raw_bindings if isinstance(raw_bindings, list) else []
     delivery_source = delivery.get("use_event_window")
@@ -20575,6 +20764,10 @@ def _session_service_accountability(
             "probe_observation_coverage_status", "not-measured",
         ),
     }
+    if executor_readiness_relation is not None:
+        summary["ambient_verification_executor_readiness_relation"] = (
+            executor_readiness_relation
+        )
     return {
         "schema_version": "mncs.environment.service-accountability/1",
         "status": (

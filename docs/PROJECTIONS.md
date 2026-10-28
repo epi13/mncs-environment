@@ -1404,6 +1404,22 @@ service-accountability projection. It preserves `verification_status` as
 the summary does not infer that a capability gap is the only cause or that
 future verification will pass.
 
+`service_accountability.summary.ambient_verification_executor_readiness_relation`
+joins those integrity-verified ambient verification obligations to the
+selected session's exact provider readiness context by repository, obligation,
+executor capability, verification Store reference, and owner-result Store
+reference. It preserves bounded links through response compaction so an agent
+can inspect the verification outcome and its current provider context together.
+The provider snapshot remains a substrate observation: an available executor
+does not establish readiness, and another unavailable capability from the same
+provider is identity-correlated only. The relation does not establish that a
+provider caused the verification outcome, that an agent received a result, or
+that intervention burden fell. Unmatched or budget-omitted records remain
+visible in bounded counts. A response-budget omission does not identify which
+absent candidate was omitted; absence attribution remains unestablished.
+Ambient fulfillment and intervention burden remain not established or not
+measured.
+
 When a Family ambient pass persists `family_last_summary`, ECI exposes it as
 `session_activity.family_ambient_observation`, with the selected session,
 Environment, snapshot sequence, an observation-epoch key when recorded, and a

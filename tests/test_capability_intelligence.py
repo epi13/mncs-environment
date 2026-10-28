@@ -7532,8 +7532,102 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "summary": {},
     }
     accountability = capability_intelligence._session_service_accountability(
-        readiness, {}, snapshot, ambient_service_execution=activity,
+        readiness, executor_delivery, snapshot,
+        ambient_service_execution=activity,
     )
+    readiness_relation = accountability["summary"][
+        "ambient_verification_executor_readiness_relation"
+    ]
+    assert readiness_relation["status"] == "observed"
+    assert readiness_relation["join_basis"] == (
+        "exact repository, obligation, executor capability, verification evidence Store reference, and owner-result Store reference"
+    )
+    assert readiness_relation["summary"] == {
+        "integrity_verified_candidate_count": 1,
+        "provider_readiness_context_count": 1,
+        "exact_link_count": 1,
+        "unmatched_candidate_count": 0,
+        "unmatched_context_count": 0,
+        "response_budget_omitted_context_count": 0,
+        "candidate_context_not_returned_count": 0,
+        "candidate_context_absence_attribution_status": "not-applicable",
+    }
+    readiness_link = readiness_relation["links"][0]
+    assert readiness_link["repository"] == "mncs-test"
+    assert readiness_link["obligation_identity"] == (
+        "mncs-test.native-provider.execution"
+    )
+    assert readiness_link["verification_evidence_reference"] == (
+        verification_reference
+    )
+    assert readiness_link["owner_result_reference"] == owner_reference
+    assert readiness_link["verification_outcome"] == "excluded"
+    assert readiness_link["verification_reason"] == "executor_not_runnable"
+    assert readiness_link["executor_availability_status"] == "available"
+    assert readiness_link["executor_availability_verification"] == "substrate"
+    assert readiness_link["provider_readiness_status"] == "not-established"
+    assert readiness_link["provider_checkout"]["head"] == "b" * 40
+    assert readiness_link["same_provider_capability_context"][
+        "dependency_status"
+    ] == "not-established"
+    assert readiness_link["same_provider_capability_context"][
+        "unavailable_bindings"
+    ][0]["capability"] == "mncs-test:canonical-vm-tests"
+    assert readiness_relation["causal_status"] == "not-established"
+    assert readiness_relation["agent_intervention_burden_status"] == (
+        "not-measured"
+    )
+
+    mismatched_delivery = json.loads(json.dumps(executor_delivery))
+    mismatched_delivery["verification_executor_context"]["obligations"][0][
+        "owner_result_reference"
+    ] = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + "0" * 64
+    )
+    mismatched_relation = (
+        capability_intelligence._ambient_verification_executor_readiness_relation(
+            activity, mismatched_delivery,
+        )
+    )
+    assert mismatched_relation["status"] == "partial"
+    assert mismatched_relation["summary"]["exact_link_count"] == 0
+    assert mismatched_relation["summary"]["unmatched_candidate_count"] == 1
+    assert mismatched_relation["summary"]["unmatched_context_count"] == 1
+
+    budget_activity = json.loads(json.dumps(activity))
+    budget_candidate = budget_activity["execution"]["owner_pass_results"][
+        "results"
+    ][2]["verification_evidence"]["investigation_candidates"][
+        "candidates"
+    ][0]
+    extra_obligation = json.loads(json.dumps(
+        budget_candidate["obligation_repository_examples"][0]
+    ))
+    extra_obligation["obligation"] = "mncs-test.native-provider.runtime"
+    budget_candidate["obligation_repository_examples"].append(extra_obligation)
+    budget_candidate["affected_obligation_count"] = 2
+    budget_delivery = json.loads(json.dumps(executor_delivery))
+    budget_context = budget_delivery["verification_executor_context"]
+    budget_context["obligation_count"] = 2
+    budget_context["obligations_returned"] = 1
+    budget_context["obligations_omitted_by_response_budget"] = 1
+    budget_context["obligations_truncated_by_response_budget"] = True
+    budget_relation = (
+        capability_intelligence._ambient_verification_executor_readiness_relation(
+            budget_activity, budget_delivery,
+        )
+    )
+    assert budget_relation["status"] == "partial"
+    assert budget_relation["summary"]["exact_link_count"] == 1
+    assert budget_relation["summary"]["unmatched_candidate_count"] == 1
+    assert budget_relation["summary"]["unmatched_context_count"] == 0
+    assert budget_relation["summary"]["response_budget_omitted_context_count"] == 1
+    assert budget_relation["summary"]["candidate_context_not_returned_count"] == 1
+    assert budget_relation["summary"][
+        "candidate_context_absence_attribution_status"
+    ] == "not-established"
+
     execution_summary = accountability["environment_service_execution"][
         "summary"
     ]
@@ -7585,6 +7679,18 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
             accountability, activity,
         )
     )
+    compact_readiness_relation = compact_accountability["summary"][
+        "ambient_verification_executor_readiness_relation"
+    ]
+    assert compact_readiness_relation["summary"]["exact_link_count"] == 1
+    compact_readiness_link = compact_readiness_relation["links"][0]
+    assert compact_readiness_link["owner_result_reference"] == owner_reference
+    assert compact_readiness_link["provider_readiness_status"] == (
+        "not-established"
+    )
+    assert compact_readiness_link["same_provider_capability_context"][
+        "unavailable_bindings"
+    ][0]["capability"] == "mncs-test:canonical-vm-tests"
     compact_summary = compact_accountability["summary"][
         "environment_service_execution"
     ]["summary"]
@@ -7609,6 +7715,13 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
             response_budget_activity,
         )
     )
+    budget_readiness_relation = budget_overview["service_accountability"][
+        "summary"
+    ]["ambient_verification_executor_readiness_relation"]
+    assert budget_readiness_relation["summary"]["exact_link_count"] == 1
+    assert budget_readiness_relation["links"][0][
+        "owner_result_reference"
+    ] == owner_reference
     budget_summary = budget_overview["service_accountability"]["summary"][
         "environment_service_execution"
     ]["summary"]
