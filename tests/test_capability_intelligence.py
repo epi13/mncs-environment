@@ -9,7 +9,7 @@ import time
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from mncs_env import capability_intelligence, claims, cli, doctor, projections
 from mncs_env.sessions import LifecycleError
@@ -6622,6 +6622,239 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     assert failed_execution["scheduled_passes"][0][
         "verification_status"
     ] == "not-established"
+
+
+def test_owner_pass_store_results_expose_bounded_content_integrity(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    session_id = session.session_id
+    records: dict[str, dict[str, object]] = {}
+    result_rows = []
+    scheduled = []
+    service_ids = ["ase_" + f"{index + 1:032x}" for index in range(18)]
+
+    def add_result(index: int, *, record_index: int, identity: str | None = None,
+                   source_session: str | None = None) -> None:
+        block = {"operation_status": "complete", "sequence": record_index}
+        owner_record: dict[str, object] = {"block": block}
+        source_session = source_session or session_id
+        reference = (
+            f"mncs-store:{source_session}:incremental-coherence:doctor:"
+            + capability_intelligence.digest_hex(owner_record, length=64)
+        )
+        records[reference] = owner_record
+        result_rows.append({
+            "owner": "doctor",
+            "service_execution_id": service_ids[index],
+            "result_status": "result-recorded",
+            "result_identity": identity or capability_intelligence.digest_hex(
+                block, length=64,
+            ),
+            "source_reference_status": "store-record",
+            "source_reference": reference,
+            "operation_status": "complete",
+            "verification_status": "not-established",
+        })
+        scheduled.append({
+            "owner": "doctor",
+            "service_execution_id": service_ids[index],
+            "disposition": 1,
+            "wave": 0,
+            "inputs": [],
+        })
+
+    add_result(0, record_index=0)
+    add_result(1, record_index=0, identity="f" * 64)
+    add_result(2, record_index=2, source_session="ses_foreign")
+    for index in range(3, 18):
+        add_result(index, record_index=index)
+
+    trace = {
+        "mode": "bounded_reconciliation",
+        "trace_persistence_status": "session-snapshot",
+        "event_count": len(result_rows),
+        "elapsed_seconds": 0.1,
+        "scheduled": scheduled,
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": result_rows,
+    }
+    reads: list[str] = []
+
+    def read_evidence(_session, owner: str, reference: str) -> dict:
+        assert _session is session
+        assert owner == "incremental-coherence:doctor"
+        assert reference in records
+        reads.append(reference)
+        return records[reference]
+
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        side_effect=read_evidence,
+    ):
+        activity = capability_intelligence._session_ambient_service_execution(
+            session, {"coherence": {"last_trace": trace}},
+        )
+
+    owner_results = activity["execution"]["owner_pass_results"]
+    projected_rows = owner_results["results"]
+    assert len(projected_rows) == 16
+    assert projected_rows[0]["source_content_integrity_status"] == (
+        "content-integrity-verified"
+    )
+    assert projected_rows[1]["source_content_integrity_status"] == (
+        "result-identity-mismatch"
+    )
+    assert projected_rows[2]["source_content_integrity_status"] == (
+        "source-reference-invalid"
+    )
+    foreign_reference = next(
+        reference for reference in records if reference.startswith(
+            "mncs-store:ses_foreign:",
+        )
+    )
+    assert foreign_reference not in reads
+    foreign_pointer, foreign_status = (
+        capability_intelligence._ambient_owner_result_store_source(
+            session,
+            {
+                "result_status": "result-recorded",
+                "source_reference_status": "store-record",
+                "owner": "doctor",
+                "source_reference": foreign_reference,
+                "result_identity": "0" * 64,
+            },
+        )
+    )
+    assert foreign_pointer is None
+    assert foreign_status == "source-reference-invalid"
+    assert all(
+        row["source_content_integrity_status"]
+        == "source-verification-limit-exhausted"
+        for row in projected_rows[9:]
+    )
+    assert len(reads) == 8
+
+    integrity = owner_results["owner_result_content_integrity"]
+    assert integrity["coverage_status"] == "partial"
+    assert integrity["read_time_budget_seconds"] == 1.0
+    assert isinstance(integrity["integrity_elapsed_seconds"], float)
+    assert integrity["integrity_elapsed_seconds"] >= 0
+    assert integrity["store_result_record_count"] == 16
+    assert integrity["content_integrity_verified_count"] == 7
+    assert integrity["content_integrity_unverified_count"] == 9
+    assert integrity["content_integrity_not_checked_count"] == 8
+    assert integrity["result_records_omitted"] == 2
+    assert integrity["status_counts"] == {
+        "content-integrity-verified": 7,
+        "result-identity-mismatch": 1,
+        "source-reference-invalid": 1,
+        "source-verification-limit-exhausted": 7,
+    }
+
+    accountability = (
+        capability_intelligence._environment_service_execution_accountability(
+            activity, include_owner_pass_observations=True,
+        )
+    )
+    summary = accountability["summary"]
+    assert summary["owner_result_content_integrity"] == integrity
+    assert summary["verification_status"] == "not-established"
+    assert summary["ambient_fulfillment_status"] == "not-established"
+    assert accountability["owner_pass_observations"]["items"][0][
+        "source_content_integrity_status"
+    ] == "content-integrity-verified"
+
+    compact_trace = capability_intelligence._compact_ambient_service_execution_overview(
+        activity,
+    )
+    compact_results = compact_trace["execution"]["owner_pass_results"]
+    assert compact_results["owner_result_content_integrity"] == integrity
+    assert compact_results["results"][0][
+        "source_content_integrity_status"
+    ] == "content-integrity-verified"
+    readiness = {
+        "services": [],
+        "source": {"service_declaration_status": "explicit-empty"},
+        "summary": {},
+    }
+    session_accountability = capability_intelligence._session_service_accountability(
+        readiness, {}, {"campaign": {}, "intent": {}},
+        ambient_service_execution=activity,
+    )
+    compact_accountability = (
+        capability_intelligence._compact_service_accountability_overview(
+            session_accountability, activity,
+        )
+    )
+    compact_summary = compact_accountability["summary"][
+        "environment_service_execution"
+    ]["summary"]
+    assert compact_summary["owner_result_content_integrity"] == integrity
+
+
+def test_owner_pass_store_integrity_budget_stops_before_store_read(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    session_id = session.session_id
+    execution_id = "ase_" + "a" * 32
+    result_identity = "b" * 64
+    reference = (
+        f"mncs-store:{session_id}:incremental-coherence:doctor:"
+        + "c" * 64
+    )
+    trace = {
+        "mode": "targeted_update",
+        "trace_persistence_status": "session-snapshot",
+        "event_count": 1,
+        "elapsed_seconds": 0.1,
+        "scheduled": [{
+            "owner": "doctor",
+            "service_execution_id": execution_id,
+            "disposition": 1,
+            "wave": 0,
+            "inputs": [],
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": [{
+            "owner": "doctor",
+            "service_execution_id": execution_id,
+            "result_status": "result-recorded",
+            "result_identity": result_identity,
+            "source_reference_status": "store-record",
+            "source_reference": reference,
+        }],
+    }
+    store_read = Mock(side_effect=AssertionError("budget must precede Store read"))
+
+    with (
+        patch.object(
+            capability_intelligence,
+            "MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_SECONDS",
+            0.0,
+        ),
+        patch(
+            "mncs_env.capability_intelligence.evidence_store.read",
+            store_read,
+        ),
+    ):
+        activity = capability_intelligence._session_ambient_service_execution(
+            session, {"coherence": {"last_trace": trace}},
+        )
+
+    owner_results = activity["execution"]["owner_pass_results"]
+    integrity = owner_results["owner_result_content_integrity"]
+    assert store_read.call_count == 0
+    assert owner_results["results"][0]["source_content_integrity_status"] == (
+        "source-read-budget-exhausted"
+    )
+    assert integrity["coverage_status"] == "partial"
+    assert integrity["content_integrity_verified_count"] == 0
+    assert integrity["content_integrity_not_checked_count"] == 1
+    assert integrity["status_counts"] == {"source-read-budget-exhausted": 1}
 
 
 def test_ambient_verification_failure_surfaces_verified_reason_under_budget(

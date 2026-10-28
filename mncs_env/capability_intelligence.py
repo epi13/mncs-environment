@@ -268,6 +268,8 @@ MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
 MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
 MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
+MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS = 8
+MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_SECONDS = 1.0
 MAX_AMBIENT_VERIFICATION_ISSUES = 8
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
@@ -622,9 +624,14 @@ def _validate_session_store_source(source: Any) -> dict[str, str] | None:
 def _session_store_source_key(
     pointer: dict[str, str],
 ) -> tuple[str, str, str, str]:
+    # Schema and result identity are assertions on the same referenced bytes;
+    # distinct assertions must not reuse one another's integrity verdict.
     return (
         "session-store", pointer["session_id"], pointer["owner"],
-        pointer["reference"],
+        "#".join((
+            pointer["reference"], pointer.get("schema", ""),
+            pointer.get("result_identity", ""),
+        )),
     )
 
 
@@ -2707,6 +2714,13 @@ def _compact_service_accountability_overview(
             compact_environment_summary["verification_result_details"] = (
                 verification_details
             )
+        owner_result_integrity = _compact_owner_result_content_integrity(
+            execution_summary.get("owner_result_content_integrity"),
+        )
+        if owner_result_integrity is not None:
+            compact_environment_summary["owner_result_content_integrity"] = (
+                owner_result_integrity
+            )
         result_status_counts = execution_summary.get(
             "owner_pass_result_status_counts",
         )
@@ -2815,6 +2829,13 @@ def _compact_ambient_service_execution_overview(
                     "result_records_omitted", "outcome_disposition_counts",
                 ) if key in owner_results
             }
+            owner_result_integrity = _compact_owner_result_content_integrity(
+                owner_results.get("owner_result_content_integrity"),
+            )
+            if owner_result_integrity is not None:
+                compact_results["owner_result_content_integrity"] = (
+                    owner_result_integrity
+                )
             results = owner_results.get("results")
             results = results if isinstance(results, list) else []
             failure_owners = execution.get("owner_failures")
@@ -2856,6 +2877,7 @@ def _compact_ambient_service_execution_overview(
                         "outcome_reason_code", "agent_response_emitted",
                         "service_availability_status",
                         "service_availability_reason_code",
+                        "source_content_integrity_status",
                     ) if key in row
                 }
                 failure_evidence = _compact_service_failure_evidence(
@@ -2886,6 +2908,45 @@ def _compact_ambient_service_execution_overview(
     }
 
 
+def _compact_owner_result_content_integrity(value: Any) -> dict[str, Any] | None:
+    """Keep bounded owner-result Store-content integrity coverage."""
+    if (not isinstance(value, dict)
+            or value.get("scope")
+            != "selected-session-owner-result-store-content"
+            or value.get("coverage_status") not in {
+                "complete", "partial", "not-applicable",
+            }):
+        return None
+    result: dict[str, Any] = {
+        "scope": value["scope"],
+        "coverage_status": value["coverage_status"],
+    }
+    for key in (
+        "store_result_record_count", "content_integrity_verified_count",
+        "content_integrity_unverified_count",
+        "content_integrity_not_checked_count", "result_records_omitted",
+        "limit", "integrity_elapsed_seconds", "read_time_budget_seconds",
+    ):
+        count = value.get(key)
+        if (type(count) is int and 0 <= count <= 10**9
+                or type(count) is float and math.isfinite(count)
+                and 0 <= count <= 86400):
+            result[key] = count
+    status_counts = value.get("status_counts")
+    if isinstance(status_counts, dict):
+        result["status_counts"] = {
+            status: count
+            for status, count in list(status_counts.items())[:16]
+            if isinstance(status, str)
+            and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", status)
+            and type(count) is int and 0 <= count <= 10**9
+        }
+    limit = value.get("interpretation_limit")
+    if isinstance(limit, str) and len(limit) <= 512 and "\x00" not in limit:
+        result["interpretation_limit"] = limit
+    return result
+
+
 def _compact_service_failure_evidence(value: Any) -> dict[str, str] | None:
     """Keep only bounded, allowlisted fields from exact service evidence."""
     if not isinstance(value, dict):
@@ -2895,6 +2956,7 @@ def _compact_service_failure_evidence(value: Any) -> dict[str, str] | None:
         "recorded", "no-failure-recorded", "unsupported-source-schema",
         "evidence-reference-unavailable", "source-unavailable",
         "source-integrity-failure", "result-identity-mismatch",
+        "source-read-budget-exhausted",
     }:
         return None
     result = {"status": status}
@@ -2908,6 +2970,11 @@ def _compact_service_failure_evidence(value: Any) -> dict[str, str] | None:
     integrity = value.get("source_integrity_status")
     if integrity in {"verified", "unavailable", "not-verified"}:
         result["source_integrity_status"] = integrity
+    owner_integrity = value.get("owner_result_content_integrity_status")
+    if isinstance(owner_integrity, str) and re.fullmatch(
+        r"[a-z][a-z0-9-]{0,79}", owner_integrity,
+    ):
+        result["owner_result_content_integrity_status"] = owner_integrity
     for key in ("source_reference", "owner_result_reference"):
         reference = value.get(key)
         if (isinstance(reference, str)
@@ -18580,6 +18647,13 @@ def _environment_service_execution_accountability(
             summary["owner_pass_result_record_count"] = owner_results[
                 "result_record_count"
             ]
+        owner_result_integrity = _compact_owner_result_content_integrity(
+            owner_results.get("owner_result_content_integrity"),
+        )
+        if owner_result_integrity is not None:
+            summary["owner_result_content_integrity"] = (
+                owner_result_integrity
+            )
         if result_status_counts:
             summary["owner_pass_result_status_counts"] = dict(
                 sorted(result_status_counts.items()),
@@ -18636,6 +18710,7 @@ def _environment_service_execution_accountability(
                         "service_execution_id", "result_status",
                         "operation_status", "result_identity",
                         "source_reference_status", "source_reference",
+                        "source_content_integrity_status",
                         "failure_evidence",
                     )
                     if key in item
@@ -18795,7 +18870,8 @@ def _environment_service_execution_accountability(
                 row["result_status"] = result.get("result_status", "unknown")
                 for key in (
                     "result_identity", "source_reference_status",
-                    "source_reference", "operation_status", "result_code",
+                    "source_reference", "source_content_integrity_status",
+                    "operation_status", "result_code",
                     "result_reused", "outcome_disposition",
                     "outcome_reason_code", "agent_response_emitted",
                     "service_availability_status",
@@ -20473,6 +20549,43 @@ def _session_projection_coherence_history(
     }
 
 
+def _ambient_owner_result_store_source(
+    session: Any, owner_result: Any,
+) -> tuple[dict[str, str] | None, str]:
+    """Build one exact source pointer for a recorded owner-pass result."""
+    if (not isinstance(owner_result, dict)
+            or owner_result.get("result_status") != "result-recorded"):
+        return None, "not-applicable"
+    if owner_result.get("source_reference_status") != "store-record":
+        return None, "not-store-record"
+    owner = owner_result.get("owner")
+    reference = owner_result.get("source_reference")
+    session_id = getattr(session, "session_id", None)
+    if (not isinstance(owner, str)
+            or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner) is None
+            or not isinstance(reference, str)
+            or len(reference) > 512
+            or not isinstance(session_id, str)):
+        return None, "source-reference-invalid"
+    reference_session = re.match(
+        r"mncs-store:(ses_[A-Za-z0-9_-]{1,128}):", reference,
+    )
+    if (reference_session is None
+            or reference_session.group(1) != session_id):
+        return None, "source-reference-invalid"
+    source = {
+        "kind": "current-owner-result",
+        "session_id": session_id,
+        "reference": reference,
+        "owner": f"incremental-coherence:{owner}",
+        "result_identity": owner_result.get("result_identity"),
+    }
+    pointer = _validate_session_store_source(source)
+    if pointer is None:
+        return None, "source-reference-invalid"
+    return pointer, "pending"
+
+
 def _session_ambient_service_execution(
     session: Any, snapshot: dict[str, Any],
 ) -> dict[str, Any]:
@@ -20519,20 +20632,77 @@ def _session_ambient_service_execution(
         result_rows = owner_results.get("results")
         if isinstance(result_rows, list):
             verification_evidence_reads = 0
+            integrity_started = time.monotonic()
+            integrity_cache: dict[tuple[str, str, str, str], str] = {}
+            integrity_attempted: set[tuple[str, str, str, str]] = set()
+            integrity_status_by_pointer: dict[
+                tuple[str, str, str, str], str
+            ] = {}
+            integrity_deadline = (
+                integrity_started
+                + MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_SECONDS
+            )
             for row in result_rows:
                 if not isinstance(row, dict):
                     continue
-                if (row.get("owner") != "verification"
-                        or row.get("result_status") != "result-recorded"
-                        or verification_evidence_reads
-                        >= MAX_ENVIRONMENT_VERIFICATION_DETAILS):
-                    continue
-                verification_evidence_reads += 1
-                verification_evidence = _ambient_verification_result_evidence(
+                pointer, pointer_status = _ambient_owner_result_store_source(
                     session, row,
                 )
-                if verification_evidence is not None:
-                    row["verification_evidence"] = verification_evidence
+                if pointer_status != "pending" or pointer is None:
+                    if pointer_status not in {"not-applicable", "not-store-record"}:
+                        row["source_content_integrity_status"] = pointer_status
+                    continue
+                key = _session_store_source_key(pointer)
+                source_integrity_status = integrity_status_by_pointer.get(key)
+                if source_integrity_status is None:
+                    if (len(integrity_status_by_pointer)
+                            >= MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS):
+                        source_integrity_status = (
+                            "source-verification-limit-exhausted"
+                        )
+                    else:
+                        verification_evidence = None
+                        if (row.get("owner") == "verification"
+                                and verification_evidence_reads
+                                < MAX_ENVIRONMENT_VERIFICATION_DETAILS):
+                            verification_evidence_reads += 1
+                            verification_evidence = (
+                                _ambient_verification_result_evidence(
+                                    session, row,
+                                    deadline=integrity_deadline,
+                                )
+                            )
+                        if verification_evidence is not None:
+                            row["verification_evidence"] = verification_evidence
+                            source_integrity_status = verification_evidence.get(
+                                "owner_result_content_integrity_status",
+                                "not-verified",
+                            )
+                            integrity_status_by_pointer[key] = (
+                                source_integrity_status
+                            )
+                            if (source_integrity_status
+                                    == "content-integrity-verified"):
+                                integrity_cache[key] = source_integrity_status
+                        else:
+                            _verify_source_pointer(
+                                session, pointer, [], None,
+                                deadline=integrity_deadline,
+                                cache=integrity_cache,
+                                attempted=integrity_attempted,
+                                workspace_checkouts={},
+                            )
+                            source_integrity_status = _source_integrity_status(
+                                pointer, integrity_cache,
+                            )
+                            integrity_status_by_pointer[key] = (
+                                source_integrity_status
+                            )
+                row["source_content_integrity_status"] = (
+                    source_integrity_status
+                )
+                verification_evidence = row.get("verification_evidence")
+                if isinstance(verification_evidence, dict):
                     failure_evidence = verification_evidence.get(
                         "failure_evidence",
                     )
@@ -20559,6 +20729,79 @@ def _session_ambient_service_execution(
                         }
                     if isinstance(failure_evidence, dict):
                         row["failure_evidence"] = failure_evidence
+            integrity_elapsed_seconds = round(
+                max(0.0, time.monotonic() - integrity_started), 6,
+            )
+            integrity_status_counts: dict[str, int] = {}
+            integrity_verified_count = 0
+            integrity_not_checked_count = 0
+            for row in result_rows:
+                if (not isinstance(row, dict)
+                        or row.get("result_status") != "result-recorded"
+                        or row.get("source_reference_status") != "store-record"):
+                    continue
+                status = row.get("source_content_integrity_status")
+                if not isinstance(status, str):
+                    status = "not-checked"
+                integrity_status_counts[status] = (
+                    integrity_status_counts.get(status, 0) + 1
+                )
+                if status == "content-integrity-verified":
+                    integrity_verified_count += 1
+                if status in {
+                    "not-checked", "source-verification-limit-exhausted",
+                    "source-read-budget-exhausted",
+                    "source-reference-invalid",
+                }:
+                    integrity_not_checked_count += 1
+            integrity_result_omitted = owner_results.get(
+                "result_records_omitted", 0,
+            )
+            if (type(integrity_result_omitted) is not int
+                    or integrity_result_omitted < 0):
+                integrity_result_omitted = 0
+            integrity_store_record_count = sum(
+                integrity_status_counts.values(),
+            )
+            integrity_coverage_status = (
+                "not-applicable" if not integrity_store_record_count
+                and integrity_result_omitted == 0 else
+                "complete" if integrity_not_checked_count == 0
+                and integrity_result_omitted == 0 else "partial"
+            )
+            owner_result_content_integrity = {
+                "scope": "selected-session-owner-result-store-content",
+                "coverage_status": integrity_coverage_status,
+                "integrity_elapsed_seconds": integrity_elapsed_seconds,
+                "read_time_budget_seconds": (
+                    MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_SECONDS
+                ),
+                "store_result_record_count": integrity_store_record_count,
+                "content_integrity_verified_count": integrity_verified_count,
+                "content_integrity_unverified_count": max(
+                    0, integrity_store_record_count - integrity_verified_count,
+                ),
+                "content_integrity_not_checked_count": (
+                    integrity_not_checked_count
+                ),
+                "result_records_omitted": integrity_result_omitted,
+                "limit": MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS,
+                "status_counts": dict(sorted(integrity_status_counts.items())),
+                "interpretation_limit": (
+                    "Checks the owner-result digest and result identity only; it does not establish service correctness, usefulness, receipt, or need fulfillment."
+                ),
+            }
+            if integrity_coverage_status != "not-applicable":
+                owner_results["owner_result_content_integrity"] = (
+                    owner_result_content_integrity
+                )
+                owner_result_limits = owner_results.get("measurement_limits")
+                if not isinstance(owner_result_limits, list):
+                    owner_result_limits = []
+                owner_result_limits.append(
+                    "Selected-session owner-result Store pointers are checked against their record digest and linked result identity within bounded count and read-time limits; this is content integrity evidence, not independent verification of service correctness or fulfillment."
+                )
+                owner_results["measurement_limits"] = owner_result_limits[:8]
     campaign = snapshot.get("campaign")
     campaign = campaign if isinstance(campaign, dict) else {}
     intent = snapshot.get("intent")
@@ -20606,7 +20849,8 @@ def _session_ambient_service_execution(
 
 
 def _ambient_verification_result_evidence(
-    session: Any, owner_result: dict[str, Any],
+    session: Any, owner_result: dict[str, Any], *,
+    deadline: float | None = None,
 ) -> dict[str, Any] | None:
     """Read exact verification evidence linked to a recorded owner result."""
     if (owner_result.get("owner") != "verification"
@@ -20625,46 +20869,28 @@ def _ambient_verification_result_evidence(
             is None):
         return None
 
+    if deadline is not None and time.monotonic() >= deadline:
+        return {
+            "status": "source-read-budget-exhausted",
+            "owner_result_reference": owner_reference,
+            "source_integrity_status": "unavailable",
+            "owner_result_content_integrity_status": (
+                "source-read-budget-exhausted"
+            ),
+        }
+
     try:
         owner_record = evidence_store.read(
             session, "incremental-coherence:verification", owner_reference,
-        )
-        if digest_hex(owner_record, length=64) != owner_reference.rsplit(":", 1)[-1]:
-            return {
-                "status": "result-identity-mismatch",
-                "owner_result_reference": owner_reference,
-                "source_integrity_status": "not-verified",
-            }
-        block = owner_record.get("block")
-        if (not isinstance(block, dict)
-                or digest_hex(block, length=64)
-                != owner_result.get("result_identity")):
-            return {
-                "status": "result-identity-mismatch",
-                "owner_result_reference": owner_reference,
-                "source_integrity_status": "not-verified",
-            }
-        evidence_reference = block.get("evidence")
-        evidence_prefix = f"mncs-store:{session_id}:verification:"
-        if (not isinstance(evidence_reference, str)
-                or not evidence_reference.startswith(evidence_prefix)
-                or re.fullmatch(
-                    r"[0-9a-f]{64}",
-                    evidence_reference[len(evidence_prefix):],
-                ) is None):
-            return {
-                "status": "evidence-reference-unavailable",
-                "owner_result_reference": owner_reference,
-                "source_integrity_status": "verified",
-            }
-        verification = evidence_store.read(
-            session, "verification", evidence_reference,
         )
     except StoreIntegrityFailure:
         return {
             "status": "source-integrity-failure",
             "owner_result_reference": owner_reference,
             "source_integrity_status": "not-verified",
+            "owner_result_content_integrity_status": (
+                "source-integrity-failure"
+            ),
         }
     except (AttributeError, KeyError, OSError, StoreUnavailable, TypeError,
             ValueError):
@@ -20672,14 +20898,92 @@ def _ambient_verification_result_evidence(
             "status": "source-unavailable",
             "owner_result_reference": owner_reference,
             "source_integrity_status": "unavailable",
+            "owner_result_content_integrity_status": "source-unavailable",
         }
 
-    if digest_hex(verification, length=64) != evidence_reference.rsplit(":", 1)[-1]:
+    if (not isinstance(owner_record, dict)
+            or digest_hex(owner_record, length=64)
+            != owner_reference.rsplit(":", 1)[-1]):
+        return {
+            "status": "result-identity-mismatch",
+            "owner_result_reference": owner_reference,
+            "source_integrity_status": "not-verified",
+            "owner_result_content_integrity_status": "sha256-mismatch",
+        }
+    block = owner_record.get("block")
+    if (not isinstance(block, dict)
+            or digest_hex(block, length=64)
+            != owner_result.get("result_identity")):
+        return {
+            "status": "result-identity-mismatch",
+            "owner_result_reference": owner_reference,
+            "source_integrity_status": "not-verified",
+            "owner_result_content_integrity_status": (
+                "result-identity-mismatch"
+            ),
+        }
+    evidence_reference = block.get("evidence")
+    evidence_prefix = f"mncs-store:{session_id}:verification:"
+    if (not isinstance(evidence_reference, str)
+            or not evidence_reference.startswith(evidence_prefix)
+            or re.fullmatch(
+                r"[0-9a-f]{64}",
+                evidence_reference[len(evidence_prefix):],
+            ) is None):
+        return {
+            "status": "evidence-reference-unavailable",
+            "owner_result_reference": owner_reference,
+            "source_integrity_status": "verified",
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+        }
+    if deadline is not None and time.monotonic() >= deadline:
+        return {
+            "status": "source-read-budget-exhausted",
+            "owner_result_reference": owner_reference,
+            "source_reference": evidence_reference,
+            "source_integrity_status": "not-verified",
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+        }
+
+    try:
+        verification = evidence_store.read(
+            session, "verification", evidence_reference,
+        )
+    except StoreIntegrityFailure:
         return {
             "status": "source-integrity-failure",
             "owner_result_reference": owner_reference,
             "source_reference": evidence_reference,
             "source_integrity_status": "not-verified",
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+        }
+    except (AttributeError, KeyError, OSError, StoreUnavailable, TypeError,
+            ValueError):
+        return {
+            "status": "source-unavailable",
+            "owner_result_reference": owner_reference,
+            "source_reference": evidence_reference,
+            "source_integrity_status": "unavailable",
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+        }
+
+    if (not isinstance(verification, dict)
+            or digest_hex(verification, length=64)
+            != evidence_reference.rsplit(":", 1)[-1]):
+        return {
+            "status": "source-integrity-failure",
+            "owner_result_reference": owner_reference,
+            "source_reference": evidence_reference,
+            "source_integrity_status": "not-verified",
+            "owner_result_content_integrity_status": "content-integrity-verified",
         }
 
     if verification.get("schema_version") != "mncs.environment.verification/1":
@@ -20688,6 +20992,7 @@ def _ambient_verification_result_evidence(
             "owner_result_reference": owner_reference,
             "source_reference": evidence_reference,
             "source_integrity_status": "verified",
+            "owner_result_content_integrity_status": "content-integrity-verified",
         }
     summary = verification.get("summary")
     summary = summary if isinstance(summary, dict) else {}
@@ -20758,6 +21063,7 @@ def _ambient_verification_result_evidence(
         "source_reference": evidence_reference,
         "source_schema": "mncs.environment.verification/1",
         "source_integrity_status": "verified",
+        "owner_result_content_integrity_status": "content-integrity-verified",
         "summary": summary_counts,
         "outcome_counts": dict(sorted(outcome_counts.items())[:8]),
         "reason_counts": dict(sorted(reason_counts.items())[:8]),

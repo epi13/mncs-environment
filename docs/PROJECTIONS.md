@@ -1206,11 +1206,22 @@ failure and result-record evidence, and exact projection digest with the
 session, Environment, snapshot, campaign, and WorkIntent. This scope is
 available without session-authored service declarations. The nested view links
 to the bounded trace by digest, which retains per-pass trigger and result
-references. When readiness services are declared, their accountability view
-remains scoped to those declarations and the owner-pass trace remains available
-separately. Owner-pass decision coverage is coverage of the scheduler's
-declared decisions only; it does not measure agent need, capability
-discoverability, service fulfillment, or intervention reduction. When no
+references. For recorded owner-pass results whose source is a selected-session
+Store record, Environment checks the record digest and the linked result
+identity. The bounded trace exposes each `source_content_integrity_status` and
+an `owner_result_content_integrity` coverage summary (at most eight distinct
+integrity checks; a one-second pre-read budget is checked before each read).
+The summary also records elapsed evaluation time. Coverage is `partial` when a
+result record was omitted or a check could not run. Foreign-session references
+are not read. Content integrity establishes that the referenced owner-result
+record matches its digest and result identity; it does not establish service
+correctness, usefulness, agent receipt, or fulfillment. `verification_status`
+and ambient fulfillment remain separate and unchanged. When readiness services
+are declared, their accountability view remains scoped to those declarations
+and the owner-pass trace remains available separately. Owner-pass decision
+coverage is coverage of the scheduler's declared decisions only; it does not
+measure agent need, capability discoverability, service fulfillment, or
+intervention reduction. When no
 owner-pass trace is recorded, an explicit empty readiness scope remains
 limited to readiness declarations; without a readiness declaration, the
 projection does not synthesize a service-accountability record.
