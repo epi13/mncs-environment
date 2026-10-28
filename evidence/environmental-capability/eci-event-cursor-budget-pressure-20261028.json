@@ -1,0 +1,73 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_event_cursor_budget_pressure_20261028",
+  "captured_at": "2026-10-28T10:57:12Z",
+  "measurement_basis": "same-session-pre-change-live-ECI-readback-and-regression-investigation",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_72a18ed565bbdfe1",
+    "campaign_evidence_count_before_recording": 122,
+    "claim_ids": ["claim:mncs-environment:worktree:606297e3a2bf"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "read the selected campaign evidence page and a bounded session-event page",
+      "command": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-offset 118 --evidence-limit 4 --session-event-limit 4",
+      "pre_change_readback_status": "observed during this session before the cursor-preservation change; the CLI output was not persisted as an artifact",
+      "pre_change_projection_identity": "not-recorded",
+      "pre_change_activity_source": {
+        "event_count": 1192,
+        "next_event_before_sequence": 1189,
+        "event_window_limit": "omitted",
+        "event_page_before_sequence": "omitted"
+      }
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_byte_count": 179349,
+      "response_truncated": true,
+      "detail_status": "evidence-priority-response-budget",
+      "interpretation": "The compact activity preserved the next event sequence but omitted the requested page limit and explicit first-page cursor. The bounded event window could not be reconstructed from the returned source metadata alone.",
+      "scope_limit": "This is one selected-session projection readback. The response was truncated and three observation records were compacted out; it does not establish that records were lost from the campaign ledger.",
+      "recurrence_status": "not-established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_event_cursor_response_budget_20261028",
+    "title": "ECI response compaction omits bounded session-event page parameters",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability-intelligence response compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the requested event window limit, explicit page cursor, and next cursor through ordinary and response-budget compaction while keeping response and event reads bounded."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "eci-prechange-readback-not-persisted",
+      "kind": "same-session-live-projection-readback",
+      "repository": "mncs-environment",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "durable_artifact_status": "not-recorded"
+    }
+  ],
+  "not_measured": [
+    "The number of additional agent operations required by the missing cursor metadata.",
+    "Whether another agent received or relied on the incomplete page metadata.",
+    "Recurrence across other sessions, evidence windows, or response budgets.",
+    "Whether the omission affected a development decision or caused source-record loss."
+  ]
+}

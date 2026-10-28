@@ -1,0 +1,78 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_event_cursor_budget_verification_20261028",
+  "captured_at": "2026-10-28T10:57:12Z",
+  "measurement_basis": "focused-ECI-module-regression-suite-and-source-integrity-checks",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_72a18ed565bbdfe1",
+    "implementation_commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e"
+  },
+  "observation": {
+    "kind": "ECI-bounded-event-cursor-regression-verification",
+    "source_interface": "MNCS Environment pytest and Python compileall",
+    "request": {
+      "commands": [
+        "python3 -m pytest -q tests/test_capability_intelligence.py",
+        "python3 -m compileall -q mncs_env tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "179 passed in 7.19s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "A compacted ECI projection preserves the requested session-event window limit and page cursor.",
+        "The response-budget summary preserves an explicit null first-page cursor when that value is present in its source.",
+        "Existing ECI response-budget, verification, diagnostic, evidence-priority, and provenance regressions pass in the full capability-intelligence test module.",
+        "The implementation and test files compile, and the committed diff passes whitespace validation."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_eci_event_cursor_budget_14b6dcf",
+        "repository": "mncs-environment",
+        "commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "5cfcee2a8b820fa4f6fe13a14a3efd2231ea5951d72701c380c7445f375a41f3"
+      }
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_event_cursor_response_budget_20261028",
+    "title": "ECI response compaction omits bounded session-event page parameters",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability-intelligence response compaction",
+    "owner": "mncs-environment"
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5cfcee2a8b820fa4f6fe13a14a3efd2231ea5951d72701c380c7445f375a41f3"
+    },
+    {
+      "kind": "regression-test",
+      "repository": "mncs-environment",
+      "commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "0682d23db887aef87d797c11bf39dee6e6b7466d2b08646a8e034e5f09b55ad8"
+    }
+  ],
+  "measurement_limits": [
+    "The focused test module establishes the selected compaction contract, not performance across every projection shape.",
+    "The full repository test suite was not rerun for this bounded response-compaction change.",
+    "Agent receipt, intervention burden, and cross-session recurrence remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  }
+}

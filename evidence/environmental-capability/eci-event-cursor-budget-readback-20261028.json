@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_event_cursor_budget_readback_20261028",
+  "captured_at": "2026-10-28T10:57:12Z",
+  "measurement_basis": "post-change-live-selected-session-ECI-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_72a18ed565bbdfe1",
+    "implementation_commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e"
+  },
+  "observation": {
+    "kind": "live-ECI-session-event-page-cursor-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "command": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-offset 118 --evidence-limit 4 --session-event-limit 4",
+      "projection_identity": "eci_4e89f91ac5f6d90f",
+      "readback_timestamp_status": "not-recorded; captured during the current session immediately before this evidence was authored",
+      "history_pages": 1,
+      "evidence_page_offset": 118,
+      "evidence_page_limit": 4,
+      "session_event_before_sequence": null,
+      "session_event_limit": 4
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_byte_count": 179349,
+      "response_truncated": true,
+      "detail_status": "evidence-priority-response-budget",
+      "observation_records_compacted_out_count": 3,
+      "session_activity_source": {
+        "event_count": 1192,
+        "event_window_limit": 4,
+        "event_page_before_sequence": null,
+        "event_page_scoped": false,
+        "event_page_has_older_records": true,
+        "event_window_sequence_start": 1189,
+        "event_window_sequence_end": 1192,
+        "next_event_before_sequence": 1189
+      },
+      "interpretation": "The response-budget projection retains the exact bounded event page parameters and continuation sequence while explicitly remaining partial and reporting compacted observation details.",
+      "effectiveness_status": "response-source-metadata-behavior-verified; agent-intervention-reduction-not-assessed"
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_event_cursor_response_budget_20261028",
+    "title": "ECI response compaction omits bounded session-event page parameters",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability-intelligence response compaction",
+    "owner": "mncs-environment"
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5cfcee2a8b820fa4f6fe13a14a3efd2231ea5951d72701c380c7445f375a41f3"
+    },
+    {
+      "kind": "regression-test",
+      "repository": "mncs-environment",
+      "commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "0682d23db887aef87d797c11bf39dee6e6b7466d2b08646a8e034e5f09b55ad8"
+    }
+  ],
+  "measurement_limits": [
+    "The live projection remains partial; three observation records were compacted out of its returned details.",
+    "This readback establishes source cursor visibility, not lower latency, lower resource use, or reduced agent intervention.",
+    "The bounded event window does not expose event payloads or establish that unselected older events are irrelevant."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_event_cursor_budget_improvement_20261028",
+  "captured_at": "2026-10-28T10:57:12Z",
+  "measurement_basis": "source-linked-ECI-pressure-implementation-verification-and-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_72a18ed565bbdfe1",
+    "implementation_commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence response compactor",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_event_cursor_response_budget_20261028",
+      "verification_observation_identity": "ev_environment_eci_event_cursor_budget_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_event_cursor_budget_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "verification_status": "focused-regression-module-passed",
+      "effectiveness_assessment": "cursor-preservation-verified; agent-intervention-reduction-not-assessed",
+      "interpretation_limit": "The change preserves bounded event page metadata through response compaction. It does not establish that agents required fewer operations, that every response detail remains available, or that the projection's overall response is no longer partial."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_event_cursor_response_budget_20261028",
+    "title": "ECI response compaction omits bounded session-event page parameters",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability-intelligence response compaction",
+    "owner": "mncs-environment",
+    "basis": "A pre-change selected-session ECI readback preserved next_event_before_sequence but omitted the requested event window limit and page cursor from compacted activity source metadata. The prior readback was not persisted as a durable artifact.",
+    "actionable_recommendation": "Preserve exact bounded event-page source metadata in ordinary and response-budget compaction, with truncation and omitted observation details explicit."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_event_cursor_budget_verified_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_event_cursor_response_budget_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_eci_event_cursor_budget_14b6dcf",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "14b6dcf82d8a90011cc2a32937bec0e84b84f57e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5cfcee2a8b820fa4f6fe13a14a3efd2231ea5951d72701c380c7445f375a41f3"
+    },
+    "verification_observation_identity": "ev_environment_eci_event_cursor_budget_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_event_cursor_budget_readback_20261028",
+    "basis": "The full capability-intelligence module passes 179 tests, including bounded cursor and response-compaction regressions; the live selected-session projection reports the requested event limit, explicit first-page null cursor, next cursor, and truncation status.",
+    "effectiveness_assessment": "response-metadata-correctness-verified; agent-burden-effectiveness-not-assessed",
+    "not_measured": [
+      "agent receipt or avoided follow-up operations",
+      "recurrence across sessions or other response shapes",
+      "longer-term effects on development outcomes or projection cost",
+      "whether the source readback that motivated the fix altered an agent decision"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_eci_event_cursor_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-event-cursor-budget-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_event_cursor_budget_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-event-cursor-budget-verification-20261028.json"
+    },
+    {
+      "kind": "subsequent-live-readback",
+      "identity": "ev_environment_eci_event_cursor_budget_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-event-cursor-budget-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The pre-change live readback was not persisted as an artifact; the observation records the selected-session output retained in this ongoing work context and marks the missing durable pointer.",
+    "The verification establishes output metadata behavior, not correctness of all underlying session events or completeness beyond the bounded page.",
+    "The ECI response remains partial and reports three compacted observation details; no general claim of burden reduction or improved service fulfillment is made."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  }
+}
