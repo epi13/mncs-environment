@@ -1,0 +1,64 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028",
+  "captured_at": "2026-10-28T06:49:25Z",
+  "measurement_basis": "active-session-authority-check-and-read-only-git-retirement-assessment",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef"
+  },
+  "observation": {
+    "kind": "retirement-authority-and-adapter-live-readback",
+    "source_interface": "mncs-env authority and retire --dry-run",
+    "request": {
+      "authority_action": "retire",
+      "repository": "mncs-environment",
+      "branch": "campaign/resource-sample-budget-context-20261028",
+      "scope": {
+        "kind": "repository",
+        "branch": "campaign/resource-sample-budget-context-20261028"
+      },
+      "adapter_mode": "dry-run"
+    },
+    "outcome": {
+      "authority_verdict": "allow",
+      "authorization_basis": "writable-repository-rights",
+      "persistent_claim_required": false,
+      "operation_executed": false,
+      "coordination_status": "target-conflicts-checked-by-retirement-adapter",
+      "adapter_status": "assessed",
+      "adapter_reason": "dry run: would delete",
+      "adapter_retired": false,
+      "dry_run": true,
+      "interpretation_limit": "The policy admitted an exact target and the Git adapter assessed it; the dry run did not delete the branch or establish subsequent operational burden reduction."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-commit",
+      "repository": "mncs-environment",
+      "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+      "path": "mncs_env/authority.py"
+    },
+    {
+      "kind": "read-only-adapter-result",
+      "repository": "mncs-environment",
+      "path": "mncs_env/retire.py",
+      "target": "campaign/resource-sample-budget-context-20261028"
+    }
+  ],
+  "measurement_limits": [
+    "The live authority check occurred in the campaign session; claim-free eligibility is independently covered by the focused unit tests.",
+    "No branch deletion was performed.",
+    "The observation does not quantify saved coordination steps or time."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

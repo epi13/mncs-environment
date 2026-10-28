@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+  "captured_at": "2026-10-28T06:49:25Z",
+  "measurement_basis": "baseline-authority-source-reproduction-with-exact-writable-branch-scope",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "baseline_commit": "f811ef96e715307a4497c0741e78f40465b83c9f"
+  },
+  "observation": {
+    "kind": "persistent-claim-required-for-exact-retirement",
+    "source_interface": "MNCS Environment authority evaluator",
+    "request": {
+      "action": "retire",
+      "target_repository": "mncs-environment",
+      "target_branch": "campaign/resource-sample-budget-context-20261028",
+      "writable_repository_rights": true,
+      "claims_supplied": {},
+      "baseline_policy": "CLAIM_REQUIRED_ACTIONS includes retire"
+    },
+    "outcome": {
+      "baseline_verdict": "defer",
+      "required_coordination": "scoped-mutation-lease",
+      "next_step": "acquire-exact-scope-lease",
+      "adapter_safety_checks_reached": false,
+      "cause_status": "reproduced from the baseline commit's authority implementation"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_retirement_claim_gate",
+    "title": "Exact local retirement requires a persistent claim before target safety checks",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment retirement authority and Git adapter",
+    "owner": "mncs-environment",
+    "basis": "The baseline evaluator defers an exact branch retirement with writable repository rights and no claims, before the retirement adapter can inspect whether the branch is merged or checked out.",
+    "actionable_recommendation": "Admit explicit branch, registered-worktree, and metadata-prune operations from writable repository rights; keep exact target validation, applicable live-claim conflict checks, Git conditional updates, and separate delete escalation in the adapter and policy contracts.",
+    "recurrence": "one reproduced policy class; recurrence across sessions is not established",
+    "not_measured": [
+      "frequency of retirement work across sessions or repositories",
+      "agent time or tool-call cost caused by this gate",
+      "whether this pressure explains other pickup, merge, or publish friction",
+      "post-change reduction in agent intervention"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "baseline-source-reproduction",
+      "repository": "mncs-environment",
+      "commit": "f811ef96e715307a4497c0741e78f40465b83c9f",
+      "path": "mncs_env/authority.py",
+      "result": "defer / scoped-mutation-lease"
+    },
+    {
+      "kind": "baseline-policy",
+      "repository": "mncs-environment",
+      "commit": "f811ef96e715307a4497c0741e78f40465b83c9f",
+      "path": "mncs_env/authority.py",
+      "detail": "CLAIM_REQUIRED_ACTIONS includes retire"
+    }
+  ],
+  "measurement_limits": [
+    "The reproduction evaluates the baseline policy with no claim records; it is not a replay of a persisted retirement event.",
+    "The prior interactive retirement deferral had no durable event identity in the campaign ledger.",
+    "This evidence does not establish that all authority or merge/publish failures share this cause."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

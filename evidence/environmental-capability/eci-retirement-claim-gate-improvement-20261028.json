@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_improvement_20261028",
+  "captured_at": "2026-10-28T06:49:25Z",
+  "measurement_basis": "source-change-linked-to-focused-verification-and-active-session-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment retirement authority and Git adapter",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_retirement_claim_gate",
+      "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+      "verification_observation_identity": "ev_environment_eci_retirement_claim_gate_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "Retirement eligibility now derives from writable repository rights and an exact branch, registered-worktree, or metadata-prune operation. It does not require a persistent claim; the existing adapter retains target-state, applicable live-claim, Git conditional-update, and worktree-removal checks. General delete remains separately escalation-gated.",
+      "effectiveness_assessment": "exact-policy-and-adapter-path-verified; later agent-intervention reduction not assessed",
+      "interpretation_limit": "The tests and live dry-run establish an admitted and assessed operation. They do not establish a successful destructive retirement, cross-session recurrence reduction, or that all authority friction shares this cause."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_retirement_claim_gate",
+    "title": "Exact local retirement requires a persistent claim before target safety checks",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment retirement authority and Git adapter",
+    "owner": "mncs-environment",
+    "basis": "The baseline policy deferred exact retirement without a claim. The implementation delegates target-specific safety to the existing adapter after requiring writable rights and a precise operation scope.",
+    "actionable_recommendation": "Observe later legitimate retirement workflows and their target-specific adapter results; keep unverified burden effects open.",
+    "recurrence": "one reproduced policy class; recurrence across sessions is not established",
+    "not_measured": [
+      "future production retirement behavior",
+      "coordination steps or waiting eliminated",
+      "cross-repository recurrence",
+      "the cause of unrelated pickup, merge, and publish failures"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_retirement_claim_gate_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_retirement_claim_gate",
+    "implementation_reference": {
+      "identity": "mncs_environment_exact_retirement_without_persistent_claim_cba45a7",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+      "path": "mncs_env/authority.py",
+      "sha256": "019ef7777dd62c96c4216855eb84a9e6c2c311988855bd5d8f2e0a4512294e9e"
+    },
+    "verification_observation_identity": "ev_environment_eci_retirement_claim_gate_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028",
+    "basis": "Focused authority and adapter tests verify exact scope, writable rights, claim-free eligibility, explicit prune scope, separate delete escalation, and continued target checks; the active session authority response and dry-run assessment confirm the integrated read path.",
+    "effectiveness_assessment": "policy-and-read-only-adapter-behavior-verified; operational burden reduction not assessed",
+    "not_measured": [
+      "later agent intervention burden",
+      "frequency of this blocker across sessions",
+      "changes to active multi-agent coordination outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_retirement_claim_gate_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-verification-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028",
+      "kind": "live-capability-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-live-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The improvement relation records eligibility and adapter assessment, not successful destructive cleanup.",
+    "The prior terminal deferral has no durable event identity.",
+    "Post-merge service use and actual agent-intervention change remain to be observed."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

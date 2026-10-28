@@ -1,0 +1,73 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_verification_20261028",
+  "captured_at": "2026-10-28T06:49:25Z",
+  "measurement_basis": "focused-authority-and-retirement-adapter-tests-plus-environment-vertical-proof",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef"
+  },
+  "observation": {
+    "kind": "claim-free-retirement-policy-verification",
+    "source_interface": "MNCS Environment pytest and vertical proof",
+    "request": {
+      "test_files": [
+        "tests/test_authority_policy_guidance.py",
+        "tests/test_retire.py",
+        "tests/test_environment.py"
+      ],
+      "selected_environment_tests": [
+        "retire_requires_target_scope_and_write_intent_not_a_claim",
+        "retire_uses_exact_worktree_scope_without_persistent_claim",
+        "retirement_claim_conflicts_are_adapter_scoped_and_delete_escalates",
+        "effective_authority_reprojects_legacy_merge_and_publish_policy"
+      ]
+    },
+    "outcome": {
+      "authority_and_retirement_tests": "45 passed",
+      "selected_environment_tests": "4 passed, 280 deselected",
+      "compileall": "passed",
+      "git_diff_check": "passed",
+      "vertical_proof": "passed; real Atlas capability invocation, protected-write denial, checkpoint, resume, handoff, and completion",
+      "verified_behavior": [
+        "An exact branch or registered-worktree retirement target is eligible from writable rights without a claim.",
+        "Missing target scope defers, and missing writable repository authority denies.",
+        "Only the explicit metadata-prune operation is admitted at repository scope.",
+        "The retirement adapter continues to reject dirty, unmerged, checked-out, and live-claim-conflicted targets.",
+        "General delete remains escalation-gated."
+      ],
+      "verification_status": "focused-regressions-and-vertical-proof-passed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-commit",
+      "repository": "mncs-environment",
+      "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef"
+    },
+    {
+      "kind": "authority-and-adapter-tests",
+      "repository": "mncs-environment",
+      "path": "tests/test_authority_policy_guidance.py"
+    },
+    {
+      "kind": "retirement-tests",
+      "repository": "mncs-environment",
+      "path": "tests/test_retire.py"
+    }
+  ],
+  "measurement_limits": [
+    "The full repository test suite was not run; a broad test_environment invocation was interrupted after 125 passing tests to avoid continuing an unintended long run.",
+    "The vertical proof validates session composition and continuation, not the retirement adapter itself.",
+    "No post-change reduction in operational intervention has yet been measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
