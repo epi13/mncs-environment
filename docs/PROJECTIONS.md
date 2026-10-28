@@ -1303,6 +1303,14 @@ allowlisted reason code, source schema, integrity status, and references.
 `owner_failure_details_status` distinguishes complete, partial, invalid, and
 `not-recorded` failure coverage. This is failure evidence, not an assertion that
 the service caused the failure or that any agent received the result.
+For recorded verification owner results, the same exact Store relation also
+surfaces bounded obligation and outcome counts, reason-code counts, and up to
+eight non-passing obligation summaries under `verification_result_details`.
+This makes unsupported executors and undeclared suites inspectable from the
+service-accountability projection. It preserves `verification_status` as
+`not-established` when the evidence has unsupported or unresolved obligations;
+the summary does not infer that a capability gap is the only cause or that
+future verification will pass.
 
 When a Family ambient pass persists `family_last_summary`, ECI exposes it as
 `session_activity.family_ambient_observation`, with the selected session,

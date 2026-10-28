@@ -6464,7 +6464,17 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     verification_evidence = {
         "schema_version": "mncs.environment.verification/1",
         "failure": {"reason": "coherence-unavailable"},
-        "summary": {"blockers": 1, "executed": 0},
+        "summary": {
+            "blockers": 1, "executed": 0, "obligations": 2,
+            "unsupported": 1,
+        },
+        "results": [{
+            "obligation": "mncs-test.native-provider.execution",
+            "repository": "mncs-test",
+            "outcome": "excluded",
+            "reason": "executor_not_runnable",
+            "unmeasurable": "suite-undeclared",
+        }],
     }
     verification_reference = (
         f"mncs-store:{session_id}:verification:"
@@ -6541,6 +6551,24 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         )
 
     verification_row = activity["execution"]["owner_pass_results"]["results"][2]
+    assert verification_row["verification_evidence"]["summary"] == {
+        "obligations": 2,
+        "executed": 0,
+        "unsupported": 1,
+        "blockers": 1,
+    }
+    assert verification_row["verification_evidence"][
+        "unmeasurable_reason_counts"
+    ] == {"suite-undeclared": 1}
+    assert verification_row["verification_evidence"][
+        "not_passed_obligations"
+    ] == [{
+        "obligation": "mncs-test.native-provider.execution",
+        "repository": "mncs-test",
+        "outcome": "excluded",
+        "reason": "executor_not_runnable",
+        "unmeasurable": "suite-undeclared",
+    }]
     assert verification_row["failure_evidence"] == {
         "status": "recorded",
         "reason_code": "coherence-unavailable",
@@ -6571,6 +6599,36 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert verification_failure["failure_evidence"]["source_reference"] == (
         verification_reference
     )
+    assert execution_summary["verification_result_details_status"] == (
+        "complete"
+    )
+    assert execution_summary["verification_result_detail_count"] == 1
+    verification_detail = execution_summary["verification_result_details"][0]
+    assert verification_detail["verification_evidence"][
+        "unmeasurable_reason_counts"
+    ] == {"suite-undeclared": 1}
+    many_results = json.loads(json.dumps(activity))
+    many_verification_results = []
+    for index in range(5):
+        row = json.loads(json.dumps(verification_row))
+        row["service_execution_id"] = "ase_" + f"{index + 1:032x}"
+        many_verification_results.append(row)
+    many_results["execution"]["owner_pass_results"]["results"] = (
+        many_verification_results
+    )
+    many_results["execution"]["owner_pass_results"][
+        "result_record_count"
+    ] = 5
+    bounded_summary = (
+        capability_intelligence._environment_service_execution_accountability(
+            many_results,
+        )["summary"]
+    )
+    assert bounded_summary["verification_result_details_status"] == "partial"
+    assert bounded_summary["verification_result_detail_count"] == 4
+    assert bounded_summary[
+        "verification_result_details_omitted_count"
+    ] == 1
     compact_accountability = (
         capability_intelligence._compact_service_accountability_overview(
             accountability, activity,
@@ -6583,6 +6641,9 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert compact_summary["owner_failure_details"][0]["failure_evidence"][
         "reason_code"
     ] == "coherence-unavailable"
+    assert compact_summary["verification_result_details"][0][
+        "verification_evidence"
+    ]["not_passed_obligations"][0]["unmeasurable"] == "suite-undeclared"
     response_budget_activity = {
         "status": "partial",
         "service_accountability": accountability,
@@ -6605,6 +6666,10 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert budget_failure["failure_evidence"]["source_integrity_status"] == (
         "verified"
     )
+    budget_verification = budget_summary["verification_result_details"][0]
+    assert budget_verification["verification_evidence"][
+        "unmeasurable_reason_counts"
+    ] == {"suite-undeclared": 1}
     pass_items = compact_accountability["summary"][
         "environment_service_execution"
     ]["summary"]["owner_pass_observations"]["items"]
@@ -6641,6 +6706,22 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     ][2]["failure_evidence"]
     assert mismatch_evidence["status"] == "result-identity-mismatch"
     assert "reason_code" not in mismatch_evidence
+
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        side_effect=[
+            owner_record,
+            {**verification_evidence, "summary": {"blockers": 2}},
+        ],
+    ):
+        mismatched_link = (
+            capability_intelligence._ambient_verification_result_evidence(
+                session,
+                result_rows[2],
+            )
+        )
+    assert mismatched_link["status"] == "source-integrity-failure"
+    assert mismatched_link["source_integrity_status"] == "not-verified"
 
 
 def test_family_ambient_observation_links_exact_owner_pass_result(

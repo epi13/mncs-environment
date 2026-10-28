@@ -263,6 +263,8 @@ MAX_SESSION_SERVICE_READINESS_RECORDS = 16
 MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
 MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
+MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
+MAX_AMBIENT_VERIFICATION_ISSUES = 8
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -2614,6 +2616,9 @@ def _compact_service_accountability_overview(
                 "owner_pass_service_availability_reason_counts",
                 "owner_failure_details_status", "owner_failure_detail_count",
                 "owner_failure_details_omitted_count",
+                "verification_result_details_status",
+                "verification_result_detail_count",
+                "verification_result_details_omitted_count",
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
             )
@@ -2629,6 +2634,13 @@ def _compact_service_accountability_overview(
         if failure_details:
             compact_environment_summary["owner_failure_details"] = (
                 failure_details
+            )
+        verification_details = _compact_environment_verification_result_details(
+            execution_summary.get("verification_result_details"),
+        )
+        if verification_details:
+            compact_environment_summary["verification_result_details"] = (
+                verification_details
             )
         result_status_counts = execution_summary.get(
             "owner_pass_result_status_counts",
@@ -2759,7 +2771,12 @@ def _compact_ambient_service_execution_overview(
                     or (isinstance(failure_evidence, dict)
                         and failure_evidence.get("status") == "recorded")
                 )
-                if (is_failure and row not in selected_results
+                has_verification_evidence = (
+                    row.get("owner") == "verification"
+                    and isinstance(row.get("verification_evidence"), dict)
+                )
+                if ((is_failure or has_verification_evidence)
+                        and row not in selected_results
                         and len(selected_results) < 4):
                     selected_results.append(row)
             compact_results["results"] = []
@@ -2781,6 +2798,11 @@ def _compact_ambient_service_execution_overview(
                 )
                 if failure_evidence is not None:
                     compact_row["failure_evidence"] = failure_evidence
+                verification_evidence = _compact_ambient_verification_evidence(
+                    row.get("verification_evidence"),
+                )
+                if verification_evidence is not None:
+                    compact_row["verification_evidence"] = verification_evidence
                 compact_results["results"].append(compact_row)
             compact_results["results_omitted_by_response_budget"] = max(
                 0, len(results) - len(compact_results["results"]),
@@ -2832,6 +2854,76 @@ def _compact_service_failure_evidence(value: Any) -> dict[str, str] | None:
     return result
 
 
+def _compact_ambient_verification_evidence(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Retain exact bounded verification coverage and unsupported reasons."""
+    if not isinstance(value, dict):
+        return None
+    evidence = _compact_service_failure_evidence(value)
+    if evidence is None:
+        return None
+    result: dict[str, Any] = evidence
+    summary = value.get("summary")
+    if isinstance(summary, dict):
+        summary_counts = {
+            key: count for key, count in summary.items()
+            if key in {
+                "obligations", "executed", "unsupported", "failed",
+                "blockers", "current", "deferred", "excluded", "unknown",
+                "unresolved", "invalid", "contradictory",
+            }
+            and type(count) is int and 0 <= count <= 10**9
+        }
+        if summary_counts:
+            result["summary"] = summary_counts
+    for source_key, output_key in (
+        ("outcome_counts", "outcome_counts"),
+        ("reason_counts", "reason_counts"),
+        ("unmeasurable_reason_counts", "unmeasurable_reason_counts"),
+    ):
+        counts = value.get(source_key)
+        if not isinstance(counts, dict):
+            continue
+        result[output_key] = {
+            name: count
+            for name, count in list(counts.items())[:8]
+            if isinstance(name, str)
+            and re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", name)
+            and type(count) is int and 0 <= count <= 10**9
+        }
+    issues = value.get("not_passed_obligations")
+    if isinstance(issues, list):
+        compact_issues = []
+        for issue in issues[:MAX_AMBIENT_VERIFICATION_ISSUES]:
+            if not isinstance(issue, dict):
+                continue
+            compact_issue: dict[str, str] = {}
+            obligation = issue.get("obligation")
+            if (isinstance(obligation, str)
+                    and re.fullmatch(r"[a-z][a-z0-9.-]{0,159}", obligation)):
+                compact_issue["obligation"] = obligation
+            repository = issue.get("repository")
+            if (isinstance(repository, str)
+                    and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", repository)):
+                compact_issue["repository"] = repository
+            for key, pattern in (
+                ("outcome", r"[a-z][a-z0-9_-]{0,79}"),
+                ("reason", r"[a-z][a-z0-9_-]{0,79}"),
+                ("unmeasurable", r"[a-z][a-z0-9-]{0,79}"),
+            ):
+                item = issue.get(key)
+                if isinstance(item, str) and re.fullmatch(pattern, item):
+                    compact_issue[key] = item
+            if compact_issue:
+                compact_issues.append(compact_issue)
+        result["not_passed_obligations"] = compact_issues
+    omitted = value.get("not_passed_obligations_omitted_count")
+    if type(omitted) is int and omitted >= 0:
+        result["not_passed_obligations_omitted_count"] = omitted
+    return result
+
+
 def _compact_environment_owner_failure_details(
     value: Any,
 ) -> list[dict[str, Any]]:
@@ -2873,8 +2965,56 @@ def _compact_environment_owner_failure_details(
         )
         if failure_evidence is not None:
             compact["failure_evidence"] = failure_evidence
+        verification_evidence = _compact_ambient_verification_evidence(
+            row.get("verification_evidence"),
+        )
+        if verification_evidence is not None:
+            compact["verification_evidence"] = verification_evidence
         if row.get("result_record_status") == "not-recorded-for-failure":
             compact["result_record_status"] = "not-recorded-for-failure"
+        result.append(compact)
+    return result
+
+
+def _compact_environment_verification_result_details(
+    value: Any,
+) -> list[dict[str, Any]]:
+    """Keep a few exact verification owner results and bounded source detail."""
+    rows = value if isinstance(value, list) else []
+    result: list[dict[str, Any]] = []
+    for row in rows[:MAX_ENVIRONMENT_VERIFICATION_DETAILS]:
+        if not isinstance(row, dict):
+            continue
+        if row.get("owner_pass") != "verification":
+            continue
+        compact: dict[str, Any] = {"owner_pass": "verification"}
+        execution_id = row.get("service_execution_id")
+        if (isinstance(execution_id, str)
+                and re.fullmatch(r"ase_[0-9a-f]{32}", execution_id)):
+            compact["service_execution_id"] = execution_id
+        for key in (
+            "result_status", "operation_status", "source_reference_status",
+        ):
+            value = row.get(key)
+            if (isinstance(value, str)
+                    and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", value)):
+                compact[key] = value
+        identity = row.get("result_identity")
+        if (isinstance(identity, str)
+                and re.fullmatch(r"[0-9a-f]{64}", identity)):
+            compact["result_identity"] = identity
+        reference = row.get("source_reference")
+        if (isinstance(reference, str)
+                and re.fullmatch(
+                    r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                )
+                and re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])):
+            compact["source_reference"] = reference
+        evidence = _compact_ambient_verification_evidence(
+            row.get("verification_evidence"),
+        )
+        if evidence is not None:
+            compact["verification_evidence"] = evidence
         result.append(compact)
     return result
 
@@ -3277,6 +3417,17 @@ def _compact_session_activity_budget_overview(
                     if failure_details:
                         execution_summary["owner_failure_details"] = (
                             failure_details
+                        )
+                    verification_details = (
+                        _compact_environment_verification_result_details(
+                            execution_summary.get(
+                                "verification_result_details",
+                            ),
+                        )
+                    )
+                    if verification_details:
+                        execution_summary["verification_result_details"] = (
+                            verification_details
                         )
                     pass_observations = execution_summary.get(
                         "owner_pass_observations",
@@ -3695,6 +3846,9 @@ def _compact_session_activity_evidence_priority_overview(
                             "owner_failure_details_status",
                             "owner_failure_detail_count",
                             "owner_failure_details_omitted_count",
+                            "verification_result_details_status",
+                            "verification_result_detail_count",
+                            "verification_result_details_omitted_count",
                         )
                         if key in execution_summary
                     }
@@ -3705,6 +3859,17 @@ def _compact_session_activity_evidence_priority_overview(
                         compact_execution_summary["owner_failure_details"] = (
                             failure_details
                         )
+                    verification_details = (
+                        _compact_environment_verification_result_details(
+                            execution_summary.get(
+                                "verification_result_details",
+                            ),
+                        )
+                    )
+                    if verification_details:
+                        compact_execution_summary[
+                            "verification_result_details"
+                        ] = verification_details
                     pass_observations = execution_summary.get(
                         "owner_pass_observations",
                     )
@@ -18374,6 +18539,70 @@ def _environment_service_execution_accountability(
             0, len(failure_detail_rows) - len(compact_failure_details),
         )
         summary["owner_failure_details"] = compact_failure_details
+        verification_owner_results = [
+            item for item in results
+            if isinstance(item, dict) and item.get("owner") == "verification"
+        ]
+        verification_detail_rows = []
+        for item in results:
+            if (not isinstance(item, dict)
+                    or item.get("owner") != "verification"
+                    or not isinstance(item.get("verification_evidence"), dict)):
+                continue
+            verification_detail_rows.append({
+                "owner_pass": "verification",
+                **{
+                    key: item[key]
+                    for key in (
+                        "service_execution_id", "result_status",
+                        "operation_status", "result_identity",
+                        "source_reference_status", "source_reference",
+                        "verification_evidence",
+                    )
+                    if key in item
+                },
+            })
+        compact_verification_details = (
+            _compact_environment_verification_result_details(
+                verification_detail_rows,
+            )
+        )
+        verification_results_omitted = owner_results.get(
+            "result_records_omitted", 0,
+        )
+        verification_evidence_complete = (
+            bool(verification_detail_rows)
+            and owner_results.get("status") == "recorded"
+            and (type(verification_results_omitted) is int
+                 and verification_results_omitted == 0)
+            and len(verification_detail_rows)
+            == len(verification_owner_results)
+            and len(compact_verification_details) == len(
+                verification_detail_rows,
+            )
+            and all(
+                isinstance(item.get("verification_evidence"), dict)
+                and item["verification_evidence"].get("status") == "recorded"
+                and item["verification_evidence"].get(
+                    "source_integrity_status",
+                ) == "verified"
+                for item in compact_verification_details
+            )
+        )
+        if verification_detail_rows:
+            summary["verification_result_details_status"] = (
+                "complete" if verification_evidence_complete else "partial"
+            )
+            summary["verification_result_detail_count"] = len(
+                compact_verification_details,
+            )
+            summary["verification_result_details_omitted_count"] = max(
+                0, len(verification_owner_results)
+                - len(compact_verification_details),
+            )
+            summary["verification_result_details"] = (
+                compact_verification_details
+            )
         scheduled = execution.get("scheduled_passes")
         scheduled = scheduled if isinstance(scheduled, list) else []
         skipped = execution.get("skipped_passes")
@@ -18444,6 +18673,11 @@ def _environment_service_execution_accountability(
                 )
                 if failure_evidence is not None:
                     row["failure_evidence"] = failure_evidence
+                verification_evidence = _compact_ambient_verification_evidence(
+                    result.get("verification_evidence"),
+                )
+                if verification_evidence is not None:
+                    row["verification_evidence"] = verification_evidence
                 result_summary = result.get("summary")
                 if isinstance(result_summary, dict):
                     row["result_summary"] = {
@@ -20148,14 +20382,47 @@ def _session_ambient_service_execution(
         owner_results = owner_results if isinstance(owner_results, dict) else {}
         result_rows = owner_results.get("results")
         if isinstance(result_rows, list):
+            verification_evidence_reads = 0
             for row in result_rows:
                 if not isinstance(row, dict):
                     continue
-                failure_evidence = _ambient_verification_failure_evidence(
+                if (row.get("owner") != "verification"
+                        or row.get("result_status") != "result-recorded"
+                        or verification_evidence_reads
+                        >= MAX_ENVIRONMENT_VERIFICATION_DETAILS):
+                    continue
+                verification_evidence_reads += 1
+                verification_evidence = _ambient_verification_result_evidence(
                     session, row,
                 )
-                if failure_evidence is not None:
-                    row["failure_evidence"] = failure_evidence
+                if verification_evidence is not None:
+                    row["verification_evidence"] = verification_evidence
+                    failure_evidence = verification_evidence.get(
+                        "failure_evidence",
+                    )
+                    is_failed_verification = (
+                        row.get("operation_status") in {"retry", "failed", "error"}
+                        or row.get("owner_outcome_status") == "failure-reported"
+                    )
+                    if (not isinstance(failure_evidence, dict)
+                            and is_failed_verification):
+                        failure_evidence = {
+                            "status": (
+                                "no-failure-recorded"
+                                if verification_evidence.get("status") == "recorded"
+                                else verification_evidence.get("status")
+                            ),
+                            **{
+                                key: verification_evidence[key]
+                                for key in (
+                                    "owner_result_reference", "source_reference",
+                                    "source_schema", "source_integrity_status",
+                                )
+                                if isinstance(verification_evidence.get(key), str)
+                            },
+                        }
+                    if isinstance(failure_evidence, dict):
+                        row["failure_evidence"] = failure_evidence
     campaign = snapshot.get("campaign")
     campaign = campaign if isinstance(campaign, dict) else {}
     intent = snapshot.get("intent")
@@ -20202,16 +20469,12 @@ def _session_ambient_service_execution(
     }
 
 
-def _ambient_verification_failure_evidence(
+def _ambient_verification_result_evidence(
     session: Any, owner_result: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Read an exact verification source only for a reported failed pass."""
+    """Read exact verification evidence linked to a recorded owner result."""
     if (owner_result.get("owner") != "verification"
-            or (owner_result.get("operation_status") not in {
-                "retry", "failed", "error",
-            }
-                and owner_result.get("owner_outcome_status")
-                != "failure-reported")):
+            or owner_result.get("result_status") != "result-recorded"):
         return None
     session_id = getattr(session, "session_id", None)
     owner_reference = owner_result.get("source_reference")
@@ -20230,6 +20493,12 @@ def _ambient_verification_failure_evidence(
         owner_record = evidence_store.read(
             session, "incremental-coherence:verification", owner_reference,
         )
+        if digest_hex(owner_record, length=64) != owner_reference.rsplit(":", 1)[-1]:
+            return {
+                "status": "result-identity-mismatch",
+                "owner_result_reference": owner_reference,
+                "source_integrity_status": "not-verified",
+            }
         block = owner_record.get("block")
         if (not isinstance(block, dict)
                 or digest_hex(block, length=64)
@@ -20269,6 +20538,14 @@ def _ambient_verification_failure_evidence(
             "source_integrity_status": "unavailable",
         }
 
+    if digest_hex(verification, length=64) != evidence_reference.rsplit(":", 1)[-1]:
+        return {
+            "status": "source-integrity-failure",
+            "owner_result_reference": owner_reference,
+            "source_reference": evidence_reference,
+            "source_integrity_status": "not-verified",
+        }
+
     if verification.get("schema_version") != "mncs.environment.verification/1":
         return {
             "status": "unsupported-source-schema",
@@ -20276,31 +20553,105 @@ def _ambient_verification_failure_evidence(
             "source_reference": evidence_reference,
             "source_integrity_status": "verified",
         }
+    summary = verification.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    summary_counts = {
+        key: value for key, value in summary.items()
+        if key in {
+            "obligations", "executed", "unsupported", "failed", "blockers",
+            "current", "deferred", "excluded", "unknown", "unresolved",
+            "invalid", "contradictory",
+        }
+        and type(value) is int and 0 <= value <= 10**9
+    }
+    outcome_counts: dict[str, int] = {}
+    reason_counts: dict[str, int] = {}
+    unmeasurable_counts: dict[str, int] = {}
+    not_passed: list[dict[str, str]] = []
+    results = verification.get("results")
+    results = results if isinstance(results, list) else []
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        outcome = item.get("outcome")
+        if isinstance(outcome, str) and re.fullmatch(
+            r"[a-z][a-z0-9_-]{0,63}", outcome,
+        ):
+            outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+        reason = item.get("reason")
+        if isinstance(reason, str) and re.fullmatch(
+            r"[a-z][a-z0-9_-]{0,79}", reason,
+        ):
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        unmeasurable = item.get("unmeasurable")
+        if isinstance(unmeasurable, str) and re.fullmatch(
+            r"[a-z][a-z0-9-]{0,79}", unmeasurable,
+        ):
+            unmeasurable_counts[unmeasurable] = (
+                unmeasurable_counts.get(unmeasurable, 0) + 1
+            )
+        if outcome == "passed":
+            continue
+        issue: dict[str, str] = {}
+        obligation = item.get("obligation")
+        if isinstance(obligation, str) and re.fullmatch(
+            r"[a-z][a-z0-9.-]{0,159}", obligation,
+        ):
+            issue["obligation"] = obligation
+        repository = item.get("repository")
+        if isinstance(repository, str) and re.fullmatch(
+            r"[a-z][a-z0-9-]{0,63}", repository,
+        ):
+            issue["repository"] = repository
+        for key, value in (
+            ("outcome", outcome), ("reason", reason),
+            ("unmeasurable", unmeasurable),
+        ):
+            pattern = (
+                r"[a-z][a-z0-9_-]{0,79}" if key == "reason"
+                else r"[a-z][a-z0-9-]{0,79}"
+            )
+            if isinstance(value, str) and re.fullmatch(pattern, value):
+                issue[key] = value
+        if issue:
+            not_passed.append(issue)
+
+    result: dict[str, Any] = {
+        "status": "recorded",
+        "owner_result_reference": owner_reference,
+        "source_reference": evidence_reference,
+        "source_schema": "mncs.environment.verification/1",
+        "source_integrity_status": "verified",
+        "summary": summary_counts,
+        "outcome_counts": dict(sorted(outcome_counts.items())[:8]),
+        "reason_counts": dict(sorted(reason_counts.items())[:8]),
+        "unmeasurable_reason_counts": dict(
+            sorted(unmeasurable_counts.items())[:8],
+        ),
+        "not_passed_obligations": not_passed[:MAX_AMBIENT_VERIFICATION_ISSUES],
+        "not_passed_obligations_omitted_count": max(
+            0, len(not_passed) - MAX_AMBIENT_VERIFICATION_ISSUES,
+        ),
+    }
     failure = verification.get("failure")
-    if not isinstance(failure, dict):
-        return {
-            "status": "no-failure-recorded",
+    if isinstance(failure, dict):
+        reason = failure.get("reason")
+        if isinstance(reason, str) and reason.startswith("execution-failed:"):
+            reason_code = "execution-failed"
+        elif isinstance(reason, str) and re.fullmatch(
+                r"[a-z][a-z0-9-]{0,79}", reason):
+            reason_code = reason
+        else:
+            reason_code = "unclassified-failure"
+        result["failure_evidence"] = {
+            "status": "recorded",
+            "reason_code": reason_code,
             "owner_result_reference": owner_reference,
             "source_reference": evidence_reference,
             "source_schema": "mncs.environment.verification/1",
             "source_integrity_status": "verified",
         }
-    reason = failure.get("reason")
-    if isinstance(reason, str) and reason.startswith("execution-failed:"):
-        reason_code = "execution-failed"
-    elif isinstance(reason, str) and re.fullmatch(
-            r"[a-z][a-z0-9-]{0,79}", reason):
-        reason_code = reason
-    else:
-        reason_code = "unclassified-failure"
-    return {
-        "status": "recorded",
-        "reason_code": reason_code,
-        "owner_result_reference": owner_reference,
-        "source_reference": evidence_reference,
-        "source_schema": "mncs.environment.verification/1",
-        "source_integrity_status": "verified",
-    }
+    return result
 
 
 def _ambient_owner_pass_event_context(
