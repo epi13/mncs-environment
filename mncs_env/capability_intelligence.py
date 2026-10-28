@@ -234,6 +234,7 @@ MAX_SESSION_PROJECTION_HISTORY = 8
 MAX_SESSION_RESOURCE_ARTIFACT_WINDOW = 256
 MAX_SESSION_RESOURCE_SAMPLES = 4
 MAX_SESSION_DIAGNOSTIC_HISTORY = 4
+MAX_SESSION_VERIFICATION_HISTORY = 8
 MAX_RESOURCE_SAMPLE_BYTES = 64 * 1024
 SYSTEM_RESOURCE_SAMPLE_CAPABILITY = "mncs-system-monitor:system-resource-sample"
 SYSTEM_RESOURCE_SAMPLE_SCHEMA = "mncs.system-monitor.resource-sample.v1"
@@ -5048,6 +5049,22 @@ def _compact_owner_pass_activity_budget(value: Any) -> dict[str, Any] | None:
     return result
 
 
+def _compact_session_verification_activity(value: Any) -> dict[str, Any] | None:
+    """Retain bounded verification-history rows and exact owner-pass links."""
+    if (not isinstance(value, dict)
+            or value.get("schema_version")
+            != "mncs.environment.session-verification-activity/1"
+            or value.get("status") not in {
+                "observed", "partial", "not-recorded-in-session",
+            }
+            or not isinstance(value.get("source"), dict)
+            or not isinstance(value.get("summary"), dict)
+            or not isinstance(value.get("history"), list)
+            or len(value["history"]) > MAX_SESSION_VERIFICATION_HISTORY):
+        return None
+    return deepcopy(value)
+
+
 def _compact_session_activity_budget_overview(
     activity: Any, source_activity: Any = None,
 ) -> dict[str, Any] | None:
@@ -5089,6 +5106,7 @@ def _compact_session_activity_budget_overview(
             "rpc_operation_records_omitted",
             "rpc_operation_records_invalid",
             "ambient_service_execution_digest",
+            "verification_activity_digest",
             "family_ambient_observation_digest",
             "retirement_activity_digest",
         )
@@ -5137,6 +5155,16 @@ def _compact_session_activity_budget_overview(
     )
     if compact_resource_samples is not None:
         result["resource_samples"] = compact_resource_samples
+
+    verification_activity = activity.get("verification_activity")
+    if (not isinstance(verification_activity, dict)
+            and isinstance(source_activity, dict)):
+        verification_activity = source_activity.get("verification_activity")
+    compact_verification_activity = _compact_session_verification_activity(
+        verification_activity,
+    )
+    if compact_verification_activity is not None:
+        result["verification_activity"] = compact_verification_activity
 
     # These families are already sanitized and bounded by the session
     # activity projector. Retain one actionable row per family in the
@@ -5754,6 +5782,7 @@ def _compact_session_activity_evidence_priority_overview(
             "repository_ref_transition_count",
             "repository_ref_transitions_truncated",
             "repository_ref_transitions_omitted_count",
+            "verification_activity",
         )
         if key in activity
     }
@@ -5772,6 +5801,7 @@ def _compact_session_activity_evidence_priority_overview(
                 "rpc_operation_records_omitted",
                 "rpc_operation_records_invalid",
                 "ambient_service_execution_digest",
+                "verification_activity_digest",
                 "family_ambient_observation_digest",
                 "retirement_activity_digest",
             )
@@ -7389,6 +7419,7 @@ def _compact_projection(
                     "session_service_accountability_digest",
                     "session_projection_coherence_digest",
                     "session_ambient_service_execution_digest",
+                    "session_verification_activity_digest",
                     "session_family_ambient_observation_digest",
                     "session_ambient_owner_pass_activity_digest",
                     "observation_records_considered",
@@ -8355,6 +8386,7 @@ def _compact_projection(
             "invocation_events_considered", "invocation_records_omitted",
             "resource_sample_identity_digest",
             "ambient_service_execution_digest",
+            "verification_activity_digest",
             "family_ambient_observation_digest",
             "ambient_owner_pass_activity_digest",
             "retirement_activity_digest",
@@ -10872,6 +10904,14 @@ def _compact_projection(
     compact_resource_samples = _compact_session_resource_samples(resource_samples)
     if compact_resource_samples is not None:
         compact_activity["resource_samples"] = compact_resource_samples
+
+    compact_verification_activity = _compact_session_verification_activity(
+        activity.get("verification_activity"),
+    )
+    if compact_verification_activity is not None:
+        compact_activity["verification_activity"] = (
+            compact_verification_activity
+        )
 
     candidate_summary = projection.get(
         "session_activity_pressure_candidate_summary",
@@ -25158,6 +25198,324 @@ def _session_projection_coherence_history(
     }
 
 
+def _session_verification_activity(
+    session: Any, snapshot: dict[str, Any], ambient_service_execution: Any,
+) -> dict[str, Any]:
+    """Relate recorded verification history to the selected session objective.
+
+    History summaries are read from the session snapshot. Immutable verification
+    evidence is not re-read here; exact source references are joined to the
+    latest retained owner-pass result when that result already exposes them.
+    """
+    timestamp_pattern = re.compile(
+        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
+        r"(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$"
+    )
+
+    def identity(value: Any) -> str | None:
+        return (value if isinstance(value, str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}", value)
+                else None)
+
+    def summary(value: Any) -> dict[str, Any] | None:
+        if not isinstance(value, dict):
+            return None
+        counts = {
+            key: value[key]
+            for key in (
+                "obligations", "current", "executed", "failed", "unknown",
+                "unsupported", "unresolved", "contradictory", "excluded",
+                "deferred", "invalid", "blockers",
+            )
+            if type(value.get(key)) is int and 0 <= value[key] <= 10**9
+        }
+        if not counts:
+            return None
+        elapsed = value.get("elapsed_seconds")
+        if (type(elapsed) in (int, float) and 0 <= elapsed <= 86400
+                and math.isfinite(elapsed)):
+            counts["elapsed_seconds"] = round(float(elapsed), 3)
+        if type(value.get("epoch_reused")) is bool:
+            counts["epoch_reused"] = value["epoch_reused"]
+        return counts
+
+    def evidence_reference(
+        value: Any, session_id: str | None,
+    ) -> tuple[dict[str, Any] | None, str]:
+        if not isinstance(value, str) or not value:
+            return None, "not-recorded"
+        if session_id is None:
+            return None, "session-identity-unavailable"
+        source = {
+            "kind": "immutable-verification-evidence",
+            "session_id": session_id,
+            "reference": value,
+            "schema": "mncs.environment.verification/1",
+            "owner": "verification",
+        }
+        pointer = _validate_session_store_source(source)
+        if pointer is not None:
+            return {
+                "kind": "immutable-verification-evidence-record",
+                "schema": "mncs.environment.verification/1",
+                "reference": pointer["reference"],
+            }, "reference-identified"
+        artifact_prefix = (
+            f"sessions/{session_id}/verification-artifacts/evidence/"
+        )
+        if value.startswith(artifact_prefix):
+            filename = value[len(artifact_prefix):]
+            if (PurePosixPath(value).as_posix() == value
+                    and "/" not in filename
+                    and re.fullmatch(
+                        r"verification-(?:ambient|explicit)-[0-9a-f]{12}\.json",
+                        filename,
+                    )):
+                return {
+                    "kind": "session-verification-evidence-artifact",
+                    "session_id": session_id,
+                    "relative_path": value,
+                }, "reference-identified"
+        if value == "verification-evidence-unwritable":
+            return None, "evidence-unwritable"
+        return None, "reference-invalid-or-unmatched"
+
+    session_id = identity(getattr(session, "session_id", None))
+    environment_id = identity(snapshot.get("environment_id"))
+    snapshot_sequence = snapshot.get("snapshot_sequence")
+    snapshot_sequence = (
+        snapshot_sequence
+        if type(snapshot_sequence) is int and snapshot_sequence >= 0 else None
+    )
+    campaign = snapshot.get("campaign")
+    campaign = campaign if isinstance(campaign, dict) else {}
+    intent = snapshot.get("intent")
+    intent = intent if isinstance(intent, dict) else {}
+    raw_history_value = snapshot.get("verification_history")
+    invalid_history_container = (
+        "verification_history" in snapshot
+        and not isinstance(raw_history_value, list)
+    )
+    raw_history = raw_history_value if isinstance(raw_history_value, list) else []
+    selected = raw_history[-MAX_SESSION_VERIFICATION_HISTORY:]
+    history_omitted = max(0, len(raw_history) - len(selected))
+
+    execution = (
+        ambient_service_execution.get("execution")
+        if isinstance(ambient_service_execution, dict) else None
+    )
+    execution = execution if isinstance(execution, dict) else None
+    owner_results = (
+        execution.get("owner_pass_results")
+        if isinstance(execution, dict) else None
+    )
+    owner_results = owner_results if isinstance(owner_results, dict) else {}
+    raw_owner_rows = owner_results.get("results")
+    raw_owner_rows = raw_owner_rows if isinstance(raw_owner_rows, list) else []
+    owner_result_limit = MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS
+    owner_rows = raw_owner_rows[:owner_result_limit]
+    owner_result_omissions = owner_results.get("result_records_omitted", 0)
+    if type(owner_result_omissions) is not int or owner_result_omissions < 0:
+        owner_result_omissions = 0
+    owner_result_omissions += max(0, len(raw_owner_rows) - len(owner_rows))
+    trace_status = (
+        ambient_service_execution.get("status")
+        if isinstance(ambient_service_execution, dict) else "unavailable"
+    )
+    trace_available = (
+        isinstance(execution, dict)
+        and trace_status in {"observed", "partial"}
+    )
+
+    invalid_history_count = int(invalid_history_container)
+    invalid_reference_count = 0
+    reference_issue_count = 0
+    exact_link_count = 0
+    history: list[dict[str, Any]] = []
+    mode_counts = {"ambient": 0, "explicit": 0}
+    for offset, item in enumerate(reversed(selected), start=1):
+        if not isinstance(item, dict):
+            invalid_history_count += 1
+            continue
+        recorded_at = item.get("at")
+        mode = item.get("mode")
+        outcome_summary = summary(item.get("summary"))
+        if (not isinstance(recorded_at, str)
+                or timestamp_pattern.fullmatch(recorded_at) is None
+                or not isinstance(mode, str) or mode not in mode_counts
+                or outcome_summary is None):
+            invalid_history_count += 1
+            continue
+        pointer, pointer_status = evidence_reference(
+            item.get("evidence_ref"), session_id,
+        )
+        reference_issue_count += pointer_status != "reference-identified"
+        if pointer_status in {
+            "session-identity-unavailable", "reference-invalid-or-unmatched",
+        }:
+            invalid_reference_count += 1
+        row: dict[str, Any] = {
+            "ordinal_from_newest": offset,
+            "recorded_at": recorded_at,
+            "mode": mode,
+            "summary": outcome_summary,
+            "evidence_reference_status": pointer_status,
+        }
+        if pointer is not None:
+            row["evidence_reference"] = pointer
+
+        matching_results: list[dict[str, Any]] = []
+        raw_reference = item.get("evidence_ref")
+        if pointer_status == "reference-identified" and isinstance(
+            raw_reference, str,
+        ):
+            for owner_row in owner_rows:
+                if (not isinstance(owner_row, dict)
+                        or owner_row.get("owner") != "verification"
+                        or owner_row.get("result_status") != "result-recorded"):
+                    continue
+                verification_evidence = owner_row.get("verification_evidence")
+                if (not isinstance(verification_evidence, dict)
+                        or verification_evidence.get("source_reference")
+                        != raw_reference):
+                    continue
+                verification_pointer = _validate_session_store_source({
+                    "kind": "immutable-verification-evidence",
+                    "session_id": session_id,
+                    "reference": verification_evidence.get("source_reference"),
+                    "schema": "mncs.environment.verification/1",
+                    "owner": "verification",
+                })
+                owner_pointer, owner_pointer_status = (
+                    _ambient_owner_result_store_source(session, owner_row)
+                )
+                if verification_pointer is None:
+                    continue
+                match: dict[str, Any] = {
+                    "owner_pass": "verification",
+                    "verification_evidence_reference": (
+                        verification_pointer["reference"]
+                    ),
+                    "verification_evidence_integrity_status": (
+                        verification_evidence.get(
+                            "source_integrity_status", "not-checked",
+                        )
+                        if verification_evidence.get("source_integrity_status")
+                        in {"verified", "unavailable", "not-verified"}
+                        else "not-checked"
+                    ),
+                    "owner_result_content_integrity_status": (
+                        owner_row.get("source_content_integrity_status")
+                        if owner_row.get("source_content_integrity_status")
+                        in {
+                            "content-integrity-verified", "source-read-failed",
+                            "source-read-budget-exhausted",
+                            "source-verification-limit-exhausted",
+                            "source-reference-invalid", "not-checked",
+                        }
+                        else "not-checked"
+                    ),
+                }
+                if owner_pointer is not None:
+                    match["owner_result_reference"] = owner_pointer["reference"]
+                else:
+                    match["owner_result_reference_status"] = owner_pointer_status
+                execution_id = owner_row.get("service_execution_id")
+                if (isinstance(execution_id, str)
+                        and re.fullmatch(r"ase_[a-f0-9]{32}", execution_id)):
+                    match["service_execution_id"] = execution_id
+                result_identity = owner_row.get("result_identity")
+                if (isinstance(result_identity, str)
+                        and re.fullmatch(r"[0-9a-f]{64}", result_identity)):
+                    match["owner_result_identity"] = result_identity
+                verification_status = owner_row.get("verification_status")
+                if (isinstance(verification_status, str)
+                        and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", verification_status)):
+                    match["scheduler_verification_status"] = verification_status
+                matching_results.append(match)
+
+        if len(matching_results) == 1:
+            relation_status = "exact-reference-match"
+            exact_link_count += 1
+        elif len(matching_results) > 1:
+            relation_status = "ambiguous-exact-reference-match"
+        elif pointer_status != "reference-identified":
+            relation_status = "not-assessable-invalid-reference"
+        elif not trace_available:
+            relation_status = "owner-pass-trace-unavailable"
+        else:
+            relation_status = "no-exact-reference-match-in-latest-trace"
+        row["latest_owner_pass_relation"] = {
+            "status": relation_status,
+            "search_scope": "latest-current-session-incremental-owner-pass-trace",
+            "matching_result_count": len(matching_results),
+            "results": matching_results[:2],
+            "search_coverage_status": (
+                "partial" if owner_result_omissions
+                else "complete-for-returned-trace-results"
+            ) if trace_available else "unavailable",
+            "owner_result_records_omitted": owner_result_omissions,
+            "causal_status": "not-established",
+        }
+        history.append(row)
+        mode_counts[mode] += 1
+
+    history_record_count = len(raw_history)
+    provenance_status = (
+        "identified"
+        if session_id and environment_id and snapshot_sequence is not None
+        else "incomplete"
+    )
+    has_records = bool(raw_history) or invalid_history_container
+    status = "observed"
+    if not has_records:
+        status = "not-recorded-in-session"
+    elif (provenance_status != "identified" or history_omitted
+          or invalid_history_count or invalid_reference_count
+          or reference_issue_count):
+        status = "partial"
+    return {
+        "schema_version": "mncs.environment.session-verification-activity/1",
+        "status": status,
+        "scope": "bounded-current-session-verification-history",
+        "source": {
+            "kind": "current-session-snapshot",
+            "session_id": session_id,
+            "environment_id": environment_id,
+            "snapshot_sequence": snapshot_sequence,
+            "campaign_id": identity(campaign.get("identity")),
+            "work_intent_id": identity(intent.get("identity")),
+            "history_record_count": history_record_count,
+            "history_records_projected": len(history),
+            "history_records_omitted": history_omitted,
+            "history_limit": MAX_SESSION_VERIFICATION_HISTORY,
+            "invalid_history_record_count": invalid_history_count,
+            "invalid_evidence_reference_count": invalid_reference_count,
+            "evidence_reference_issue_count": reference_issue_count,
+            "provenance_status": provenance_status,
+            "owner_pass_trace_status": trace_status,
+            "owner_pass_result_records_examined": len(owner_rows),
+            "owner_pass_result_records_omitted": owner_result_omissions,
+        },
+        "summary": {
+            "history_record_count": history_record_count,
+            "history_records_projected": len(history),
+            "history_records_omitted": history_omitted,
+            "mode_counts_projected": mode_counts,
+            "exact_owner_pass_reference_match_count": exact_link_count,
+            "verification_correctness_status": "not-established",
+            "ambient_fulfillment_status": "not-established",
+            "agent_intervention_burden_status": "not-measured",
+        },
+        "history": history,
+        "measurement_limits": [
+            "Verification summaries and references are read from the selected session snapshot; immutable evidence is not re-read or independently verified by this activity view.",
+            "Owner-pass links require exact evidence-reference equality and search only the latest retained owner-pass trace; absence of a match does not establish that no related verification occurred.",
+            "Verification outcomes do not establish environmental service fulfillment, correctness beyond their declared checks, agent receipt, or reduced intervention burden.",
+        ],
+    }
+
+
 def _ambient_owner_result_store_source(
     session: Any, owner_result: Any,
 ) -> tuple[dict[str, str] | None, str]:
@@ -26363,6 +26721,15 @@ def _session_activity(
     ambient_service_execution = _session_ambient_service_execution(
         session, snapshot,
     )
+    verification_activity = _session_verification_activity(
+        session, snapshot, ambient_service_execution,
+    )
+    has_verification_activity = (
+        verification_activity.get("status") != "not-recorded-in-session"
+    )
+    verification_activity_digest = (
+        digest_hex(verification_activity) if has_verification_activity else None
+    )
     service_readiness = _session_service_readiness(session, snapshot)
     service_accountability = _session_service_accountability(
         service_readiness, None, snapshot,
@@ -26457,6 +26824,8 @@ def _session_activity(
                 ),
                 **({"ambient_service_execution_digest": ambient_service_execution_digest}
                    if ambient_service_execution_digest is not None else {}),
+                **({"verification_activity_digest": verification_activity_digest}
+                   if verification_activity_digest is not None else {}),
                 **({"family_ambient_observation_digest": (
                     family_ambient_observation_digest
                 )} if family_ambient_observation_digest is not None else {}),
@@ -26474,6 +26843,8 @@ def _session_activity(
                if has_service_readiness else {}),
             **({"service_accountability": service_accountability}
                if service_accountability is not None else {}),
+            **({"verification_activity": verification_activity}
+               if has_verification_activity else {}),
             **({"family_ambient_observation": family_ambient_observation}
                if family_ambient_observation is not None else {}),
             **({"doctor_health_history": doctor_health_history}
@@ -26521,6 +26892,8 @@ def _session_activity(
                 ),
                 **({"ambient_service_execution_digest": ambient_service_execution_digest}
                    if ambient_service_execution_digest is not None else {}),
+                **({"verification_activity_digest": verification_activity_digest}
+                   if verification_activity_digest is not None else {}),
                 **({"family_ambient_observation_digest": (
                     family_ambient_observation_digest
                 )} if family_ambient_observation_digest is not None else {}),
@@ -26535,6 +26908,8 @@ def _session_activity(
                if has_service_readiness else {}),
             **({"service_accountability": service_accountability}
                if service_accountability is not None else {}),
+            **({"verification_activity": verification_activity}
+               if has_verification_activity else {}),
             **({"family_ambient_observation": family_ambient_observation}
                if family_ambient_observation is not None else {}),
             **({"doctor_health_history": doctor_health_history}
@@ -28851,6 +29226,8 @@ def _session_activity(
            if has_service_readiness else {}),
         **({"service_accountability": service_accountability}
            if service_accountability is not None else {}),
+        **({"verification_activity": verification_activity}
+           if has_verification_activity else {}),
         **({"family_ambient_observation": family_ambient_observation}
            if family_ambient_observation is not None else {}),
         **({"doctor_health_history": doctor_health_history}
@@ -28876,6 +29253,8 @@ def _session_activity(
             ],
             **({"ambient_service_execution_digest": ambient_service_execution_digest}
                if ambient_service_execution_digest is not None else {}),
+            **({"verification_activity_digest": verification_activity_digest}
+               if verification_activity_digest is not None else {}),
             **({"family_ambient_observation_digest": (
                 family_ambient_observation_digest
             )} if family_ambient_observation_digest is not None else {}),
@@ -30756,6 +31135,10 @@ def project(
         digest_hex(activity["ambient_service_execution"])
         if isinstance(activity.get("ambient_service_execution"), dict) else None
     )
+    session_verification_activity_digest = (
+        digest_hex(activity["verification_activity"])
+        if isinstance(activity.get("verification_activity"), dict) else None
+    )
     session_family_ambient_observation_digest = (
         digest_hex(activity["family_ambient_observation"])
         if isinstance(activity.get("family_ambient_observation"), dict) else None
@@ -30851,6 +31234,11 @@ def project(
                 ),
             } if session_ambient_service_execution_digest is not None else {}),
             **({
+                "session_verification_activity_digest": (
+                    session_verification_activity_digest
+                ),
+            } if session_verification_activity_digest is not None else {}),
+            **({
                 "session_family_ambient_observation_digest": (
                     session_family_ambient_observation_digest
                 ),
@@ -30936,6 +31324,11 @@ def project(
                     session_ambient_service_execution_digest
                 ),
             } if session_ambient_service_execution_digest is not None else {}),
+            **({
+                "session_verification_activity_digest": (
+                    session_verification_activity_digest
+                ),
+            } if session_verification_activity_digest is not None else {}),
             **({
                 "session_family_ambient_observation_digest": (
                     session_family_ambient_observation_digest

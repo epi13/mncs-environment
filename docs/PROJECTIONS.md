@@ -1518,6 +1518,21 @@ bounded extraction is not established, and reaching the candidate limit is
 reported as possible truncation. The summary does not establish an
 environmental defect, agent intervention burden, or cross-session recurrence.
 
+`session_activity.verification_activity` projects the selected session's
+bounded `verification_history` alongside its campaign, work-intent,
+environment, and snapshot identities. It retains allowlisted outcome counts
+and typed evidence references without re-reading immutable verification
+records. Each history row is joined to the latest retained owner-pass result
+only when its exact evidence reference matches. The relation carries the
+owner-result reference and the verification and owner-result content-integrity
+states recorded by that trace. A missing match means no exact match was present
+in the latest retained trace; it does not establish that no related
+verification occurred. Both normal and evidence-priority compaction preserve
+the bounded rows and references, and the activity digest participates in
+projection identity. The view does not independently verify verification
+content, establish service fulfillment or correctness, attribute activity to
+an agent, or measure intervention burden.
+
 At the projection root, `session_activity_pressure_candidate_count` now
 includes these verified unmeasurable verification-obligation candidates
 alongside the existing RPC, authority, coordination, and service-readiness

@@ -9172,6 +9172,186 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert mismatched_link["source_integrity_status"] == "not-verified"
 
 
+def test_session_verification_activity_correlates_exact_history_and_survives_compaction(
+    tmp_path: Path,
+) -> None:
+    session, _state = _session(tmp_path, [])
+    session_id = session.session_id
+    exact_verification_reference = (
+        f"mncs-store:{session_id}:verification:" + "a" * 64
+    )
+    unmatched_verification_reference = (
+        f"mncs-store:{session_id}:verification:" + "b" * 64
+    )
+    owner_result_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + "c" * 64
+    )
+    owner_row = {
+        "owner": "verification",
+        "service_execution_id": "ase_" + "d" * 32,
+        "result_status": "result-recorded",
+        "result_identity": "e" * 64,
+        "source_reference_status": "store-record",
+        "source_reference": owner_result_reference,
+        "source_content_integrity_status": "content-integrity-verified",
+        "verification_status": "not-established",
+        "verification_evidence": {
+            "status": "recorded",
+            "source_reference": exact_verification_reference,
+            "source_integrity_status": "verified",
+            "owner_result_reference": owner_result_reference,
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+        },
+    }
+    ambient_execution = {
+        "status": "observed",
+        "scope": "latest-current-session-incremental-owner-pass-trace",
+        "source": {
+            "kind": "current-session-snapshot",
+            "session_id": session_id,
+            "environment_id": "renv_projection_reader",
+            "snapshot_sequence": 42,
+            "campaign_id": "cmp_projection_reader",
+            "work_intent_id": "int_projection_reader",
+            "trace_status": "recorded",
+            "owner_pass_decision_coverage": "complete",
+        },
+        "execution": {
+            "mode": "targeted_update",
+            "decision_record_status": "recorded",
+            "owner_pass_decision_coverage": "complete",
+            "scheduled_passes": [],
+            "skipped_passes": [],
+            "owner_pass_results": {
+                "result_record_count": 1,
+                "result_records_omitted": 0,
+                "results": [owner_row],
+            },
+        },
+    }
+    snapshot = {
+        **session.snapshot,
+        "snapshot_sequence": 42,
+        "verification_history": [
+            {
+                "at": "not-a-timestamp",
+                "mode": "ambient",
+                "summary": {"obligations": 1, "blockers": 0},
+                "evidence_ref": exact_verification_reference,
+            },
+            {
+                "at": "2026-10-28T10:00:00Z",
+                "mode": "explicit",
+                "summary": {"obligations": 2, "blockers": 1},
+                "evidence_ref": unmatched_verification_reference,
+            },
+            {
+                "at": "2026-10-28T11:00:00Z",
+                "mode": "ambient",
+                "summary": {
+                    "obligations": 3, "executed": 1,
+                    "failed": 0, "blockers": 0,
+                },
+                "evidence_ref": exact_verification_reference,
+            },
+        ],
+    }
+    session.snapshot = snapshot
+
+    with patch(
+        "mncs_env.capability_intelligence._session_ambient_service_execution",
+        return_value=ambient_execution,
+    ):
+        projection = capability_intelligence.project(session)
+
+    activity = projection["session_activity"]
+    verification_activity = activity["verification_activity"]
+    assert verification_activity["status"] == "partial"
+    assert verification_activity["source"]["campaign_id"] == (
+        "cmp_projection_reader"
+    )
+    assert verification_activity["source"]["work_intent_id"] == (
+        "int_projection_reader"
+    )
+    assert verification_activity["source"]["invalid_history_record_count"] == 1
+    assert verification_activity["summary"][
+        "exact_owner_pass_reference_match_count"
+    ] == 1
+    exact_row, unmatched_row = verification_activity["history"]
+    assert exact_row["evidence_reference"]["reference"] == (
+        exact_verification_reference
+    )
+    exact_relation = exact_row["latest_owner_pass_relation"]
+    assert exact_relation["status"] == "exact-reference-match"
+    assert exact_relation["results"][0]["service_execution_id"] == (
+        "ase_" + "d" * 32
+    )
+    assert exact_relation["results"][0][
+        "verification_evidence_integrity_status"
+    ] == "verified"
+    assert exact_relation["results"][0][
+        "owner_result_content_integrity_status"
+    ] == "content-integrity-verified"
+    assert unmatched_row["latest_owner_pass_relation"]["status"] == (
+        "no-exact-reference-match-in-latest-trace"
+    )
+    assert verification_activity["summary"]["ambient_fulfillment_status"] == (
+        "not-established"
+    )
+    assert verification_activity["summary"][
+        "agent_intervention_burden_status"
+    ] == "not-measured"
+    assert projection["source"]["session_verification_activity_digest"]
+    prior_projection_identity = projection["identity"]
+    session.snapshot["verification_history"][-1]["summary"]["failed"] = 1
+    with patch(
+        "mncs_env.capability_intelligence._session_ambient_service_execution",
+        return_value=ambient_execution,
+    ):
+        updated_projection = capability_intelligence.project(session)
+    assert updated_projection["identity"] != prior_projection_identity
+
+    with patch(
+        "mncs_env.capability_intelligence._session_ambient_service_execution",
+        return_value=ambient_execution,
+    ):
+        compact_projection = capability_intelligence.project(
+            session,
+            max_result_bytes=(
+                capability_intelligence.MIN_EVIDENCE_PRIORITY_RESULT_BYTES
+            ),
+        )
+    compact_history = compact_projection["session_activity"][
+        "verification_activity"
+    ]["history"]
+    assert compact_history[0]["latest_owner_pass_relation"]["status"] == (
+        "exact-reference-match"
+    )
+    assert compact_history[0]["evidence_reference"]["reference"] == (
+        exact_verification_reference
+    )
+
+    for compact in (
+        capability_intelligence._compact_session_activity_budget_overview(
+            activity,
+        ),
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            activity,
+        ),
+    ):
+        assert compact is not None
+        compact_verification = compact["verification_activity"]
+        assert compact_verification["history"][0][
+            "latest_owner_pass_relation"
+        ]["status"] == "exact-reference-match"
+        assert compact_verification["history"][0]["evidence_reference"][
+            "reference"
+        ] == exact_verification_reference
+
+
 def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> None:
     integrity = {
         "scope": "selected-session-owner-result-store-content",
