@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_live_readback_source_correction_20261028",
+  "captured_at": "2026-10-28T11:32:15Z",
+  "measurement_basis": "exact-git-blob-verification-and-append-only-source-pointer-correction",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI source-integrity projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3f35ac204e56e0fd",
+      "target_observation_identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028",
+      "corrected_field_paths": ["supporting_sources"],
+      "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef"
+    },
+    "outcome": {
+      "status": "source-pointer-correction-recorded",
+      "source_pointer_count": 2,
+      "observation_bytes_changed": false,
+      "implementation_source_count": 2,
+      "reason": "The two incomplete pointers were resolved to exact authority and retirement-adapter implementation blobs. The original read-only assessment remains in the target observation; no missing runtime-output artifact was manufactured."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-live-readback-20261028.json",
+      "sha256": "e7f3cbe9fa5d281f98b5289dd06880f0514a4645dc5897ab74e75d654e6bad42"
+    },
+    "corrected_field_paths": ["supporting_sources"],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "kind": "implementation-commit",
+          "repository": "mncs-environment",
+          "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+          "path": "mncs_env/authority.py",
+          "sha256": "019ef7777dd62c96c4216855eb84a9e6c2c311988855bd5d8f2e0a4512294e9e"
+        },
+        {
+          "kind": "retirement-adapter-implementation",
+          "repository": "mncs-environment",
+          "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+          "path": "mncs_env/retire.py",
+          "sha256": "9186eb4be521d1a8f07e5dd59575a5dafdb11cfd994c294602909239a6c5324b"
+        }
+      ]
+    },
+    "reason": "The original live readback linked an implementation commit without a digest and labeled an unpinned source file as an adapter result. Replace only its supporting-source list with exact implementation blobs. The assessed dry-run outcome in the observation remains unchanged; the correction does not claim an independent runtime transcript."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_retirement_claim_gate_live_readback_20261028",
+      "kind": "corrected-observation-target",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-live-readback-20261028.json",
+      "sha256": "e7f3cbe9fa5d281f98b5289dd06880f0514a4645dc5897ab74e75d654e6bad42"
+    },
+    {
+      "kind": "retirement-authority-implementation",
+      "repository": "mncs-environment",
+      "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+      "path": "mncs_env/authority.py",
+      "sha256": "019ef7777dd62c96c4216855eb84a9e6c2c311988855bd5d8f2e0a4512294e9e"
+    },
+    {
+      "kind": "retirement-adapter-implementation",
+      "repository": "mncs-environment",
+      "commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+      "path": "mncs_env/retire.py",
+      "sha256": "9186eb4be521d1a8f07e5dd59575a5dafdb11cfd994c294602909239a6c5324b"
+    }
+  ],
+  "measurement_limits": [
+    "The correction establishes implementation-blob integrity, not the content of an unavailable dry-run response transcript.",
+    "The source observation continues to establish only a recorded claim-free eligibility decision and adapter dry-run assessment; coordination burden and subsequent production outcomes remain separate."
+  ]
+}

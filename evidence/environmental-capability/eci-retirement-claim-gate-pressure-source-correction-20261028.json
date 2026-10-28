@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_pressure_source_correction_20261028",
+  "captured_at": "2026-10-28T11:32:15Z",
+  "measurement_basis": "exact-git-blob-verification-and-append-only-source-pointer-correction",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI source-integrity projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_3f35ac204e56e0fd",
+      "target_observation_identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+      "corrected_field_paths": ["supporting_sources"],
+      "source_commit": "f811ef96e715307a4497c0741e78f40465b83c9f",
+      "source_path": "mncs_env/authority.py"
+    },
+    "outcome": {
+      "status": "source-pointer-correction-recorded",
+      "source_pointer_count": 2,
+      "observation_bytes_changed": false,
+      "sha256_added": "da743803369f02602c8c8455710b41117195769f4f9ef1e31dc147f0421b0377",
+      "reason": "Both baseline source entries name the same Git blob. Its SHA-256 was computed from the exact commit:path object and added to each pointer; the original pressure description and outcome were left unchanged."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-pressure-20261028.json",
+      "sha256": "98fb100be9074d282ed63dc67a0356b0b1f36cc8a24b5a40e4ca098d3df2c42f"
+    },
+    "corrected_field_paths": ["supporting_sources"],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "kind": "baseline-source-reproduction",
+          "repository": "mncs-environment",
+          "commit": "f811ef96e715307a4497c0741e78f40465b83c9f",
+          "path": "mncs_env/authority.py",
+          "sha256": "da743803369f02602c8c8455710b41117195769f4f9ef1e31dc147f0421b0377",
+          "result": "defer / scoped-mutation-lease"
+        },
+        {
+          "kind": "baseline-policy",
+          "repository": "mncs-environment",
+          "commit": "f811ef96e715307a4497c0741e78f40465b83c9f",
+          "path": "mncs_env/authority.py",
+          "sha256": "da743803369f02602c8c8455710b41117195769f4f9ef1e31dc147f0421b0377",
+          "detail": "CLAIM_REQUIRED_ACTIONS includes retire"
+        }
+      ]
+    },
+    "reason": "The original baseline record omitted content digests from both source pointers. Correct only the supporting-source references with the digest of the named immutable Git blob; retain the recorded policy result and pressure unchanged."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+      "kind": "corrected-observation-target",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-pressure-20261028.json",
+      "sha256": "98fb100be9074d282ed63dc67a0356b0b1f36cc8a24b5a40e4ca098d3df2c42f"
+    },
+    {
+      "kind": "baseline-source-blob",
+      "repository": "mncs-environment",
+      "commit": "f811ef96e715307a4497c0741e78f40465b83c9f",
+      "path": "mncs_env/authority.py",
+      "sha256": "da743803369f02602c8c8455710b41117195769f4f9ef1e31dc147f0421b0377"
+    }
+  ],
+  "measurement_limits": [
+    "The correction makes the baseline code source content-addressable; it does not independently replay the original policy observation or establish its recurrence.",
+    "The prior campaign checkpoint remains immutable and retains its original source pointers; this correction is applied only when the target and correction are selected together."
+  ]
+}
