@@ -1,0 +1,92 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_evidence_capture_pressure_role_correction_20261028",
+  "captured_at": "2026-10-28T04:50:09Z",
+  "measurement_basis": "append-only-correction-after-bounded-ECI-readback-showed-pressure-evidence-was-supporting-context-and-therefore-not-eligible-for-priority-retention",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_3f554976706b8ee1",
+    "campaign_evidence_count_before_recording": 39,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:84126eb53bf9",
+      "claim:mncs-environment:worktree:d86f5a375d87"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-observation-contract-correction",
+    "source_interface": "MNCS Environment environmental-capability projection and append-only observation correction mechanism",
+    "request": {
+      "operation": "correct the exact pressure occurrence role after the bounded projection dropped all supporting-context rows",
+      "correction_projection_identity": "eci_899f4e153e66e084",
+      "source_event_identities": [
+        "evt_1de4bd556894a8f7",
+        "evt_b78277b72d4710c5"
+      ],
+      "campaign_state_checkpoint_id": "chk_3f554976706b8ee1"
+    },
+    "outcome": {
+      "target_identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+      "previous_role": "supporting-context",
+      "replacement_role": "occurrence",
+      "reason": "The target records the directly observed initial output-truncation failure and its exact invocation/completion events. It is the occurrence establishing the pressure; the separate verification and ECI readback records remain supporting context.",
+      "interpretation_limit": "This corrects classification for ECI retention and does not strengthen the underlying event evidence or establish recurrence."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "0289d641ab57968c20f4e624301c2f5aff69b5e4",
+      "path": "evidence/environmental-capability/projection-evidence-capture-pressure-20261028.json",
+      "sha256": "ab8b2967e06c1a70e9bac0fecf48d576010e0f963739e7f2de38adfa1fdbcb62"
+    },
+    "corrected_field_paths": [
+      "pressure_hypothesis_role"
+    ],
+    "replacement_values": {
+      "pressure_hypothesis_role": "occurrence"
+    },
+    "reason": "The pressure record describes the direct truncation occurrence itself, not secondary context. Correcting this exact role allows the established compact ECI path-retention policy to retain the occurrence with its linked pressure and improvement relation."
+  },
+  "supporting_sources": [
+    {
+      "identity": "evt_1de4bd556894a8f7",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 258,
+      "type": "capability.invoked"
+    },
+    {
+      "identity": "evt_b78277b72d4710c5",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 259,
+      "type": "invocation.completed"
+    },
+    {
+      "identity": "eci_899f4e153e66e084",
+      "kind": "authenticated-ECI-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "0289d641ab57968c20f4e624301c2f5aff69b5e4"
+    }
+  ],
+  "not_measured": [
+    "Whether a separate agent would classify the same evidence identically without this correction.",
+    "Whether preserving one linked path changes subsequent agent behavior or reduces intervention burden.",
+    "Whether this pressure recurs across additional capabilities or sessions."
+  ]
+}
