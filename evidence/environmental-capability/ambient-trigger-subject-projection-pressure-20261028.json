@@ -1,0 +1,112 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_trigger_subject_projection_pressure_20261028",
+  "captured_at": "2026-10-28T14:26:00Z",
+  "measurement_basis": "baseline-and-post-change-ECI-readbacks-plus-one-bounded-resident-pass",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_f26bd2b80eee5c31",
+    "campaign_evidence_count_before_recording": 146,
+    "implementation_commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+    "claim_ids": ["claim:mncs-environment:worktree:c99b053bd4e9"]
+  },
+  "observation": {
+    "kind": "ambient-owner-trigger-context-and-replay-diagnostic-pressure",
+    "source_interface": "MNCS Environment incremental coherence scheduler and environmental-capability projection",
+    "request": {
+      "baseline_projection": {
+        "identity": "eci_ff51fbefd212c529",
+        "content_digest": "bfe5e2ddc257f372eb9778cffd16d139",
+        "status": "partial",
+        "owner_summary_schema": "mncs.environment.owner-pass-decision-summary/3",
+        "owner_count": 7,
+        "selected_owner_detail": "doctor",
+        "semantic_subject_fields_present": false
+      },
+      "resident_attempt": {
+        "command": "./scripts/mncs-env resident ses_9db7b7c6f04e4d19 --max-ticks 1",
+        "result": "failed-before-trace-output",
+        "stdout_bytes": 0,
+        "exception": "KeyError: store_replay",
+        "stack_location": "mncs_env/coherence.py:1428 in tick",
+        "process_sample_elapsed_seconds": 89,
+        "process_sample_cpu_percent": 88.4,
+        "process_sample_rss_kb": 525824,
+        "process_sample_high_water_rss_kb": 627468,
+        "process_io_bytes": {
+          "rchar": 3956147092,
+          "wchar": 150211550,
+          "read_bytes": 2998272,
+          "write_bytes": 405254144
+        }
+      },
+      "post_run_filesystem_context": {
+        "mount_source": "/dev/sda3[/home]",
+        "filesystem": "btrfs",
+        "data_profile_used_percent": 96.63,
+        "metadata_profile": "DUP",
+        "metadata_used_percent": 67.91,
+        "unallocated_bytes": 26844594176,
+        "estimated_free_bytes": 34078625792,
+        "device_error_counters": {
+          "write_io_errs": 0,
+          "read_io_errs": 0,
+          "flush_io_errs": 0,
+          "corruption_errs": 0,
+          "generation_errs": 0
+        },
+        "measurement_limit": "Post-run unprivileged output omitted detailed per-device chunk usage."
+      },
+      "post_run_store_footprint": {
+        "environment_state_directory_du_output": "26G",
+        "store_directory_du_output": "23G",
+        "store_chunks_directory_du_output": "11G",
+        "store_generations_directory_du_output": "11G",
+        "causal_relation_to_resident_write_bytes": "not-established"
+      }
+    },
+    "outcome": {
+      "interpretation": "The prior compact ECI view omitted routed semantic-subject context. The resident pass failed while updating a Store replay diagnostic because that record was not initialized on every route through the error path. A process sample during the pass showed 405254144 process write bytes and 525824 kB RSS; the source of that I/O was not isolated. The post-run Btrfs snapshot had no device-counter errors and did not show metadata exhaustion. These observations do not establish the cause of the earlier Btrfs incident.",
+      "scope": "One selected session, one resident tick attempt, one bounded ECI projection, and one post-run filesystem sample."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_trigger_context_and_replay_diagnostics_20261028",
+    "title": "Ambient owner traces lose trigger context and Store replay reporting can crash",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment coherence routing and ECI compaction",
+    "owner": "mncs-environment",
+    "basis": "The baseline selected-session ECI summary used schema 3 and had no semantic-subject fields. A later resident attempt ended with KeyError while updating Store replay diagnostics after a route or observation failure.",
+    "actionable_recommendation": "Preserve bounded sanitized routed subjects and trigger kinds with exact service execution identity; initialize replay diagnostics before fallible routing; measure stage resource cost without attributing the observed I/O to a specific subsystem."
+  },
+  "supporting_sources": [
+    {
+      "kind": "baseline-live-projection",
+      "identity": "eci_ff51fbefd212c529",
+      "content_digest": "bfe5e2ddc257f372eb9778cffd16d139",
+      "repository": "mncs-environment"
+    },
+    {
+      "kind": "resident-failure-observation",
+      "source_interface": "MNCS Environment resident CLI",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    }
+  ],
+  "measurement_limits": [
+    "The resident pass ran once; high I/O and memory are not attributed to Store, filesystem metadata, or a particular owner service.",
+    "Post-run Btrfs measurements do not establish the earlier metadata-exhaustion cause or whether this pass changed allocation state.",
+    "No non-empty live semantic-subject trigger relation was available in the selected-session trace.",
+    "The observation does not establish agent need, service fulfillment, or reduced intervention burden."
+  ]
+}

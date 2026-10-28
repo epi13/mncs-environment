@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_trigger_subject_projection_verification_20261028",
+  "captured_at": "2026-10-28T14:26:00Z",
+  "measurement_basis": "targeted-owner-router-and-capability-intelligence-regression-suites",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_f26bd2b80eee5c31",
+    "campaign_evidence_count_before_recording": 146,
+    "implementation_commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+    "claim_ids": ["claim:mncs-environment:worktree:c99b053bd4e9"]
+  },
+  "observation": {
+    "kind": "ambient-trigger-context-and-replay-diagnostic-regression-verification",
+    "source_interface": "MNCS Environment pytest, Python compileall, and Git diff checks",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_incremental.py tests/test_capability_intelligence.py",
+        "python -m compileall -q mncs_env tests/test_incremental.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "214 passed, 21 skipped in 7.72s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "Routed semantic subjects are associated only with owners whose input mask admits the event.",
+        "Trace projection retains bounded sanitized non-path subject identities and explicit omission counts.",
+        "Owner summary schema 4 carries bounded trigger evidence with exact service execution identity and remains able to read schema 1 through 3.",
+        "A known trigger kind remains visible with an explicit zero-subject count.",
+        "Store replay diagnostics survive a route failure followed by an unknown post-pass Store observation."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_ambient_trigger_subject_projection_13f1757",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+        "path": "mncs_env/coherence.py",
+        "sha256": "762117cee55343ae59a417e5f73abf576b3fff9c3613e726ee91e2b14de68c1c"
+      },
+      "regression_test_reference": {
+        "identity": "mncs_environment_ambient_trigger_and_replay_tests_13f1757",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+        "path": "tests/test_incremental.py",
+        "sha256": "3912c01834c7ee047aa416443b239437eb36eecd8734f823786fbdafa84be210"
+      },
+      "additional_regression_test_reference": {
+        "identity": "mncs_environment_capability_trigger_summary_tests_13f1757",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+        "path": "tests/test_capability_intelligence.py",
+        "sha256": "8bad621a261a532a87cfe93d617cf94cb52ee61f60cf16d1c8fe7871a719e22b"
+      },
+      "scope_limit": "The repository-wide suite was not run; 21 tests requiring the unselected external compiler and Automation checkout were skipped."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_trigger_context_and_replay_diagnostics_20261028",
+    "title": "Ambient owner traces lose trigger context and Store replay reporting can crash",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment coherence routing and ECI compaction",
+    "owner": "mncs-environment",
+    "basis": "The baseline selected-session ECI summary used schema 3 and had no semantic-subject fields. A later resident attempt ended with KeyError while updating Store replay diagnostics after a route or observation failure.",
+    "actionable_recommendation": "Preserve bounded sanitized routed subjects and trigger kinds with exact service execution identity; initialize replay diagnostics before fallible routing; measure stage resource cost without attributing the observed I/O to a specific subsystem."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_trigger_subject_projection_13f1757",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+      "path": "mncs_env/coherence.py",
+      "sha256": "762117cee55343ae59a417e5f73abf576b3fff9c3613e726ee91e2b14de68c1c"
+    },
+    {
+      "identity": "mncs_environment_ambient_trigger_and_replay_tests_13f1757",
+      "kind": "regression-test-source",
+      "repository": "mncs-environment",
+      "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+      "path": "tests/test_incremental.py",
+      "sha256": "3912c01834c7ee047aa416443b239437eb36eecd8734f823786fbdafa84be210"
+    }
+  ],
+  "measurement_limits": [
+    "The skipped tests require the external compiler and Automation checkout; this session did not select that repository.",
+    "The route-error regression injects an early routing failure and unknown post-pass Store observation; it does not reproduce the process I/O or identify its source.",
+    "Tests establish trace integrity and diagnostic survival, not service correctness, agent receipt, ambient fulfillment, or burden reduction."
+  ]
+}

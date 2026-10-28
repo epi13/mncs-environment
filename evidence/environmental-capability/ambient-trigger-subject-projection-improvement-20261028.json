@@ -1,0 +1,97 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_trigger_subject_projection_improvement_20261028",
+  "captured_at": "2026-10-28T14:26:00Z",
+  "measurement_basis": "source-linked-implementation-verification-and-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_f26bd2b80eee5c31",
+    "campaign_evidence_count_before_recording": 146,
+    "implementation_commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+    "claim_ids": ["claim:mncs-environment:worktree:c99b053bd4e9"]
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence and incremental coherence",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_trigger_context_and_replay_diagnostics_20261028",
+      "verification_observation_identity": "ev_environment_ambient_trigger_subject_projection_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_trigger_subject_projection_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-and-commit-verified",
+      "verification_status": "targeted-regression-suites-passed",
+      "readback_status": "schema-4-and-explicit-zero-subject-state-visible",
+      "effectiveness_assessment": "Bounded trigger-context and Store replay diagnostic paths are implemented and regression-verified. The selected-session readback contains no non-empty live semantic-subject relation. The costly tick and its I/O source remain unresolved.",
+      "interpretation_limit": "No claim is made that this change reduced agent effort, service latency, or filesystem I/O."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_trigger_context_and_replay_diagnostics_20261028",
+    "title": "Ambient owner traces lose trigger context and Store replay reporting can crash",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment coherence routing and ECI compaction",
+    "owner": "mncs-environment",
+    "basis": "The baseline selected-session ECI summary used schema 3 and had no semantic-subject fields. A later resident attempt ended with KeyError while updating Store replay diagnostics after a route or observation failure.",
+    "actionable_recommendation": "Preserve bounded sanitized routed subjects and trigger kinds with exact service execution identity; initialize replay diagnostics before fallible routing; measure stage resource cost without attributing the observed I/O to a specific subsystem."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_trigger_subject_projection_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_trigger_context_and_replay_diagnostics_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_trigger_subject_projection_13f1757",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+      "path": "mncs_env/coherence.py",
+      "sha256": "762117cee55343ae59a417e5f73abf576b3fff9c3613e726ee91e2b14de68c1c"
+    },
+    "verification_observation_identity": "ev_environment_ambient_trigger_subject_projection_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_trigger_subject_projection_readback_20261028",
+    "basis": "Targeted suites cover bounded semantic-subject routing, zero-subject trigger-kind retention, old summary readability, and Store replay diagnostic survival. The post-change ECI readback shows schema 4 and an explicit zero-subject detail for the selected session.",
+    "effectiveness_assessment": "trigger-context-and-replay-diagnostic-paths-regression-verified; live-nonempty-trigger-link-and-agent-burden-not-established",
+    "not_measured": [
+      "Whether agents needed or received the sampled services.",
+      "Whether non-empty semantic subject links occur in current operational triggers.",
+      "Whether the change reduced agent intervention, service I/O, or latency.",
+      "Why the resident pass sample caused 405254144 process write bytes.",
+      "Cross-session recurrence and subsequent outcomes."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_trigger_subject_projection_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-trigger-subject-projection-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_trigger_subject_projection_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-trigger-subject-projection-verification-20261028.json"
+    },
+    {
+      "kind": "post-change-live-readback",
+      "identity": "ev_environment_ambient_trigger_subject_projection_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-trigger-subject-projection-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The live readback has no non-empty trigger evidence, so practical benefit of subject correlation is not demonstrated yet.",
+    "The regression covers the observed missing-diagnostic class through controlled failure injection, not the source of the measured resident-pass resource use.",
+    "Ambient fulfillment, agent receipt, correctness, and intervention burden remain unmeasured."
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_trigger_subject_projection_readback_20261028",
+  "captured_at": "2026-10-28T14:26:00Z",
+  "measurement_basis": "post-commit-live-selected-session-ECI-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_f26bd2b80eee5c31",
+    "campaign_evidence_count_before_recording": 146,
+    "implementation_commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+    "claim_ids": ["claim:mncs-environment:worktree:c99b053bd4e9"]
+  },
+  "observation": {
+    "kind": "post-change-live-selected-session-trigger-context-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --consumer mncs-environment-capability-campaign --consumer-kind agent --interpret environmental-capability --evidence-offset 142 --evidence-limit 4 --history-pages 1 --session-event-limit 32",
+      "projection_identity": "eci_df742a4d7c0e6f55",
+      "projection_content_digest": "d721c27eb917aa34763ad4077d0ab310",
+      "readback_time_status": "Observed during this session; projection does not embed a readback timestamp."
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "service_execution_status": "observed",
+      "owner_summary_schema": "mncs.environment.owner-pass-decision-summary/4",
+      "owner_count": 7,
+      "owner_count_omitted": 0,
+      "source_owner_observation_count": 7,
+      "owner_detail_rows_returned": 1,
+      "owner_detail_rows_omitted": 6,
+      "selected_owner": "doctor",
+      "selected_owner_subject_identity_status": "complete",
+      "selected_owner_subject_identity_count": 0,
+      "selected_owner_subject_identities": [],
+      "owners_with_trigger_evidence": [],
+      "interpretation": "The updated projection renders schema 4 and explicitly reports zero semantic subjects for its returned Doctor detail. The stored selected-session trace had no non-empty trigger evidence, so this does not demonstrate a live non-empty subject-to-service relation."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_trigger_context_and_replay_diagnostics_20261028",
+    "title": "Ambient owner traces lose trigger context and Store replay reporting can crash",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment coherence routing and ECI compaction",
+    "owner": "mncs-environment",
+    "basis": "The baseline selected-session ECI summary used schema 3 and had no semantic-subject fields. A later resident attempt ended with KeyError while updating Store replay diagnostics after a route or observation failure.",
+    "actionable_recommendation": "Preserve bounded sanitized routed subjects and trigger kinds with exact service execution identity; initialize replay diagnostics before fallible routing; measure stage resource cost without attributing the observed I/O to a specific subsystem."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_trigger_subject_projection_13f1757",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "13f1757dc16962d057ae9b0837635bc87f348a4f",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f9e2fee614228a996bc7cb4cbed45233ac3c8754cbdc1fb264077a6c80b1c19e"
+    },
+    {
+      "identity": "eci_df742a4d7c0e6f55",
+      "kind": "post-change-live-projection",
+      "repository": "mncs-environment",
+      "content_digest": "d721c27eb917aa34763ad4077d0ab310"
+    }
+  ],
+  "measurement_limits": [
+    "The projection response is partial and returns one of seven owner observation details; all seven owners are present in the compact summary.",
+    "This is a readback of the stored trace through the new projection, not a successful fresh ambient tick.",
+    "No live non-empty semantic-subject event was observed, so cross-session recurrence and practical agent benefit remain unestablished."
+  ]
+}
