@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_integrity_chain_readback_20261028",
+  "captured_at": "2026-10-28T02:19:33Z",
+  "measurement_basis": "live-eci-readback-of-pressure-implementation-verification-and-subsequent-observation-links",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "e53eade5e07f24e3ff60803e25fd305f831c8add"
+  },
+  "observation": {
+    "kind": "environmental-improvement-chain-live-readback",
+    "source_interface": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-offset 22 --evidence-limit 4",
+    "request": {
+      "projection_identity": "eci_081ff02e03ef7e69",
+      "campaign_evidence_offset": 22,
+      "campaign_evidence_limit": 4,
+      "expected_improvement_relation_identity": "im_environment_ambient_owner_result_integrity_20261028"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "improvement_relation_count": 1,
+      "improvement_relation_status": "validated",
+      "pressure_hypothesis_status": "present-in-projection",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "implementation_source_content_integrity_status": "content-integrity-verified",
+      "implementation_record_window_status": "not-present-in-selected-campaign-evidence-window",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The projection validated and integrity-checked the pressure-to-implementation relation and its verification and subsequent-observation references. It did not establish service correctness, agent receipt, burden reduction, or long-term effectiveness."
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "b2f387a8dbe10c7ec3473d62e0c306211966d1ae",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-pressure-20261028.json",
+      "sha256": "fb7e8add87c663b839fc6e42863b56bd5118f5cdfff0d5c932887452301e1712"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "b2f387a8dbe10c7ec3473d62e0c306211966d1ae",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-verification-20261028.json",
+      "sha256": "6a3ec6c12718f109f80587a422db145377fdd6d0d22b3590417c6548e28e7f7b"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_live_readback_20261028",
+      "kind": "live-capability-readback",
+      "repository": "mncs-environment",
+      "commit": "b2f387a8dbe10c7ec3473d62e0c306211966d1ae",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-live-readback-20261028.json",
+      "sha256": "347858fd6ad16ca4ddf38bf286b05182e85bf92be04b1c133816eedc31cef13d"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_improvement_20261028",
+      "kind": "environmental-improvement-link-record",
+      "repository": "mncs-environment",
+      "commit": "b2f387a8dbe10c7ec3473d62e0c306211966d1ae",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-improvement-20261028.json",
+      "sha256": "3225c18ad6ab171f985a9583103e32f652c6832dfeb7cafadd481626ae7dc679"
+    }
+  ],
+  "measurement_limits": [
+    "The ECI response is partial; this record preserves the relation status rather than interpreting partial projection coverage as complete campaign coverage.",
+    "The implementation source pointer was content-integrity-verified, but its source-code record was not present in the selected campaign evidence page.",
+    "The readback does not establish agent receipt, reduced intervention burden, correctness of the service results, or causal effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
