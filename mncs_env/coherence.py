@@ -556,6 +556,27 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
     persistence_status = value.get("trace_persistence_status")
     if persistence_status in {"session-snapshot", "entry-response-only"}:
         result["trace_persistence_status"] = persistence_status
+    publication_status = value.get("result_reference_publication_status")
+    if publication_status in {"complete", "interrupted", "failed"}:
+        result["result_reference_publication_status"] = publication_status
+    publication_elapsed = duration(
+        value.get("result_reference_publication_elapsed_seconds"),
+    )
+    if publication_elapsed is not None:
+        result["result_reference_publication_elapsed_seconds"] = (
+            publication_elapsed
+        )
+    publication_usage = resources.compact_process_usage(
+        value.get("result_reference_publication_process_resource_usage"),
+    )
+    if publication_usage is not None:
+        result["result_reference_publication_process_resource_usage"] = (
+            publication_usage
+        )
+    if publication_status in {"interrupted", "failed"}:
+        result["measurement_limits"].append(
+            "Owner passes returned, but immutable result-reference publication did not complete. This snapshot preserves scheduler and process-resource evidence where its save succeeded; owner result pointers may be missing and replay cursors remain at their prior values.",
+        )
     reason = safe_text(value.get("reason"))
     if reason is not None:
         result["reason"] = reason
@@ -1623,6 +1644,61 @@ def _owner_pass_results(session, scheduled: list[dict], results: dict,
     return rows
 
 
+def _persist_result_publication_failure(
+    session, previous: dict, report: dict, scheduled: list[dict],
+    results: dict, *, status: str,
+) -> None:
+    """Retain completed owner observations when immutable result linking fails.
+
+    Replay cursors are deliberately left at their prior values. The next tick
+    therefore reconciles the work again instead of treating an unlinked result
+    as a durable acknowledgement.
+    """
+    partial_trace = dict(report)
+    partial_trace["trace_persistence_status"] = "session-snapshot"
+    partial_trace["result_reference_publication_status"] = status
+    partial_trace["owner_pass_results"] = _owner_pass_results(
+        session, scheduled, results, None, persisted=True,
+    )
+
+    partial_state = dict(previous)
+    partial_state["schema_version"] = SCHEMA
+    partial_state["last_trace"] = partial_trace
+    partial_state["stable"] = False
+    prior_history = project_owner_execution_history(
+        previous.get("owner_execution_history"),
+        session_id=session.session_id,
+    )
+    partial_state["owner_execution_history"] = _append_owner_execution_history(
+        previous.get("owner_execution_history"), partial_trace,
+        trace_sequence=min(10**12, prior_history["trace_sequence"] + 1),
+        session_id=session.session_id,
+    )
+
+    prior_coherence = session.snapshot.get("coherence")
+    prior_sequence = session.snapshot.get("snapshot_sequence")
+    prior_updated_at = session.snapshot.get("updated_at")
+    session.snapshot["coherence"] = partial_state
+    try:
+        session._save()
+    except Exception:
+        # Preserve the publication error that caused this recovery attempt.
+        # The session snapshot may already have committed despite a lost reply;
+        # a later canonical read decides that using Store revision state.
+        if isinstance(prior_coherence, dict):
+            session.snapshot["coherence"] = prior_coherence
+        else:
+            session.snapshot.pop("coherence", None)
+        if prior_sequence is None:
+            session.snapshot.pop("snapshot_sequence", None)
+        else:
+            session.snapshot["snapshot_sequence"] = prior_sequence
+        if prior_updated_at is None:
+            session.snapshot.pop("updated_at", None)
+        else:
+            session.snapshot["updated_at"] = prior_updated_at
+
+
 def _load_results(session, refs):
     results, known = {}, True
     expected = session.state_dir / "sessions" / session.session_id / "coherence-results"
@@ -1964,7 +2040,56 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     report["trace_persistence_status"] = (
         "session-snapshot" if persist_trace else "entry-response-only"
     )
-    result_refs = _result_refs(session, results) if persist_trace else None
+    if persist_trace:
+        publication_started = time.monotonic()
+        publication_resource_before = resources.process_usage_sample(os.getpid())
+        try:
+            result_refs = _result_refs(session, results)
+        except (KeyboardInterrupt, Exception) as publication_error:
+            publication_elapsed = round(
+                time.monotonic() - publication_started, 3,
+            )
+            publication_resource_after = resources.process_usage_sample(
+                os.getpid(),
+            )
+            report["result_reference_publication_status"] = (
+                "interrupted" if isinstance(publication_error, KeyboardInterrupt)
+                else "failed"
+            )
+            report["result_reference_publication_elapsed_seconds"] = (
+                publication_elapsed
+            )
+            report["result_reference_publication_process_resource_usage"] = (
+                resources.process_usage_delta(
+                    publication_resource_before, publication_resource_after,
+                    elapsed_seconds=publication_elapsed,
+                    measurement_basis=(
+                        "process-counters-bracketing-result-reference-publication"
+                    ),
+                )
+            )
+            _persist_result_publication_failure(
+                session, previous, report, report["scheduled"], results,
+                status=report["result_reference_publication_status"],
+            )
+            raise
+        publication_elapsed = round(time.monotonic() - publication_started, 3)
+        publication_resource_after = resources.process_usage_sample(os.getpid())
+        report["result_reference_publication_status"] = "complete"
+        report["result_reference_publication_elapsed_seconds"] = (
+            publication_elapsed
+        )
+        report["result_reference_publication_process_resource_usage"] = (
+            resources.process_usage_delta(
+                publication_resource_before, publication_resource_after,
+                elapsed_seconds=publication_elapsed,
+                measurement_basis=(
+                    "process-counters-bracketing-result-reference-publication"
+                ),
+            )
+        )
+    else:
+        result_refs = None
     report["owner_pass_results"] = _owner_pass_results(
         session, report["scheduled"], results, result_refs,
         persisted=persist_trace,

@@ -184,6 +184,23 @@ def test_process_usage_counters_measure_bounded_io_and_guard_pid_reuse(
     }
     assert resources.compact_process_usage(delta) == delta
 
+    publication_delta = resources.process_usage_delta(
+        before,
+        after,
+        elapsed_seconds=0.25,
+        measurement_basis=(
+            "process-counters-bracketing-result-reference-publication"
+        ),
+    )
+    assert publication_delta["measurement_basis"] == (
+        "process-counters-bracketing-result-reference-publication"
+    )
+    assert resources.compact_process_usage(publication_delta) == publication_delta
+    with pytest.raises(ValueError, match="unsupported process resource"):
+        resources.process_usage_delta(
+            before, after, measurement_basis="unattributed-counter-window",
+        )
+
     stat_fields[19] = "43"
     root.joinpath("stat").write_text(
         f"123 (resource-probe) {' '.join(stat_fields)}\n"

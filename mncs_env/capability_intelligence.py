@@ -3398,6 +3398,7 @@ def _compact_service_accountability_overview(
                 "verification_result_details_omitted_count",
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
+                "result_reference_publication_status",
             )
             if isinstance(execution_summary.get(key), str)
             or (type(execution_summary.get(key)) is int
@@ -3405,6 +3406,23 @@ def _compact_service_accountability_overview(
             or (key == "owner_failure_count" and key in execution_summary
                 and execution_summary.get(key) is None)
         }
+        publication_elapsed = execution_summary.get(
+            "result_reference_publication_elapsed_seconds",
+        )
+        if (type(publication_elapsed) in (int, float)
+                and 0 <= publication_elapsed <= 86400):
+            compact_environment_summary[
+                "result_reference_publication_elapsed_seconds"
+            ] = round(float(publication_elapsed), 3)
+        publication_usage = resources_module.compact_process_usage(
+            execution_summary.get(
+                "result_reference_publication_process_resource_usage",
+            ),
+        )
+        if publication_usage is not None:
+            compact_environment_summary[
+                "result_reference_publication_process_resource_usage"
+            ] = publication_usage
         compact_environment_summary.update(
             _compact_scheduled_pass_verification_status_summary(
                 execution_summary,
@@ -23132,6 +23150,28 @@ def _environment_service_execution_accountability(
         scheduler_mode = execution.get("mode")
         if isinstance(scheduler_mode, str):
             summary["scheduler_mode"] = scheduler_mode
+        publication_status = execution.get(
+            "result_reference_publication_status",
+        )
+        if publication_status in {"complete", "interrupted", "failed"}:
+            summary["result_reference_publication_status"] = (
+                publication_status
+            )
+        publication_elapsed = execution.get(
+            "result_reference_publication_elapsed_seconds",
+        )
+        if (type(publication_elapsed) in (int, float)
+                and 0 <= publication_elapsed <= 86400):
+            summary["result_reference_publication_elapsed_seconds"] = round(
+                float(publication_elapsed), 3,
+            )
+        publication_resource_usage = resources_module.compact_process_usage(
+            execution.get("result_reference_publication_process_resource_usage"),
+        )
+        if publication_resource_usage is not None:
+            summary["result_reference_publication_process_resource_usage"] = (
+                publication_resource_usage
+            )
         for key in (
             "declared_owner_pass_count", "owner_pass_decision_count",
             "owner_pass_decision_coverage", "scheduled_pass_count",

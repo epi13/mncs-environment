@@ -19,6 +19,10 @@ MAX_WATCH_ENTRIES = 8192
 MAX_CGROUP_VALUE_BYTES = 4096
 MAX_PROCESS_IO_BYTES = 1024
 PROCESS_RESOURCE_USAGE_SCHEMA = "mncs.environment.process-resource-usage/1"
+PROCESS_RESOURCE_MEASUREMENT_BASES = frozenset({
+    "process-counters-bracketing-owner-runner",
+    "process-counters-bracketing-result-reference-publication",
+})
 PROCESS_IO_FIELDS = (
     "rchar", "wchar", "read_bytes", "write_bytes",
     "cancelled_write_bytes",
@@ -146,13 +150,17 @@ def process_usage_sample(
 
 def process_usage_delta(
     before: Any, after: Any, *, elapsed_seconds: float | None = None,
+    measurement_basis: str = "process-counters-bracketing-owner-runner",
 ) -> dict[str, Any]:
     """Derive same-process counter deltas, retaining unavailable measurements."""
+    if measurement_basis not in PROCESS_RESOURCE_MEASUREMENT_BASES:
+        raise ValueError("unsupported process resource measurement basis")
+
     def unavailable(reason: str) -> dict[str, Any]:
         return {
             "schema_version": PROCESS_RESOURCE_USAGE_SCHEMA,
             "status": "unavailable",
-            "measurement_basis": "process-counters-bracketing-owner-runner",
+            "measurement_basis": measurement_basis,
             "reason_code": reason,
         }
 
@@ -221,7 +229,7 @@ def process_usage_delta(
     return {
         "schema_version": PROCESS_RESOURCE_USAGE_SCHEMA,
         "status": status,
-        "measurement_basis": "process-counters-bracketing-owner-runner",
+        "measurement_basis": measurement_basis,
         "pid": pid,
         "process_start_ticks": start_ticks,
         "elapsed_seconds": elapsed,
@@ -265,7 +273,7 @@ def compact_process_usage(value: Any) -> dict[str, Any] | None:
             or value.get("schema_version") != PROCESS_RESOURCE_USAGE_SCHEMA
             or value.get("status") not in {"measured", "partial", "unavailable"}
             or value.get("measurement_basis")
-            != "process-counters-bracketing-owner-runner"):
+            not in PROCESS_RESOURCE_MEASUREMENT_BASES):
         return None
     status = value["status"]
     if status == "unavailable":

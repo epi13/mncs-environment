@@ -120,6 +120,18 @@ intervention. When the final ECI summary must drop the sibling activity
 projection, the service-accountability view restores bounded unscoped-call
 references from its source projection digest.
 
+The same trace measures immutable owner-result publication separately from
+the owner runners, including elapsed time and scheduler-process CPU, memory,
+and I/O counters. If publication fails or is interrupted after the owners
+return, Environment saves a partial trace and bounded owner-execution history
+when the Store still accepts the snapshot. The trace labels result references
+as incomplete and leaves Store and semantic replay cursors at their previous
+values, so a later tick reconciles the work. ECI preserves the publication
+status and cost while keeping owner-result pointers absent or partial; it does
+not treat the saved scheduler observations as result verification or service
+fulfillment. Process counters cover Environment's scheduler process and do not
+include the Store service or other child processes.
+
 Quiet adapters now record bounded outcome reason codes, including disabled
 scope and completed no-work cases, while entry continues to omit the quiet
 agent-facing block. The ECI carries these codes through the exact scheduled

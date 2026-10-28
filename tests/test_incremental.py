@@ -1058,6 +1058,90 @@ def test_store_publication_during_pass_is_not_skipped(participant):
         store.close()
 
 
+def test_owner_resource_trace_survives_result_publication_interruption(
+    tmp_path, monkeypatch,
+):
+    participant = Participant(tmp_path / "state", repository(tmp_path))
+    automation = tmp_path / "automation"
+    (automation / "native/mncs/automation").mkdir(parents=True)
+    (automation / "native/mncs/automation/coherence.mncs").write_text(
+        "fixture scheduler provider presence",
+    )
+    monkeypatch.setenv("MNCS_AUTOMATION_ROOT", str(automation))
+
+    def route(session, function, rows):
+        if function == "route_batch":
+            return [2] * len(rows), {"status": "fixture"}
+        return [0] * len(rows), {"status": "fixture"}
+
+    monkeypatch.setattr(coherence, "_native", route)
+    monkeypatch.setattr(family, "scheduler_deadlines", lambda session: [])
+    counts, owned = runners()
+    for name in owned:
+        def run(name=name):
+            counts[name] += 1
+            return {"summary": {"run_count": counts[name]}, "reused": False}
+        owned[name] = run
+
+    coherence.tick(participant, {}, owned)
+    previous = participant.snapshot["coherence"]
+    prior_store_cursor = previous.get("store_cursor")
+    prior_semantic_cursors = dict(previous.get("semantic_cursors") or {})
+    prior_saves = participant.saves
+    (Path(participant.snapshot["selected_checkouts"]["app"]["path"])
+     / "source.mncs").write_text("source changed before interrupted publication")
+
+    with patch.object(
+        coherence, "_result_refs", side_effect=KeyboardInterrupt,
+    ):
+        with pytest.raises(KeyboardInterrupt):
+            coherence.tick(participant, {}, owned)
+
+    state = participant.snapshot["coherence"]
+    trace = state["last_trace"]
+    assert participant.saves == prior_saves + 1
+    assert state["stable"] is False
+    assert state.get("store_cursor") == prior_store_cursor
+    assert state.get("semantic_cursors") == prior_semantic_cursors
+    assert trace["trace_persistence_status"] == "session-snapshot"
+    assert trace["result_reference_publication_status"] == "interrupted"
+    assert trace["result_reference_publication_elapsed_seconds"] >= 0
+    assert trace["result_reference_publication_process_resource_usage"][
+        "status"
+    ] in {"measured", "partial"}
+    assert trace["scheduled"]
+    assert trace["owner_pass_results"]
+    assert all(
+        row["result_status"] == "result-recorded"
+        and row["source_reference_status"] == "not-recorded"
+        for row in trace["owner_pass_results"]
+    )
+
+    history = coherence.project_owner_execution_history(
+        state["owner_execution_history"], session_id=participant.session_id,
+    )
+    latest = {row["service_execution_id"]: row for row in history["rows"]}
+    for scheduled in trace["scheduled"]:
+        row = latest[scheduled["service_execution_id"]]
+        assert row["process_resource_usage"] == scheduled[
+            "process_resource_usage"
+        ]
+
+    projected_trace = coherence.project_trace(
+        trace, session_id=participant.session_id,
+    )
+    assert projected_trace["result_reference_publication_status"] == (
+        "interrupted"
+    )
+    assert projected_trace["result_reference_publication_process_resource_usage"][
+        "status"
+    ] in {"measured", "partial"}
+    assert any(
+        "result-reference publication did not complete" in limit
+        for limit in projected_trace["measurement_limits"]
+    )
+
+
 def test_store_cursor_waits_for_owner_success(participant):
     store = open_store(participant.state_dir, 'store')
     participant.store = store

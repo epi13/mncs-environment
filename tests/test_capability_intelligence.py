@@ -6934,6 +6934,19 @@ def test_owner_pass_projection_correlates_bounded_process_resource_evidence() ->
         "owner_outcome_status": "no-failure-reported",
         "verification_status": "not-established",
     } for suffix in ("a", "b")]
+    publication_usage = {
+        **usage,
+        "measurement_basis": (
+            "process-counters-bracketing-result-reference-publication"
+        ),
+        "elapsed_seconds": 65.25,
+        "io_bytes": {
+            **usage["io_bytes"],
+            "rchar": 3_100_000_000,
+            "wchar": 82_000_000,
+            "write_bytes": 222_000_000,
+        },
+    }
     execution = {
         "mode": "targeted_update",
         "decision_record_status": "recorded",
@@ -6948,18 +6961,54 @@ def test_owner_pass_projection_correlates_bounded_process_resource_evidence() ->
         "skipped_passes": [],
         "owner_pass_results": {"results": []},
         "ambient_fulfillment": "not-established",
+        "result_reference_publication_status": "interrupted",
+        "result_reference_publication_elapsed_seconds": 65.25,
+        "result_reference_publication_process_resource_usage": (
+            publication_usage
+        ),
+    }
+    ambient_execution = {
+        "status": "recorded",
+        "source": {"owner_pass_decision_coverage": "complete"},
+        "execution": execution,
     }
     view = capability_intelligence._environment_service_execution_accountability(
-        {
-            "status": "recorded",
-            "source": {"owner_pass_decision_coverage": "complete"},
-            "execution": execution,
-        },
+        ambient_execution,
         include_owner_pass_observations=True,
     )
 
     assert view is not None
     assert view["summary"]["ambient_fulfillment_status"] == "not-established"
+    assert view["summary"]["result_reference_publication_status"] == (
+        "interrupted"
+    )
+    assert view["summary"]["result_reference_publication_elapsed_seconds"] == (
+        65.25
+    )
+    assert view["summary"][
+        "result_reference_publication_process_resource_usage"
+    ] == publication_usage
+    compact = capability_intelligence._compact_service_accountability_overview(
+        {
+            "schema_version": "mncs.environment.service-accountability/1",
+            "status": "environment-execution-only",
+            "scope": "selected-session-environment-owner-pass-contract",
+            "source": {},
+            "summary": {"projected_service_count": 0},
+            "services": [],
+            "environment_service_execution": view,
+        },
+        ambient_execution,
+    )
+    compact_summary = compact["summary"]["environment_service_execution"][
+        "summary"
+    ]
+    assert compact_summary["result_reference_publication_status"] == (
+        "interrupted"
+    )
+    assert compact_summary[
+        "result_reference_publication_process_resource_usage"
+    ] == publication_usage
     observations = view["owner_pass_observations"]
     assert [item["process_resource_usage"] for item in observations["items"]] == [
         usage, usage,
