@@ -2475,6 +2475,94 @@ def test_observation_correction_restores_unsupported_schema_version(
     )
 
 
+def test_observation_correction_restores_invalid_recorder_object(
+    tmp_path: Path,
+) -> None:
+    target = _observation(
+        "ev_environment_invalid_recorder_target",
+        "ses_recorder_correction",
+        "cmp_recorder_correction",
+    )
+    target["recorder"] = "invalid-recorder-string"
+    session, state = _session(tmp_path, [target])
+    correction = _observation(
+        "ev_environment_recorder_correction",
+        "ses_recorder_correction",
+        "cmp_recorder_correction",
+    )
+    _drop_pressure_hypothesis(correction)
+    correction["observation"]["kind"] = "environmental-observation-correction"
+    replacement_recorder = {
+        "campaign_id": "cmp_recorder_correction",
+        "session_id": "ses_recorder_correction",
+        "consumer_id": "environmental-capability-campaign",
+        "environment_id": "renv_recorder_correction",
+    }
+    correction["record_correction"] = {
+        "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+        "target_reference": dict(state["evidence"][0]),
+        "corrected_field_paths": ["recorder"],
+        "replacement_values": {"recorder": replacement_recorder},
+        "reason": (
+            "Restore session attribution on the immutable record whose recorder "
+            "was incorrectly stored as a string."
+        ),
+    }
+    assert capability_intelligence._validate_observation_correction(
+        correction["record_correction"],
+    ) is not None
+    invalid_correction = {
+        **correction["record_correction"],
+        "replacement_values": {"recorder": {"campaign_id": ""}},
+    }
+    assert capability_intelligence._validate_observation_correction(
+        invalid_correction,
+    ) is None
+
+    relative = "evidence/environmental-capability/recorder-correction.json"
+    raw = json.dumps(correction, sort_keys=True, separators=(",", ":")).encode()
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    correction_path = checkout / relative
+    correction_path.parent.mkdir(parents=True, exist_ok=True)
+    correction_path.write_bytes(raw)
+    _git(checkout, "add", relative)
+    _git(checkout, "commit", "--quiet", "-m", "append recorder correction")
+    state["evidence"].append({
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": _git(checkout, "rev-parse", "HEAD"),
+        "path": relative,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    })
+    state["evidence_count"] = len(state["evidence"])
+
+    result = capability_intelligence.project(session)
+
+    assert result["status"] == "ready"
+    assert result["source"]["record_corrections_applied_count"] == 1
+    assert result["source"]["record_corrections_unverified_count"] == 0
+    assert result["source"]["observation_records_unavailable"] == 0
+    corrected = next(
+        item for item in result["observations"]
+        if item["identity"] == target["identity"]
+    )
+    assert corrected["record_correction"]["status"] == (
+        "completed-by-append-only-record"
+    )
+    assert corrected["recording_context"]["campaign_id"] == (
+        replacement_recorder["campaign_id"]
+    )
+    assert corrected["recording_context"]["session_id"] == (
+        replacement_recorder["session_id"]
+    )
+    assert corrected["recording_context"]["consumer_id"] == (
+        replacement_recorder["consumer_id"]
+    )
+    assert target["recorder"] == "invalid-recorder-string"
+
+
 def test_append_only_correction_repairs_invalid_improvement_relation(
     tmp_path: Path,
 ) -> None:

@@ -1673,14 +1673,15 @@ a transcription or relation needs correction. A later record can use the
 target evidence reference, name corrected fields, and provide their replacement
 values. One correction may name up to three supported fields, including
 `supporting_sources`, `not_measured`, `related_work`,
-`pressure_hypothesis_role`, and
+`recorder`, `pressure_hypothesis_role`, and
 `pressure_hypothesis.actionable_recommendation`. On an integrity-verified
 contract-invalid target, a correction may supply a missing or invalid
 actionable recommendation, `observation.source_interface`,
 `observation.request`, `observation.outcome`, or the top-level
-`schema_version`.
+`schema_version`. A `recorder` correction must be an object containing only
+recognized recorder identifiers with non-empty bounded string values.
 These fields can only complete a contract-invalid target; they cannot rewrite
-a valid observation. The exception is an actionable recommendation that
+a valid observation or recorder. The exception is an actionable recommendation that
 conflicts with another definition of the same pressure: it may be reconciled
 only when its replacement exactly matches an integrity-verified `occurrence`
 in the same campaign with the same hypothesis identity, title, category,

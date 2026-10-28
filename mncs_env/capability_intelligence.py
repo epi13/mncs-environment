@@ -14179,6 +14179,7 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
                 not isinstance(field, str)
                 or field not in {
                     "schema_version", "supporting_sources", "not_measured",
+                    "recorder",
                     "pressure_hypothesis_role",
                     "related_work",
                     "improvement_relation",
@@ -14207,6 +14208,21 @@ def _validate_observation_correction(value: Any) -> dict[str, Any] | None:
         if (not isinstance(limits, list) or not 1 <= len(limits) <= 16
                 or any(not isinstance(item, str) or not item or len(item) > 512
                        for item in limits)):
+            return None
+    if "recorder" in fields:
+        recorder = replacements["recorder"]
+        recorder_fields = {
+            "campaign_id", "session_id", "consumer_id", "environment_id",
+            "definition_id", "environment_version",
+        }
+        if (not isinstance(recorder, dict)
+                or set(recorder) - recorder_fields
+                or any(
+                    not isinstance(recorder.get(field), str)
+                    or not recorder[field]
+                    or len(recorder[field]) > 160
+                    for field in recorder
+                )):
             return None
     if "pressure_hypothesis_role" in fields:
         replacement_role = replacements["pressure_hypothesis_role"]
@@ -14308,7 +14324,7 @@ def _apply_observation_correction_values(
             **pressure_updates,
         }
     for field in (
-        "schema_version", "supporting_sources", "not_measured",
+        "schema_version", "supporting_sources", "not_measured", "recorder",
         "pressure_hypothesis_role",
         "related_work", "improvement_relation",
     ):
