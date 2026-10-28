@@ -4434,8 +4434,10 @@ def _compact_session_activity_budget_overview(
             "family_ambient_observation_digest",
             "retirement_activity_digest",
         )
-        if (isinstance(source.get(key), str)
-            or type(source.get(key)) in (int, bool))
+        if (key in source and (isinstance(source.get(key), str)
+            or type(source.get(key)) in (int, bool)
+            or (key == "event_page_before_sequence"
+                and source.get(key) is None)))
     }
     for key in ("authority_claim_state_lookup", "integration_claim_state_lookup"):
         lookup = source.get(key)
@@ -6988,7 +6990,7 @@ def _compact_projection(
     compact_activity_source = {
         key: activity_source[key]
         for key in (
-            "event_count", "event_window_truncated",
+            "event_count", "event_window_limit", "event_window_truncated",
             "event_page_scoped",
             "event_page_before_sequence", "next_event_before_sequence",
             "event_window_sequence_start", "event_window_sequence_end",
@@ -7030,6 +7032,10 @@ def _compact_projection(
         and (
             key not in {"event_page_before_sequence", "next_event_before_sequence"}
             or activity_source[key] is not None
+        )
+        and (
+            key != "event_window_limit"
+            or activity_source.get("event_page_scoped") is True
         )
         and (
             key != "event_page_scoped" or activity_source[key] is True
@@ -9558,6 +9564,17 @@ def _compact_projection(
         deepcopy(result.get("session_activity", {}))
         if max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES else {}
     )
+    if priority_activity_source and isinstance(raw_activity.get("source"), dict):
+        compact_source = priority_activity_source.get("source")
+        if isinstance(compact_source, dict):
+            for key in (
+                "event_window_limit", "event_page_before_sequence",
+                "next_event_before_sequence", "event_window_truncated",
+                "event_page_scoped", "event_page_has_older_records",
+                "event_window_sequence_start", "event_window_sequence_end",
+            ):
+                if key not in compact_source and key in raw_activity["source"]:
+                    compact_source[key] = raw_activity["source"][key]
     priority_activity_budget: dict[str, Any] | None = None
 
     def build_evidence_priority_candidate() -> dict[str, Any] | None:

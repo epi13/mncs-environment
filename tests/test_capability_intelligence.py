@@ -12601,6 +12601,7 @@ def test_projection_carries_source_page_cursor_through_compaction(tmp_path: Path
         assert result["session_activity"]["source"][
             "event_page_before_sequence"
         ] == 4
+        assert result["session_activity"]["source"]["event_window_limit"] == 8
         assert result["session_activity"]["source"][
             "next_event_before_sequence"
         ] == 2
@@ -16640,7 +16641,7 @@ def test_cli_history_pages_correlate_pressure_within_bounded_read_budget(
     assert projection["session_activity"]["source"][
         "event_page_before_sequence"
     ] == 12
-    assert "event_window_limit" not in projection["session_activity"]["source"]
+    assert projection["session_activity"]["source"]["event_window_limit"] == 64
     assert projection["source"]["evidence_history_observation_budgets_by_page"] == [
         {
             "offset": 9,
