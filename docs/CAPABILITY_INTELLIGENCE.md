@@ -492,16 +492,24 @@ The adapter requires its schema and identity, bounded source-file hashes,
 Compiler campaign/session fields, stage observations, and reported
 verification result. The observation retains the Compiler campaign and session
 under `observation.source_session_context`; `related_work` remains the current
-Environment reader's campaign and session. The source session is explicitly
-`source-session-declared-not-cross-validated`, so a content-addressed report is
-not mistaken for an authenticated runtime session lookup.
+Environment reader's campaign and session. When the Environment session store
+can read the exact `checkpoint_before_change`, ECI correlates it only if the
+returned checkpoint identity, source session, and campaign match the
+content-addressed report. A verified match adds the checkpoint time, Work
+Intent identity, and Environment identity to `source_session_context`; an
+unavailable or mismatched checkpoint leaves the report's session context
+declared but unverified and exposes the lookup status in `outcome_context`.
+The join does not read source-session events or resource samples, and it does
+not claim that the checkpoint's Work Intent text or full session state matches
+the verification moment.
 
 The projection separates source-reported bootstrap and runner process
 measurements, per-stage build/cache observations, and unavailable fields.
-Missing cgroup measurements remain missing. Work Intent, model, token usage,
-and Compiler-session diagnostics or resource samples are not inferred. The
-adapter creates no pressure hypothesis: a successful focused cache workload
-demonstrates a Compiler capability in that workload, but does not establish
-recurrence, agent-attributed resource pressure, a general speedup, or reduced
-agent burden. Inspect the exact source evidence pointer and the
+Missing cgroup measurements remain missing. The Work Intent identity is
+available only when the exact source checkpoint verifies; its goal text,
+model, token usage, and Compiler-session diagnostics or resource samples remain
+unjoined. The adapter creates no pressure hypothesis: a successful focused
+cache workload demonstrates a Compiler capability in that workload. It does not
+establish recurrence, agent-attributed resource pressure, a general speedup,
+or reduced agent burden. Inspect the exact source evidence pointer and the
 `measurement_summary` before interpreting its figures.

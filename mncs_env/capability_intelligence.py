@@ -18,7 +18,7 @@ import selectors
 import subprocess
 import time
 from copy import deepcopy
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -310,6 +310,10 @@ SOURCE_INTEGRITY_VERIFIED = frozenset({
 })
 _COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SESSION_CONTEXT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+_TIMESTAMP = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 def _workspace_root(session: Any) -> Path | None:
@@ -808,7 +812,7 @@ def _compact_request_summary(request: Any) -> dict[str, Any] | None:
         "target_observation_identity", "target_content_sha256",
         "repository", "branch", "commit", "session_id", "work_intent_id",
         "source_schema_version", "compiler_branch", "compiler_base_revision",
-        "language_lock_revision", "test_head",
+        "language_lock_revision", "test_head", "campaign_checkpoint_before_change",
     ):
         value = request.get(key)
         if isinstance(value, str) and value:
@@ -840,7 +844,7 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         "verification_record_status", "subsequent_record_status",
         "original_record_status",
         "source_reported_verification_result", "resource_measurement_scope",
-        "session_activity_join_status",
+        "session_activity_join_status", "source_session_checkpoint_status",
         "projection_status", "observation_identity", "source_campaign_id",
         "source_session_id", "compiler_source_status",
         "source_registration_status", "registration_scope",
@@ -6785,7 +6789,8 @@ def _compact_projection(
                     "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
                     "environment_id", "repository", "repository_branch", "repository_head",
                     "repository_context_basis", "repository_branch_capture_status",
-                    "repository_head_capture_status",
+                    "repository_head_capture_status", "checkpoint_before_change",
+                    "checkpoint_recorded_at",
                 )
                 if isinstance(source_context.get(key), str)
             }
@@ -11379,6 +11384,70 @@ def _compiler_interface_consumption_metrics(
     return measured, availability, qualifications
 
 
+def _compiler_source_checkpoint_context(
+    session: Any, *, session_id: str, campaign_id: str,
+    checkpoint_id: str,
+) -> tuple[dict[str, str] | None, str]:
+    """Correlate one content-addressed source record to its exact prior checkpoint."""
+    if (not session_id.startswith("ses_")
+            or not campaign_id.startswith("cmp_")
+            or not checkpoint_id.startswith("chk_")
+            or not all(
+                _SESSION_CONTEXT_ID.fullmatch(value)
+                for value in (session_id, campaign_id, checkpoint_id)
+            )):
+        return None, "source-checkpoint-identity-invalid"
+    store = getattr(session, "store", None)
+    reader = getattr(store, "load_checkpoint", None)
+    if not callable(reader):
+        return None, "checkpoint-reader-unavailable"
+    try:
+        record = reader(session_id, checkpoint_id)
+    except (LifecycleError, StoreIntegrityFailure, StoreUnavailable,
+            OSError, TypeError, ValueError):
+        return None, "checkpoint-read-unavailable"
+    if not isinstance(record, dict):
+        return None, "checkpoint-not-found-or-unavailable"
+    if (record.get("identity") != checkpoint_id
+            or record.get("session_id") != session_id):
+        return None, "checkpoint-session-or-identity-mismatch"
+    campaign_state = record.get("campaign_state")
+    campaign_state = campaign_state if isinstance(campaign_state, dict) else {}
+    recorded_campaign_id = record.get("campaign_identity")
+    state_campaign_id = campaign_state.get("campaign_identity")
+    if (isinstance(recorded_campaign_id, str)
+            and recorded_campaign_id != campaign_id):
+        return None, "checkpoint-campaign-mismatch"
+    if (isinstance(state_campaign_id, str)
+            and state_campaign_id != campaign_id):
+        return None, "checkpoint-campaign-mismatch"
+    if campaign_id not in (recorded_campaign_id, state_campaign_id):
+        return None, "checkpoint-campaign-identity-unavailable"
+
+    context = {
+        "checkpoint_before_change": checkpoint_id,
+        "repository_context_basis": (
+            "content-addressed-compiler-record-and-exact-campaign-checkpoint"
+        ),
+    }
+    for field, source_field in (
+        ("work_intent_id", "intent_id"),
+        ("environment_id", "environment_id"),
+    ):
+        value = record.get(source_field)
+        if isinstance(value, str) and _SESSION_CONTEXT_ID.fullmatch(value):
+            context[field] = value
+    created_at = record.get("created_at")
+    if isinstance(created_at, str) and _TIMESTAMP.fullmatch(created_at):
+        try:
+            datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+        else:
+            context["checkpoint_recorded_at"] = created_at
+    return context, "verified-exact-pre-change-checkpoint"
+
+
 def _compiler_language_module_interface_consumption_observation(
     session: Any, reference: dict[str, str], source: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -11570,6 +11639,31 @@ def _compiler_language_module_interface_consumption_observation(
             "content-addressed-source-record; source session is declared"
         ),
     }
+    source_session_context_basis = "content-addressed-compiler-evidence-record"
+    source_checkpoint_context, source_checkpoint_status = (
+        _compiler_source_checkpoint_context(
+            session,
+            session_id=source_session_id,
+            campaign_id=campaign_id,
+            checkpoint_id=checkpoint,
+        )
+    )
+    source_session_context_resolution = "source-session-declared-not-cross-validated"
+    if source_checkpoint_context is not None:
+        source_context.update(source_checkpoint_context)
+        source_session_context_resolution = (
+            "verified-exact-pre-change-checkpoint"
+        )
+        source_session_context_basis = (
+            "content-addressed-compiler-record-and-verified-source-checkpoint/1"
+        )
+
+    measurement_availability_work_intent = (
+        "identity-verified-at-pre-change-checkpoint; goal-text-not-joined"
+        if (source_checkpoint_context is not None
+            and "work_intent_id" in source_checkpoint_context)
+        else "not-verified-from-source-checkpoint"
+    )
     limitations = source.get("limitations")
     limitations = [
         _short_text(value, 384) for value in limitations[:8]
@@ -11594,14 +11688,15 @@ def _compiler_language_module_interface_consumption_observation(
                 "source_file_hashes": source_files,
                 "source_file_count": len(source_files),
                 "source_session_context_resolution": (
-                    "source-session-declared-not-cross-validated"
+                    source_session_context_resolution
                 ),
             },
             "source_session_context": source_context,
-            "source_session_context_basis": "content-addressed-compiler-evidence-record",
-            "source_session_context_resolution": "source-session-declared-not-cross-validated",
+            "source_session_context_basis": source_session_context_basis,
+            "source_session_context_resolution": source_session_context_resolution,
             "outcome": {
                 "source_reported_verification_result": result[:64],
+                "source_session_checkpoint_status": source_checkpoint_status,
                 "locked_language_revision": language_revision,
                 "canonical_vm_binary_sha256": canonical_binary,
                 "stage_summaries": stage_summaries,
@@ -11612,7 +11707,7 @@ def _compiler_language_module_interface_consumption_observation(
                         "source_capture_time": "not-recorded-in-source",
                         "model_identity": "not-recorded-in-source",
                         "token_usage": "not-recorded-in-source",
-                        "work_intent": "not-recorded-in-source",
+                        "work_intent": measurement_availability_work_intent,
                         "compiler_session_diagnostics": "not-joined-by-this-projection",
                         "compiler_session_resource_samples": "not-joined-by-this-projection",
                     },
@@ -11628,7 +11723,8 @@ def _compiler_language_module_interface_consumption_observation(
         },
         "related_work": related_work,
         "not_measured": [
-            "Compiler source session Work Intent, diagnostics, and resource samples",
+            "Compiler source session diagnostic activity and resource samples",
+            "Work Intent goal text and exact verification-time session context",
             "agent model identity, token usage, and total campaign duration",
             "agent-attributed resource use, recurrence, or whether cost was necessary",
         ],
@@ -28294,7 +28390,8 @@ def project(
             (
                 "campaign_id", "session_id", "work_intent_id", "work_intent_goal",
                 "environment_id", "repository", "repository_branch", "repository_head",
-                "repository_context_basis",
+                "repository_context_basis", "checkpoint_before_change",
+                "checkpoint_recorded_at",
             )
             if source_session_context is not None else ()
         )

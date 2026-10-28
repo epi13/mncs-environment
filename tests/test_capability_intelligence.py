@@ -13942,6 +13942,12 @@ def test_compiler_module_interface_consumption_preserves_source_context_and_scop
     assert outcome["measurement_summary"]["measurement_availability"][
         "bootstrap_build_peak_cgroup_memory_bytes"
     ] == "null-in-source-record"
+    assert outcome["source_session_checkpoint_status"] == (
+        "checkpoint-reader-unavailable"
+    )
+    assert outcome["measurement_summary"]["measurement_availability"][
+        "work_intent"
+    ] == "not-verified-from-source-checkpoint"
     stages = {stage["name"]: stage for stage in outcome["stage_summaries"]}
     assert stages["fresh_process"]["semantic_work"] == {
         "recomputed_fact_count": 0,
@@ -13963,6 +13969,139 @@ def test_compiler_module_interface_consumption_preserves_source_context_and_scop
         "agent-attributed resource use" in item
         for item in observation["measurement_limits"]
     )
+
+
+def test_compiler_module_interface_consumption_joins_exact_source_checkpoint(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    reference = _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+    checkpoint = {
+        "identity": report["campaign"]["checkpoint_before_change"],
+        "session_id": report["campaign"]["session_id"],
+        "campaign_identity": report["campaign"]["identity"],
+        "intent_id": "int_verified_compiler_checkpoint_objective",
+        "environment_id": "renv_verified_compiler_checkpoint",
+        "created_at": "2026-10-23T19:10:11+00:00",
+    }
+    session.store = SimpleNamespace(
+        load_checkpoint=Mock(return_value=checkpoint),
+    )
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    context = observation["observation"]["source_session_context"]
+    assert observation["identity"] == reference["identity"]
+    assert context["campaign_id"] == report["campaign"]["identity"]
+    assert context["session_id"] == report["campaign"]["session_id"]
+    assert context["checkpoint_before_change"] == checkpoint["identity"]
+    assert context["checkpoint_recorded_at"] == checkpoint["created_at"]
+    assert context["work_intent_id"] == checkpoint["intent_id"]
+    assert context["environment_id"] == checkpoint["environment_id"]
+    assert observation["observation"]["source_session_context_resolution"] == (
+        "verified-exact-pre-change-checkpoint"
+    )
+    assert observation["observation"]["source_session_context_basis"] == (
+        "content-addressed-compiler-record-and-verified-source-checkpoint/1"
+    )
+    outcome = observation["observation"]["outcome"]
+    assert outcome["source_session_checkpoint_status"] == (
+        "verified-exact-pre-change-checkpoint"
+    )
+    assert outcome["measurement_summary"]["measurement_availability"][
+        "work_intent"
+    ] == "identity-verified-at-pre-change-checkpoint; goal-text-not-joined"
+    assert outcome["session_activity_join_status"] == (
+        "source session activity not-read"
+    )
+    session.store.load_checkpoint.assert_called_once_with(
+        report["campaign"]["session_id"],
+        report["campaign"]["checkpoint_before_change"],
+    )
+
+    result["session_activity"]["oversized_secondary_context"] = "x" * 100_000
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 8_192,
+    )
+    compact_observation = compact["observations"][0]
+    assert compact_observation["observation"]["source_session_context"][
+        "work_intent_id"
+    ] == checkpoint["intent_id"]
+    assert compact_observation["observation"]["source_session_context"][
+        "checkpoint_before_change"
+    ] == checkpoint["identity"]
+    assert compact_observation["observation"]["outcome_context"][
+        "source_session_checkpoint_status"
+    ] == "verified-exact-pre-change-checkpoint"
+
+
+def test_compiler_module_interface_checkpoint_campaign_mismatch_stays_unverified(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+    checkpoint = {
+        "identity": report["campaign"]["checkpoint_before_change"],
+        "session_id": report["campaign"]["session_id"],
+        "campaign_identity": "cmp_unrelated_campaign",
+        "intent_id": "int_must_not_be_correlated",
+        "environment_id": "renv_unrelated_environment",
+        "created_at": "2026-10-23T19:10:11+00:00",
+    }
+    session.store = SimpleNamespace(
+        load_checkpoint=Mock(return_value=checkpoint),
+    )
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    context = observation["observation"]["source_session_context"]
+    assert observation["observation"]["source_session_context_resolution"] == (
+        "source-session-declared-not-cross-validated"
+    )
+    assert "work_intent_id" not in context
+    assert "environment_id" not in context
+    assert "checkpoint_recorded_at" not in context
+    assert observation["observation"]["outcome"][
+        "source_session_checkpoint_status"
+    ] == "checkpoint-campaign-mismatch"
+    assert observation["observation"]["outcome"][
+        "measurement_summary"]["measurement_availability"]["work_intent"] == (
+            "not-verified-from-source-checkpoint"
+        )
+
+
+def test_compiler_module_interface_checkpoint_rejects_unsafe_store_identity(
+    tmp_path: Path,
+) -> None:
+    session, state = _session(tmp_path, [])
+    report = _compiler_language_module_interface_consumption_report()
+    report["campaign"]["session_id"] = "ses_../../outside"
+    _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+    reader = Mock(return_value=None)
+    session.store = SimpleNamespace(load_checkpoint=reader)
+
+    result = capability_intelligence.project(session)
+
+    observation = result["observations"][0]
+    assert observation["observation"]["outcome"][
+        "source_session_checkpoint_status"
+    ] == (
+        "source-checkpoint-identity-invalid"
+    )
+    assert observation["observation"]["source_session_context_resolution"] == (
+        "source-session-declared-not-cross-validated"
+    )
+    reader.assert_not_called()
 
 
 def test_unselected_compiler_module_interface_consumption_is_read_only(
