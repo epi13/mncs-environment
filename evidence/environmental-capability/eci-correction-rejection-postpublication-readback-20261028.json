@@ -1,0 +1,115 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_rejection_postpublication_readback_20261028",
+  "captured_at": "2026-10-28T05:09:11Z",
+  "measurement_basis": "authenticated-post-append-ECI-readback-of-new-pressure-verification-improvement-and-correction-summary",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_8b5e6d7647d38094",
+    "campaign_evidence_count_before_recording": 46,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:6f70d4da5c8e",
+      "claim:mncs-environment:worktree:eb9c510e11fe",
+      "claim:mncs-environment:worktree:cc7682bd8556"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment environmental-capability projection over the appended campaign evidence history",
+    "request": {
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "history_pages": 2,
+      "evidence_limit": 32,
+      "session_event_before_sequence": 398,
+      "session_event_limit": 1,
+      "campaign_state_checkpoint_id": "chk_8b5e6d7647d38094",
+      "projection_identity": "eci_eb8f63cd5323d536",
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 2 --evidence-limit 32 --session-event-before-sequence 398 --session-event-limit 1"
+    },
+    "outcome": {
+      "projection_content_digest": "4d7c2dbb0e333e4380b838687d2ccc0b",
+      "projection_status": "partial",
+      "detail_status": "evidence-priority-response-budget",
+      "serialized_response_bytes": 26100,
+      "response_budget_bytes": 73728,
+      "source_evidence": {
+        "checkpoint_id": "chk_8b5e6d7647d38094",
+        "evidence_count": 46,
+        "page_offsets": [
+          14,
+          0
+        ],
+        "pages_read": 2,
+        "observation_records_considered": 46,
+        "observation_records_verified": 15,
+        "observation_records_unavailable": 1,
+        "response_truncated": true
+      },
+      "retained_pressure_path": {
+        "occurrence_identity": "ev_environment_eci_correction_rejection_pressure_20261028",
+        "pressure_hypothesis_identity": "ph_environment_eci_correction_rejection_visibility",
+        "recurrence_status": "not-established",
+        "improvement_relation_identity": "im_environment_eci_correction_rejection_visibility_20261028",
+        "verification_observation_identity": "ev_environment_eci_correction_rejection_verification_20261028",
+        "subsequent_observation_identity": "ev_environment_eci_correction_rejection_readback_20261028",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "retained_correction_rejection_summary": {
+        "identity": "ev_environment_projection_evidence_capture_postpublication_pressure_correction_20261028",
+        "target_identity": "ev_environment_projection_evidence_capture_postpublication_readback_20261028",
+        "status": "replacement-values-unverified-or-unchanged",
+        "rejection_reason": "No independently verified occurrence with the same pressure definition and replacement recommendation was found in the selected evidence pages.",
+        "source_reference": {
+          "repository": "mncs-environment",
+          "commit": "9d8f95f58f44b7d75d8d50527f9696fa2338397b",
+          "path": "evidence/environmental-capability/projection-evidence-capture-postpublication-pressure-correction-20261028.json",
+          "sha256": "727fa44d8a87f8f02239ba08f504e7c1bba016562cde8161dd503036c584da46"
+        }
+      },
+      "interpretation_limit": "The compact ECI makes the new occurrence-to-pressure-to-improvement relationship and the authentic correction rejection inspectable. One record was unavailable and other details were omitted by the response budget. A single occurrence does not establish recurrence; effectiveness and agent intervention burden remain unassessed."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_rejection_visibility",
+    "title": "Budgeted ECI responses omit why an append-only recommendation correction was rejected",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment environmental-capability projection and correction validation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded, provenance-linked correction rejection summary alongside the priority evidence path."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "eci_eb8f63cd5323d536",
+      "kind": "authenticated-post-append-ECI-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "513f54bae80cbe9315ff3406d686c0cd53b0e9fe"
+    },
+    {
+      "identity": "ev_environment_eci_correction_rejection_improvement_20261028",
+      "kind": "campaign-improvement-relation",
+      "repository": "mncs-environment",
+      "commit": "513f54bae80cbe9315ff3406d686c0cd53b0e9fe",
+      "path": "evidence/environmental-capability/eci-correction-rejection-improvement-20261028.json",
+      "sha256": "1af67e62ee370e4057e856a9793563b3001262134f513ba838ccc0ef39f5be6c"
+    }
+  ],
+  "not_measured": [
+    "Whether the same diagnostic is useful to another agent or in another session.",
+    "Whether the change reduces investigation steps or intervention burden.",
+    "Whether independent later work confirms the pressure is eliminated or less frequent."
+  ]
+}
