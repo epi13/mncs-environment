@@ -84,6 +84,13 @@ opportunity, service failure, or reduced intervention. Its digest participates
 in the service-accountability projection identity, including when response-
 budget compaction retains only its summary.
 
+The compact `owner_decision_summary` groups returned owner-pass observations
+by decision and includes observed result, scheduler-outcome, and verification
+status counts when those fields were recorded. Its source-observation counts
+show whether the grouped rows cover the complete recorded window. These are
+status counts, not proof that an owner fulfilled an agent need: a recorded
+result or a `no-failure-reported` outcome is not independent verification.
+
 When readiness services are explicitly empty or no readiness declaration is
 recorded, the session records an Environment owner-pass execution, and the
 selected activity has no owner-pass-scoped calls, the same

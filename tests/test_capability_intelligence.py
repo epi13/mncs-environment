@@ -5715,6 +5715,13 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
             "scheduled_count": 1,
             "skipped_count": 0,
             "unclassified_decision_count": 0,
+            "observed_result_status_counts": {"result-recorded": 1},
+            "observed_outcome_status_counts": {
+                "no-failure-reported": 1,
+            },
+            "observed_verification_status_counts": {
+                "not-established": 1,
+            },
         },
         {
             "owner_pass": "semantics",
@@ -6086,12 +6093,20 @@ def test_projection_enforces_tight_budget_for_session_service_history(
             "scheduled_count": 0,
             "skipped_count": 0,
             "unclassified_decision_count": 1,
+            "observed_result_status_counts": {"result-recorded": 1},
+            "observed_verification_status_counts": {
+                "not-established": 1,
+            },
         },
         {
             "owner_pass": "projections",
             "scheduled_count": 0,
             "skipped_count": 0,
             "unclassified_decision_count": 1,
+            "observed_result_status_counts": {"result-recorded": 1},
+            "observed_verification_status_counts": {
+                "not-established": 1,
+            },
         },
     ]
     observation = next(
@@ -6192,6 +6207,77 @@ def test_owner_pass_decision_summary_preserves_partial_source_coverage() -> None
     assert complete["status"] == "complete"
     assert complete["owner_count"] == len(owners)
     assert [item["owner_pass"] for item in complete["owners"]] == list(owners)
+
+
+def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
+    summary = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 1,
+        "items": [
+            {
+                "owner_pass": "doctor",
+                "decision": "scheduled",
+                "outcome_status": "no-failure-reported",
+                "result_status": "result-recorded",
+                "verification_status": "not-established",
+            },
+            {
+                "owner_pass": "doctor",
+                "decision": "scheduled",
+                "outcome_status": "unknown",
+                "result_status": "not-recorded-for-execution",
+                "verification_status": "not-established",
+            },
+            {
+                "owner_pass": "verification",
+                "decision": "scheduled",
+                "outcome_status": "failure-reported",
+                "result_status": "result-recorded",
+                "verification_status": "verified",
+            },
+        ],
+    })
+
+    assert summary is not None
+    assert summary["status"] == "partial"
+    assert summary["source_observation_count"] == 4
+    assert summary["source_omitted_observation_count"] == 1
+    assert summary["owners"] == [
+        {
+            "owner_pass": "doctor",
+            "scheduled_count": 2,
+            "skipped_count": 0,
+            "unclassified_decision_count": 0,
+            "observed_result_status_counts": {
+                "not-recorded-for-execution": 1,
+                "result-recorded": 1,
+            },
+            "observed_outcome_status_counts": {
+                "no-failure-reported": 1,
+                "unknown": 1,
+            },
+            "observed_verification_status_counts": {
+                "not-established": 2,
+            },
+        },
+        {
+            "owner_pass": "verification",
+            "scheduled_count": 1,
+            "skipped_count": 0,
+            "unclassified_decision_count": 0,
+            "observed_result_status_counts": {"result-recorded": 1},
+            "observed_outcome_status_counts": {"failure-reported": 1},
+            "observed_verification_status_counts": {"verified": 1},
+        },
+    ]
+
+    compacted_again = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 3,
+        "items": [{"owner_pass": "doctor", "decision": "scheduled"}],
+        "owner_decision_summary": summary,
+    })
+    assert compacted_again == summary
 
 
 def test_service_probe_bindings_survive_large_inventory_truncation() -> None:

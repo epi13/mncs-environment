@@ -5238,11 +5238,31 @@ def _compact_owner_pass_decision_summary(
     """Retain bounded per-service scheduler decisions in compact ECI views.
 
     The summary identifies which Environment owners had recorded scheduled or
-    skipped decisions. It deliberately says nothing about agent need,
-    fulfillment, or intervention burden.
+    skipped decisions, plus the result and verification states present in the
+    returned source observations. It deliberately says nothing about agent
+    need, fulfillment, or intervention burden.
     """
     if not isinstance(value, dict):
         return None
+
+    status_count_fields = (
+        "observed_result_status_counts",
+        "observed_outcome_status_counts",
+        "observed_verification_status_counts",
+    )
+
+    def compact_status_counts(raw: Any) -> dict[str, int] | None:
+        if not isinstance(raw, dict):
+            return None
+        valid_items = (
+            (status, count)
+            for status, count in raw.items()
+            if isinstance(status, str)
+            and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", status)
+            and type(count) is int and count >= 0
+        )
+        counts = dict(sorted(valid_items)[:8])
+        return counts or None
 
     prior = value.get("owner_decision_summary")
     if isinstance(prior, dict):
@@ -5281,14 +5301,19 @@ def _compact_owner_pass_decision_summary(
                     )
                 ):
                     break
-                validated_owners.append({
+                validated_owner = {
                     "owner_pass": owner["owner_pass"],
                     "scheduled_count": owner["scheduled_count"],
                     "skipped_count": owner["skipped_count"],
                     "unclassified_decision_count": owner[
                         "unclassified_decision_count"
                     ],
-                })
+                }
+                for field in status_count_fields:
+                    counts = compact_status_counts(owner.get(field))
+                    if counts is not None:
+                        validated_owner[field] = counts
+                validated_owners.append(validated_owner)
             else:
                 return {
                     "schema_version": schema_version,
@@ -5311,7 +5336,7 @@ def _compact_owner_pass_decision_summary(
     if type(source_omitted) is not int or source_omitted < 0:
         source_omitted = None
 
-    owners: dict[str, dict[str, int]] = {}
+    owners: dict[str, dict[str, Any]] = {}
     invalid_observation_count = 0
     for item in items:
         if not isinstance(item, dict):
@@ -5336,11 +5361,33 @@ def _compact_owner_pass_decision_summary(
             owner["skipped_count"] += 1
         else:
             owner["unclassified_decision_count"] += 1
+        for field, source_field in (
+            ("observed_result_status_counts", "result_status"),
+            ("observed_outcome_status_counts", "outcome_status"),
+            ("observed_verification_status_counts", "verification_status"),
+        ):
+            status_value = item.get(source_field)
+            if (not isinstance(status_value, str)
+                    or re.fullmatch(r"[a-z][a-z0-9-]{0,79}", status_value) is None):
+                continue
+            field_counts = owner.setdefault(field, {})
+            field_counts[status_value] = field_counts.get(status_value, 0) + 1
 
-    owner_rows = [
-        {"owner_pass": name, **counts}
-        for name, counts in list(owners.items())[:MAX_ECI_OWNER_PASS_SUMMARY_ROWS]
-    ]
+    owner_rows = []
+    for name, counts in list(owners.items())[:MAX_ECI_OWNER_PASS_SUMMARY_ROWS]:
+        owner_row = {
+            key: counts[key]
+            for key in (
+                "scheduled_count", "skipped_count",
+                "unclassified_decision_count",
+            )
+        }
+        owner_row["owner_pass"] = name
+        for field in status_count_fields:
+            status_counts = compact_status_counts(counts.get(field))
+            if status_counts is not None:
+                owner_row[field] = status_counts
+        owner_rows.append(owner_row)
     owner_count_omitted = max(0, len(owners) - len(owner_rows))
     unclassified_decision_count = sum(
         owner["unclassified_decision_count"] for owner in owners.values()
