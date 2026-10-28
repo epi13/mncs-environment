@@ -266,6 +266,7 @@ MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS = 8
 MAX_SESSION_SERVICE_READINESS_RECORDS = 16
 MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
+MAX_ECI_OWNER_PASS_SUMMARY_ROWS = 8
 MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
 MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
 MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS = 8
@@ -3101,7 +3102,17 @@ def _compact_service_accountability_overview(
             if isinstance(execution_view, dict) else None
         )
         if isinstance(pass_observations, dict):
-            compact_environment_summary["owner_pass_observations"] = pass_observations
+            owner_decision_summary = _compact_owner_pass_decision_summary(
+                pass_observations,
+            )
+            compact_pass_observations = dict(pass_observations)
+            if owner_decision_summary is not None:
+                compact_pass_observations["owner_decision_summary"] = (
+                    owner_decision_summary
+                )
+            compact_environment_summary["owner_pass_observations"] = (
+                compact_pass_observations
+            )
         compact_summary["environment_service_execution"] = {
             "status": environment_execution.get("status"),
             "scope": environment_execution.get("scope"),
@@ -4991,6 +5002,11 @@ def _compact_session_activity_evidence_priority_overview(
                     if isinstance(pass_observations, dict):
                         items = pass_observations.get("items")
                         items = items if isinstance(items, list) else []
+                        owner_decision_summary = (
+                            _compact_owner_pass_decision_summary(
+                                pass_observations,
+                            )
+                        )
                         retained_items = items[:1]
                         compact_pass_observations = {
                             "count": pass_observations.get("count", 0),
@@ -5003,6 +5019,10 @@ def _compact_session_activity_evidence_priority_overview(
                             compact_pass_observations[
                                 "response_budget_truncated"
                             ] = True
+                        if owner_decision_summary is not None:
+                            compact_pass_observations[
+                                "owner_decision_summary"
+                            ] = owner_decision_summary
                         compact_execution_summary[
                             "owner_pass_observations"
                         ] = compact_pass_observations
@@ -5029,6 +5049,142 @@ def _compact_session_activity_evidence_priority_overview(
         "Session detail reduced; inspect source projections for full context.",
     ]
     return result
+
+
+def _compact_owner_pass_decision_summary(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Retain bounded per-service scheduler decisions in compact ECI views.
+
+    The summary identifies which Environment owners had recorded scheduled or
+    skipped decisions. It deliberately says nothing about agent need,
+    fulfillment, or intervention burden.
+    """
+    if not isinstance(value, dict):
+        return None
+
+    prior = value.get("owner_decision_summary")
+    if isinstance(prior, dict):
+        schema_version = prior.get("schema_version")
+        status = prior.get("status")
+        source_count = prior.get("source_observation_count")
+        source_omitted = prior.get("source_omitted_observation_count")
+        returned_count = prior.get("returned_observation_count")
+        invalid_count = prior.get("invalid_observation_count")
+        owner_count = prior.get("owner_count")
+        owner_omitted = prior.get("owner_count_omitted")
+        owners = prior.get("owners")
+        if (
+            schema_version == "mncs.environment.owner-pass-decision-summary/1"
+            and status in {"complete", "partial", "coverage-unknown"}
+            and (source_count is None or type(source_count) is int and source_count >= 0)
+            and (source_omitted is None or type(source_omitted) is int and source_omitted >= 0)
+            and type(returned_count) is int and returned_count >= 0
+            and type(invalid_count) is int and invalid_count >= 0
+            and type(owner_count) is int and owner_count >= 0
+            and type(owner_omitted) is int and owner_omitted >= 0
+            and isinstance(owners, list) and len(owners) <= MAX_ECI_OWNER_PASS_SUMMARY_ROWS
+        ):
+            validated_owners = []
+            for owner in owners:
+                if (
+                    not isinstance(owner, dict)
+                    or not isinstance(owner.get("owner_pass"), str)
+                    or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner["owner_pass"]) is None
+                    or any(
+                        type(owner.get(key)) is not int or owner[key] < 0
+                        for key in (
+                            "scheduled_count", "skipped_count",
+                            "unclassified_decision_count",
+                        )
+                    )
+                ):
+                    break
+                validated_owners.append({
+                    "owner_pass": owner["owner_pass"],
+                    "scheduled_count": owner["scheduled_count"],
+                    "skipped_count": owner["skipped_count"],
+                    "unclassified_decision_count": owner[
+                        "unclassified_decision_count"
+                    ],
+                })
+            else:
+                return {
+                    "schema_version": schema_version,
+                    "status": status,
+                    "source_observation_count": source_count,
+                    "source_omitted_observation_count": source_omitted,
+                    "returned_observation_count": returned_count,
+                    "invalid_observation_count": invalid_count,
+                    "owner_count": owner_count,
+                    "owner_count_omitted": owner_omitted,
+                    "owners": validated_owners,
+                }
+
+    items = value.get("items")
+    items = items if isinstance(items, list) else []
+    source_count = value.get("count")
+    if type(source_count) is not int or source_count < 0:
+        source_count = None
+    source_omitted = value.get("omitted_count")
+    if type(source_omitted) is not int or source_omitted < 0:
+        source_omitted = None
+
+    owners: dict[str, dict[str, int]] = {}
+    invalid_observation_count = 0
+    for item in items:
+        if not isinstance(item, dict):
+            invalid_observation_count += 1
+            continue
+        owner_name = item.get("owner_pass")
+        if (
+            not isinstance(owner_name, str)
+            or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner_name) is None
+        ):
+            invalid_observation_count += 1
+            continue
+        owner = owners.setdefault(owner_name, {
+            "scheduled_count": 0,
+            "skipped_count": 0,
+            "unclassified_decision_count": 0,
+        })
+        decision = item.get("decision")
+        if decision == "scheduled":
+            owner["scheduled_count"] += 1
+        elif decision == "skipped":
+            owner["skipped_count"] += 1
+        else:
+            owner["unclassified_decision_count"] += 1
+
+    owner_rows = [
+        {"owner_pass": name, **counts}
+        for name, counts in list(owners.items())[:MAX_ECI_OWNER_PASS_SUMMARY_ROWS]
+    ]
+    owner_count_omitted = max(0, len(owners) - len(owner_rows))
+    unclassified_decision_count = sum(
+        owner["unclassified_decision_count"] for owner in owners.values()
+    )
+    if source_count is None or source_omitted is None:
+        status = "coverage-unknown"
+    elif (
+        source_omitted or invalid_observation_count or owner_count_omitted
+        or unclassified_decision_count
+        or source_count != len(items)
+    ):
+        status = "partial"
+    else:
+        status = "complete"
+    return {
+        "schema_version": "mncs.environment.owner-pass-decision-summary/1",
+        "status": status,
+        "source_observation_count": source_count,
+        "source_omitted_observation_count": source_omitted,
+        "returned_observation_count": len(items),
+        "invalid_observation_count": invalid_observation_count,
+        "owner_count": len(owners),
+        "owner_count_omitted": owner_count_omitted,
+        "owners": owner_rows,
+    }
 
 
 def _compact_campaign_evidence_priority_rows(

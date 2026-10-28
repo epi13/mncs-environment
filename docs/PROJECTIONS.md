@@ -1408,6 +1408,17 @@ allowlisted reason code, source schema, integrity status, and references.
 `owner_failure_details_status` distinguishes complete, partial, invalid, and
 `not-recorded` failure coverage. This is failure evidence, not an assertion that
 the service caused the failure or that any agent received the result.
+
+When ECI reduces session context to preserve campaign evidence, the bounded
+`owner_pass_observations.owner_decision_summary` retains the distinct owner
+passes and their scheduled or skipped decision counts from the returned trace.
+It keeps the source observation count, source omissions, invalid rows, and
+coverage status visible while the detailed observation list retains one exact
+result reference. This lets an agent discover which Environment services ran
+without expanding the full session history. The summary covers scheduler
+decisions only; it does not establish service opportunities, fulfillment,
+agent receipt, or intervention reduction. Partial and unknown source coverage
+remain explicit.
 For recorded verification owner results, the same exact Store relation also
 surfaces bounded obligation and outcome counts, reason-code counts, and up to
 eight non-passing obligation summaries under `verification_result_details`.

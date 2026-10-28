@@ -5599,6 +5599,26 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert compact_pass_observations["items"][0]["result_identity"] == (
         result_digest
     )
+    compact_owner_summary = compact_pass_observations[
+        "owner_decision_summary"
+    ]
+    assert compact_owner_summary["status"] == "complete"
+    assert compact_owner_summary["source_observation_count"] == 2
+    assert compact_owner_summary["source_omitted_observation_count"] == 0
+    assert compact_owner_summary["owners"] == [
+        {
+            "owner_pass": "doctor",
+            "scheduled_count": 1,
+            "skipped_count": 0,
+            "unclassified_decision_count": 0,
+        },
+        {
+            "owner_pass": "semantics",
+            "scheduled_count": 0,
+            "skipped_count": 1,
+            "unclassified_decision_count": 0,
+        },
+    ]
 
     session.snapshot.pop("requirements")
     without_readiness_declaration = capability_intelligence.project(session)[
@@ -5947,6 +5967,29 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     ]
     assert all(item["source_reference"].startswith("mncs-store:")
                for item in compact_observations["items"])
+    owner_summary = compact_observations["owner_decision_summary"]
+    assert owner_summary["schema_version"] == (
+        "mncs.environment.owner-pass-decision-summary/1"
+    )
+    assert owner_summary["status"] == "partial"
+    assert owner_summary["source_observation_count"] == 7
+    assert owner_summary["source_omitted_observation_count"] == 5
+    assert owner_summary["returned_observation_count"] == 2
+    assert owner_summary["owner_count"] == 2
+    assert owner_summary["owners"] == [
+        {
+            "owner_pass": "doctor",
+            "scheduled_count": 0,
+            "skipped_count": 0,
+            "unclassified_decision_count": 1,
+        },
+        {
+            "owner_pass": "projections",
+            "scheduled_count": 0,
+            "skipped_count": 0,
+            "unclassified_decision_count": 1,
+        },
+    ]
     observation = next(
         item for item in compact["observations"]
         if item["identity"] == latest_pressure["identity"]
@@ -5989,6 +6032,62 @@ def test_projection_enforces_tight_budget_for_session_service_history(
         compact["improvement_relation_count"] - 1
     )
     assert compact["source"]["response_truncated"] is True
+
+
+def test_owner_pass_decision_summary_preserves_partial_source_coverage() -> None:
+    summary = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 2,
+        "items": [
+            {"owner_pass": "doctor", "decision": "scheduled"},
+            {"owner_pass": "family", "decision": "skipped"},
+        ],
+    })
+
+    assert summary is not None
+    assert summary["status"] == "partial"
+    assert summary["source_observation_count"] == 4
+    assert summary["source_omitted_observation_count"] == 2
+    assert summary["returned_observation_count"] == 2
+    assert summary["owners"] == [
+        {
+            "owner_pass": "doctor",
+            "scheduled_count": 1,
+            "skipped_count": 0,
+            "unclassified_decision_count": 0,
+        },
+        {
+            "owner_pass": "family",
+            "scheduled_count": 0,
+            "skipped_count": 1,
+            "unclassified_decision_count": 0,
+        },
+    ]
+
+    compacted_again = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 3,
+        "items": [{"owner_pass": "doctor", "decision": "scheduled"}],
+        "owner_decision_summary": summary,
+    })
+    assert compacted_again == summary
+
+    owners = (
+        "doctor", "semantics", "actions", "verification", "diagnostics",
+        "family", "projections",
+    )
+    complete = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": len(owners),
+        "omitted_count": 0,
+        "items": [
+            {"owner_pass": owner, "decision": "scheduled"}
+            for owner in owners
+        ],
+    })
+    assert complete is not None
+    assert complete["status"] == "complete"
+    assert complete["owner_count"] == len(owners)
+    assert [item["owner_pass"] for item in complete["owners"]] == list(owners)
 
 
 def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
