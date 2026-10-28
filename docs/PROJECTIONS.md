@@ -1712,6 +1712,24 @@ available, and type; inspect the selected source event window for full payloads.
 The summary and references remain evidence of server-side recording, not proof
 that an agent received or used a capability.
 
+The same bounded summary includes `availability_accountability`, derived from
+the selected session's current binding snapshot. It preserves the examined
+binding count, scan completeness, availability states and reason codes, and a
+bounded set of provider-level counts even when per-binding rows are compacted.
+Provider declaration source pointers retain their observed checkout head when
+available, while explicitly leaving implementation ownership and content
+integrity unverified. `provider_declaration_scan_complete` describes whether
+the declaration inventory itself was fully scanned; the separate
+`provider_declaration_sources_omitted_count` reports source pointers left out
+by the bounded projection. The provider rows prioritize providers with more
+unknown or unavailable bindings, then sort by identity; omitted-row counts
+preserve the scope of that view. Unknown and unavailable states do not by
+themselves show that a capability was needed for the session, presented to an
+agent, usable, or a native migration opportunity. Accordingly, service
+opportunity and agent receipt remain `not-established`. Inspect source
+bindings and their provider declarations before treating an availability
+observation as an actionable service gap.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full

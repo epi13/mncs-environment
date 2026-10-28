@@ -257,6 +257,8 @@ MAX_AMBIENT_UNCLASSIFIED_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_CAPABILITIES = 16
 MAX_SESSION_ACTIVITY_BINDINGS = 32
 MAX_SESSION_ACTIVITY_BINDING_SCAN = 512
+MAX_CAPABILITY_PROVIDER_ACCOUNTABILITY_ROWS = 8
+MAX_CAPABILITY_PROVIDER_DECLARATION_SOURCES = 8
 MAX_CONTEXT_RESPONSE_CAPABILITY_LIST = 20
 MAX_SESSION_ACTIVITY_CAPABILITY_EVENTS = 12
 MAX_CAPABILITY_SUPPORTING_EVENTS = 3
@@ -2829,6 +2831,119 @@ def _compact_count_map(value: Any, *, key_limit: int = 64) -> dict[str, int]:
     }
 
 
+def _compact_capability_availability_accountability(
+    value: Any,
+) -> dict[str, Any] | None:
+    if (not isinstance(value, dict)
+            or value.get("schema_version")
+            != "mncs.environment.capability-availability-accountability/1"):
+        return None
+    result: dict[str, Any] = {
+        "schema_version": value["schema_version"],
+    }
+    for key in (
+        "scope", "source_basis", "binding_scan_status",
+        "service_opportunity_status", "agent_receipt_status",
+        "provider_row_selection_basis",
+    ):
+        if isinstance(value.get(key), str):
+            result[key] = _short_text(value[key], 128)
+    for key in (
+        "binding_count", "binding_records_examined",
+        "binding_records_not_examined", "binding_records_invalid",
+        "provider_count", "provider_rows_omitted_count",
+        "provider_declaration_sources_omitted_count",
+        "unknown_reason_codes_omitted_count",
+        "unavailable_reason_codes_omitted_count",
+    ):
+        count = value.get(key)
+        if type(count) is int and count >= 0:
+            result[key] = count
+    for key in (
+        "provider_declaration_scan_complete",
+    ):
+        if type(value.get(key)) is bool:
+            result[key] = value[key]
+    for key in (
+        "availability_status_counts", "unknown_reason_code_counts",
+        "unavailable_reason_code_counts",
+    ):
+        counts = _compact_count_map(value.get(key), key_limit=80)
+        if counts or isinstance(value.get(key), dict):
+            result[key] = counts
+
+    raw_providers = value.get("provider_rows")
+    if isinstance(raw_providers, list):
+        provider_rows = []
+        for item in raw_providers[:MAX_CAPABILITY_PROVIDER_ACCOUNTABILITY_ROWS]:
+            if not isinstance(item, dict):
+                continue
+            provider = item.get("provider")
+            if not isinstance(provider, str) or not provider:
+                continue
+            row: dict[str, Any] = {
+                "provider": _short_text(provider, 128),
+            }
+            count = item.get("binding_count")
+            if type(count) is int and count >= 0:
+                row["binding_count"] = count
+            for key in (
+                "availability_status_counts", "unknown_reason_code_counts",
+                "unavailable_reason_code_counts",
+            ):
+                counts = _compact_count_map(item.get(key), key_limit=80)
+                if counts or isinstance(item.get(key), dict):
+                    row[key] = counts
+            for key in (
+                "unknown_reason_codes_omitted_count",
+                "unavailable_reason_codes_omitted_count",
+            ):
+                count = item.get(key)
+                if type(count) is int and count >= 0:
+                    row[key] = count
+            provider_rows.append(row)
+        result["provider_rows"] = provider_rows
+        result["provider_rows_omitted_count"] = max(
+            result.get("provider_rows_omitted_count", 0),
+            len(raw_providers) - len(provider_rows),
+        )
+
+    raw_sources = value.get("provider_declaration_sources")
+    if isinstance(raw_sources, list):
+        sources = []
+        for item in raw_sources[:MAX_CAPABILITY_PROVIDER_DECLARATION_SOURCES]:
+            if not isinstance(item, dict):
+                continue
+            provider = item.get("provider")
+            path = normalize_provider_evidence_path(item.get("path"))
+            if not isinstance(provider, str) or not provider or path is None:
+                continue
+            reference: dict[str, Any] = {
+                "provider": _short_text(provider, 128),
+                "path": path,
+                "basis": "provider-declaration-source",
+                "implementation_ownership_status": "not-established",
+                "content_integrity_status": "not-verified",
+            }
+            head = item.get("observed_checkout_head")
+            if isinstance(head, str) and _COMMIT.fullmatch(head):
+                reference["observed_checkout_head"] = head
+            sources.append(reference)
+        result["provider_declaration_sources"] = sources
+        result["provider_declaration_sources_omitted_count"] = max(
+            result.get("provider_declaration_sources_omitted_count", 0),
+            len(raw_sources) - len(sources),
+        )
+
+    limits = value.get("measurement_limits")
+    if isinstance(limits, list):
+        result["measurement_limits"] = [
+            _short_text(item, 256)
+            for item in limits[:3] if isinstance(item, str)
+        ]
+    return result
+
+
 def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -2901,6 +3016,13 @@ def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
         count = value.get(key)
         if type(count) is int and count >= 0:
             summary[key] = count
+    availability_accountability = (
+        _compact_capability_availability_accountability(
+            value.get("availability_accountability"),
+        )
+    )
+    if availability_accountability is not None:
+        summary["availability_accountability"] = availability_accountability
     return summary
 
 
@@ -5199,6 +5321,9 @@ def _compact_session_activity_budget_overview(
         result["doctor_health_history"] = compact_doctor
 
     capability_delivery = activity.get("capability_delivery")
+    if (not isinstance(capability_delivery, dict)
+            and isinstance(source_activity, dict)):
+        capability_delivery = source_activity.get("capability_delivery")
     verification_context = (
         capability_delivery.get("verification_executor_context")
         if isinstance(capability_delivery, dict) else None
@@ -5206,10 +5331,26 @@ def _compact_session_activity_budget_overview(
     compact_verification_context = _compact_verification_executor_context(
         verification_context,
     )
+    compact_capability_delivery: dict[str, Any] = {}
     if compact_verification_context is not None:
-        result["capability_delivery"] = {
-            "verification_executor_context": compact_verification_context,
-        }
+        compact_capability_delivery[
+            "verification_executor_context"
+        ] = compact_verification_context
+    binding_summary = (
+        capability_delivery.get("binding_evidence_summary")
+        if isinstance(capability_delivery, dict) else None
+    )
+    availability_accountability = (
+        _compact_capability_availability_accountability(
+            binding_summary.get("availability_accountability"),
+        ) if isinstance(binding_summary, dict) else None
+    )
+    if availability_accountability is not None:
+        compact_capability_delivery[
+            "availability_accountability"
+        ] = availability_accountability
+    if compact_capability_delivery:
+        result["capability_delivery"] = compact_capability_delivery
 
     for key in (
         "repository_ref_transition_count", "repository_ref_transitions_truncated",
@@ -5476,10 +5617,35 @@ def _compact_session_activity_evidence_priority_overview(
         capability_delivery.get("verification_executor_context")
         if isinstance(capability_delivery, dict) else None
     )
+    compact_capability_delivery: dict[str, Any] = {}
     if isinstance(compact_verification_context, dict):
-        result["capability_delivery"] = {
-            "verification_executor_context": compact_verification_context,
-        }
+        compact_capability_delivery[
+            "verification_executor_context"
+        ] = compact_verification_context
+    availability_accountability = (
+        capability_delivery.get("availability_accountability")
+        if isinstance(capability_delivery, dict) else None
+    )
+    if not isinstance(availability_accountability, dict):
+        binding_summary = (
+            capability_delivery.get("binding_evidence_summary")
+            if isinstance(capability_delivery, dict) else None
+        )
+        availability_accountability = (
+            binding_summary.get("availability_accountability")
+            if isinstance(binding_summary, dict) else None
+        )
+    compact_availability_accountability = (
+        _compact_capability_availability_accountability(
+            availability_accountability,
+        )
+    )
+    if compact_availability_accountability is not None:
+        compact_capability_delivery[
+            "availability_accountability"
+        ] = compact_availability_accountability
+    if compact_capability_delivery:
+        result["capability_delivery"] = compact_capability_delivery
 
     result["detail_status"] = "evidence-priority-response-budget"
     result["evidence_priority_summary_only"] = True
@@ -10928,6 +11094,19 @@ def _compact_projection(
         elif isinstance(
             result["session_activity"].get("capability_delivery"), dict,
         ):
+            delivery = result["session_activity"]["capability_delivery"]
+            binding_summary = delivery.get("binding_evidence_summary")
+            availability_accountability = (
+                _compact_capability_availability_accountability(
+                    binding_summary.get("availability_accountability"),
+                ) if isinstance(binding_summary, dict) else None
+            )
+            if (availability_accountability is not None
+                    and "availability_accountability" not in delivery):
+                result["session_activity"]["capability_delivery"] = {
+                    "availability_accountability": availability_accountability,
+                }
+                continue
             result["session_activity"].pop("capability_delivery")
         elif result["session_activity"].get("capabilities"):
             result["session_activity"]["capabilities"].pop()
@@ -17040,6 +17219,177 @@ def _context_response_use_sequence_relation(
     }
 
 
+def _capability_availability_accountability_summary(
+    bindings: list[dict[str, Any]], *,
+    availability_counts: dict[str, int],
+    binding_records_not_examined: int,
+    binding_records_invalid: int,
+    provider_declarations_omitted_count: int,
+) -> dict[str, Any]:
+    providers: dict[str, dict[str, Any]] = {}
+    unknown_reason_counts: dict[str, int] = {}
+    unavailable_reason_counts: dict[str, int] = {}
+    declaration_sources: set[tuple[str, str, str | None]] = set()
+    declaration_sources_omitted = max(0, provider_declarations_omitted_count)
+
+    for binding in bindings:
+        provider = binding.get("provider")
+        status = binding.get("availability_status")
+        if (not isinstance(status, str)
+                or status not in {
+                    "available", "unavailable", "unknown", "unrecorded",
+                }):
+            status = "unrecorded"
+        if isinstance(provider, str) and provider:
+            group = providers.setdefault(provider, {
+                "provider": provider,
+                "binding_count": 0,
+                "availability_status_counts": {},
+                "unknown_reason_code_counts": {},
+                "unavailable_reason_code_counts": {},
+            })
+            group["binding_count"] += 1
+            status_counts = group["availability_status_counts"]
+            status_counts[status] = status_counts.get(status, 0) + 1
+
+            code = binding.get("availability_code")
+            if (isinstance(code, str)
+                    and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", code)):
+                if status == "unknown":
+                    reason_counts = group["unknown_reason_code_counts"]
+                    reason_counts[code] = reason_counts.get(code, 0) + 1
+                    unknown_reason_counts[code] = (
+                        unknown_reason_counts.get(code, 0) + 1
+                    )
+                elif status == "unavailable":
+                    reason_counts = group["unavailable_reason_code_counts"]
+                    reason_counts[code] = reason_counts.get(code, 0) + 1
+                    unavailable_reason_counts[code] = (
+                        unavailable_reason_counts.get(code, 0) + 1
+                    )
+
+            declarations = binding.get("provider_declarations")
+            declarations = declarations if isinstance(declarations, list) else []
+            for declaration in declarations[:8]:
+                if not isinstance(declaration, dict):
+                    continue
+                source = normalize_provider_evidence_path(
+                    declaration.get("source"),
+                )
+                if source is None:
+                    continue
+                reference = declaration.get(
+                    "provider_declared_evidence_reference",
+                )
+                head = (
+                    reference.get("observed_checkout_head")
+                    if isinstance(reference, dict) else None
+                )
+                if not isinstance(head, str) or not _COMMIT.fullmatch(head):
+                    checkout = binding.get("provider_checkout")
+                    head = checkout.get("head") if isinstance(checkout, dict) else None
+                if not isinstance(head, str) or not _COMMIT.fullmatch(head):
+                    head = ""
+                declaration_sources.add((provider, source, head or None))
+
+    provider_rows = sorted(
+        providers.values(),
+        key=lambda item: (
+            -sum(item["availability_status_counts"].get(status, 0)
+                 for status in ("unknown", "unavailable")),
+            item["provider"],
+        ),
+    )
+    compact_provider_rows = [
+        {
+            "provider": provider["provider"],
+            "binding_count": provider["binding_count"],
+            "availability_status_counts": dict(sorted(
+                provider["availability_status_counts"].items(),
+            )[:8]),
+            "unknown_reason_code_counts": dict(sorted(
+                provider["unknown_reason_code_counts"].items(),
+            )[:8]),
+            "unknown_reason_codes_omitted_count": max(
+                0, len(provider["unknown_reason_code_counts"]) - 8,
+            ),
+            "unavailable_reason_code_counts": dict(sorted(
+                provider["unavailable_reason_code_counts"].items(),
+            )[:8]),
+            "unavailable_reason_codes_omitted_count": max(
+                0, len(provider["unavailable_reason_code_counts"]) - 8,
+            ),
+        }
+        for provider in provider_rows[:MAX_CAPABILITY_PROVIDER_ACCOUNTABILITY_ROWS]
+    ]
+    sorted_sources = sorted(
+        declaration_sources,
+        key=lambda item: (item[0], item[1], item[2] or ""),
+    )
+    compact_sources = [
+        {
+            "provider": provider,
+            "path": path,
+            "basis": "provider-declaration-source",
+            "implementation_ownership_status": "not-established",
+            "content_integrity_status": "not-verified",
+            **({"observed_checkout_head": head} if head else {}),
+        }
+        for provider, path, head in sorted_sources[
+            :MAX_CAPABILITY_PROVIDER_DECLARATION_SOURCES
+        ]
+    ]
+
+    scan_complete = (
+        binding_records_not_examined == 0 and binding_records_invalid == 0
+    )
+    declaration_scan_complete = (
+        scan_complete
+        and declaration_sources_omitted == 0
+    )
+    return {
+        "schema_version": (
+            "mncs.environment.capability-availability-accountability/1"
+        ),
+        "scope": "selected-session-current-binding-snapshot",
+        "source_basis": "current-session-binding-snapshot",
+        "binding_count": len(bindings),
+        "binding_records_examined": len(bindings),
+        "binding_records_not_examined": max(0, binding_records_not_examined),
+        "binding_records_invalid": max(0, binding_records_invalid),
+        "binding_scan_status": "complete" if scan_complete else "partial",
+        "availability_status_counts": dict(sorted(availability_counts.items())[:8]),
+        "unknown_reason_code_counts": dict(sorted(unknown_reason_counts.items())[:8]),
+        "unknown_reason_codes_omitted_count": max(
+            0, len(unknown_reason_counts) - 8,
+        ),
+        "unavailable_reason_code_counts": dict(sorted(unavailable_reason_counts.items())[:8]),
+        "unavailable_reason_codes_omitted_count": max(
+            0, len(unavailable_reason_counts) - 8,
+        ),
+        "provider_count": len(providers),
+        "provider_row_selection_basis": (
+            "highest-unknown-or-unavailable-binding-count-then-provider"
+        ),
+        "provider_rows": compact_provider_rows,
+        "provider_rows_omitted_count": max(
+            0, len(provider_rows) - len(compact_provider_rows),
+        ),
+        "provider_declaration_scan_complete": declaration_scan_complete,
+        "provider_declaration_sources": compact_sources,
+        "provider_declaration_sources_omitted_count": max(
+            0, len(sorted_sources) - len(compact_sources),
+        ),
+        "service_opportunity_status": "not-established",
+        "agent_receipt_status": "not-established",
+        "measurement_limits": [
+            "Availability is the selected session binding snapshot; it does not establish that a capability was relevant to this objective, presented to, received by, discovered by, or usable by an agent.",
+            "Unknown or unavailable bindings are environment observations, not by themselves service failures or native migration opportunities.",
+            "Provider declaration source pointers are provenance context; they do not verify implementation ownership or source integrity.",
+        ],
+    }
+
+
 def _capability_binding_evidence_summary(
     bindings: list[dict[str, Any]], *, availability_counts: dict[str, int],
     complete_history: bool, binding_details_omitted_count: int,
@@ -17129,6 +17479,17 @@ def _capability_binding_evidence_summary(
     exact_invocation_events, exact_invocation_events_omitted = (
         bounded_event_references(exact_bindings, "supporting_events")
     )
+    availability_accountability = (
+        _capability_availability_accountability_summary(
+            bindings,
+            availability_counts=availability_counts,
+            binding_records_not_examined=binding_records_not_examined,
+            binding_records_invalid=binding_records_invalid,
+            provider_declarations_omitted_count=(
+                provider_declarations_omitted_count
+            ),
+        )
+    )
 
     return {
         "schema_version": "mncs.environment.capability-binding-evidence-summary/2",
@@ -17137,6 +17498,7 @@ def _capability_binding_evidence_summary(
         ),
         "binding_count": len(bindings),
         "availability_status_counts": dict(sorted(availability_counts.items())[:8]),
+        "availability_accountability": availability_accountability,
         "provider_invocation_addressing_status_counts": dict(sorted(
             (provider_invocation_addressing_counts or {}).items(),
         )[:8]),

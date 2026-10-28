@@ -4349,7 +4349,17 @@ def test_capability_binding_summary_survives_response_budget_trimming(
         bindings.append({
             "provider": f"provider-{index}",
             "capability": f"mncs-capability-{index}",
-            "availability_status": "available",
+            "availability_status": (
+                "unknown" if index == 0 else
+                "unavailable" if index == 1 else "available"
+            ),
+            **({"availability_code": "provider-invocation-undeclared"}
+               if index == 0 else {}),
+            **({"availability_code": "provider-invocation-unresolvable"}
+               if index == 1 else {}),
+            **({"provider_declarations": [{
+                "source": "provider-0/.mncs/project.json",
+            }]} if index == 0 else {}),
             "binding_id": f"cap_binding_{index}",
             "contract_revision": "1",
             "use_observation_status": (
@@ -4391,11 +4401,15 @@ def test_capability_binding_summary_survives_response_budget_trimming(
         "binding_count": len(bindings),
         "bindings": bindings,
         "bindings_omitted": 0,
-        "availability_counts": {"available": len(bindings)},
+        "availability_counts": {
+            "available": 7, "unknown": 1, "unavailable": 1,
+        },
         "binding_evidence_summary": (
             capability_intelligence._capability_binding_evidence_summary(
                 bindings,
-                availability_counts={"available": len(bindings)},
+                availability_counts={
+                    "available": 7, "unknown": 1, "unavailable": 1,
+                },
                 complete_history=True,
                 binding_details_omitted_count=0,
                 binding_records_not_examined=0,
@@ -4461,6 +4475,65 @@ def test_capability_binding_summary_survives_response_budget_trimming(
     ] == ["evt_0_2_", "evt_0_1_", "evt_0_0_"]
     assert summary["discoverability_status"] == "not-measured"
     assert summary["agent_receipt_status"] == "not-established"
+    availability_accountability = summary["availability_accountability"]
+    assert availability_accountability["scope"] == (
+        "selected-session-current-binding-snapshot"
+    )
+    assert availability_accountability["binding_scan_status"] == "complete"
+    assert availability_accountability["availability_status_counts"] == {
+        "available": 7, "unavailable": 1, "unknown": 1,
+    }
+    assert availability_accountability["unknown_reason_code_counts"] == {
+        "provider-invocation-undeclared": 1,
+    }
+    assert availability_accountability["unavailable_reason_code_counts"] == {
+        "provider-invocation-unresolvable": 1,
+    }
+    assert availability_accountability[
+        "provider_declaration_scan_complete"
+    ] is True
+    assert availability_accountability["provider_rows"][0] == {
+        "provider": "provider-0",
+        "binding_count": 1,
+        "availability_status_counts": {"unknown": 1},
+        "unknown_reason_code_counts": {
+            "provider-invocation-undeclared": 1,
+        },
+        "unknown_reason_codes_omitted_count": 0,
+        "unavailable_reason_code_counts": {},
+        "unavailable_reason_codes_omitted_count": 0,
+    }
+    assert availability_accountability["provider_declaration_sources"][0][
+        "path"
+    ] == "provider-0/.mncs/project.json"
+    assert availability_accountability["service_opportunity_status"] == (
+        "not-established"
+    )
+    assert availability_accountability["agent_receipt_status"] == (
+        "not-established"
+    )
+
+    evidence_priority = (
+        capability_intelligence._compact_session_activity_evidence_priority_overview({
+            "status": "partial",
+        }, {
+            "status": "partial",
+            "capability_delivery": {
+                "binding_evidence_summary": summary,
+                "bindings": [{"unused_detail": "large" * 100}],
+            },
+        })
+    )
+    assert evidence_priority is not None
+    priority_availability = evidence_priority["capability_delivery"][
+        "availability_accountability"
+    ]
+    assert priority_availability["unknown_reason_code_counts"] == {
+        "provider-invocation-undeclared": 1,
+    }
+    assert priority_availability["provider_declaration_sources"][0]["path"] == (
+        "provider-0/.mncs/project.json"
+    )
     assert len(json.dumps(
         compact, ensure_ascii=False, sort_keys=True,
     ).encode("utf-8")) <= budget
