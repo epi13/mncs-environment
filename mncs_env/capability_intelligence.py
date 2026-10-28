@@ -4413,17 +4413,48 @@ def _compact_session_activity_budget_overview(
             result[key] = value
 
     source = activity.get("source")
-    if isinstance(source, dict):
-        result["source"] = {
-            key: source[key]
-            for key in (
-                "event_count", "ambient_service_execution_digest",
-                "family_ambient_observation_digest",
-                "retirement_activity_digest",
-            )
-            if (isinstance(source.get(key), str)
-                or type(source.get(key)) in (int, bool))
-        }
+    source = source if isinstance(source, dict) else {}
+    if isinstance(source_activity, dict):
+        source_fallback = source_activity.get("source")
+        if isinstance(source_fallback, dict):
+            source = {**source_fallback, **source}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "event_count", "event_window_limit",
+            "event_page_before_sequence", "next_event_before_sequence",
+            "event_window_truncated", "event_page_scoped",
+            "event_page_has_older_records",
+            "event_window_sequence_start", "event_window_sequence_end",
+            "rpc_operation_events_considered",
+            "rpc_operation_records_returned",
+            "rpc_operation_records_omitted",
+            "rpc_operation_records_invalid",
+            "ambient_service_execution_digest",
+            "family_ambient_observation_digest",
+            "retirement_activity_digest",
+        )
+        if (isinstance(source.get(key), str)
+            or type(source.get(key)) in (int, bool))
+    }
+    for key in ("authority_claim_state_lookup", "integration_claim_state_lookup"):
+        lookup = source.get(key)
+        if isinstance(lookup, dict):
+            compact_source[key] = {
+                field: lookup[field]
+                for field in (
+                    "status", "lookup_count", "lookup_limit",
+                    "lookup_omitted_count", "observed_at",
+                    "activity_lookup_count", "activity_lookup_limit",
+                    "prior_activity_lookup_count",
+                    "reused_activity_lookup_count",
+                )
+                if field in lookup
+                and (isinstance(lookup[field], str)
+                     or type(lookup[field]) is int)
+            }
+    if compact_source:
+        result["source"] = compact_source
 
     retirement_activity = activity.get("retirement_activity")
     if (not isinstance(retirement_activity, dict)
@@ -4447,9 +4478,74 @@ def _compact_session_activity_budget_overview(
     if compact_resource_samples is not None:
         result["resource_samples"] = compact_resource_samples
 
+    # These families are already sanitized and bounded by the session
+    # activity projector. Retain one actionable row per family in the
+    # response-budget view and account for anything omitted.
+    compact_detail_families = (
+        "authority_denial_candidates",
+        "authority_denials",
+        "coordination_deferrals",
+        "coordination_deferral_candidates",
+        "integration_eligibility",
+        "proposal_eligibility",
+        "repository_ref_transitions",
+        "claim_lifecycle_correlations",
+        "rpc_operations",
+        "rpc_failure_candidates",
+        "interactions",
+    )
+    for key in compact_detail_families:
+        rows = (
+            source_activity.get(key)
+            if isinstance(source_activity, dict) and key in source_activity
+            else activity.get(key)
+        )
+        if not isinstance(rows, list) or not rows:
+            continue
+        result[key] = rows[:1]
+        if len(rows) > 1:
+            result[f"{key}_response_budget_truncated"] = True
+            result[f"{key}_response_budget_omitted_count"] = len(rows) - 1
+        if key == "claim_lifecycle_correlations":
+            prior_omitted = activity.get(
+                "claim_lifecycle_correlations_omitted_count", 0,
+            )
+            if type(prior_omitted) is not int or prior_omitted < 0:
+                prior_omitted = 0
+            result["claim_lifecycle_correlations_returned"] = 1
+            result["claim_lifecycle_correlations_omitted_count"] = (
+                prior_omitted + len(rows) - 1
+            )
+    for key in (
+        "authority_denial_candidate_count", "coordination_deferral_count",
+        "coordination_deferral_candidate_count", "integration_eligibility_count",
+        "proposal_eligibility_count", "repository_ref_transition_count",
+        "rpc_operation_count", "rpc_failure_candidate_count",
+    ):
+        if type(activity.get(key)) is int and activity[key] >= 0:
+            result[key] = activity[key]
+    ambient_owner_pass_activity = activity.get("ambient_owner_pass_activity")
+    if (not isinstance(ambient_owner_pass_activity, dict)
+            and isinstance(source_activity, dict)):
+        ambient_owner_pass_activity = source_activity.get(
+            "ambient_owner_pass_activity",
+        )
+    if isinstance(ambient_owner_pass_activity, dict):
+        result["ambient_owner_pass_activity"] = ambient_owner_pass_activity
+    rpc_operation_summary = activity.get("rpc_operation_summary")
+    if (not isinstance(rpc_operation_summary, dict)
+            and isinstance(source_activity, dict)):
+        rpc_operation_summary = source_activity.get("rpc_operation_summary")
+    if isinstance(rpc_operation_summary, dict):
+        result["rpc_operation_summary"] = rpc_operation_summary
+
     diagnostic_activity = _compact_session_diagnostic_activity(
         activity.get("diagnostic_activity"),
     )
+    if (diagnostic_activity is None and isinstance(source_activity, dict)):
+        diagnostic_activity = _compact_session_diagnostic_activity(
+            source_activity.get("diagnostic_activity"),
+        )
     if diagnostic_activity is not None:
         result["diagnostic_activity"] = diagnostic_activity
     family_observation_source = activity.get("family_ambient_observation")
@@ -4692,6 +4788,9 @@ def _compact_session_activity_budget_overview(
             result["service_accountability"] = compact_accountability
 
     doctor_history = activity.get("doctor_health_history")
+    if (not isinstance(doctor_history, dict)
+            and isinstance(source_activity, dict)):
+        doctor_history = source_activity.get("doctor_health_history")
     if isinstance(doctor_history, dict):
         compact_doctor: dict[str, Any] = {
             key: doctor_history[key]
@@ -4926,7 +5025,7 @@ def _compact_session_activity_budget_overview(
 
 
 def _compact_session_activity_evidence_priority_overview(
-    activity: Any,
+    activity: Any, source_activity: Any = None,
 ) -> dict[str, Any] | None:
     """Reduce secondary session context further while retaining source links.
 
@@ -4935,7 +5034,9 @@ def _compact_session_activity_evidence_priority_overview(
     Keep measured service totals and exact owner-result pointers, while
     omitting detailed readiness and historical Doctor rows.
     """
-    result = _compact_session_activity_budget_overview(activity)
+    result = _compact_session_activity_budget_overview(
+        activity, source_activity,
+    )
     if result is None:
         return None
 
@@ -4957,12 +5058,27 @@ def _compact_session_activity_evidence_priority_overview(
         result["source"] = {
             key: source[key]
             for key in (
-                "event_count", "ambient_service_execution_digest",
+                "event_count", "event_window_limit",
+                "event_page_before_sequence", "next_event_before_sequence",
+                "event_window_truncated", "event_page_scoped",
+                "event_page_has_older_records",
+                "event_window_sequence_start", "event_window_sequence_end",
+                "rpc_operation_events_considered",
+                "rpc_operation_records_returned",
+                "rpc_operation_records_omitted",
+                "rpc_operation_records_invalid",
+                "ambient_service_execution_digest",
                 "family_ambient_observation_digest",
                 "retirement_activity_digest",
             )
             if key in source
         }
+        for key in (
+            "authority_claim_state_lookup", "integration_claim_state_lookup",
+        ):
+            lookup = source.get(key)
+            if isinstance(lookup, dict):
+                result["source"][key] = lookup
     retirement_activity = _compact_session_retirement_activity(
         activity.get("retirement_activity"), operation_limit=1, target_limit=1,
     )
@@ -4974,7 +5090,6 @@ def _compact_session_activity_evidence_priority_overview(
     )
     if resource_samples is not None:
         result["resource_samples"] = resource_samples
-
     accountability = activity.get("service_accountability")
     if isinstance(accountability, dict):
         compact_accountability = {
@@ -9436,6 +9551,71 @@ def _compact_projection(
     def compact_result_size() -> int:
         return _projection_response_size(result)
 
+    # Keep an immutable, already-sanitized activity source before response
+    # trimming mutates the working result. Tight responses can then recover
+    # selected context without re-reading events or losing provenance.
+    priority_activity_source = (
+        deepcopy(result.get("session_activity", {}))
+        if max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES else {}
+    )
+    priority_activity_budget: dict[str, Any] | None = None
+
+    def build_evidence_priority_candidate() -> dict[str, Any] | None:
+        nonlocal priority_activity_budget
+        if priority_activity_budget is None:
+            priority_activity_budget = _compact_session_activity_budget_overview(
+                priority_activity_source, priority_activity_source,
+            )
+        candidate = deepcopy(result)
+        compact_activity = _compact_session_activity_evidence_priority_overview(
+            candidate.get("session_activity"), priority_activity_source,
+        )
+        if compact_activity is None:
+            return None
+        candidate["session_activity"] = compact_activity
+        if not _compact_campaign_evidence_priority_rows(candidate):
+            return None
+        if _projection_response_size(candidate) > max_result_bytes:
+            return None
+
+        # Add only context groups that fit beside the source evidence. Related
+        # denial, eligibility, and lifecycle records travel together so their
+        # cross-references remain meaningful after compaction.
+        groups = (
+            ("diagnostic_activity",),
+            ("doctor_health_history",),
+            ("repository_ref_transitions",),
+            ("coordination_deferrals", "coordination_deferral_candidates"),
+            (
+                "authority_denial_candidates", "authority_denials",
+                "integration_eligibility", "proposal_eligibility",
+                "claim_lifecycle_correlations",
+            ),
+            (
+                "rpc_operations", "rpc_operation_summary",
+                "rpc_failure_candidates", "interactions",
+            ),
+            ("ambient_owner_pass_activity",),
+        )
+        source = priority_activity_budget or {}
+        for group in groups:
+            values = {
+                key: source[key]
+                for key in group
+                if key in source
+                and isinstance(source[key], (dict, list))
+                and source[key]
+            }
+            if not values:
+                continue
+            trial = dict(candidate)
+            trial_activity = dict(candidate["session_activity"])
+            trial["session_activity"] = trial_activity
+            trial_activity.update(values)
+            if _projection_response_size(trial) <= max_result_bytes:
+                candidate = trial
+        return candidate
+
     def trim_doctor_gap_detail() -> bool:
         activity_result = result.get("session_activity")
         doctor_history = (
@@ -9629,46 +9809,37 @@ def _compact_projection(
                 and result["observations"]
                 and result["pressure_hypotheses"]
                 and result["improvement_relations"]):
-            candidate = deepcopy(result)
-            evidence_priority_activity = (
-                _compact_session_activity_evidence_priority_overview(
-                    candidate.get("session_activity"),
+            candidate = build_evidence_priority_candidate()
+            if candidate is not None:
+                compact_observation = next(
+                    iter(candidate.get("observations", [])), None,
                 )
-            )
-            if evidence_priority_activity is not None:
-                candidate["session_activity"] = evidence_priority_activity
-                if _compact_campaign_evidence_priority_rows(candidate):
-                    compact_observation = next(
-                        iter(candidate.get("observations", [])), None,
-                    )
-                    compact_hypothesis = next(
-                        iter(candidate.get("pressure_hypotheses", [])), None,
-                    )
-                    compact_relation = next(
-                        iter(candidate.get("improvement_relations", [])), None,
-                    )
-                    observation_pressure = (
-                        compact_observation.get("pressure_hypothesis")
-                        if isinstance(compact_observation, dict) else None
-                    )
-                    path_identity = (
-                        observation_pressure.get("identity")
-                        if isinstance(observation_pressure, dict) else None
-                    )
-                    linked_path = (
-                        isinstance(path_identity, str)
-                        and isinstance(compact_hypothesis, dict)
-                        and compact_hypothesis.get("identity") == path_identity
-                        and isinstance(compact_relation, dict)
-                        and compact_relation.get(
-                            "addresses_hypothesis_identity",
-                        ) == path_identity
-                    )
-                    if (linked_path
-                            and _projection_response_size(candidate)
-                            <= max_result_bytes):
-                        result = candidate
-                        continue
+                compact_hypothesis = next(
+                    iter(candidate.get("pressure_hypotheses", [])), None,
+                )
+                compact_relation = next(
+                    iter(candidate.get("improvement_relations", [])), None,
+                )
+                observation_pressure = (
+                    compact_observation.get("pressure_hypothesis")
+                    if isinstance(compact_observation, dict) else None
+                )
+                path_identity = (
+                    observation_pressure.get("identity")
+                    if isinstance(observation_pressure, dict) else None
+                )
+                linked_path = (
+                    isinstance(path_identity, str)
+                    and isinstance(compact_hypothesis, dict)
+                    and compact_hypothesis.get("identity") == path_identity
+                    and isinstance(compact_relation, dict)
+                    and compact_relation.get(
+                        "addresses_hypothesis_identity",
+                    ) == path_identity
+                )
+                if linked_path:
+                    result = candidate
+                    continue
         # Preserve selected campaign evidence even when it has not yet been
         # correlated with a pressure hypothesis or improvement relation.
         # Secondary session context can be reconstructed from its own
@@ -9676,17 +9847,10 @@ def _compact_projection(
         # page difficult to inspect and connect to the current work.
         if (result["observations"]
                 and max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES):
-            candidate = deepcopy(result)
-            evidence_priority_activity = (
-                _compact_session_activity_evidence_priority_overview(
-                    candidate.get("session_activity"),
-                )
-            )
-            if evidence_priority_activity is not None:
-                candidate["session_activity"] = evidence_priority_activity
-                if _projection_response_size(candidate) <= max_result_bytes:
-                    result = candidate
-                    continue
+            candidate = build_evidence_priority_candidate()
+            if candidate is not None:
+                result = candidate
+                continue
         if result["observations"]:
             def observation_retention_priority(item: dict[str, Any]) -> int:
                 hypothesis = item.get("pressure_hypothesis")

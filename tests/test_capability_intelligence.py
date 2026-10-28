@@ -4310,6 +4310,7 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
     assert compact_diagnostics["history"][0]["evidence_reference"][
         "reference"
     ] == evidence_reference
+    assert capability_intelligence._projection_response_size(compact) <= 8_000
 
     session.snapshot["diagnostic_history"].append({
         "at": "2026-10-27T20:01:00Z",
