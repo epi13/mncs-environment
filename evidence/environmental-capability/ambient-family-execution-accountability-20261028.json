@@ -1,0 +1,148 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_family_execution_accountability_20261028",
+  "captured_at": "2026-10-28T00:05:00Z",
+  "measurement_basis": "prior live Family and scheduler evidence, exact execution-link regression tests, and live backward-compatibility readback",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_family_summary_scheduler_identity_gap_20261028",
+    "title": "The Family domain summary is not attributable to its exact scheduler result",
+    "category": "environment-service-accountability",
+    "owner": "mncs-environment",
+    "subsystem": "Family ambient pass, owner-pass provenance, and capability intelligence",
+    "basis": "The preceding live observation recorded a later successful Family summary separately from an earlier unavailable scheduler result and explicitly noted that no exact execution identity linked them.",
+    "actionable_recommendation": "Carry the scoped Family owner-pass execution identity beside a persisted Family summary and correlate it only against the same owner and execution identity in the latest scheduler trace.",
+    "not_measured": [
+      "whether an agent needed or received the Family service",
+      "eligible service opportunities or fulfillment",
+      "agent intervention burden or its reduction",
+      "cross-session correlation coverage"
+    ]
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "observation": {
+    "kind": "ambient-family-execution-result-accountability",
+    "source_interface": "MNCS Environment incremental owner-pass context and environmental-capability projection",
+    "request": {
+      "prior_observation_identity": "ev_environment_ambient_family_service_accountability_20261027",
+      "prior_projection_identity": "eci_7dcbfd8cf8894353",
+      "implementation_commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "verification_observation_identity": "ev_environment_family_execution_link_verification_20261028"
+    },
+    "outcome": {
+      "prior_gap": "The Family pass summary and owner-pass scheduler record were separate observations with no shared execution identity.",
+      "implementation": {
+        "context_source": "existing scoped ambient owner-pass context",
+        "join_keys": ["owner_pass=family", "service_execution_id"],
+        "matched_result_identity_exposed": true,
+        "mismatched_and_unavailable_contexts_remain_explicit": true,
+        "verification_status": "not-established",
+        "ambient_fulfillment_status": "not-established",
+        "agent_intervention_burden_status": "not-measured"
+      },
+      "verification": {
+        "observation_identity": "ev_environment_family_execution_link_verification_20261028",
+        "targeted_tests_passed": 182,
+        "targeted_tests_failed": 0,
+        "targeted_tests_skipped": 22,
+        "exact_match_and_mismatch_cases": "passed"
+      },
+      "live_backward_compatibility_readback": {
+        "session_id": "ses_c7628be9292eab08",
+        "projection_identity": "eci_7dcbfd8cf8894353",
+        "family_summary_digest": "67c5bc9616e3d762",
+        "owner_pass_relation_status": "not-recorded",
+        "interpretation": "The authentic persisted summary predates owner-context capture and came from a direct pass. It remains explicitly unlinked; no live scheduled match is claimed."
+      },
+      "effectiveness_assessment": "The exact provenance join and safe unlinked states are covered by regression tests. Agent benefit and longitudinal service effectiveness are not established."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_family_execution_result_link_20261028",
+    "addresses_hypothesis_identity": "ph_environment_family_summary_scheduler_identity_gap_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_family_owner_context_7790e80",
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "mncs_env/family.py",
+      "sha256": "e1494344d74c21a7baeb76e04ff501fa60f97dbfdec4a9a504f7a805c91094f6"
+    },
+    "verification_observation_identity": "ev_environment_family_execution_link_verification_20261028",
+    "subsequent_observation_identity": null,
+    "basis": "Family persists only its current scoped owner-pass context. ECI joins the bounded domain summary to the latest owner result only when the Family owner and exact execution ID match; compact responses retain the bounded relation.",
+    "effectiveness_assessment": "Exact correlation behavior is regression-verified; no new live scheduled match, agent-burden reduction, or longitudinal effect has been observed.",
+    "not_measured": [
+      "service opportunity coverage, agent receipt, or fulfillment",
+      "agent intervention burden or reduction",
+      "independent verification of Family domain outcomes",
+      "cross-session persistence and recurrence",
+      "whether the new relationship changes agent development decisions"
+    ]
+  },
+  "related_work": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS."
+  },
+  "recorder": {
+    "campaign_id": "cmp_7f550d193225b7be",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_6b644a59c2867246",
+    "repository": "mncs-environment",
+    "session_id": "ses_a752e1c55fb4ca6f",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "supporting_sources": [
+    {
+      "kind": "prior-live-pressure-observation",
+      "identity": "ev_environment_ambient_family_service_accountability_20261027",
+      "repository": "mncs-environment",
+      "commit": "528efbc8270f25e3374b8dab861306f32375227e",
+      "path": "evidence/environmental-capability/ambient-family-service-accountability-20261027.json",
+      "sha256": "19b78ea4bcc984d6b85d74ab653b6db53f1b9a41a811f810ddb07d8243bab39e"
+    },
+    {
+      "kind": "verification-observation",
+      "identity": "ev_environment_family_execution_link_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "c67832511a0f3eb0ad9d4f9f37b6b1a173678230",
+      "path": "evidence/environmental-capability/ambient-family-execution-link-verification-20261028.json",
+      "sha256": "04438538523eb6ee907df6144e496a1aeb0679e90da152ab38d688c385dd9047"
+    },
+    {
+      "kind": "implementation",
+      "identity": "mncs_environment_family_owner_context_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "mncs_env/family.py",
+      "sha256": "e1494344d74c21a7baeb76e04ff501fa60f97dbfdec4a9a504f7a805c91094f6"
+    },
+    {
+      "kind": "projection",
+      "identity": "mncs_environment_family_owner_relation_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ff1b2a1f597acc525f315c6745f98552a4042598d37908799634e35c7fac6735"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_family_owner_context_test_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "tests/test_family.py",
+      "sha256": "8b45e71399c6206f9ecd47fb354bb029f4cabaf68be4c3c551816891275f5ff8"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_family_owner_projection_test_7790e80",
+      "repository": "mncs-environment",
+      "commit": "7790e8013a37cd296e70989990c0e339116492bd",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "330bb083b323da837b85d994ec55a8ec85f5d9552da64996f1c7ebbc580f9db1"
+    }
+  ]
+}
