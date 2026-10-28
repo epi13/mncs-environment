@@ -4534,6 +4534,35 @@ def test_capability_binding_summary_survives_response_budget_trimming(
     assert priority_availability["provider_declaration_sources"][0]["path"] == (
         "provider-0/.mncs/project.json"
     )
+    priority_use = evidence_priority["capability_delivery"][
+        "observed_use_accountability"
+    ]
+    assert priority_use["schema_version"] == (
+        "mncs.environment.capability-use-accountability/1"
+    )
+    assert priority_use["scope"] == (
+        "selected-session-current-binding-snapshot-and-event-window"
+    )
+    assert priority_use["event_window_status"] == "complete-session-history"
+    assert priority_use["event_window_complete_history"] is True
+    assert priority_use["exact_binding_invoked_binding_count"] == 1
+    assert priority_use["exact_binding_invocation_count"] == 2
+    assert priority_use["exact_binding_completion_count"] == 1
+    assert priority_use["exact_binding_outcome_status_counts"] == {
+        "succeeded": 1,
+    }
+    assert priority_use["use_observation_status_counts"] == {
+        "invoked-for-exact-session-binding": 1,
+        "no-environment-invocation-record-in-session-history": 8,
+    }
+    assert priority_use["agent_attribution_status"] == "not-established"
+    assert priority_use["agent_receipt_status"] == "not-established"
+    assert [item["identity"][:8] for item in priority_use[
+        "exact_binding_invocation_supporting_events"
+    ]] == ["evt_0_2_", "evt_0_1_", "evt_0_0_"]
+    assert priority_use[
+        "exact_binding_invocation_supporting_events_omitted"
+    ] == 0
     assert len(json.dumps(
         compact, ensure_ascii=False, sort_keys=True,
     ).encode("utf-8")) <= budget

@@ -2944,6 +2944,89 @@ def _compact_capability_availability_accountability(
     return result
 
 
+def _compact_capability_use_accountability(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Preserve exact binding-use evidence when per-binding rows are dropped."""
+    if (not isinstance(value, dict)
+            or value.get("schema_version")
+            != "mncs.environment.capability-binding-evidence-summary/2"):
+        return None
+    result: dict[str, Any] = {
+        "schema_version": "mncs.environment.capability-use-accountability/1",
+        "scope": "selected-session-current-binding-snapshot-and-event-window",
+        "discoverability_status": value.get(
+            "discoverability_status", "not-measured",
+        ),
+        "agent_receipt_status": value.get(
+            "agent_receipt_status", "not-established",
+        ),
+        "agent_attribution_status": "not-established",
+        "measurement_limits": [
+            "Exact binding counts require provider, binding ID, and contract revision on the recorded Environment interaction.",
+            "Recorded invocation and completion events do not establish agent receipt, successful task use, or service fulfillment.",
+            "The selected event window excludes direct external tool activity; an incomplete window does not establish absence of use.",
+        ],
+    }
+    for key, maximum in (
+        ("source_basis", 128),
+        ("event_window_status", 64),
+        ("discoverability_status", 64),
+        ("agent_receipt_status", 64),
+    ):
+        if isinstance(value.get(key), str):
+            result[key] = _short_text(value[key], maximum)
+    if type(value.get("event_window_complete_history")) is bool:
+        result["event_window_complete_history"] = value[
+            "event_window_complete_history"
+        ]
+    for key in (
+        "exact_binding_invoked_binding_count",
+        "exact_binding_invocation_count",
+        "exact_binding_completion_count",
+        "exact_binding_invocation_supporting_events_omitted",
+    ):
+        count = value.get(key)
+        if type(count) is int and count >= 0:
+            result[key] = count
+    for key in (
+        "use_observation_status_counts",
+        "binding_attribution_status_counts",
+        "exact_binding_outcome_status_counts",
+    ):
+        counts = _compact_count_map(value.get(key), key_limit=96)
+        if counts or isinstance(value.get(key), dict):
+            result[key] = counts
+    references = value.get("exact_binding_invocation_supporting_events")
+    if isinstance(references, list):
+        compact_references = []
+        for reference in references[:MAX_CAPABILITY_SUPPORTING_EVENTS]:
+            if not isinstance(reference, dict):
+                continue
+            identity = reference.get("identity")
+            event_type = reference.get("type")
+            if not isinstance(identity, str) or not identity:
+                continue
+            if not isinstance(event_type, str) or not event_type:
+                continue
+            compact_reference = {
+                "identity": _short_text(identity, 160),
+                "type": _short_text(event_type, 96),
+            }
+            sequence = reference.get("sequence")
+            if type(sequence) is int and sequence >= 0:
+                compact_reference["sequence"] = sequence
+            compact_references.append(compact_reference)
+        result["exact_binding_invocation_supporting_events"] = (
+            compact_references
+        )
+        result["exact_binding_invocation_supporting_events_omitted"] = (
+            result.get("exact_binding_invocation_supporting_events_omitted", 0)
+            + max(0, len(references) - len(compact_references))
+        )
+    return result
+
+
 def _compact_binding_evidence_summary(value: Any) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -5349,6 +5432,13 @@ def _compact_session_activity_budget_overview(
         compact_capability_delivery[
             "availability_accountability"
         ] = availability_accountability
+    use_accountability = _compact_capability_use_accountability(
+        binding_summary,
+    ) if isinstance(binding_summary, dict) else None
+    if use_accountability is not None:
+        compact_capability_delivery[
+            "observed_use_accountability"
+        ] = use_accountability
     if compact_capability_delivery:
         result["capability_delivery"] = compact_capability_delivery
 
@@ -5644,6 +5734,28 @@ def _compact_session_activity_evidence_priority_overview(
         compact_capability_delivery[
             "availability_accountability"
         ] = compact_availability_accountability
+    use_accountability = capability_delivery.get(
+        "observed_use_accountability",
+    ) if isinstance(capability_delivery, dict) else None
+    if not isinstance(use_accountability, dict):
+        binding_summary = (
+            capability_delivery.get("binding_evidence_summary")
+            if isinstance(capability_delivery, dict) else None
+        )
+        if (not isinstance(binding_summary, dict)
+                and isinstance(source_activity, dict)):
+            source_delivery = source_activity.get("capability_delivery")
+            binding_summary = (
+                source_delivery.get("binding_evidence_summary")
+                if isinstance(source_delivery, dict) else None
+            )
+        use_accountability = _compact_capability_use_accountability(
+            binding_summary,
+        ) if isinstance(binding_summary, dict) else None
+    if isinstance(use_accountability, dict):
+        compact_capability_delivery[
+            "observed_use_accountability"
+        ] = use_accountability
     if compact_capability_delivery:
         result["capability_delivery"] = compact_capability_delivery
 

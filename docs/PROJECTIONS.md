@@ -1730,6 +1730,17 @@ opportunity and agent receipt remain `not-established`. Inspect source
 bindings and their provider declarations before treating an availability
 observation as an actionable service gap.
 
+The evidence-priority ECI view also retains `capability_delivery.observed_use_accountability`
+beside availability when it compacts per-binding details. This summary counts
+only invocations carrying the exact provider, binding ID, and contract
+revision, and preserves bounded outcome counts and source event references.
+Capability-name-only matches remain visible through the use-status counts but
+are not added to exact invocation totals. The selected event-window coverage,
+agent attribution, discoverability, and receipt are stated separately; an
+invocation or completion event is not proof that an agent received a useful
+result or that a service fulfilled its responsibility. Direct external tools
+are outside this Environment event view.
+
 When response compaction is needed, each pressure summary retains bounded exact
 evidence references (identity, repository, commit, path, and digest), so an
 agent can inspect the records supporting the hypothesis even when their full
