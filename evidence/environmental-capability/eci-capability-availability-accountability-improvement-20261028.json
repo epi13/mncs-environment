@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_capability_availability_accountability_improvement_20261028",
+  "captured_at": "2026-10-28T16:50:00Z",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "Make environmental services accountable through evidence from real MNCS development, and make machine-native work easier to discover and carry out.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "measurement_basis": "Explicit link from the observed response-budget pressure to the committed Environment implementation and its regression and live-projection verification. The relation records integration-time verification separately from longer-term service effectiveness.",
+  "not_measured": [
+    "whether the summary reduces agent intervention in ordinary development",
+    "whether other agents can discover, interpret, or use the information reliably",
+    "whether the 37 unknown or unavailable bindings represent eligible service opportunities",
+    "whether subsequent session activity changes these availability states",
+    "whether any MNCS-native implementation became feasible as a result"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability campaign evidence",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_capability_availability_compaction_20261028",
+      "implementation_commit": "97d4e1e770a507a79c315923e46b9a3db52d500d",
+      "verification_observation_identity": "ev_environment_eci_capability_availability_accountability_verification_20261028",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Environmental Capability Intelligence now derives a bounded provider-level availability summary from the current session binding snapshot and retains it through response-budget compaction, including provider declaration source pointers and explicit scan and omission status.",
+      "verified_change": "The existing capability-intelligence test module passed all 194 tests, and a post-commit live ECI readback returned the summary within the CLI response limit.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "This verifies the projection path and regression behavior. It does not prove agent receipt, discoverability, reduced intervention, or long-term resolution of the observed pressure."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_capability_availability_accountability_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_capability_availability_compaction_20261028",
+    "implementation_reference": {
+      "identity": "eci_capability_availability_implementation_97d4e1e",
+      "repository": "mncs-environment",
+      "commit": "97d4e1e770a507a79c315923e46b9a3db52d500d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "963638c420dcf06f738babd2e2e7ae31550d3ff6d6c56b31320b69000ac50c0f"
+    },
+    "verification_observation_identity": "ev_environment_eci_capability_availability_accountability_verification_20261028",
+    "subsequent_observation_identity": null,
+    "basis": "The implementation preserves the current binding availability summary in response-priority views; targeted regression assertions cover provider reason counts, declaration source pointers, scan completeness, and the unestablished agent-receipt and service-opportunity states.",
+    "not_measured": [
+      "agent-reported or independently observed intervention reduction",
+      "cross-session recurrence or long-term pressure resolution",
+      "whether any provider capability was needed for the selected work intent",
+      "whether the implementation changed native-versus-host ownership or migration readiness"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "eci_capability_availability_implementation_97d4e1e",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "97d4e1e770a507a79c315923e46b9a3db52d500d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "963638c420dcf06f738babd2e2e7ae31550d3ff6d6c56b31320b69000ac50c0f"
+    },
+    {
+      "identity": "eci_capability_availability_regression_tests_97d4e1e",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "97d4e1e770a507a79c315923e46b9a3db52d500d",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "de9a72fe21b3cfd674a4f7efc07d25cda64e152d3824613b4f7e912b1cecb440"
+    }
+  ]
+}

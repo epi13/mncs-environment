@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_capability_availability_budget_pressure_20261028",
+  "captured_at": "2026-10-28T16:50:00Z",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "Make environmental services accountable through evidence from real MNCS development, and make machine-native work easier to discover and carry out.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_a4de4e071b43aca7",
+    "campaign_evidence_count_before_recording": 170
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "measurement_basis": "One live environmental-capability projection from this session omitted the capability-delivery section under response compaction. A refreshed session context separately reported the binding availability totals below. The baseline projection identity was not retained, so recurrence and agent impact are not established.",
+  "not_measured": [
+    "whether an agent needed or attempted to use any binding in the snapshot",
+    "whether the omitted section caused manual intervention or changed an outcome",
+    "whether the condition recurs across sessions or other projection budgets",
+    "whether unknown or unavailable bindings are defective or native migration opportunities",
+    "whether an agent received, discovered, understood, or successfully used the capabilities"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-budget-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "python -m mncs_env.cli projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-limit 2",
+      "history_pages": 1,
+      "evidence_limit": 2,
+      "baseline_projection_identity_status": "not-retained",
+      "baseline_cli_response_limit_bytes": 73728,
+      "baseline_cli_response_bytes": 59289,
+      "repository_head_before_change": "93029b3bb22b37bcbf000f3989825bf38d7e2ca7"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "session_activity_capability_delivery_status": "not-present-in-returned-projection",
+      "separate_refreshed_binding_context": {
+        "binding_count": 89,
+        "availability_status_counts": {
+          "available": 52,
+          "unavailable": 1,
+          "unknown": 36
+        },
+        "unknown_reason_code_counts": {
+          "provider-invocation-undeclared": 36
+        },
+        "unavailable_reason_code_counts": {
+          "provider-invocation-unresolvable": 1
+        }
+      },
+      "interpretation_limit": "The binding totals came from the refreshed session context, not from the compact baseline projection. Their absence in one ECI response is an observability gap; it does not establish that all 37 non-available bindings were needed or caused agent work."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_capability_availability_compaction_20261028",
+    "title": "Response-budget compaction can hide current capability availability from ECI readers",
+    "category": "environmental-observability",
+    "subsystem": "Environmental Capability Intelligence capability-delivery projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded provider-level availability summary and declaration source context in the evidence-priority response while preserving uncertainty about need, receipt, and usability."
+  },
+  "supporting_sources": [
+    {
+      "identity": "eci_capability_delivery_baseline_93029b3",
+      "kind": "committed-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "93029b3bb22b37bcbf000f3989825bf38d7e2ca7",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "334b5aad4e8ab794e441b959994a5ca910e7caa180a03d4129a49cd0bd2fb45a"
+    }
+  ]
+}

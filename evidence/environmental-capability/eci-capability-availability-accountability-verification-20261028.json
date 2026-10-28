@@ -1,0 +1,101 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_capability_availability_accountability_verification_20261028",
+  "captured_at": "2026-10-28T16:50:00Z",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "Make environmental services accountable through evidence from real MNCS development, and make machine-native work easier to discover and carry out.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "measurement_basis": "Post-commit ECI CLI output and the existing capability-intelligence regression module. The selected counts and response bytes were copied from the bounded live result; no agent-receipt or intervention metric is available.",
+  "not_measured": [
+    "whether any agent independently noticed or used the newly exposed summary",
+    "whether the change reduced manual capability discovery or agent intervention",
+    "whether unknown or unavailable bindings are needed by this campaign",
+    "whether provider declarations establish implementation ownership or successful behavior",
+    "system-wide native-versus-host implementation ownership or migration readiness"
+  ],
+  "observation": {
+    "kind": "environmental-capability-availability-accountability-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "python -m mncs_env.cli projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-limit 2",
+      "projection_identity": "eci_cf2c3390b9db5c27",
+      "projection_status": "partial",
+      "projection_response_bytes": 66144,
+      "cli_response_limit_bytes": 73728,
+      "history_pages": 1,
+      "evidence_limit": 2,
+      "implementation_commit": "97d4e1e770a507a79c315923e46b9a3db52d500d"
+    },
+    "outcome": {
+      "availability_accountability": {
+        "schema_version": "mncs.environment.capability-availability-accountability/1",
+        "scope": "selected-session-current-binding-snapshot",
+        "binding_count": 89,
+        "binding_scan_status": "complete",
+        "availability_status_counts": {
+          "available": 52,
+          "unavailable": 1,
+          "unknown": 36
+        },
+        "unknown_reason_code_counts": {
+          "provider-invocation-undeclared": 36
+        },
+        "unavailable_reason_code_counts": {
+          "provider-invocation-unresolvable": 1
+        },
+        "provider_count": 13,
+        "provider_rows_returned": 8,
+        "provider_rows_omitted_count": 5,
+        "provider_declaration_scan_complete": true,
+        "provider_declaration_sources_returned": 8,
+        "provider_declaration_sources_omitted_count": 9,
+        "service_opportunity_status": "not-established",
+        "agent_receipt_status": "not-established"
+      },
+      "baseline_comparison": {
+        "baseline_response_bytes": 59289,
+        "baseline_projection_identity_status": "not-retained",
+        "baseline_capability_delivery_status": "not-present-in-returned-projection",
+        "post_change_availability_accountability_status": "present"
+      },
+      "regression_verification": {
+        "command": "python -m pytest -q tests/test_capability_intelligence.py",
+        "passed": 194,
+        "failed": 0,
+        "status": "passed"
+      },
+      "interpretation_limit": "The readback verifies that bounded availability counts and provider source context survive response compaction within the CLI response limit. It does not establish that agents needed, received, discovered, or used the capabilities, nor that the change reduced intervention."
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "eci_capability_availability_implementation_97d4e1e",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "97d4e1e770a507a79c315923e46b9a3db52d500d",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "963638c420dcf06f738babd2e2e7ae31550d3ff6d6c56b31320b69000ac50c0f"
+    },
+    {
+      "identity": "eci_capability_availability_regression_tests_97d4e1e",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "97d4e1e770a507a79c315923e46b9a3db52d500d",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "de9a72fe21b3cfd674a4f7efc07d25cda64e152d3824613b4f7e912b1cecb440"
+    }
+  ]
+}
