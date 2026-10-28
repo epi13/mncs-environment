@@ -6562,6 +6562,34 @@ def _compact_session_diagnostic_activity(value: Any) -> dict[str, Any] | None:
     return result
 
 
+def _compact_owner_process_usage(value: Any) -> dict[str, Any] | None:
+    """Keep the useful resource deltas without repeating process identity."""
+    sample = resources_module.compact_process_usage(value)
+    if sample is None:
+        return None
+    result = {
+        "schema_version": sample["schema_version"],
+        "status": sample["status"],
+    }
+    if isinstance(sample.get("reason_code"), str):
+        result["reason_code"] = sample["reason_code"]
+    for key in (
+        "cpu_user_ticks", "cpu_system_ticks", "rss_high_water_growth_bytes",
+    ):
+        if key in sample:
+            result[key] = sample[key]
+    io = sample.get("io_bytes")
+    if isinstance(io, dict):
+        compact_io = {"status": io["status"]}
+        if isinstance(io.get("reason_code"), str):
+            compact_io["reason_code"] = io["reason_code"]
+        for key in ("read_bytes", "write_bytes"):
+            if key in io:
+                compact_io[key] = io[key]
+        result["io_bytes"] = compact_io
+    return result
+
+
 def _compact_projection(
     projection: dict[str, Any], original_size: int, max_result_bytes: int,
 ) -> dict[str, Any]:
@@ -9633,8 +9661,23 @@ def _compact_projection(
         )
     raw_service_accountability = activity.get("service_accountability")
     if isinstance(raw_service_accountability, dict):
-        # The session projection already bounds and sanitizes this join.
-        compact_activity["service_accountability"] = raw_service_accountability
+        # The session projection already bounds and sanitizes this join. Keep
+        # its two nested uncertainty notes concise so exact owner-pass evidence
+        # can survive the response budget without duplicating the same caveats.
+        compact_accountability = deepcopy(raw_service_accountability)
+        if isinstance(compact_accountability.get("measurement_limits"), list):
+            compact_accountability["measurement_limits"] = [
+                "Selected-session declarations and bounded owner-pass records do not enumerate every service opportunity or establish agent need, fulfillment, receipt, intervention burden, or outcome quality.",
+            ]
+        compact_execution = compact_accountability.get(
+            "environment_service_execution",
+        )
+        if (isinstance(compact_execution, dict)
+                and isinstance(compact_execution.get("measurement_limits"), list)):
+            compact_execution["measurement_limits"] = [
+                "Scheduler decisions do not establish service fulfillment or reduced intervention.",
+            ]
+        compact_activity["service_accountability"] = compact_accountability
     raw_ambient_service_execution = activity.get("ambient_service_execution")
     compact_service_accountability_fallback = (
         _compact_service_accountability_overview(
@@ -9700,6 +9743,32 @@ def _compact_projection(
                 )
                 if key in group
             }
+            process_usage_status = group.get(
+                "latest_trace_process_resource_usage_status",
+            )
+            if process_usage_status in {
+                "measured", "partial", "unavailable",
+                "not-recorded-on-trace", "invalid-trace-record",
+            }:
+                compact_group[
+                    "latest_trace_process_resource_usage_status"
+                ] = process_usage_status
+            elif process_usage_status is not None:
+                compact_group[
+                    "latest_trace_process_resource_usage_status"
+                ] = "invalid-trace-record"
+            process_usage = _compact_owner_process_usage(
+                group.get("latest_trace_process_resource_usage"),
+            )
+            if (process_usage is not None
+                    and process_usage.get("status") == process_usage_status):
+                compact_group["latest_trace_process_resource_usage"] = (
+                    process_usage
+                )
+            elif group.get("latest_trace_process_resource_usage") is not None:
+                compact_group[
+                    "latest_trace_process_resource_usage_status"
+                ] = "invalid-trace-record"
             status_counts = group.get("outcome_status_counts")
             if isinstance(status_counts, dict):
                 compact_group["outcome_status_counts"] = {
@@ -21631,6 +21700,7 @@ def _service_ambient_owner_pass_observation(
                     "latest_trace_verification_status",
                     "latest_trace_failure_observation_status",
                     "latest_trace_run_elapsed_seconds",
+                    "latest_trace_process_resource_usage_status",
                 )
                 if isinstance(execution.get(key), str)
                 or (key == "latest_trace_run_elapsed_seconds"
@@ -24945,6 +25015,23 @@ def _session_ambient_owner_pass_activity(
                 item["latest_trace_run_elapsed_seconds"] = round(
                     float(elapsed), 3,
                 )
+            if "process_resource_usage" not in trace_row:
+                item["latest_trace_process_resource_usage_status"] = (
+                    "not-recorded-on-trace"
+                )
+            else:
+                process_usage = resources_module.compact_process_usage(
+                    trace_row.get("process_resource_usage"),
+                )
+                if process_usage is None:
+                    item["latest_trace_process_resource_usage_status"] = (
+                        "invalid-trace-record"
+                    )
+                else:
+                    item["latest_trace_process_resource_usage_status"] = (
+                        process_usage["status"]
+                    )
+                    item["latest_trace_process_resource_usage"] = process_usage
         capability_groups = sorted(
             group["_capabilities"].values(),
             key=lambda row: row["invocation_count"], reverse=True,

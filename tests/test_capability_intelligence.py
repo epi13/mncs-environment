@@ -90,6 +90,38 @@ def _session(tmp_path: Path, reports: list[dict], *, extra_refs: list[dict] | No
     return session, state
 
 
+def _measured_owner_resource_usage() -> dict:
+    return {
+        "schema_version": (
+            capability_intelligence.resources_module.PROCESS_RESOURCE_USAGE_SCHEMA
+        ),
+        "status": "measured",
+        "measurement_basis": "process-counters-bracketing-owner-runner",
+        "pid": 505,
+        "process_start_ticks": 42,
+        "elapsed_seconds": 0.1,
+        "cpu_user_ticks": 3,
+        "cpu_system_ticks": 1,
+        "rss_start_bytes": 4096,
+        "rss_end_bytes": 8192,
+        "rss_high_water_start_bytes": 8192,
+        "rss_high_water_end_bytes": 12288,
+        "rss_high_water_growth_bytes": 4096,
+        "io_bytes": {
+            "status": "measured",
+            "reason_code": None,
+            "rchar": 100,
+            "wchar": 75,
+            "read_bytes": 128,
+            "write_bytes": 256,
+            "cancelled_write_bytes": 16,
+        },
+        "measurement_limits": [
+            "Counters cover the scheduler process and exclude spawned child processes.",
+        ],
+    }
+
+
 def _add_compiler_regression_evidence(
     session, state: dict, report: dict,
 ) -> dict[str, str]:
@@ -5027,6 +5059,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     forge_service = "mncs-forge:resident-workspace"
     language_probe = "mncs-language-service:ready"
     service_execution_id = "ase_" + "c" * 32
+    owner_usage = _measured_owner_resource_usage()
     owner_pass_context = {
         "schema_version": "mncs.environment.ambient-owner-pass-context/1",
         "owner_pass": "doctor",
@@ -5126,6 +5159,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             "owner_reused": False,
             "timer_or_lifecycle_due": False,
             "run_elapsed_seconds": 0.1,
+            "process_resource_usage": owner_usage,
             "inputs": ["source.changed"],
         }],
         "skipped": [],
@@ -5304,6 +5338,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "latest_trace_verification_status": "not-established",
         "latest_trace_failure_observation_status": "complete",
         "latest_trace_run_elapsed_seconds": 0.1,
+        "latest_trace_process_resource_usage_status": "measured",
     }]
     assert ambient_probe_activity["probe_calls"] == [{
         "owner_pass": "doctor",
@@ -5313,6 +5348,7 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         "latest_trace_verification_status": "not-established",
         "latest_trace_failure_observation_status": "complete",
         "latest_trace_run_elapsed_seconds": 0.1,
+        "latest_trace_process_resource_usage_status": "measured",
         "probe_binding_attribution_status": "exact-current-session-binding",
         "binding_identity": {
             "status": "complete",
@@ -9242,6 +9278,7 @@ def test_environment_service_execution_surfaces_family_availability_reason() -> 
 def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path) -> None:
     session, _ = _session(tmp_path, [])
     execution_id = "ase_" + "d" * 32
+    process_resource_usage = _measured_owner_resource_usage()
     owner_context = {
         "schema_version": "mncs.environment.ambient-owner-pass-context/1",
         "owner_pass": "verification",
@@ -9261,6 +9298,7 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
             "owner_reused": False,
             "timer_or_lifecycle_due": False,
             "run_elapsed_seconds": 0.1,
+            "process_resource_usage": process_resource_usage,
             "inputs": ["source.changed"],
         }],
         "skipped": [],
@@ -9327,6 +9365,10 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert group["latest_trace_verification_status"] == "not-established"
     assert group["latest_trace_failure_observation_status"] == "complete"
     assert group["latest_trace_run_elapsed_seconds"] == 0.1
+    assert group["latest_trace_process_resource_usage_status"] == "measured"
+    assert group["latest_trace_process_resource_usage"] == (
+        process_resource_usage
+    )
     assert group["invocation_count"] == 1
     assert group["completion_count"] == 1
     assert group["outcome_status_counts"] == {"ok": 1}
@@ -9344,7 +9386,45 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert compact_activity["execution_groups"][0][
         "latest_trace_owner_outcome_status"
     ] == "no-failure-reported"
+    compact_usage = compact_activity["execution_groups"][0][
+        "latest_trace_process_resource_usage"
+    ]
+    assert compact_usage["status"] == "measured"
+    assert compact_usage["cpu_user_ticks"] == 3
+    assert compact_usage["cpu_system_ticks"] == 1
+    assert compact_usage["rss_high_water_growth_bytes"] == 4096
+    assert compact_usage["io_bytes"]["write_bytes"] == 256
+    assert compact_usage["schema_version"] == process_resource_usage[
+        "schema_version"
+    ]
+    assert "pid" not in compact_usage
     assert compact["source"]["session_ambient_owner_pass_activity_digest"]
+
+    partial_usage = deepcopy(process_resource_usage)
+    partial_usage["status"] = "partial"
+    partial_usage["cpu_system_ticks"] = None
+    session.snapshot["coherence"]["last_trace"]["scheduled"][0][
+        "process_resource_usage"
+    ] = partial_usage
+    compact_partial = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+    )
+    partial_summary = compact_partial["session_activity"][
+        "ambient_owner_pass_activity"
+    ]["execution_groups"][0]["latest_trace_process_resource_usage"]
+    assert partial_summary["status"] == "partial"
+    assert partial_summary["cpu_system_ticks"] is None
+
+    session.snapshot["coherence"]["last_trace"]["scheduled"][0].pop(
+        "process_resource_usage",
+    )
+    unmeasured = capability_intelligence.project(session)["session_activity"][
+        "ambient_owner_pass_activity"
+    ]["execution_groups"][0]
+    assert unmeasured["latest_trace_process_resource_usage_status"] == (
+        "not-recorded-on-trace"
+    )
+    assert "latest_trace_process_resource_usage" not in unmeasured
 
 
 def test_ambient_owner_pass_mismatched_completion_context_is_not_joined(

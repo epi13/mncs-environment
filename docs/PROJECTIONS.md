@@ -1562,6 +1562,18 @@ that an agent received the result, or that intervention burden fell. The event
 window and latest stored trace are bounded, so an absent match may mean the
 relevant trace was entry-only or has since been replaced. No opportunity
 denominator or fulfillment ratio is inferred from these records.
+When that exact trace row carries process-resource evidence, the execution
+group also exposes `latest_trace_process_resource_usage` and its measurement
+status beside the correlated invocation outcomes and elapsed time. A missing
+sample is reported as `not-recorded-on-trace`; an unavailable or partial sample
+retains its own status and reason. Full projections preserve the bounded
+sample; compact responses retain CPU ticks, RSS high-water growth, and storage
+read/write deltas, with unavailable counter fields left null. Compact responses
+omit process identity. These counters observe the scheduler process around the
+owner interval, exclude child processes, and do not establish that the owner
+caused all measured activity or that the invocations consumed the reported
+resources. Older traces remain readable and report that the sample was not
+recorded.
 
 `session_activity.retirement_activity` relates the selected session's
 `environment.retirement.requested`, `environment.retirement.target-completed`,
