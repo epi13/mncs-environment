@@ -1,0 +1,79 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_ambient_owner_decision_summary_pressure_20261028",
+  "captured_at": "2026-10-28T08:12:09Z",
+  "measurement_basis": "pre-change-live-ECI-service-accountability-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "bba59087482e04cb57b70b63bf6574df06efa747"
+  },
+  "observation": {
+    "kind": "compact-ECI-omits-most-observed-owner-pass-identities",
+    "source_interface": "MNCS Environment environmental capability projection",
+    "request": {
+      "projection_identity": "eci_589471f61258a6f8",
+      "campaign_state_checkpoint_id": "chk_ec88790adcdeb56f",
+      "evidence_page_offset": 85,
+      "evidence_page_limit": 4,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "service_accountability_status": "empty-declared-scope",
+      "owner_pass_decision_coverage": "complete",
+      "scheduled_pass_count": 7,
+      "skipped_pass_count": 0,
+      "owner_pass_observation_count": 7,
+      "owner_pass_observations_returned": 1,
+      "owner_pass_observations_omitted_by_response_budget": 6,
+      "returned_owner_pass_names": ["doctor"],
+      "eligible_service_opportunity_count": null,
+      "ambient_fulfillment_status": "not-measured",
+      "agent_intervention_burden_status": "not-measured",
+      "source_pointer_content_integrity_verified_count": 5,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "response_truncated": true
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_decision_compaction",
+    "title": "Compact ECI hides identities of observed ambient services",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability intelligence service accountability",
+    "owner": "mncs-environment",
+    "basis": "The compact ECI response reported seven scheduler decisions but returned one owner-pass observation and omitted six detailed rows, so the selected response did not identify the other observed Environment services.",
+    "actionable_recommendation": "Preserve a bounded per-owner summary of recorded scheduler decisions through response compaction, with source coverage explicit and agent opportunity, fulfillment, receipt, and intervention burden left unmeasured unless evidence establishes them.",
+    "recurrence": "one selected campaign-window response; recurrence across response shapes or sessions is not established",
+    "not_measured": [
+      "agent time or tool calls caused by omitted owner-pass identities",
+      "whether any omitted owner was relevant to an agent need",
+      "frequency of owner-summary omission across other evidence windows",
+      "whether omission changed a development decision"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pre-change-live-ECI-readback",
+      "identity": "ev_environment_eci_correction_summary_budget_readback_20261028",
+      "repository": "mncs-environment",
+      "commit": "bba59087482e04cb57b70b63bf6574df06efa747",
+      "path": "evidence/environmental-capability/eci-correction-summary-budget-readback-20261028.json",
+      "sha256": "7752777d08c3045ad96e958242a2ff1e308c0454739d18a7b86d5c81231c9359"
+    }
+  ],
+  "measurement_limits": [
+    "Six omitted rows do not establish six distinct owner services or that any service was absent; only the returned detailed owner identity is asserted.",
+    "Scheduler decision coverage is not an agent-opportunity denominator and does not establish service fulfillment, correctness, receipt, or reduced intervention burden.",
+    "The selected ECI response was partial and response-truncated; recurrence and causal impact are not established."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
