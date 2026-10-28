@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_capability_use_compaction_pressure_20261028",
+  "captured_at": "2026-10-28T17:00:31Z",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "Make environmental services accountable through evidence from real MNCS development, and make machine-native work easier to discover and carry out.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_68e5aa0bb938b0f3",
+    "campaign_evidence_count_before_recording": 173
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "measurement_basis": "The existing binding-evidence summary already derives exact provider, binding ID, and contract-revision invocation counts, completion counts, outcomes, and source events. The evidence-priority ECI response retained availability accountability but omitted those use fields. A same-session before/after projection readback confirms the omission and the new bounded summary. The selected 128-event window is truncated and contains no exact binding invocation, so this record does not claim that any agent used or needed a capability.",
+  "not_measured": [
+    "whether agents used Environment capabilities outside the selected event window or through direct external tools",
+    "whether an agent received, discovered, or benefited from any capability",
+    "whether omitted use evidence caused manual intervention or changed a development outcome",
+    "whether the pressure recurs across sessions or projection budgets",
+    "whether any capability should be migrated from host code to MNCS"
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-budget-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "projection_command": "python -m mncs_env.cli projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-offset 170 --evidence-limit 3 --session-event-limit 128",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "selected_event_sequence_start": 1582,
+      "selected_event_sequence_end": 1709,
+      "selected_event_window_truncated": true,
+      "baseline_repository_head": "aa920091db475854f06cdd4b423135ef3c40d9fe",
+      "baseline_projection_identity": "eci_2fdb58d99fda2fcc",
+      "baseline_cli_response_bytes": 67003,
+      "cli_response_limit_bytes": 73728
+    },
+    "outcome": {
+      "baseline": {
+        "availability_accountability_present": true,
+        "observed_use_accountability_present": false,
+        "projection_status": "partial"
+      },
+      "source_capability": {
+        "summary_schema": "mncs.environment.capability-binding-evidence-summary/2",
+        "exact_binding_invocation_count_field": "exact_binding_invocation_count",
+        "exact_binding_supporting_event_field": "exact_binding_invocation_supporting_events",
+        "source_test": "test_capability_binding_summary_survives_response_budget_trimming"
+      },
+      "interpretation_limit": "The baseline ECI response omitted a compact use summary even though the underlying binding summary contract carries exact-use fields. The live event page had no exact invocations and was truncated; this is an observability pressure, not evidence of missing capability use, agent burden, or service failure."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_capability_use_compaction_20261028",
+    "title": "Evidence-priority compaction can drop exact capability-use context",
+    "category": "environmental-observability",
+    "subsystem": "Environmental Capability Intelligence capability-delivery projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded summary of exact provider, binding, and contract-revision invocations with outcome and source-event counts beside availability, preserving event-window and agent-receipt uncertainty."
+  },
+  "supporting_sources": [
+    {
+      "identity": "eci_capability_delivery_baseline_aa92009",
+      "kind": "committed-projection-implementation",
+      "repository": "mncs-environment",
+      "commit": "aa920091db475854f06cdd4b423135ef3c40d9fe",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "963638c420dcf06f738babd2e2e7ae31550d3ff6d6c56b31320b69000ac50c0f"
+    },
+    {
+      "identity": "eci_capability_delivery_exact_use_test_aa92009",
+      "kind": "committed-verification-test",
+      "repository": "mncs-environment",
+      "commit": "aa920091db475854f06cdd4b423135ef3c40d9fe",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "de9a72fe21b3cfd674a4f7efc07d25cda64e152d3824613b4f7e912b1cecb440"
+    }
+  ]
+}

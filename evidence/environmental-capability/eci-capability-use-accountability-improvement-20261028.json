@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_capability_use_accountability_improvement_20261028",
+  "captured_at": "2026-10-28T17:00:31Z",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "campaign_objective": "Make environmental services accountable through evidence from real MNCS development, and make machine-native work easier to discover and carry out.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "measurement_basis": "Explicit link from the observed ECI compaction pressure to the committed Environment implementation, regression verification, and same-session post-change readback. Integration-time verification and longer-term service effectiveness remain separate.",
+  "not_measured": [
+    "whether other agents discover or interpret the summary reliably",
+    "whether the change reduced agent intervention in ordinary workflows",
+    "whether the pressure recurs across sessions or has been eliminated long term",
+    "whether any binding was needed by the selected work intent",
+    "whether the implementation changes native-versus-host ownership or migration readiness"
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment environmental-capability campaign evidence",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_capability_use_compaction_20261028",
+      "implementation_commit": "99063c4489d56e20c698d6925ab9883598feddc6",
+      "verification_observation_identity": "ev_environment_eci_capability_use_accountability_verification_20261028",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "The bounded ECI response now retains observed_use_accountability beside availability when it compacts per-binding details. It preserves only exact provider, binding ID, and contract-revision invocation counts, completion and outcome counts, bounded source events, and selected-window completeness.",
+      "verified_change": "The full capability-intelligence regression module passed all 194 tests. A same-session post-change ECI readback returned the new use summary within the 73,728-byte CLI response limit and preserved the truncated-window and unestablished-agent states.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "This verifies evidence preservation and compaction behavior. It does not establish agent receipt, discoverability, reduced intervention, or long-term resolution of the pressure."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_capability_use_accountability_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_capability_use_compaction_20261028",
+    "implementation_reference": {
+      "identity": "eci_capability_use_implementation_99063c4",
+      "repository": "mncs-environment",
+      "commit": "99063c4489d56e20c698d6925ab9883598feddc6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d820093db546f8795ccb1fe41fdd701585fbb8e0e25cf894733844f8f868edff"
+    },
+    "verification_observation_identity": "ev_environment_eci_capability_use_accountability_verification_20261028",
+    "subsequent_observation_identity": null,
+    "basis": "The evidence-priority summary now carries exact interaction counts and references from the existing binding-evidence summary while preserving availability, event-window limits, and explicit uncertainty about agent attribution and receipt.",
+    "not_measured": [
+      "agent-reported or independently observed intervention reduction",
+      "cross-session recurrence or long-term pressure resolution",
+      "whether the additional evidence enables a new native implementation",
+      "whether a capability was needed or successfully used by an agent"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "eci_capability_use_implementation_99063c4",
+      "kind": "committed-environment-implementation",
+      "repository": "mncs-environment",
+      "commit": "99063c4489d56e20c698d6925ab9883598feddc6",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "d820093db546f8795ccb1fe41fdd701585fbb8e0e25cf894733844f8f868edff"
+    },
+    {
+      "identity": "eci_capability_use_regression_tests_99063c4",
+      "kind": "committed-verification-tests",
+      "repository": "mncs-environment",
+      "commit": "99063c4489d56e20c698d6925ab9883598feddc6",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "1d058e482625b491c27a0a09ae10faebf4988c2639ceebebf7d6850ef40b4ade"
+    }
+  ]
+}
