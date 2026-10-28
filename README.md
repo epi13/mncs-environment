@@ -256,10 +256,13 @@ native concurrency checks. Availability and readiness are observations, not
 permission to modify a checkout.
 
 For the focused environmental capability campaign, use
-`.mncs/environment-observation.json`. It selects Environment, Store,
-Rights/Provenance, and the read-only System Monitor sample capability, binds the
-Environment checkout containing the definition, and starts no background
-services. Readiness can be checked separately when needed:
+`.mncs/environment-observation.json`. It selects Environment, Test, and the
+read-only Language, Compiler, Stdlib, and VM repositories referenced by Test's
+verification provider, alongside Store, Rights/Provenance, Automation, Commons,
+and the read-only System Monitor sample capability. These repositories are in
+workspace discovery scope; Environment remains the only repository in writable
+intent. The definition binds the Environment checkout containing it and starts
+no background services. Readiness can be checked separately when needed:
 
 ```bash
 ./scripts/mncs-env enter \

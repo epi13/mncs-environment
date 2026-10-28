@@ -7,6 +7,10 @@
     "repositories": [
       "mncs-environment",
       "mncs-test",
+      "mncs-language",
+      "mncs-compiler",
+      "mncs-stdlib",
+      "mncs-vm",
       "mncs-store",
       "mncs-rights-provenance",
       "mncs-system-monitor",
