@@ -21,6 +21,10 @@ def _fake_process(proc_root: Path, pid: int, cgroup: str) -> Path:
     (root / "status").write_text(
         "Name:\tresource-probe\nPPid:\t1\nVmHWM:\t16 kB\nVmRSS:\t8 kB\n"
     )
+    (root / "io").write_text(
+        "rchar: 1000\nwchar: 500\nsyscr: 4\nsyscw: 3\n"
+        "read_bytes: 128\nwrite_bytes: 64\ncancelled_write_bytes: 0\n"
+    )
     (root / "limits").write_text("Max open files            64                  128                 files\n")
     (root / "fd").mkdir()
     (root / "cgroup").write_text(cgroup)
@@ -132,6 +136,76 @@ def test_cgroup_path_escape_and_oversized_values_fail_closed(tmp_path, monkeypat
     )
 
 
+def test_process_usage_counters_measure_bounded_io_and_guard_pid_reuse(
+    tmp_path,
+):
+    proc_root = tmp_path / "proc"
+    root = _fake_process(proc_root, 123, "0::/user.slice/session-7.scope\n")
+    before = resources.process_usage_sample(123, proc_root=proc_root)
+    assert before["status"] == "observed"
+    assert before["io_counters"] == {
+        "rchar": 1000,
+        "wchar": 500,
+        "read_bytes": 128,
+        "write_bytes": 64,
+        "cancelled_write_bytes": 0,
+    }
+
+    stat_fields = root.joinpath("stat").read_text().rsplit(")", 1)[1].split()
+    stat_fields[11] = "5"
+    stat_fields[12] = "2"
+    root.joinpath("stat").write_text(
+        f"123 (resource-probe) {' '.join(stat_fields)}\n"
+    )
+    root.joinpath("status").write_text(
+        "Name:\tresource-probe\nPPid:\t1\nVmHWM:\t20 kB\nVmRSS:\t12 kB\n"
+    )
+    root.joinpath("io").write_text(
+        "rchar: 1100\nwchar: 575\nsyscr: 5\nsyscw: 4\n"
+        "read_bytes: 256\nwrite_bytes: 320\ncancelled_write_bytes: 16\n"
+    )
+    after = resources.process_usage_sample(123, proc_root=proc_root)
+    delta = resources.process_usage_delta(before, after, elapsed_seconds=0.25)
+    assert after["status"] == "observed"
+    assert delta["status"] == "measured"
+    assert delta["cpu_user_ticks"] == 5
+    assert delta["cpu_system_ticks"] == 2
+    assert delta["rss_start_bytes"] == 8 * 1024
+    assert delta["rss_end_bytes"] == 12 * 1024
+    assert delta["rss_high_water_growth_bytes"] == 4 * 1024
+    assert delta["io_bytes"] == {
+        "status": "measured",
+        "reason_code": None,
+        "rchar": 100,
+        "wchar": 75,
+        "read_bytes": 128,
+        "write_bytes": 256,
+        "cancelled_write_bytes": 16,
+    }
+    assert resources.compact_process_usage(delta) == delta
+
+    stat_fields[19] = "43"
+    root.joinpath("stat").write_text(
+        f"123 (resource-probe) {' '.join(stat_fields)}\n"
+    )
+    recycled = resources.process_usage_sample(123, proc_root=proc_root)
+    assert resources.process_usage_delta(before, recycled)["reason_code"] == (
+        "process-identity-changed"
+    )
+
+
+def test_process_usage_counter_read_is_bounded(tmp_path, monkeypatch):
+    proc_root = tmp_path / "proc"
+    root = _fake_process(proc_root, 123, "0::/user.slice/session-7.scope\n")
+    monkeypatch.setattr(resources, "MAX_PROCESS_IO_BYTES", 16)
+
+    sample = resources.process_usage_sample(123, proc_root=proc_root)
+
+    assert sample["status"] == "partial"
+    assert sample["io_status"] == "unavailable"
+    assert sample["io_reason_code"] == "resource-value-too-large"
+
+
 def test_repeated_observations_release_all_handles(tmp_path):
     baseline = len(os.listdir('/proc/self/fd'))
     with (tmp_path / 'deleted').open('w'):
@@ -206,6 +280,10 @@ def test_cli_does_not_open_or_create_store(tmp_path):
     assert payload['processes'][0]['pid'] == os.getpid()
     row = payload['processes'][0]
     assert row['rss_hwm_bytes'] >= row['rss_bytes']
+    assert row["cpu_user_ticks"] >= 0
+    assert row["cpu_system_ticks"] >= 0
+    assert row["io_counters"]["status"] == "complete"
+    assert row["io_counters"]["write_bytes"] >= 0
     assert row['executable']
     assert row['executable_sha256'].startswith('sha256:')
     assert payload['session_process_mapping'] == 'not-asserted'

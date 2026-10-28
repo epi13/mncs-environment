@@ -16,6 +16,12 @@ soft/hard FD limits, remaining headroom, descriptor classes, deleted handle
 count, and inotify watch entries. It also includes host available/total memory
 and the system file-table allocation/limit. Watch entries are counted per
 observed handle, so duplicated handles may count the same watches twice.
+Each process row includes cumulative user/system CPU ticks and bounded
+`/proc/<pid>/io` counters. `rchar` and `wchar` include pipe and socket
+transfers; `read_bytes` and `write_bytes` are kernel storage-I/O accounting;
+`cancelled_write_bytes` records canceled writes. These are process-lifetime
+counters and exclude child processes. Missing or partial counters remain
+explicit in `io_counters.status`.
 The executable digest observes the image exposed by procfs; it is not a build
 receipt or application-level producer attestation. This is a process sample,
 not a service identity, leak verdict, RSS aggregate, or ownership grant.

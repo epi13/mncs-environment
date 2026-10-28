@@ -6303,7 +6303,7 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     assert "source_reference" not in compact_observations["items"][0]
     owner_summary = compact_observations["owner_decision_summary"]
     assert owner_summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/4"
+        "mncs.environment.owner-pass-decision-summary/5"
     )
     assert owner_summary["status"] == "partial"
     assert owner_summary["source_observation_count"] == 7
@@ -6443,6 +6443,16 @@ def test_owner_pass_decision_summary_preserves_partial_source_coverage() -> None
         "items": [],
         "owner_decision_summary": version_three,
     }) == version_three
+    version_four = deepcopy(summary)
+    version_four["schema_version"] = (
+        "mncs.environment.owner-pass-decision-summary/4"
+    )
+    assert capability_intelligence._compact_owner_pass_decision_summary({
+        "count": 4,
+        "omitted_count": 3,
+        "items": [],
+        "owner_decision_summary": version_four,
+    }) == version_four
     version_two = deepcopy(summary)
     version_two["schema_version"] = (
         "mncs.environment.owner-pass-decision-summary/2"
@@ -6657,6 +6667,91 @@ def test_owner_trigger_evidence_preserves_kind_when_subjects_are_empty() -> None
     }
 
 
+def test_owner_pass_projection_correlates_bounded_process_resource_evidence() -> None:
+    usage = {
+        "schema_version": (
+            capability_intelligence.resources_module.PROCESS_RESOURCE_USAGE_SCHEMA
+        ),
+        "status": "measured",
+        "measurement_basis": "process-counters-bracketing-owner-runner",
+        "pid": 505,
+        "process_start_ticks": 42,
+        "elapsed_seconds": 0.25,
+        "cpu_user_ticks": 4,
+        "cpu_system_ticks": 2,
+        "rss_start_bytes": 4096,
+        "rss_end_bytes": 8192,
+        "rss_high_water_start_bytes": 8192,
+        "rss_high_water_end_bytes": 12288,
+        "rss_high_water_growth_bytes": 4096,
+        "io_bytes": {
+            "status": "measured",
+            "reason_code": None,
+            "rchar": 100,
+            "wchar": 75,
+            "read_bytes": 128,
+            "write_bytes": 256,
+            "cancelled_write_bytes": 16,
+        },
+        "measurement_limits": [
+            "Counters cover the scheduler process and exclude spawned child processes.",
+        ],
+    }
+    scheduled = [{
+        "owner": "verification",
+        "service_execution_id": "ase_" + suffix * 32,
+        "process_resource_usage": usage,
+        "run_elapsed_seconds": 0.25,
+        "trigger_kinds": ["source.changed"],
+        "owner_outcome_status": "no-failure-reported",
+        "verification_status": "not-established",
+    } for suffix in ("a", "b")]
+    execution = {
+        "mode": "targeted_update",
+        "decision_record_status": "recorded",
+        "owner_pass_decision_coverage": "complete",
+        "declared_owner_pass_count": 7,
+        "owner_pass_decision_count": 2,
+        "scheduled_pass_count": 2,
+        "skipped_pass_count": 0,
+        "owner_failure_count": 0,
+        "owner_failure_observation_status": "complete",
+        "scheduled_passes": scheduled,
+        "skipped_passes": [],
+        "owner_pass_results": {"results": []},
+        "ambient_fulfillment": "not-established",
+    }
+    view = capability_intelligence._environment_service_execution_accountability(
+        {
+            "status": "recorded",
+            "source": {"owner_pass_decision_coverage": "complete"},
+            "execution": execution,
+        },
+        include_owner_pass_observations=True,
+    )
+
+    assert view is not None
+    assert view["summary"]["ambient_fulfillment_status"] == "not-established"
+    observations = view["owner_pass_observations"]
+    assert [item["process_resource_usage"] for item in observations["items"]] == [
+        usage, usage,
+    ]
+    summary = capability_intelligence._compact_owner_pass_decision_summary(
+        observations,
+    )
+    assert summary is not None
+    assert summary["schema_version"] == (
+        "mncs.environment.owner-pass-decision-summary/5"
+    )
+    resource_evidence = summary["owners"][0]["process_resource_usage"]
+    assert resource_evidence["record_count"] == 2
+    assert resource_evidence["records_omitted_count"] == 1
+    assert resource_evidence["records"] == [{
+        "service_execution_id": "ase_" + "a" * 32,
+        "usage": usage,
+    }]
+
+
 def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() -> None:
     rows = []
     for index, suffix in enumerate(("a", "b", "c")):
@@ -6691,7 +6786,7 @@ def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() ->
 
     assert summary is not None
     assert summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/4"
+        "mncs.environment.owner-pass-decision-summary/5"
     )
     evidence = summary["owners"][0]["result_evidence"]
     assert evidence["unreferenced_result_count"] == 1
@@ -8831,7 +8926,7 @@ def test_evidence_priority_summary_retains_owner_result_integrity_by_owner() -> 
     )
     owner_summary = summary["owner_pass_observations"]["owner_decision_summary"]
     assert owner_summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/4"
+        "mncs.environment.owner-pass-decision-summary/5"
     )
     assert [
         owner["observed_source_content_integrity_status_counts"]

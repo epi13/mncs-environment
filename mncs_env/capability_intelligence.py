@@ -28,6 +28,7 @@ from . import evidence_store
 from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
+from . import resources as resources_module
 from . import workspace as workspace_module
 from .capabilities import MAX_OUTPUT_LIMIT_BYTES, normalize_provider_evidence_path
 from .identity import digest_hex
@@ -281,6 +282,7 @@ MAX_ECI_OWNER_PASS_SUMMARY_ROWS = 8
 MAX_ECI_OWNER_PASS_RESULT_REFERENCES_PER_OWNER = 1
 MAX_ECI_OWNER_PASS_TRIGGER_RECORDS_PER_OWNER = 1
 MAX_ECI_OWNER_PASS_TRIGGER_SUBJECT_IDENTITIES = 2
+MAX_ECI_OWNER_PASS_RESOURCE_RECORDS_PER_OWNER = 1
 MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
 MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
 MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS = 8
@@ -4780,6 +4782,7 @@ def _compact_session_activity_budget_overview(
                                 "semantic_subject_identity_count",
                                 "semantic_subject_identity_omitted_count",
                                 "semantic_subject_identities",
+                                "process_resource_usage",
                             )
                             if key in item
                         })
@@ -5504,6 +5507,49 @@ def _compact_owner_pass_decision_summary(
             "records_omitted_count": records_omitted,
         }
 
+    def compact_process_resource_evidence(
+        raw: Any,
+    ) -> dict[str, Any] | None:
+        if not isinstance(raw, dict):
+            return None
+        record_count = raw.get("record_count")
+        records_omitted = raw.get("records_omitted_count")
+        records = raw.get("records")
+        if (
+            type(record_count) is not int or record_count < 0
+            or type(records_omitted) is not int or records_omitted < 0
+            or not isinstance(records, list)
+            or len(records) > MAX_ECI_OWNER_PASS_RESOURCE_RECORDS_PER_OWNER
+            or record_count != len(records) + records_omitted
+        ):
+            return None
+        compact_records = []
+        seen_execution_ids = set()
+        for record in records:
+            if not isinstance(record, dict):
+                return None
+            execution_id = record.get("service_execution_id")
+            usage = resources_module.compact_process_usage(
+                record.get("usage"),
+            )
+            if (
+                not isinstance(execution_id, str)
+                or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None
+                or execution_id in seen_execution_ids
+                or usage is None
+            ):
+                return None
+            seen_execution_ids.add(execution_id)
+            compact_records.append({
+                "service_execution_id": execution_id,
+                "usage": usage,
+            })
+        return {
+            "record_count": record_count,
+            "records": compact_records,
+            "records_omitted_count": records_omitted,
+        }
+
     prior = value.get("owner_decision_summary")
     if isinstance(prior, dict):
         schema_version = prior.get("schema_version")
@@ -5521,6 +5567,7 @@ def _compact_owner_pass_decision_summary(
                 "mncs.environment.owner-pass-decision-summary/2",
                 "mncs.environment.owner-pass-decision-summary/3",
                 "mncs.environment.owner-pass-decision-summary/4",
+                "mncs.environment.owner-pass-decision-summary/5",
             }
             and status in {"complete", "partial", "coverage-unknown"}
             and (source_count is None or type(source_count) is int and source_count >= 0)
@@ -5587,6 +5634,7 @@ def _compact_owner_pass_decision_summary(
                         "mncs.environment.owner-pass-decision-summary/2",
                         "mncs.environment.owner-pass-decision-summary/3",
                         "mncs.environment.owner-pass-decision-summary/4",
+                        "mncs.environment.owner-pass-decision-summary/5",
                     }
                     and (compact_status_counts(
                         owner.get("observed_result_status_counts"),
@@ -5599,6 +5647,15 @@ def _compact_owner_pass_decision_summary(
                 if trigger_evidence is not None:
                     validated_owner["trigger_evidence"] = trigger_evidence
                 elif owner.get("trigger_evidence") is not None:
+                    break
+                resource_evidence = compact_process_resource_evidence(
+                    owner.get("process_resource_usage"),
+                )
+                if resource_evidence is not None:
+                    validated_owner["process_resource_usage"] = (
+                        resource_evidence
+                    )
+                elif owner.get("process_resource_usage") is not None:
                     break
                 validated_owners.append(validated_owner)
             else:
@@ -5645,6 +5702,8 @@ def _compact_owner_pass_decision_summary(
             "seen_result_references": set(),
             "trigger_evidence_records": [],
             "trigger_evidence_record_count": 0,
+            "process_resource_usage_records": [],
+            "process_resource_usage_record_count": 0,
         })
         decision = item.get("decision")
         if decision == "scheduled":
@@ -5765,6 +5824,24 @@ def _compact_owner_pass_decision_summary(
             ):
                 owner["trigger_evidence_records"].append(record)
 
+        raw_process_usage = item.get("process_resource_usage")
+        process_usage = resources_module.compact_process_usage(
+            raw_process_usage,
+        )
+        if raw_process_usage is not None and process_usage is None:
+            invalid_observation_count += 1
+        elif process_usage is not None and isinstance(execution_id, str) and (
+            re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is not None
+        ):
+            owner["process_resource_usage_record_count"] += 1
+            if len(owner["process_resource_usage_records"]) < (
+                MAX_ECI_OWNER_PASS_RESOURCE_RECORDS_PER_OWNER
+            ):
+                owner["process_resource_usage_records"].append({
+                    "service_execution_id": execution_id,
+                    "usage": process_usage,
+                })
+
     owner_rows = []
     for name, counts in list(owners.items())[:MAX_ECI_OWNER_PASS_SUMMARY_ROWS]:
         owner_row = {
@@ -5806,6 +5883,20 @@ def _compact_owner_pass_decision_summary(
                     0, trigger_record_count - len(trigger_records),
                 ),
             }
+        process_usage_count = counts.get(
+            "process_resource_usage_record_count", 0,
+        )
+        if process_usage_count:
+            process_usage_records = counts.get(
+                "process_resource_usage_records", [],
+            )
+            owner_row["process_resource_usage"] = {
+                "record_count": process_usage_count,
+                "records": process_usage_records,
+                "records_omitted_count": max(
+                    0, process_usage_count - len(process_usage_records),
+                ),
+            }
         owner_rows.append(owner_row)
     owner_count_omitted = max(0, len(owners) - len(owner_rows))
     unclassified_decision_count = sum(
@@ -5822,7 +5913,7 @@ def _compact_owner_pass_decision_summary(
     else:
         status = "complete"
     return {
-        "schema_version": "mncs.environment.owner-pass-decision-summary/4",
+        "schema_version": "mncs.environment.owner-pass-decision-summary/5",
         "status": status,
         "source_observation_count": source_count,
         "source_omitted_observation_count": source_omitted,
@@ -22244,6 +22335,11 @@ def _environment_service_execution_accountability(
                 row["semantic_subject_identities"] = subject_identities
             if type(item.get("timer_or_lifecycle_due")) is bool:
                 row["timer_or_lifecycle_due"] = item["timer_or_lifecycle_due"]
+            process_usage = resources_module.compact_process_usage(
+                item.get("process_resource_usage"),
+            )
+            if process_usage is not None:
+                row["process_resource_usage"] = process_usage
             if (type(item.get("run_elapsed_seconds")) in (int, float)
                     and 0 <= item["run_elapsed_seconds"] <= 86400):
                 row["run_elapsed_seconds"] = item["run_elapsed_seconds"]

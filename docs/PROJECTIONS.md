@@ -1468,10 +1468,15 @@ trigger-evidence record per owner when the scheduler records a trigger kind,
 semantic subject, or timer/lifecycle trigger. It links up to two sanitized,
 non-path subject identities and their omission count to the exact service
 execution identity and trigger kinds, including an explicit zero-subject
-observation. These are the scheduler's recorded event relationships; they do
-not establish that an agent needed the service, that the service fulfilled a
-need, or that an event caused the result. Older version 1 through 3 summaries
-remain readable without being upgraded from partial context.
+observation. Version 5 also preserves one bounded process-resource delta per
+owner execution: scheduler-process CPU ticks, RSS boundary and high-water
+values, and procfs I/O counter deltas. These counters exclude spawned child
+processes and host-wide use; RSS is sampled at the interval boundaries, and
+`rchar`/`wchar` include pipe and socket transfers. They expose process evidence
+for the execution interval without establishing that the service caused all
+observed work, that an agent needed the service, or that the service fulfilled
+a need. Older version 1 through 4 summaries remain readable without being
+upgraded from partial context.
 For recorded verification owner results, the same exact Store relation also
 surfaces bounded obligation and outcome counts, reason-code counts, and up to
 eight non-passing obligation summaries under `verification_result_details`.

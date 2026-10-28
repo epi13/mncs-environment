@@ -102,10 +102,49 @@ def test_recovery_scan_records_owner_failure_coverage_without_native_automation(
     session = Participant(tmp_path / "state", repository(tmp_path))
     _, owned = runners()
 
-    _, successful_trace = coherence.tick(session, {}, owned)
+    def resource_sample(counter):
+        return {
+            "schema_version": coherence.resources.PROCESS_RESOURCE_USAGE_SCHEMA,
+            "status": "observed",
+            "pid": 505,
+            "process_start_ticks": 42,
+            "cpu_user_ticks": counter,
+            "cpu_system_ticks": counter // 2,
+            "rss_bytes": 4096 + counter,
+            "rss_high_water_bytes": 8192 + counter,
+            "io_status": "complete",
+            "io_reason_code": None,
+            "io_counters": {
+                "rchar": counter * 10,
+                "wchar": counter * 5,
+                "read_bytes": counter * 2,
+                "write_bytes": counter * 3,
+                "cancelled_write_bytes": counter,
+            },
+        }
+
+    process_samples = iter([
+        sample
+        for index in range(len(owned))
+        for sample in (
+            resource_sample(index * 10),
+            resource_sample(index * 10 + 4),
+        )
+    ])
+    with patch.object(
+        coherence.resources, "process_usage_sample",
+        side_effect=lambda _pid: next(process_samples),
+    ):
+        _, successful_trace = coherence.tick(session, {}, owned)
+
     assert successful_trace["mode"] == "recovery_scan"
     assert successful_trace["owner_failures"] == []
     assert len(successful_trace["owner_pass_results"]) == 7
+    for row in successful_trace["scheduled"]:
+        usage = row["process_resource_usage"]
+        assert usage["status"] == "measured"
+        assert usage["cpu_user_ticks"] == 4
+        assert re.fullmatch(r"ase_[0-9a-f]{32}", row["service_execution_id"])
     successful_projection = coherence.project_trace(successful_trace)
     assert successful_projection["owner_failure_observation_status"] == "complete"
     assert all(
@@ -120,8 +159,18 @@ def test_recovery_scan_records_owner_failure_coverage_without_native_automation(
         row for row in successful_projection["scheduled_passes"]
         if row["owner"] == "verification"
     )
+    source_verification = next(
+        row for row in successful_trace["scheduled"]
+        if row["owner"] == "verification"
+    )
     assert verification["service_execution_id"] == (
         scheduled_verification["service_execution_id"]
+    )
+    assert scheduled_verification["process_resource_usage"] == (
+        source_verification["process_resource_usage"]
+    )
+    assert scheduled_verification["process_resource_usage"]["status"] == (
+        "measured"
     )
     assert verification["result_status"] == "result-recorded"
     assert verification["source_reference_status"] == "trace-not-persisted"

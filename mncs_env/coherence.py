@@ -18,7 +18,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from . import evidence_store, observations, sources
+from . import evidence_store, observations, resources, sources
 from .identity import digest_hex
 from .invocation_context import ambient_owner_pass_context
 from .persist import write_json
@@ -224,6 +224,11 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
                 0, subject_count - len(subject_identities),
             )
             row["semantic_subject_identities"] = subject_identities
+        process_usage = resources.compact_process_usage(
+            item.get("process_resource_usage"),
+        )
+        if process_usage is not None:
+            row["process_resource_usage"] = process_usage
         scheduled.append(row)
 
     raw_skipped = value.get("skipped")
@@ -1183,18 +1188,23 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         results = {}
         scheduled = []
         for name, run in runners.items():
+            resource_before = resources.process_usage_sample(os.getpid())
             owner_started = time.monotonic()
             service_execution_id = _service_execution_id(session, name)
             with ambient_owner_pass_context(
                 session.session_id, name, service_execution_id,
             ):
                 results[name] = run()
+            owner_elapsed_seconds = round(time.monotonic() - owner_started, 3)
+            resource_after = resources.process_usage_sample(os.getpid())
             scheduled.append({
                 "pass": name,
                 "owner": name,
                 "service_execution_id": service_execution_id,
-                "run_elapsed_seconds": round(
-                    time.monotonic() - owner_started, 3,
+                "run_elapsed_seconds": owner_elapsed_seconds,
+                "process_resource_usage": resources.process_usage_delta(
+                    resource_before, resource_after,
+                    elapsed_seconds=owner_elapsed_seconds,
                 ),
             })
         owner_failures = sorted(
@@ -1303,6 +1313,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 continue
             key, kind = derived.get(name, (None, None))
             before = _domain_signature(session.snapshot.get(key)) if key else None
+            resource_before = resources.process_usage_sample(os.getpid())
             owner_started = time.monotonic()
             service_execution_id = _service_execution_id(session, name)
             with ambient_owner_pass_context(
@@ -1310,6 +1321,11 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             ):
                 results[name] = runners[name]()
             owner_elapsed_seconds = round(time.monotonic() - owner_started, 3)
+            resource_after = resources.process_usage_sample(os.getpid())
+            process_resource_usage = resources.process_usage_delta(
+                resource_before, resource_after,
+                elapsed_seconds=owner_elapsed_seconds,
+            )
             scheduled.add(name)
             deadlines.pop(name, None)
             if name == "doctor":
@@ -1352,6 +1368,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 "service_execution_id": service_execution_id,
                 "owner_reused": bool((results[name] or {}).get("reused", False)),
                 "run_elapsed_seconds": owner_elapsed_seconds,
+                "process_resource_usage": process_resource_usage,
                 "invalidated_input_mask": rows[names.index(name)][3] if rows else None,
                 "timer_or_lifecycle_due": bool(rows[names.index(name)][7]) if rows else None,
                 "inputs": trigger_kinds,
