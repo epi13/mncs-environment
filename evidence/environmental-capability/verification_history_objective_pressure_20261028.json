@@ -1,0 +1,96 @@
+{
+  "captured_at": "2026-10-28T18:51:24Z",
+  "identity": "ev_environment_verification_history_objective_pressure_20261028",
+  "measurement_basis": "read-only ECI and selected-session evidence inspection",
+  "measurement_limits": [
+    "The selected session is one source; cross-session recurrence is not established.",
+    "No agent intervention, receipt, productivity effect, service failure, or causal attribution is inferred.",
+    "The scheduler trace is the latest retained trace and cannot establish whether unmatched verification history came from a scheduler run outside that trace."
+  ],
+  "observation": {
+    "kind": "environment-service-accountability-projection-pressure",
+    "outcome": {
+      "agent_intervention_burden_status": "not-measured",
+      "interpretation": "Verification history and owner-pass execution were recorded by existing systems, but the earlier ECI activity view did not correlate that history with the selected development objective. This is a projection discoverability gap, not evidence of service failure.",
+      "service_failure_status": "not-established",
+      "status": "observed"
+    },
+    "request": {
+      "baseline_projection_identity": "eci_4b6b36347b6d2943",
+      "baseline_projection_sha256": "e3d976c19ec84c42037a9e72aea634b2",
+      "baseline_verification_activity_status": "not-exposed-in-session-activity",
+      "campaign_id": "cmp_c2d1ef45b03f9f1c",
+      "selected_session_verification_history_count": 3,
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "source_interface": "MNCS Environment ECI environmental-capability projection",
+      "work_intent_id": "int_e9a2959ffe2e952c"
+    },
+    "source_interface": "MNCS Environment ECI environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Project the bounded verification history with campaign and work-intent context, and join it to owner-pass evidence only by exact immutable verification reference. Preserve unmatched history and integrity limits.",
+    "basis": "The selected session already retained verification history and an ambient owner-pass trace, but the prior ECI projection did not expose their relationship beside the campaign and work intent.",
+    "category": "environment-service-accountability-and-verification",
+    "identity": "ph_environment_verification_history_objective_relation_20261028",
+    "not_measured": [
+      "agent awareness or use of the prior projection",
+      "agent intervention burden or productivity",
+      "service correctness or fulfillment",
+      "recurrence across sessions or agents"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established-across-sessions",
+    "subsystem": "MNCS Environment capability-intelligence projection",
+    "title": "Session verification history lacks an objective-correlated ECI view"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "implementation_commit": "28ecc66c66ba10f3b21ee187c93663304cd98f2f",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "kind": "immutable-verification-evidence",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:557555069fa4ac92a26359ffb4269cc8e1691ee79976aefc531ce64c85837364",
+      "schema": "mncs.environment.verification/1",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:058b141a13047e2ab8fbd70ac0fd484cc48eff432a70af539113a90aa7a5a97f",
+      "schema": "mncs.environment.verification/1",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "current-owner-result",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "commit": "28ecc66c66ba10f3b21ee187c93663304cd98f2f",
+      "identity": "mncs_environment_session_verification_activity_28ecc66",
+      "kind": "source-code-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e717a1cd97df945732e75a25f7355bf95763dec16f66f0cffdce1bfe6af0ac66"
+    }
+  ]
+}

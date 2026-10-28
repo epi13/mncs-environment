@@ -1,0 +1,113 @@
+{
+  "captured_at": "2026-10-28T18:51:24Z",
+  "identity": "ev_environment_verification_history_objective_verification_20261028",
+  "measurement_basis": "focused ECI suite, repository regression suite, and fresh-process vertical proof",
+  "measurement_limits": [
+    "Tests verify the bounded projection and existing environment workflow; they do not establish service correctness, agent receipt, burden reduction, or cross-session effectiveness.",
+    "The live owner-pass relation is exact-reference correlation, not causal attribution."
+  ],
+  "observation": {
+    "kind": "environmental-service-accountability-verification",
+    "outcome": {
+      "focused_elapsed_seconds": 7.35,
+      "focused_passed_test_count": 196,
+      "full_elapsed_seconds": 776.83,
+      "full_passed_test_count": 1187,
+      "full_skipped_test_count": 82,
+      "git_diff_check_status": "passed",
+      "python_compile_status": "passed",
+      "status": "passed",
+      "verified_behavior": [
+        "session verification history is correlated to campaign and work-intent identities",
+        "owner-pass correlation requires exact immutable verification-reference equality",
+        "unmatched history remains visible without being called a failure",
+        "verification and owner-result integrity states remain distinct",
+        "normal, response-budget, and evidence-priority views retain exact evidence references",
+        "verification-history changes alter the ECI projection identity"
+      ],
+      "vertical_proof_status": "passed"
+    },
+    "request": {
+      "focused_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "full_command": "python3 -m pytest tests/ -q",
+      "implementation_commit": "28ecc66c66ba10f3b21ee187c93663304cd98f2f",
+      "targeted_test": "test_session_verification_activity_correlates_exact_history_and_survives_compaction",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py"
+    },
+    "source_interface": "MNCS Environment regression and vertical verification"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Project the bounded verification history with campaign and work-intent context, and join it to owner-pass evidence only by exact immutable verification reference. Preserve unmatched history and integrity limits.",
+    "basis": "The selected session already retained verification history and an ambient owner-pass trace, but the prior ECI projection did not expose their relationship beside the campaign and work intent.",
+    "category": "environment-service-accountability-and-verification",
+    "identity": "ph_environment_verification_history_objective_relation_20261028",
+    "not_measured": [
+      "agent awareness or use of the prior projection",
+      "agent intervention burden or productivity",
+      "service correctness or fulfillment",
+      "recurrence across sessions or agents"
+    ],
+    "owner": "mncs-environment",
+    "recurrence": "not-established-across-sessions",
+    "subsystem": "MNCS Environment capability-intelligence projection",
+    "title": "Session verification history lacks an objective-correlated ECI view"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "implementation_commit": "28ecc66c66ba10f3b21ee187c93663304cd98f2f",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "28ecc66c66ba10f3b21ee187c93663304cd98f2f",
+      "identity": "mncs_environment_session_verification_activity_28ecc66",
+      "kind": "source-code-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "e717a1cd97df945732e75a25f7355bf95763dec16f66f0cffdce1bfe6af0ac66"
+    },
+    {
+      "commit": "28ecc66c66ba10f3b21ee187c93663304cd98f2f",
+      "identity": "mncs_environment_session_verification_activity_tests_28ecc66",
+      "kind": "source-code-test",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "6151ab2dbbd7161fc2639d23aceb89a06f27f1d5b3211b2482cb5413ce8512f9"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:557555069fa4ac92a26359ffb4269cc8e1691ee79976aefc531ce64c85837364",
+      "schema": "mncs.environment.verification/1",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:058b141a13047e2ab8fbd70ac0fd484cc48eff432a70af539113a90aa7a5a97f",
+      "schema": "mncs.environment.verification/1",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "current-owner-result",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    }
+  ]
+}
