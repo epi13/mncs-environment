@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_verification_candidate_summary_correction_readback_20261028",
+  "captured_at": "2026-10-28T17:44:47Z",
+  "measurement_basis": "bounded-live-eci-readback-after-append-only-pressure-definition-correction",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_f6b6c5392b0a401b",
+    "campaign_evidence_count_before_recording": 181,
+    "implementation_commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+    "correction_commit": "937f23304e0aed5f374226aec79b7a77bb1b9c81"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-correction-live-readback",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_f6b6c5392b0a401b",
+      "campaign_evidence_count": 181,
+      "history_pages": 1,
+      "evidence_limit": 8,
+      "eci_identity": "eci_18beffddee5526f6",
+      "eci_content_digest": "18a2f9a901f755c54620f95bb6ddcaf3",
+      "raw_response_byte_count": 73257,
+      "response_limit_byte_count": 73728
+    },
+    "outcome": {
+      "status": "partial",
+      "pressure_hypothesis_identity": "ph_environment_verification_candidate_root_omission",
+      "definition_status": "consistent",
+      "definition_conflict_fields": [],
+      "correction_status": "applied-to-verified-target",
+      "correction_basis": "corroborated-by-verified-occurrence",
+      "candidate_occurrence_count": 8,
+      "candidate_limit": 8,
+      "candidate_completeness_status": "not-established",
+      "improvement_effectiveness_assessment": "not-assessed",
+      "interpretation": "The projection applied the exact append-only recommendation correction, removed the conflicting definition, and retained the bounded candidate summary. The response remains partial and the candidate limit is reached; this readback establishes neither complete coverage nor reduced agent burden."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_verification_candidate_summary_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "a4531f13ad838eec76a5461fa6d3ad8579c3d787",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-pressure-20261028.json",
+      "sha256": "e037f693d7ad7fcfe2b5bc2f13cfd912828a10e0eb3168399108df3e69d94636"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_verification_candidate_summary_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "a4531f13ad838eec76a5461fa6d3ad8579c3d787",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-improvement-20261028.json",
+      "sha256": "5344b6109fe0d75c71fc28d461debebb4d7c9f0d1e38916b8adceb5de020a56d"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_verification_candidate_summary_recommendation_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "937f23304e0aed5f374226aec79b7a77bb1b9c81",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-recommendation-correction-20261028.json",
+      "sha256": "579886c9662379d7f3d0581a323b8734a2b27fe73fde19d936b9fc87dbd11bb9"
+    }
+  ],
+  "measurement_limits": [
+    "The readback covers one selected session and one bounded campaign evidence page; cross-session recurrence is not established.",
+    "Eight candidates reach the extraction limit, so completeness is not established.",
+    "The projection remains partial under the response budget.",
+    "The correction aligns evidence definitions; service correctness, agent receipt, and intervention burden remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_verification_candidate_root_omission",
+    "title": "Verified ambient verification candidates are absent from the ECI root candidate summary",
+    "category": "environment-service-accountability-and-verification",
+    "subsystem": "MNCS Environment ECI session activity candidate projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Include these verified candidate occurrences in the root bounded candidate summary, group them by repository and unmeasurable reason, and preserve exact source provenance and uncertainty through response compaction."
+  }
+}
