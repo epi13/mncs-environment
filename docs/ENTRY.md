@@ -370,6 +370,13 @@ that response bound. Use its page cursors and coverage fields to determine what
 history was actually examined. A missing pressure in a bounded view does not
 establish that it is absent from older campaign evidence.
 
+The entry context also exposes `actions.session_activity_projection.argv` for
+the selected session's bounded event, resource, diagnostic, and verification
+evidence. Use it when the combined capability analysis summarizes activity
+detail to preserve campaign evidence within its response budget. This action
+reads the same authenticated session records and does not create a separate
+telemetry store.
+
 ## Environmental capability intelligence
 
 The read-only `campaign-state-inspection/2` capability also includes an

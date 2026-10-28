@@ -457,6 +457,24 @@ the current generation's binding metadata but materialize only the selected
 verified event payloads. Event page reads are on demand and do not copy the
 session transcript.
 
+When campaign observations and their relationships make the combined response
+too large for activity detail, query the same bounded records directly:
+
+```bash
+./scripts/mncs-env projections <session> --interpret session-activity
+```
+
+This focused view includes the session, campaign, WorkIntent, Environment, and
+definition context where recorded, alongside existing resource-sample,
+diagnostic, verification, and event evidence. It reads no second telemetry
+store. The default event window is four records; use
+`--session-event-before-sequence` with the returned cursor to inspect older
+pages. Response-budget compaction retains bounded source-linked examples and
+reports omitted detail. Resource samples remain host snapshots, not
+agent-attributed consumption or proof of environmental pressure. Entry context
+publishes the command as `actions.session_activity_projection.argv` so agents
+can discover it without reconstructing the CLI invocation.
+
 Session activity keeps authenticated Control read observations distinct from
 Environment-bound capability invocations. If valid Control reads are present
 without Environment invocations, status is `rpc-only-in-session-history`; a

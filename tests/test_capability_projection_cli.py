@@ -42,6 +42,27 @@ class EnvironmentalCapabilityProjectionCliTests(unittest.TestCase):
         self.assertEqual(call.kwargs["evidence_limit"], 12)
         self.assertEqual(call.kwargs["session_event_limit"], 64)
 
+    def test_session_activity_is_a_focused_projection_without_repository_scope(self) -> None:
+        call = self._run_projection([
+            "projections", "ses_example", "--interpret", "session-activity",
+        ])
+
+        self.assertEqual(call.kwargs["session_event_limit"], 4)
+        self.assertEqual(
+            call.kwargs["evidence_limit"],
+            cli.capability_intelligence_module.MAX_EVIDENCE_REFS,
+        )
+
+    def test_session_activity_accepts_its_bounded_event_cursor(self) -> None:
+        call = self._run_projection([
+            "projections", "ses_example", "--interpret", "session-activity",
+            "--session-event-before-sequence", "32",
+            "--session-event-limit", "8",
+        ])
+
+        self.assertEqual(call.kwargs["session_event_before_sequence"], 32)
+        self.assertEqual(call.kwargs["session_event_limit"], 8)
+
     def test_why_route_passes_exact_projection_id(self) -> None:
         call = self._run_projection([
             "projections", "ses_example", "--interpret", "why",

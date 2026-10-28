@@ -12118,6 +12118,126 @@ def _projection_content_digest(projection: dict[str, Any]) -> str:
     }, length=32)
 
 
+def project_session_activity(
+    session: Any, *,
+    event_before_sequence: int | None = None,
+    event_limit: int = MAX_SESSION_EVENT_WINDOW,
+    doctor_gap_limit: int = 0,
+    max_result_bytes: int = MAX_RESULT_BYTES,
+) -> dict[str, Any]:
+    """Expose bounded session evidence without campaign-analysis payloads.
+
+    Environmental-capability analysis includes this same activity view, but
+    its campaign observations take priority when the combined response reaches
+    the transport limit. This focused projection keeps the existing session
+    records directly inspectable without creating another evidence store.
+    """
+    if (type(max_result_bytes) is not int
+            or max_result_bytes < 1 or max_result_bytes > MAX_RESULT_BYTES):
+        raise ValueError(
+            "session activity result limit must be within its configured bound"
+        )
+    if (type(event_before_sequence) not in (int, type(None))
+            or (event_before_sequence is not None
+                and event_before_sequence < 1)):
+        raise ValueError("session activity event cursor must be positive")
+    if (type(event_limit) is not int
+            or not 1 <= event_limit <= MAX_SESSION_EVENT_WINDOW):
+        raise ValueError(
+            "session activity event limit must be between 1 and "
+            f"{MAX_SESSION_EVENT_WINDOW}"
+        )
+    if (type(doctor_gap_limit) is not int
+            or not 0 <= doctor_gap_limit <= MAX_DOCTOR_GAP_EXAMPLES):
+        raise ValueError(
+            "Doctor gap example limit must be between 0 and "
+            f"{MAX_DOCTOR_GAP_EXAMPLES}"
+        )
+
+    activity = _session_activity(
+        session, session.snapshot,
+        event_before_sequence=event_before_sequence,
+        event_limit=event_limit,
+        doctor_gap_limit=doctor_gap_limit,
+    )
+    context = activity.get("context")
+    result: dict[str, Any] = {
+        "schema_version": "mncs.environment.session-activity-projection/1",
+        "status": activity.get("status", "unavailable"),
+        "subject": {
+            "session_id": session.session_id,
+            **(context if isinstance(context, dict) else {}),
+        },
+        "session_activity": activity,
+        "detail_status": "selected-session-window",
+        "measurement_limits": [
+            "Session evidence is limited to the selected bounded event page and recorded provider artifacts.",
+            "Host resource samples describe host state at capture time; they are not agent-attributed consumption and do not establish pressure or causation.",
+            "Unavailable historical context remains unavailable; current session context is not retroactive attribution.",
+        ],
+    }
+
+    if _projection_response_size(result) > max_result_bytes:
+        compact = _compact_session_activity_budget_overview(activity, activity)
+        if compact is not None:
+            result["session_activity"] = compact
+            result["detail_status"] = "summary-only-response-budget"
+            result["measurement_limits"].append(
+                "Session activity detail was reduced to bounded service totals and source-linked examples to fit the requested result budget."
+            )
+
+    if _projection_response_size(result) > max_result_bytes:
+        resource_samples = _compact_session_resource_samples(
+            activity.get("resource_samples"), observation_limit=1,
+            preserve_empty=True, response_budget_overview=True,
+        )
+        diagnostic_activity = _compact_session_diagnostic_activity(
+            activity.get("diagnostic_activity"),
+        )
+        verification_activity = _compact_session_verification_activity(
+            activity.get("verification_activity"),
+        )
+        source = activity.get("source")
+        source = source if isinstance(source, dict) else {}
+        compact_source = {
+            key: source[key]
+            for key in (
+                "event_window_limit", "event_page_before_sequence",
+                "next_event_before_sequence", "event_window_truncated",
+                "event_window_sequence_start", "event_window_sequence_end",
+                "resource_sample_identity_digest",
+                "verification_activity_digest",
+            )
+            if key in source and (
+                isinstance(source[key], str)
+                or type(source[key]) in (int, bool)
+                or source[key] is None
+            )
+        }
+        minimal_activity: dict[str, Any] = {
+            "status": activity.get("status", "unavailable"),
+            "context": context if isinstance(context, dict) else {},
+            "source": compact_source,
+        }
+        if resource_samples is not None:
+            minimal_activity["resource_samples"] = resource_samples
+        if diagnostic_activity is not None:
+            minimal_activity["diagnostic_activity"] = diagnostic_activity
+        if verification_activity is not None:
+            minimal_activity["verification_activity"] = verification_activity
+        result["session_activity"] = minimal_activity
+        result["detail_status"] = "evidence-summary-only-response-budget"
+        result["measurement_limits"].append(
+            "Repeated session detail was omitted by the response budget; bounded resource, diagnostic, and verification evidence is retained where available."
+        )
+
+    result["content_digest"] = digest_hex({
+        "kind": "environmental-session-activity-projection/1",
+        "projection": result,
+    }, length=32)
+    return result
+
+
 def _compiler_regression_reference_family(
     reference: dict[str, str],
 ) -> tuple[str, str, tuple[str, ...]] | None:

@@ -1386,6 +1386,14 @@ def interpretation(
                 )
             )
         return result
+    if route == "session-activity":
+        return capability_intelligence.project_session_activity(
+            session,
+            event_before_sequence=session_event_before_sequence,
+            event_limit=session_event_limit,
+            doctor_gap_limit=doctor_gap_limit,
+            max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
+        )
     root = _workspace_root(session)
     if root is None:
         raise ValueError('workspace unavailable')

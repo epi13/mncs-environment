@@ -4988,6 +4988,9 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
             side_effect=LifecycleError("campaign evidence unavailable"),
         ):
             activity_only = capability_intelligence.project(session)
+            focused_activity = capability_intelligence.project_session_activity(
+                session, event_limit=4, max_result_bytes=10_000,
+            )
 
     samples = result["session_activity"]["resource_samples"]
     assert samples["status"] == "available"
@@ -5162,12 +5165,41 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
         )
     )
     assert missing_relation["status"] == "sample-not-present-in-selected-session"
-    assert read_artifact.call_count == 3
+    assert read_artifact.call_count == 4
     assert activity_only["status"] == "partial"
     assert activity_only["session_activity"]["resource_samples"][
         "observation_count"
     ] == 1
+    assert focused_activity["schema_version"] == (
+        "mncs.environment.session-activity-projection/1"
+    )
+    assert focused_activity["subject"] == {
+        "session_id": "ses_projection_reader",
+        "campaign_id": "cmp_projection_reader",
+        "work_intent_id": "int_projection_reader",
+        "work_intent_goal": "inspect current pressures",
+        "environment_id": "renv_projection_reader",
+        "definition_id": "env_projection_reader",
+    }
+    assert focused_activity["session_activity"]["resource_samples"][
+        "observations"
+    ][0]["identity"] == sample_identity
+    assert focused_activity["session_activity"]["resource_samples"][
+        "observations"
+    ][0]["source"]["artifact_reference"]["sha256"] == metadata["sha256"]
+    assert focused_activity["session_activity"]["resource_samples"][
+        "observations"
+    ][0]["source"]["invocation_event"]["identity"] == (
+        "evt_monitor_resource_sample_invoked"
+    )
+    assert focused_activity["session_activity"]["resource_samples"][
+        "observations"
+    ][0]["context"]["work_intent_id"] == "int_projection_reader"
+    assert capability_intelligence._projection_response_size(
+        focused_activity,
+    ) <= 10_000
     assert "private-host-name" not in json.dumps(result)
+    assert "private-host-name" not in json.dumps(focused_activity)
     assert "private-process-command" not in json.dumps(result)
     assert "private-argument-is-not-projected" not in json.dumps(result)
     assert "large_diagnostic" not in json.dumps(compact)

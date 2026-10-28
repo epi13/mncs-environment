@@ -415,30 +415,44 @@ def cmd_projections(args: argparse.Namespace) -> int:
             and args.interpret != "environmental-capability"):
         return fail('--evidence-limit requires --interpret environmental-capability')
     if (args.session_event_before_sequence is not None
-            and args.interpret != "environmental-capability"):
+            and args.interpret not in {
+                "environmental-capability", "session-activity",
+            }):
         return fail(
             '--session-event-before-sequence requires '
-            '--interpret environmental-capability'
+            '--interpret environmental-capability or session-activity'
         )
     if (args.session_event_limit is not None
-            and args.interpret != "environmental-capability"):
+            and args.interpret not in {
+                "environmental-capability", "session-activity",
+            }):
         return fail(
             '--session-event-limit requires '
-            '--interpret environmental-capability'
+            '--interpret environmental-capability or session-activity'
         )
     if (args.doctor_gap_limit is not None
-            and args.interpret != "environmental-capability"):
+            and args.interpret not in {
+                "environmental-capability", "session-activity",
+            }):
         return fail(
             '--doctor-gap-limit requires '
-            '--interpret environmental-capability'
+            '--interpret environmental-capability or session-activity'
         )
     if args.interpret:
-        if args.interpret != "environmental-capability" and not args.repository:
+        if (args.interpret not in {
+                "environmental-capability", "session-activity",
+        } and not args.repository):
             return fail('--interpret requires --repository')
-        if args.interpret == "environmental-capability":
+        if args.interpret in {
+            "environmental-capability", "session-activity",
+        }:
             evidence_limit = (args.evidence_limit
                               if args.evidence_limit is not None
-                              else DEFAULT_ECI_EVIDENCE_PAGE_SIZE)
+                              else (
+                                  DEFAULT_ECI_EVIDENCE_PAGE_SIZE
+                                  if args.interpret == "environmental-capability"
+                                  else capability_intelligence_module.MAX_EVIDENCE_REFS
+                              ))
             session_event_limit = (
                 args.session_event_limit
                 if args.session_event_limit is not None
@@ -462,7 +476,9 @@ def cmd_projections(args: argparse.Namespace) -> int:
                     ),
                     projection_id=getattr(args, 'projection', None),
                 )
-                if args.interpret == "environmental-capability":
+                if args.interpret in {
+                    "environmental-capability", "session-activity",
+                }:
                     out(
                         interpretation,
                         max_bytes=capability_intelligence_module.MAX_RESULT_BYTES,
@@ -2679,7 +2695,7 @@ def build_parser() -> argparse.ArgumentParser:
     projections = session_parser("projections", "ambient projection coherence pass with a terse summary")
     projections.add_argument('--interpret', choices=(
         'capabilities', 'dependencies', 'blockers', 'architecture',
-        'structure', 'why', 'environmental-capability'))
+        'structure', 'why', 'environmental-capability', 'session-activity'))
     projections.add_argument('--repository')
     projections.add_argument(
         '--projection',
@@ -2701,11 +2717,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     projections.add_argument(
         '--session-event-before-sequence', type=int, default=None,
-        help="read the bounded session event page preceding this sequence",
+        help=("read the bounded session event page preceding this sequence "
+              "for environmental-capability or session-activity projections"),
     )
     projections.add_argument(
         '--session-event-limit', type=int, default=None,
-        help=("session event records per environmental capability page "
+        help=("session event records per environmental-capability or "
+              "session-activity page "
               f"(1-{capability_intelligence_module.MAX_SESSION_EVENT_WINDOW}; default "
               f"{DEFAULT_ECI_SESSION_EVENT_LIMIT})"),
     )
@@ -2713,7 +2731,7 @@ def build_parser() -> argparse.ArgumentParser:
         '--doctor-gap-limit', type=int, default=None,
         help=(
             "include at most this many examples from verified immutable Doctor "
-            "gap classifications in environmental capability analysis "
+            "gap classifications in environmental-capability or session-activity views "
             f"(0-{capability_intelligence_module.MAX_DOCTOR_GAP_EXAMPLES}; default 0; "
             "nonzero values perform one bounded Doctor evidence read)"
         ),

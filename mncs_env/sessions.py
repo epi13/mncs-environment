@@ -10708,6 +10708,12 @@ class Session:
                 "--interpret", "environmental-capability",
             ],
         }
+        actions["session_activity_projection"] = {
+            "argv": [
+                *prefix, "projections", self.session_id,
+                "--interpret", "session-activity",
+            ],
+        }
         actions["environmental_capability_history_projection"] = {
             "argv": [
                 *prefix, "projections", self.session_id,
