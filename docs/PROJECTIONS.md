@@ -1608,7 +1608,11 @@ only when its replacement exactly matches an integrity-verified `occurrence`
 in the same campaign with the same hypothesis identity, title, category,
 subsystem, and owner. The projection reports
 `corroborated-by-verified-occurrence` as the basis. Unsupported rewrites remain
-unverified. The projection reapplies the complete record contract before it
+unverified. For an unsupported recommendation rewrite,
+`record_correction.rejection_reason` states when no matching independently
+verified occurrence was found in the selected evidence pages. This bounded
+diagnostic does not claim that no such occurrence exists outside those pages.
+The projection reapplies the complete record contract before it
 includes a contract-invalid corrected record in pressure analysis. It retains
 the exact target pointer and correction identity so the effective value remains
 traceable to both the original record and its correction.
@@ -1686,7 +1690,10 @@ pointers and reduces session activity to its bounded overview. This applies to
 the normal 72 KiB response limit as well as smaller supported budgets; it is
 not limited to an unusually tight output request. If no complete linked path
 is present or the compact path cannot fit, ordinary omission counts continue
-to disclose which observation rows were removed.
+to disclose which observation rows were removed. Up to four rejected
+observation-correction summaries retain their status, target, bounded
+rejection reason, and exact source pointer alongside that path, so a useful
+diagnostic does not disappear when its full observation row is compacted out.
 
 Before dropping environmental observation summaries to meet this bound, the
 compactor can omit nested owner-audit source-detail entries one at a time.

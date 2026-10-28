@@ -4336,6 +4336,31 @@ def _compact_campaign_evidence_priority_rows(
             if isinstance(value.get(key), str)
         }
 
+    correction_rejection_summaries = []
+    for item in observations:
+        if not isinstance(item, dict):
+            continue
+        correction = item.get("record_correction")
+        if not isinstance(correction, dict):
+            continue
+        rejection_reason = correction.get("rejection_reason")
+        if not isinstance(rejection_reason, str) or not rejection_reason:
+            continue
+        summary = {
+            key: correction[key]
+            for key in ("status", "target_identity")
+            if isinstance(correction.get(key), str)
+        }
+        if isinstance(item.get("identity"), str):
+            summary["identity"] = item["identity"]
+        summary["rejection_reason"] = _short_text(rejection_reason, 240)
+        pointer = retain_pointer(item.get("evidence_reference"))
+        if pointer is not None:
+            summary["evidence_reference"] = pointer
+        correction_rejection_summaries.append(summary)
+        if len(correction_rejection_summaries) == 4:
+            break
+
     compact_observation = None
     if isinstance(observation, dict):
         compact_observation = {}
@@ -4454,6 +4479,10 @@ def _compact_campaign_evidence_priority_rows(
     result["improvement_relations"] = (
         [compact_relation] if compact_relation is not None else []
     )
+    if correction_rejection_summaries:
+        result["correction_rejection_summaries"] = (
+            correction_rejection_summaries
+        )
     result["campaign_evidence_summary_only"] = True
     source = result.get("source")
     if isinstance(source, dict):
@@ -5557,7 +5586,7 @@ def _compact_projection(
                 key: _short_text(record_correction.get(key), 160)
                 for key in (
                     "status", "basis", "correction_observation_identity",
-                    "target_identity", "reason",
+                    "target_identity", "reason", "rejection_reason",
                 )
                 if isinstance(record_correction.get(key), str)
             }
@@ -25526,6 +25555,7 @@ def project(
             continue
         replacements_verified = True
         correction_basis = None
+        correction_rejection_reason = None
         replacement_values = correction["replacement_values"]
         for field in correction["corrected_field_paths"]:
             replacement = replacement_values[field]
@@ -25562,6 +25592,14 @@ def project(
                     correction_basis = "corroborated-by-verified-occurrence"
                 else:
                     replacements_verified = False
+                    if field == (
+                        "pressure_hypothesis.actionable_recommendation"
+                    ):
+                        correction_rejection_reason = (
+                            "No independently verified occurrence with the same "
+                            "pressure definition and replacement recommendation "
+                            "was found in the selected evidence pages."
+                        )
                     break
             elif field == "related_work":
                 replacement_work = replacement
@@ -25744,7 +25782,7 @@ def project(
             if _observation_contract_diagnostics(corrected_record):
                 replacements_verified = False
         if not replacements_verified:
-            correction_status_by_record[correction_record["identity"]] = {
+            correction_status = {
                 "status": (
                     "replacement-does-not-complete-observation-contract"
                     if target_is_contract_invalid
@@ -25753,6 +25791,13 @@ def project(
                 "target_identity": target_identity,
                 "target_reference": target_reference,
             }
+            if correction_rejection_reason is not None:
+                correction_status["rejection_reason"] = (
+                    correction_rejection_reason
+                )
+            correction_status_by_record[correction_record["identity"]] = (
+                correction_status
+            )
             unverified_record_correction_count += 1
             continue
         correction_status = {

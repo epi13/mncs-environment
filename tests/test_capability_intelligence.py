@@ -1560,6 +1560,85 @@ def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
     assert correction_projection["record_correction"]["status"] == (
         "replacement-values-unverified-or-unchanged"
     )
+    rejection_reason = (
+        "No independently verified occurrence with the same pressure "
+        "definition and replacement recommendation was found in the "
+        "selected evidence pages."
+    )
+    assert correction_projection["record_correction"][
+        "rejection_reason"
+    ] == rejection_reason
+    compact = capability_intelligence._compact_projection(
+        result, 100_000, 24_000,
+    )
+    compact_correction = next(
+        item for item in compact["observations"]
+        if item["identity"] == correction["identity"]
+    )
+    assert compact_correction["record_correction"][
+        "rejection_reason"
+    ] == rejection_reason
+
+    correction_reference = {
+        "identity": correction["identity"],
+        "repository": "mncs-environment",
+        "commit": "c" * 40,
+        "path": relative,
+        "sha256": hashlib.sha256(correction_bytes).hexdigest(),
+        "verification": "verified",
+        "status": "ok",
+        "content_integrity_status": "verified",
+    }
+    evidence_priority_candidate = {
+        "observations": [
+            {
+                "identity": "ev_priority_occurrence",
+                "pressure_hypothesis_role": "occurrence",
+                "pressure_hypothesis": {"identity": "ph_priority"},
+                "evidence_reference": {
+                    "identity": "ev_priority_occurrence",
+                    "repository": "mncs-environment",
+                    "commit": "d" * 40,
+                    "path": "evidence/occurrence.json",
+                    "sha256": "e" * 64,
+                },
+            },
+            {
+                "identity": correction["identity"],
+                "record_correction": {
+                    "status": "replacement-values-unverified-or-unchanged",
+                    "target_identity": target["identity"],
+                    "rejection_reason": rejection_reason,
+                },
+                "evidence_reference": correction_reference,
+            },
+        ],
+        "pressure_hypotheses": [{"identity": "ph_priority"}],
+        "improvement_relations": [{
+            "identity": "im_priority",
+            "addresses_hypothesis_identity": "ph_priority",
+        }],
+        "source": {},
+    }
+    assert capability_intelligence._compact_campaign_evidence_priority_rows(
+        evidence_priority_candidate,
+    )
+    assert evidence_priority_candidate["correction_rejection_summaries"] == [{
+        "status": "replacement-values-unverified-or-unchanged",
+        "target_identity": target["identity"],
+        "identity": correction["identity"],
+        "rejection_reason": rejection_reason,
+        "evidence_reference": {
+            key: correction_reference[key]
+            for key in (
+                "identity", "repository", "commit", "path", "sha256",
+                "verification", "status", "content_integrity_status",
+            )
+        },
+    }]
+    assert evidence_priority_candidate["observations"][0]["identity"] == (
+        "ev_priority_occurrence"
+    )
 
 
 def test_verified_occurrence_can_reconcile_pressure_recommendation_wording(
