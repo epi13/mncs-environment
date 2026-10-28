@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-28T06:05:45Z",
+  "identity": "ev_environment_ambient_verification_readiness_join_verification_20261028",
+  "measurement_basis": "targeted-regression-projection-conformance-and-live-ECI-readback",
+  "observation": {
+    "kind": "implementation-verification",
+    "outcome": {
+      "capability_intelligence_tests": "174 passed",
+      "compileall": "pass",
+      "diff_check": "pass",
+      "implementation_commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "interpretation_limit": "Tests and readback verify projection representation and provenance. They do not establish provider readiness, causal dependence, agent receipt, ambient fulfillment, or reduced intervention burden.",
+      "projection_conformance": {
+        "native_receipt": "f36ae687e5d46847ddcb18f5b7a14214cd91fa93fa3fd24b6e75a800b333e9db",
+        "receipt_identity": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e",
+        "verdict": "pass"
+      },
+      "verification_status": "focused-verification-and-projection-conformance-passed",
+      "verified_behavior": "The existing service-accountability projection joins integrity-verified ambient verification candidates to current provider context on exact repository, obligation, executor capability, verification Store reference, and owner-result Store reference. The bounded relation rejects mismatched references, preserves exact links through compaction, distinguishes total obligations from returned contexts, and does not attribute absent contexts to a response-budget omission."
+    },
+    "request": {
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m compileall -q mncs_env",
+        "git diff --check",
+        "python3 scripts/verify_projection_contracts.py --workspace /home/epi13/Documents/Projects --repository mncs-environment"
+      ],
+      "implementation_commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87"
+    },
+    "source_interface": "MNCS Environment capability-intelligence regression tests and projection-conformance verifier"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Join integrity-verified verification outcomes to the exact current provider context in the existing service-accountability projection, preserving response-budget limits and provenance.",
+    "category": "environmental-service-accountability",
+    "identity": "ph_environment_ambient_verification_readiness_join_visibility",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability intelligence and service-accountability projection",
+    "title": "Verified ambient verification outcomes are not joined to provider context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 54,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ac6d025a733a47a6",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9e3b6cdef642"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "identity": "mncs_environment_ambient_verification_readiness_join_implementation_53f2335",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3b8d8536f72e4ccb5af36e464b244de00861982e0b0cb929cdda761569659396"
+    },
+    {
+      "commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "identity": "mncs_environment_ambient_verification_readiness_join_tests_53f2335",
+      "kind": "committed-regression-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "5b46f24d298d8e89142d3be0561435ccd26a649a448fc36165d32cd47ad0c20d"
+    },
+    {
+      "identity": "mncs_environment_ambient_verification_readiness_join_projection_contracts_53f2335",
+      "kind": "projection-conformance-receipt",
+      "reference": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e",
+      "repository": "mncs-environment"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "captured_at": "2026-10-28T06:05:45Z",
+  "identity": "ev_environment_ambient_verification_readiness_join_improvement_20261028",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_ambient_verification_readiness_join_visibility",
+    "basis": "The implementation joins verified outcome evidence with provider context only when repository, obligation, capability, verification Store reference, and owner-result Store reference all match uniquely. Verification and live projection readback confirm exact links, bounded omission counts, and explicit limits. Six candidates lack returned contexts, but absence attribution remains not-established; the change does not establish service readiness or reduced agent burden.",
+    "identity": "im_environment_ambient_verification_executor_readiness_join_20261028",
+    "implementation_reference": {
+      "commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "identity": "mncs_environment_ambient_verification_readiness_join_implementation_53f2335",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3b8d8536f72e4ccb5af36e464b244de00861982e0b0cb929cdda761569659396"
+    },
+    "not_measured": [
+      "Whether the joined provider context improves another agent's ability to resolve a verification exclusion.",
+      "Whether the observed provider/toolchain conditions caused either verification exclusion.",
+      "Whether the response-budget omissions conceal actionable pressure identities.",
+      "Whether eligible opportunities, ambient fulfillment, or agent intervention burden change across later sessions."
+    ],
+    "subsequent_observation_identity": "ev_environment_ambient_verification_readiness_join_readback_20261028",
+    "verification_observation_identity": "ev_environment_ambient_verification_readiness_join_verification_20261028"
+  },
+  "measurement_basis": "validated-pressure-to-implementation-verification-and-post-publication-readback-relation",
+  "not_measured": [
+    "Whether actual agent investigation work, coordination, or fallback steps decreased.",
+    "Whether the provider is ready to execute a verification obligation.",
+    "Whether the same-provider unavailable capability is causally related to the executor outcome.",
+    "Whether excluded verification frequency or native implementation ownership changes in subsequent sessions."
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "Exact representation and source linkage verified; service fulfillment, agent receipt, provider readiness, and burden reduction not established or measured.",
+      "identity": "im_environment_ambient_verification_executor_readiness_join_20261028",
+      "implementation_scope": "Existing ECI service-accountability projection; no new telemetry store or service registry.",
+      "verified_change": "The service-accountability projection now presents a bounded exact-reference join between integrity-verified ambient verification outcomes and current provider readiness context, including in compact response views."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_verification_readiness_join_visibility",
+      "operation": "Record the explicit pressure-to-implementation relationship with independent regression verification and the subsequent live ECI projection readback."
+    },
+    "source_interface": "MNCS Environment capability intelligence projection, regression suite, and campaign evidence ledger"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Join integrity-verified verification outcomes to the exact current provider context in the existing service-accountability projection, preserving response-budget limits and provenance.",
+    "category": "environmental-service-accountability",
+    "identity": "ph_environment_ambient_verification_readiness_join_visibility",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability intelligence and service-accountability projection",
+    "title": "Verified ambient verification outcomes are not joined to provider context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 54,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ac6d025a733a47a6",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9e3b6cdef642"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_verification_readiness_join_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "path": "evidence/environmental-capability/ambient-verification-readiness-join-pressure-20261028.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "identity": "mncs_environment_ambient_verification_readiness_join_implementation_53f2335",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3b8d8536f72e4ccb5af36e464b244de00861982e0b0cb929cdda761569659396"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_readiness_join_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "path": "evidence/environmental-capability/ambient-verification-readiness-join-verification-20261028.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_readiness_join_readback_20261028",
+      "kind": "post-implementation-ECI-readback",
+      "path": "evidence/environmental-capability/ambient-verification-readiness-join-readback-20261028.json",
+      "repository": "mncs-environment"
+    }
+  ]
+}

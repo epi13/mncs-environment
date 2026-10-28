@@ -1,0 +1,89 @@
+{
+  "captured_at": "2026-10-28T06:05:45Z",
+  "identity": "ev_environment_ambient_verification_readiness_join_pressure_20261028",
+  "measurement_basis": "pre-change-main-ECI-readback-of-separate-verification-and-provider-context",
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "outcome": {
+      "baseline_projection": {
+        "content_digest": "4941a7f432ec72d09f1bd515c1ad1f98",
+        "identity": "eci_2d8dd3f6ad463656",
+        "service_accountability_relation_present": false,
+        "source_campaign_checkpoint": "chk_ac6d025a733a47a6",
+        "source_campaign_evidence_count": 54,
+        "source_recorded_at": "2026-10-28T05:45:49+00:00",
+        "status": "partial"
+      },
+      "interpretation_limit": "The projection establishes that the outcome and provider context were separately observable, not that a provider caused the exclusion, that an agent performed extra work, or that burden was reduced.",
+      "observed_case": {
+        "obligation": "mncs-test.native-application-build-vm",
+        "owner_result_content_integrity_status": "content-integrity-verified",
+        "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+        "repository": "mncs-test",
+        "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+        "verification_outcome": "excluded",
+        "verification_reason": "executor_not_runnable",
+        "verification_source_integrity_status": "verified"
+      },
+      "observed_limitation": "The pre-change ECI projection exposed integrity-verified ambient verification evidence and current provider readiness in separate activity views, without an exact joined relationship in service_accountability. This required a reader to correlate the views manually to inspect the same obligation context."
+    },
+    "request": {
+      "operation": "Inspect the pre-change ECI environmental-capability projection and compare service-accountability, ambient-verification, and provider-readiness fields.",
+      "projection_content_digest": "4941a7f432ec72d09f1bd515c1ad1f98",
+      "projection_identity": "eci_2d8dd3f6ad463656"
+    },
+    "source_interface": "MNCS Environment projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Join integrity-verified verification outcomes to the exact current provider context in the existing service-accountability projection, preserving response-budget limits and provenance.",
+    "category": "environmental-service-accountability",
+    "identity": "ph_environment_ambient_verification_readiness_join_visibility",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability intelligence and service-accountability projection",
+    "title": "Verified ambient verification outcomes are not joined to provider context"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 54,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ac6d025a733a47a6",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9e3b6cdef642"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "ed91734bfef47e001a474fcce78bf693cb97a5f2",
+      "content_digest": "4941a7f432ec72d09f1bd515c1ad1f98",
+      "identity": "eci_2d8dd3f6ad463656",
+      "kind": "pre-change-main-ECI-projection-readback",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "mncs-test-native-application-build-vm-verification-evidence",
+      "kind": "integrity-verified-verification-record",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "repository": "mncs-test"
+    },
+    {
+      "identity": "mncs-test-native-application-build-vm-owner-result",
+      "kind": "content-integrity-verified-owner-result",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "repository": "mncs-test"
+    }
+  ]
+}

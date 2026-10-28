@@ -1,0 +1,135 @@
+{
+  "captured_at": "2026-10-28T06:04:46Z",
+  "identity": "ev_environment_ambient_verification_readiness_join_readback_20261028",
+  "measurement_basis": "post-publication-live-ECI-readback-of-service-accountability-join",
+  "not_measured": [
+    "Which identities among the six candidates without returned context were omitted by the bounded context response.",
+    "Whether either excluded verification obligation could run after provider/toolchain changes.",
+    "Whether an agent received or used the joined context with fewer investigation steps.",
+    "Eligible-service fulfillment and agent intervention burden."
+  ],
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "outcome": {
+      "campaign_checkpoint": "chk_ac6d025a733a47a6",
+      "campaign_evidence_count": 54,
+      "interpretation_limit": "The relation exposes exact evidence relationships and a potential native-verification pressure. The response remains partial; six candidate identities lack returned context, and the projection does not establish which were among omitted contexts, why they were absent, provider readiness, causal dependence, agent receipt, or reduced burden.",
+      "linked_obligations": [
+        {
+          "executor_availability_status": "available",
+          "obligation": "mncs-test.native-application-build-vm",
+          "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+          "provider_readiness_status": "not-established",
+          "repository": "mncs-test",
+          "unmeasurable_reason": "executor-not-native",
+          "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+          "verification_outcome": "excluded",
+          "verification_reason": "executor_not_runnable"
+        },
+        {
+          "executor_availability_status": "not-recorded",
+          "obligation": "mncs-commons.family-projection.conformance",
+          "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+          "provider_readiness_status": "not-established",
+          "repository": "mncs-commons",
+          "unmeasurable_reason": "executor-not-native",
+          "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+          "verification_outcome": "excluded",
+          "verification_reason": "executor_not_runnable"
+        }
+      ],
+      "projection_content_digest": "75d776b31e6bdefafc453a4622596ced",
+      "projection_identity": "eci_f9302eab6639d9a2",
+      "projection_status": "partial",
+      "relation": {
+        "agent_intervention_burden_status": "not-measured",
+        "agent_receipt_status": "not-established",
+        "ambient_fulfillment_status": "not-established",
+        "candidate_context_absence_attribution_status": "not-established",
+        "candidate_context_not_returned_count": 6,
+        "causal_status": "not-established",
+        "exact_link_count": 2,
+        "integrity_verified_candidate_count": 8,
+        "provider_readiness_context_returned_count": 2,
+        "provider_readiness_obligation_count": 8,
+        "response_budget_omitted_context_count": 6,
+        "status": "partial",
+        "unmatched_candidate_count": 6,
+        "unmatched_context_count": 0
+      },
+      "response_truncated": true,
+      "service_accountability": {
+        "agent_intervention_burden_status": "not-measured",
+        "ambient_fulfillment_status": "not-measured",
+        "eligible_service_opportunity_count": null
+      }
+    },
+    "request": {
+      "captured_at": "2026-10-28T06:04:46Z",
+      "operation": "Read the published ECI environmental-capability projection and inspect service-accountability summary and ambient-verification executor-readiness relationship.",
+      "projection_content_digest": "75d776b31e6bdefafc453a4622596ced",
+      "projection_identity": "eci_f9302eab6639d9a2"
+    },
+    "source_interface": "MNCS Environment projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Join integrity-verified verification outcomes to the exact current provider context in the existing service-accountability projection, preserving response-budget limits and provenance.",
+    "category": "environmental-service-accountability",
+    "identity": "ph_environment_ambient_verification_readiness_join_visibility",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability intelligence and service-accountability projection",
+    "title": "Verified ambient verification outcomes are not joined to provider context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 54,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_ac6d025a733a47a6",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9e3b6cdef642"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "content_digest": "75d776b31e6bdefafc453a4622596ced",
+      "identity": "eci_f9302eab6639d9a2",
+      "kind": "post-publication-ECI-projection-readback",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "53f2335c00f87789bbf0cbe9a874eb426c0faa87",
+      "identity": "mncs_environment_ambient_verification_readiness_join_implementation_53f2335",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3b8d8536f72e4ccb5af36e464b244de00861982e0b0cb929cdda761569659396"
+    },
+    {
+      "identity": "mncs-test-native-application-build-vm-verification-evidence",
+      "kind": "integrity-verified-verification-record",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "repository": "mncs-test"
+    },
+    {
+      "identity": "mncs-test-native-application-build-vm-owner-result",
+      "kind": "content-integrity-verified-owner-result",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "repository": "mncs-test"
+    }
+  ]
+}
