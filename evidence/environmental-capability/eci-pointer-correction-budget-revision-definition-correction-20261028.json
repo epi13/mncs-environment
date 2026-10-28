@@ -20,7 +20,7 @@
     "outcome": {
       "status": "append-only-pressure-recommendation-correction-recorded",
       "definition_field": "actionable_recommendation",
-      "replacement": "When a verified pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget."
+      "replacement": "When a selected append-only pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget."
     }
   },
   "record_correction": {
@@ -34,7 +34,7 @@
     },
     "corrected_field_paths": ["pressure_hypothesis.actionable_recommendation"],
     "replacement_values": {
-      "pressure_hypothesis.actionable_recommendation": "When a verified pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget."
+      "pressure_hypothesis.actionable_recommendation": "When a selected append-only pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget."
     },
     "reason": "The pressure occurrence supplies the verified recommendation for this hypothesis identity. Align the corrected implementation-link revision to that exact definition while preserving its verified implementation and improvement relationship."
   },
