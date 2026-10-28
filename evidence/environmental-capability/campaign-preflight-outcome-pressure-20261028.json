@@ -1,0 +1,67 @@
+{
+  "captured_at": "2026-10-28T09:29:22Z",
+  "identity": "ev_environment_campaign_preflight_outcome_pressure_20261028",
+  "measurement_basis": "authenticated-campaign-state-readback-and-existing-checkpoint-preflight",
+  "measurement_limits": [
+    "One campaign checkpoint path was examined; recurrence across sessions is not established.",
+    "The prior readback does not measure agent time, tool calls, or burden caused by reconstructing the missing status.",
+    "Rejected checkpoint attempts do not update campaign state and are outside this persisted summary."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-outcome-visibility-gap",
+    "outcome": {
+      "ECI_preflight_outcome_projection": "not-present",
+      "accepted_checkpoint_preflight_result": "not-recorded-in-campaign-state",
+      "interpretation": "The selected-checkout guard could reject malformed evidence, but an accepted checkpoint did not preserve whether a candidate record had been validated or skipped.",
+      "preflight_contract_check_present": true
+    },
+    "request": {
+      "operation": "read-campaign-state-and-ECI-after-observation-preflight",
+      "prior_checkpoint_id": "chk_4ce9b3929692d02a",
+      "prior_preflight_implementation_commit": "a5ab21e415a5779f6d510c58c86c699e31ee8d70"
+    },
+    "source_interface": "MNCS Environment campaign-state and environmental-capability projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Persist a bounded result for each accepted campaign checkpoint and expose its validation status and limits through campaign-state and ECI reads.",
+    "basis": "The pre-publication contract check returned no outcome for campaign-state persistence, and the subsequent campaign-state readback had no field distinguishing a validated check from an unselected-checkout skip.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_outcome_visibility_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment campaign checkpoint and ECI projection",
+    "title": "Accepted campaign checkpoint did not expose its observation preflight result"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "e6396408552fd628e4ff8c0c7283996fc20ee9e5",
+      "identity": "ev_environment_campaign_observation_preflight_readback_20261028",
+      "kind": "prior-campaign-readback",
+      "path": "evidence/environmental-capability/campaign-observation-contract-preflight-readback-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "0e82411c364a7cbf7be147144fde4a0ee566e78bbe3e64773855c74d61119a7f"
+    },
+    {
+      "commit": "a5ab21e415a5779f6d510c58c86c699e31ee8d70",
+      "identity": "src_environment_campaign_observation_preflight_a5ab21e",
+      "kind": "prior-implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "78363f3d34cdf67092c35fd25886ccc56cd969975ecb4814020cfc311e3c4527"
+    }
+  ]
+}

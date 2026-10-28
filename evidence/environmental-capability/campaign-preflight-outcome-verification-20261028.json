@@ -1,0 +1,103 @@
+{
+  "captured_at": "2026-10-28T09:29:22Z",
+  "identity": "ev_environment_campaign_preflight_outcome_verification_20261028",
+  "measurement_basis": "focused-campaign-state-and-ECI-regression-verification",
+  "measurement_limits": [
+    "The targeted regression set does not replace the full Environment suite.",
+    "The tests establish the bounded recorded state and projection behavior, not a reduction in intervention burden or a systemwide service fulfillment ratio.",
+    "Rejected checkpoints leave campaign state unchanged; their operation diagnostics are not persisted in this summary."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-outcome-verification",
+    "outcome": {
+      "campaign_checkpoint_and_metadata_bound_tests_passed": 8,
+      "compileall": "passed",
+      "focused_test_count": 9,
+      "git_diff_check": "passed",
+      "projection_and_compaction_test_passed": 1,
+      "ruff_select_up031": "passed",
+      "status": "passed",
+      "verified_properties": [
+        "A selected readable observation reference is recorded as validated with exact candidate and validated counts.",
+        "A candidate with no selected Environment checkout is recorded as not-evaluated with its reason and no added checkout authority.",
+        "A checkpoint adding no matching observations is recorded as not-applicable.",
+        "A malformed selected record is rejected before publication and leaves prior campaign state unchanged.",
+        "Campaign-state reads and full and compact ECI projections retain the bounded result."
+      ]
+    },
+    "request": {
+      "campaign_tests": "pytest -q tests/test_environment.py -k 'campaign and checkpoint' tests/test_campaign_metadata_bounds.py",
+      "compile_check": "python -m compileall -q mncs_env/sessions.py mncs_env/capability_intelligence.py",
+      "implementation_commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "lint_check": "ruff check --select UP031 --output-format concise mncs_env/sessions.py mncs_env/capability_intelligence.py tests/test_environment.py tests/test_capability_intelligence.py",
+      "projection_test": "PYTHONPATH=. pytest -q tests/test_capability_intelligence.py -k campaign_state_and_projection_interfaces_expose_the_derived_view"
+    },
+    "source_interface": "MNCS Environment pytest, compiler checks, and ECI projection"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Persist a bounded result for each accepted campaign checkpoint and expose its validation status and limits through campaign-state and ECI reads.",
+    "basis": "Regression coverage verifies that an accepted campaign state now carries the check outcome and that read interfaces expose it.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_outcome_visibility_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment campaign checkpoint and ECI projection",
+    "title": "Accepted campaign checkpoint did not expose its observation preflight result"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "identity": "src_environment_campaign_preflight_outcome_568ed6c",
+      "kind": "implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "a56bfc4d8cfeea8f85adb4aca20d9676bdb7f4b5dee26970501808ea6433f1d1"
+    },
+    {
+      "commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "identity": "src_environment_campaign_preflight_eci_568ed6c",
+      "kind": "projection-source",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "3cbdcf0f23e5ac49c29cd94a3bb0b4a82cf3bad4c88e0738467983fc259b3d10"
+    },
+    {
+      "commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "identity": "src_environment_campaign_preflight_tests_568ed6c",
+      "kind": "verification-source",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "ec9d2ebc4c3ea65f66fc219f582b61afdfa89ed8cd9fe9b0f8d64e4c6c23a014"
+    },
+    {
+      "commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "identity": "src_environment_campaign_preflight_projection_tests_568ed6c",
+      "kind": "projection-test-source",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "69154ae40c6db9673871fd3efd67836a8269db1b5a214a2c61d06391f9d49a64"
+    },
+    {
+      "commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "identity": "src_environment_campaign_preflight_docs_568ed6c",
+      "kind": "documentation-source",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "7a77b511b05a7eb921b65d333bddd0e5b75c8f93873b7d63b4fb11e4790c86e1"
+    }
+  ]
+}
