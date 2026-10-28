@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_session_store_source_improvement_20261028",
+  "captured_at": "2026-10-28T01:36:11Z",
+  "measurement_basis": "implemented-source-adapter-regression-verification-and-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "82bf84ab51066d67bda14f16415485537f1726c4"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI supporting-source projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_session_store_sources_not_resolved",
+      "implementation_commit": "82bf84ab51066d67bda14f16415485537f1726c4",
+      "verification_observation_identity": "ev_environment_eci_session_store_source_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_session_store_source_live_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "ECI now validates typed session Store source pointers, restricts reads to the selected session, verifies the exact record digest plus any declared schema or owner-result identity, reports integrity separately from reference classification, and preserves only the exact pointer in compact output.",
+      "verified_change": "The focused source-link tests pass, the full repository suite passes 1,185 tests with 46 skipped, and the eight-step vertical proof passes. A live ECI projection resolves four Store source links across two campaign observations with all four content-integrity checks passing.",
+      "effectiveness_assessment": "source-link-discoverability-and-integrity-verified; agent-burden-effect-not-measured",
+      "interpretation_limit": "The change makes the authentic Store relationship inspectable through ECI. It does not establish agent receipt, reduced intervention, correctness of the underlying verification outcome, or resolution of the four older unavailable observation records."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_session_store_sources_not_resolved",
+    "title": "ECI cannot verify exact session Store references attached to environmental observations",
+    "category": "environment-evidence-linkage-and-provenance",
+    "subsystem": "MNCS Environment ECI source pointer projection",
+    "owner": "mncs-environment",
+    "basis": "Before this change, the source adapter recognized repository commit/path pointers but not the selected-session Store reference form. The existing ambient verification pressure and live-readback observations carry two exact immutable Store references each.",
+    "actionable_recommendation": "Keep typed session Store source links integrity-checked and inspectable through the existing ECI projection, with explicit session scope and no payload copying.",
+    "recurrence": "observed-in-two-campaign-observations-within-one-session",
+    "not_measured": [
+      "agent receipt or use of the newly exposed source detail",
+      "agent intervention-burden reduction",
+      "source-link recurrence across other sessions",
+      "production-scale Store read latency"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_session_store_sources_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_session_store_sources_not_resolved",
+    "implementation_reference": {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_eci_session_store_sources_82bf84a",
+      "repository": "mncs-environment",
+      "commit": "82bf84ab51066d67bda14f16415485537f1726c4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "27d71175a1146c087fe6cb897f617ef24dd2fd0cbcf49d79be3b127cf979a0bc"
+    },
+    "verification_observation_identity": "ev_environment_eci_session_store_source_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_session_store_source_live_readback_20261028",
+    "basis": "Regression tests cover exact selected-session links, foreign-session non-read, content-digest mismatch, schema mismatch, owner-result identity mismatch, and compact pointer preservation. The live campaign projection verifies the authentic owner-result and verification records across two observations. This establishes the source projection behavior, not a causal reduction in agent work.",
+    "not_measured": [
+      "agent intervention burden or productivity",
+      "whether agents acted on the newly discoverable verification evidence",
+      "causal relationship to any later service outcome"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_eci_session_store_sources_tests_82bf84a",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "82bf84ab51066d67bda14f16415485537f1726c4",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "f0c6b4d872e149c96b9206f35904fa02095a68ed6124f4497f9e2a60853a9040"
+    }
+  ],
+  "measurement_limits": [
+    "The live projection is partial and contains four older records with unavailable source commit/path objects.",
+    "A verified Store pointer does not establish that its evidence conclusion is correct.",
+    "Agent receipt and burden reduction remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

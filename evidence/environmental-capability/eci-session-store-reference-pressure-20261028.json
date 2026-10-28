@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_session_store_source_pressure_20261028",
+  "captured_at": "2026-10-28T01:35:32Z",
+  "measurement_basis": "base-source-review-correlated-with-authentic-session-store-references",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_base_commit": "82d08e2b9c337e4c5d878075ee84ca22d9b8e473"
+  },
+  "observation": {
+    "kind": "environmental-evidence-linkage-pressure",
+    "source_interface": "MNCS Environment ECI supporting-source projection",
+    "request": {
+      "observation_identity": "ev_environment_ambient_verification_coverage_live_readback_20261028",
+      "session_store_source_kinds": [
+        "current-owner-result",
+        "immutable-verification-evidence"
+      ],
+      "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c"
+    },
+    "outcome": {
+      "observed_limitation": "At the implementation base, ECI validated supporting sources through repository commit/path pointers. These exact session Store references had no repository path representation, so the projection could not expose their content-integrity result or follow their relation to the recorded verification outcome.",
+      "base_code_path_status": "confirmed-by-source-review",
+      "prior_live_projection_status": "source-reference-invalid; the earlier response was not retained as a standalone artifact",
+      "causal_status": "established-for-source-classification-path; agent impact not measured"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_session_store_sources_not_resolved",
+    "title": "ECI cannot verify exact session Store references attached to environmental observations",
+    "category": "environment-evidence-linkage-and-provenance",
+    "subsystem": "MNCS Environment ECI source pointer projection",
+    "owner": "mncs-environment",
+    "basis": "The captured verification observation carries exact immutable references for a session owner result and verification record. At the implementation base, the source adapter only accepted repository commit/path references, leaving these existing Store relationships unverified in ECI.",
+    "actionable_recommendation": "Resolve a bounded allowlist of typed session Store source references only within the selected session, validate record and linked identities, and preserve the exact reference without copying its payload.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "agent operations spent investigating the missing source relationship",
+      "whether this source-link gap recurred in other sessions or services",
+      "agent intervention burden or productivity"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_verification_coverage_live_readback_20261028",
+      "kind": "captured-session-store-references",
+      "repository": "mncs-environment",
+      "commit": "82d08e2b9c337e4c5d878075ee84ca22d9b8e473",
+      "path": "evidence/environmental-capability/ambient-verification-coverage-live-readback-20261028.json",
+      "sha256": "03fd04b1ca398a6cd9dbde375b6006693e0914a784a40da3d7319a2e26008012"
+    },
+    {
+      "identity": "mncs_environment_eci_generic_source_validator_base_82d08",
+      "kind": "base-source-code",
+      "repository": "mncs-environment",
+      "commit": "82d08e2b9c337e4c5d878075ee84ca22d9b8e473",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "87b72879e68695265e47dc5c4f8dc1c727317eb29bb7aa4761fbcaa7cc608d22"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1"
+    }
+  ],
+  "measurement_limits": [
+    "The pre-change ECI response was not archived as an independent artifact; the source-classification gap is reproducible from the implementation base and the exact Store pointers.",
+    "The two references belong to one selected session and do not establish recurrence.",
+    "No agent receipt, manual fallback, or intervention burden was measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

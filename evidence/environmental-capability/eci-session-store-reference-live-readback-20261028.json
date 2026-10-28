@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_session_store_source_live_readback_20261028",
+  "captured_at": "2026-10-28T01:35:32Z",
+  "measurement_basis": "bounded-live-eci-campaign-projection-readback-after-source-link-implementation",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "82bf84ab51066d67bda14f16415485537f1726c4"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "python3 -m mncs_env.cli projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 12",
+    "request": {
+      "projection_identity": "eci_2921ffec542de401",
+      "campaign_state_checkpoint_id": "chk_26c09825a555efea",
+      "campaign_evidence_count": 12,
+      "observations_with_session_store_sources": [
+        "ev_environment_ambient_verification_coverage_pressure_20261028",
+        "ev_environment_ambient_verification_coverage_live_readback_20261028"
+      ]
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "session_store_source_pointer_count": 4,
+      "session_store_content_integrity_verified_count": 4,
+      "session_store_content_integrity_not_verified_count": 0,
+      "source_pointer_count": 8,
+      "source_pointer_content_integrity_verified_count": 8,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "observation_records_verified": 6,
+      "observation_records_unavailable": 4,
+      "owner_result_source_status": "session-store-reference",
+      "owner_result_content_integrity_status": "content-integrity-verified",
+      "owner_result_identity_status": "content-integrity-verified",
+      "verification_evidence_source_status": "session-store-reference",
+      "verification_evidence_content_integrity_status": "content-integrity-verified",
+      "verification_evidence_schema": "mncs.environment.verification/1",
+      "interpretation_limit": "The selected session Store references are exact and integrity-checked. Four older campaign records remain unavailable because their referenced repository commit/path objects are unavailable; this readback does not establish agent receipt or reduced intervention burden."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1"
+    },
+    {
+      "identity": "mncs_environment_eci_session_store_sources_82bf84a",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "82bf84ab51066d67bda14f16415485537f1726c4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "27d71175a1146c087fe6cb897f617ef24dd2fd0cbcf49d79be3b127cf979a0bc"
+    }
+  ],
+  "measurement_limits": [
+    "The campaign response is partial: four older observation records have unavailable source commit/path objects, and only six observation records were projected.",
+    "The source pointer counts include repository and session Store sources; all eight selected sources in this readback have verified content integrity.",
+    "The readback proves source-reference discoverability and integrity checks, not that an agent used the evidence or experienced lower burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
