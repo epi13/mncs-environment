@@ -5510,7 +5510,8 @@ def _compact_campaign_evidence_priority_rows(
     source = result.get("source")
     if isinstance(source, dict):
         retained_source_fields = {
-            "campaign_state_checkpoint_id", "recorded_at", "evidence_count",
+            "campaign_state_checkpoint_id", "campaign_observation_preflight",
+            "recorded_at", "evidence_count",
             "evidence_page_truncated", "evidence_page_offset",
             "evidence_page_limit", "previous_evidence_offset",
             "next_evidence_offset", "evidence_history_pages_requested",

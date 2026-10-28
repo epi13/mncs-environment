@@ -1651,7 +1651,19 @@ def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
             "identity": "im_priority",
             "addresses_hypothesis_identity": "ph_priority",
         }],
-        "source": {},
+        "source": {
+            "campaign_observation_preflight": {
+                "schema_version": (
+                    "mncs.environment.campaign-observation-preflight/1"
+                ),
+                "status": "validated",
+                "reference_count": 2,
+                "validated_reference_count": 2,
+                "reason": (
+                    "selected-checkout-blob-and-observation-contract-verified"
+                ),
+            },
+        },
     }
     assert capability_intelligence._compact_campaign_evidence_priority_rows(
         evidence_priority_candidate,
@@ -1672,6 +1684,9 @@ def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
     assert evidence_priority_candidate["observations"][0]["identity"] == (
         "ev_priority_occurrence"
     )
+    assert evidence_priority_candidate["source"][
+        "campaign_observation_preflight"
+    ]["status"] == "validated"
 
 
 def test_verified_occurrence_can_reconcile_pressure_recommendation_wording(
