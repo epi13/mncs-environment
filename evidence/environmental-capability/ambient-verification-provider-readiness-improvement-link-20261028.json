@@ -1,0 +1,111 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_provider_readiness_improvement_link_20261028",
+  "captured_at": "2026-10-28T05:42:40Z",
+  "measurement_basis": "explicit-validated-improvement-relation-to-verified-implementation-and-subsequent-session-readback",
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+    "category": "environmental-service-accountability",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability delivery and verification readiness projection",
+    "title": "Budgeted ECI hides provider readiness context for an excluded verification obligation",
+    "actionable_recommendation": "Retain a bounded, provenance-linked verification executor and provider readiness relationship in the ECI evidence-priority response."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_verification_provider_readiness_eci_path_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_verification_readiness_implementation_5b5a9c8",
+      "repository": "mncs-environment",
+      "commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "769d40c03e3ea3a024f921e1abdcc06270bc82964e862e4e368e5f7b223a5da8"
+    },
+    "verification_observation_identity": "ev_environment_ambient_verification_provider_readiness_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_verification_provider_readiness_readback_20261028",
+    "basis": "The implementation and focused verification establish bounded ECI projection behavior. The authenticated post-implementation session readback surfaces the exact excluded verification obligation, provider checkout state, declared toolchain observation, same-provider unavailable capability, and source Store references while keeping readiness, causal attribution, fulfillment, and burden reduction unestablished.",
+    "not_measured": [
+      "Whether a later workflow can execute the obligation after its selected checkout and declared toolchain become ready.",
+      "Whether another agent can use the projection with fewer investigation or coordination steps.",
+      "Whether agent intervention burden or excluded verification frequency changes across sessions.",
+      "Whether the same-provider unavailable capability is a causal dependency of the executor."
+    ]
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability intelligence projection and evidence-priority compaction",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+      "operation": "record the exact top-level relationship from the provider-readiness pressure to its verified implementation, focused verification, and subsequent ECI readback"
+    },
+    "outcome": {
+      "identity": "im_environment_ambient_verification_provider_readiness_eci_path_20261028",
+      "implementation_scope": "bounded verification executor provider-readiness context retained in normal ECI evidence-priority output",
+      "verified_change": "The live ECI result exposes exact source references and current provider binding observations. It does not establish that the external executor is ready, that an eligible opportunity was fulfilled, or that agents received the capability.",
+      "effectiveness_assessment": "projection-behavior-verified-for-selected-session; ambient service effectiveness and burden reduction not-assessed"
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_state_checkpoint_id_before_recording": "chk_4571eef3ec8c5f8d",
+    "campaign_evidence_count_before_recording": 52,
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:401886ff1eaf",
+      "claim:mncs-environment:worktree:e59fda9cc543",
+      "claim:mncs-environment:worktree:564f03a8d693"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "2a3d48d75044b3bd7f296772b5f9297abc22202b",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-pressure-20261028.json",
+      "sha256": "65cf2277c8365295fd04b3df0717037a6ac4b276c695106cfcafeb32eb1fb5d3"
+    },
+    {
+      "identity": "mncs_environment_ambient_verification_readiness_implementation_5b5a9c8",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "769d40c03e3ea3a024f921e1abdcc06270bc82964e862e4e368e5f7b223a5da8"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "2a3d48d75044b3bd7f296772b5f9297abc22202b",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-verification-20261028.json",
+      "sha256": "429f6c8f2a114d59f276230a6d175015a80d9b0b426ba40658408bbd27fd8962"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_readback_20261028",
+      "kind": "post-implementation-ECI-readback",
+      "repository": "mncs-environment",
+      "commit": "2a3d48d75044b3bd7f296772b5f9297abc22202b",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-readback-20261028.json",
+      "sha256": "ae6a2fb75ce6c426c94941651530c0f18cfb067b1a6e1110e49e23442e44f87a"
+    }
+  ],
+  "not_measured": [
+    "Whether the environment fulfilled an eligible verification opportunity automatically.",
+    "Whether agents' need to investigate provider readiness or coordinate environment scope has decreased.",
+    "Whether later sessions confirm a readiness transition or reduced burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  }
+}
