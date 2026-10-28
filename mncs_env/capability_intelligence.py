@@ -4125,6 +4125,190 @@ def _session_family_ambient_observation(
     }
 
 
+def _compact_session_resource_sample_observation(
+    item: Any,
+) -> dict[str, Any] | None:
+    """Keep bounded resource evidence while omitting unrelated artifact data."""
+    if not isinstance(item, dict):
+        return None
+    compact_item = {
+        key: _short_text(item.get(key), 160)
+        for key in ("identity", "status")
+        if isinstance(item.get(key), str)
+    }
+    item_context = item.get("context")
+    if isinstance(item_context, dict):
+        compact_item["context"] = {
+            key: _short_text(item_context[key], 160)
+            for key in (
+                "session_id", "campaign_id", "work_intent_id",
+                "environment_id", "definition_id",
+            )
+            if isinstance(item_context.get(key), str)
+        }
+    item_source = item.get("source")
+    if isinstance(item_source, dict):
+        compact_item_source = {
+            key: _short_text(item_source[key], 160)
+            for key in (
+                "capability", "binding_id", "provider_request_id",
+                "event_correlation_status", "invocation_recorded_at",
+                "provider", "contract_revision",
+            )
+            if isinstance(item_source.get(key), str)
+        }
+        for key in ("invocation_event", "completion_event"):
+            reference = item_source.get(key)
+            if isinstance(reference, dict):
+                compact_item_source[key] = {
+                    field: reference[field]
+                    for field in ("identity", "sequence", "type", "observed_at")
+                    if field in reference
+                }
+        artifact_reference = item_source.get("artifact_reference")
+        if isinstance(artifact_reference, dict):
+            compact_item_source["artifact_reference"] = {
+                "store_reference": _short_text(
+                    artifact_reference.get("store_reference"), 512,
+                ),
+                "path": _short_text(artifact_reference.get("path"), 160),
+                "byte_count": artifact_reference.get("byte_count"),
+                "sha256": _short_text(artifact_reference.get("sha256"), 64),
+            }
+        compact_item["source"] = compact_item_source
+    sample = item.get("sample")
+    if isinstance(sample, dict):
+        compact_sample: dict[str, Any] = {
+            "schema": _short_text(sample.get("schema"), 96),
+        }
+        if sample.get("measurement_basis") == (
+            "system-monitor-reported-resource-sample"
+        ):
+            compact_sample["measurement_basis"] = sample["measurement_basis"]
+        availability = sample.get("measurement_availability")
+        if isinstance(availability, dict):
+            compact_sample["measurement_availability"] = {
+                key: value
+                for key, value in availability.items()
+                if key in {
+                    "host.cpu_count", "host.cpu_utilization",
+                    "host.load_average", "host.memory_total_bytes",
+                    "host.memory_available_bytes",
+                }
+                and isinstance(value, str)
+                and value in {"measured", "derived", "unavailable"}
+            }
+        if type(sample.get("observed_at")) is int:
+            compact_sample["observed_at"] = sample["observed_at"]
+        sample_time = sample.get("sample_time")
+        if isinstance(sample_time, dict):
+            compact_sample["sample_time"] = {
+                key: sample_time[key]
+                for key in ("wall_time_unix_ms", "monotonic_ns")
+                if key in sample_time
+                and (type(sample_time[key]) is int or sample_time[key] is None)
+            }
+        host = sample.get("host")
+        if isinstance(host, dict):
+            compact_host = {}
+            for key in (
+                "cpu_count", "memory_total_bytes", "memory_available_bytes",
+            ):
+                if key in host and (
+                    type(host.get(key)) is int or host.get(key) is None
+                ):
+                    compact_host[key] = host[key]
+            if "cpu_utilization" in host and (
+                type(host.get("cpu_utilization")) in (int, float)
+                or host.get("cpu_utilization") is None
+            ):
+                compact_host["cpu_utilization"] = host["cpu_utilization"]
+            load_average = host.get("load_average")
+            if "load_average" in host and (
+                isinstance(load_average, (list, dict)) or load_average is None
+            ):
+                compact_host["load_average"] = load_average
+            for key in ("cpu_status", "memory_available_status"):
+                if isinstance(host.get(key), str):
+                    compact_host[key] = _short_text(host[key], 64)
+            compact_sample["host"] = compact_host
+        compact_item["sample"] = compact_sample
+    return compact_item
+
+
+def _compact_session_resource_samples(
+    value: Any, *, observation_limit: int = MAX_SESSION_RESOURCE_SAMPLES,
+    preserve_empty: bool = False, response_budget_overview: bool = False,
+) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    raw_observations = value.get("observations")
+    raw_observations = raw_observations if isinstance(raw_observations, list) else []
+    valid_observations = [item for item in raw_observations if isinstance(item, dict)]
+    compact_observations = [
+        compact
+        for item in valid_observations[:max(0, observation_limit)]
+        if (compact := _compact_session_resource_sample_observation(item)) is not None
+    ]
+    compact_source: dict[str, Any] = {}
+    for key in (
+        "artifact_window_count", "artifact_window_limit", "records_omitted",
+    ):
+        number = source.get(key)
+        if type(number) is int and number >= 0:
+            compact_source[key] = number
+    if type(source.get("artifact_window_truncated")) is bool:
+        compact_source["artifact_window_truncated"] = source[
+            "artifact_window_truncated"
+        ]
+    for key in ("selection_policy", "observation_identity_digest"):
+        if isinstance(source.get(key), str):
+            compact_source[key] = _short_text(source[key], 160)
+    compact: dict[str, Any] = {
+        "observation_count": (
+            value.get("observation_count")
+            if type(value.get("observation_count")) is int
+            and value["observation_count"] >= 0 else 0
+        ),
+        "records_examined": (
+            value.get("records_examined")
+            if type(value.get("records_examined")) is int
+            and value["records_examined"] >= 0 else 0
+        ),
+        "observations": compact_observations,
+    }
+    if isinstance(value.get("status"), str):
+        compact["status"] = _short_text(value["status"], 96)
+    if compact_source:
+        compact["source"] = compact_source
+    if value.get("observations_truncated") is True:
+        compact["observations_truncated"] = True
+    prior_omitted = value.get("observations_omitted_by_response_budget")
+    if response_budget_overview and type(prior_omitted) is int and prior_omitted > 0:
+        compact["observations_omitted_by_response_budget"] = prior_omitted
+    if len(valid_observations) > len(compact_observations):
+        compact["observations_truncated"] = True
+        if response_budget_overview:
+            compact["observations_omitted_by_response_budget"] = (
+                compact.get("observations_omitted_by_response_budget", 0)
+                + len(valid_observations) - len(compact_observations)
+            )
+    if response_budget_overview and compact_observations:
+        compact["measurement_limits"] = [
+            "Host resource samples describe host state at capture time; they are not agent-attributed consumption and do not establish resource pressure or causation.",
+        ]
+    has_window_evidence = (
+        source.get("artifact_window_truncated") is True
+        or (type(source.get("records_omitted")) is int
+            and source["records_omitted"] > 0)
+    )
+    if preserve_empty or compact_observations or has_window_evidence:
+        return compact
+    return None
+
+
 def _compact_session_activity_budget_overview(
     activity: Any, source_activity: Any = None,
 ) -> dict[str, Any] | None:
@@ -4158,6 +4342,18 @@ def _compact_session_activity_budget_overview(
             if (isinstance(source.get(key), str)
                 or type(source.get(key)) in (int, bool))
         }
+
+    resource_samples = None
+    if isinstance(source_activity, dict):
+        resource_samples = source_activity.get("resource_samples")
+    if not isinstance(resource_samples, dict):
+        resource_samples = activity.get("resource_samples")
+    compact_resource_samples = _compact_session_resource_samples(
+        resource_samples, observation_limit=1, preserve_empty=True,
+        response_budget_overview=True,
+    )
+    if compact_resource_samples is not None:
+        result["resource_samples"] = compact_resource_samples
 
     diagnostic_activity = _compact_session_diagnostic_activity(
         activity.get("diagnostic_activity"),
@@ -4674,6 +4870,12 @@ def _compact_session_activity_evidence_priority_overview(
             )
             if key in source
         }
+    resource_samples = _compact_session_resource_samples(
+        activity.get("resource_samples"), observation_limit=1,
+        preserve_empty=True, response_budget_overview=True,
+    )
+    if resource_samples is not None:
+        result["resource_samples"] = resource_samples
 
     accountability = activity.get("service_accountability")
     if isinstance(accountability, dict):
@@ -8808,141 +9010,8 @@ def _compact_projection(
             compact_activity["authority_denial_candidates_truncated"] = True
 
     resource_samples = activity.get("resource_samples")
-    resource_samples = resource_samples if isinstance(resource_samples, dict) else {}
-    resource_source = resource_samples.get("source")
-    resource_source = resource_source if isinstance(resource_source, dict) else {}
-    raw_resource_observations = resource_samples.get("observations")
-    raw_resource_observations = (
-        raw_resource_observations
-        if isinstance(raw_resource_observations, list) else []
-    )
-    compact_resource_observations = []
-    for item in raw_resource_observations[:MAX_SESSION_RESOURCE_SAMPLES]:
-        if not isinstance(item, dict):
-            continue
-        compact_item = {
-            key: _short_text(item.get(key), 160)
-            for key in ("identity", "status")
-            if isinstance(item.get(key), str)
-        }
-        item_context = item.get("context")
-        if isinstance(item_context, dict):
-            compact_item["context"] = {
-                key: _short_text(item_context[key], 160)
-                for key in (
-                    "session_id", "campaign_id", "work_intent_id",
-                    "environment_id", "definition_id",
-                )
-                if isinstance(item_context.get(key), str)
-            }
-        item_source = item.get("source")
-        if isinstance(item_source, dict):
-            compact_item_source = {
-                key: _short_text(item_source[key], 160)
-                for key in (
-                    "capability", "binding_id", "provider_request_id",
-                    "event_correlation_status", "invocation_recorded_at",
-                    "provider", "contract_revision",
-                )
-                if isinstance(item_source.get(key), str)
-            }
-            for key in ("invocation_event", "completion_event"):
-                reference = item_source.get(key)
-                if isinstance(reference, dict):
-                    compact_item_source[key] = {
-                        field: reference[field]
-                        for field in ("identity", "sequence", "type", "observed_at")
-                        if field in reference
-                    }
-            artifact_reference = item_source.get("artifact_reference")
-            if isinstance(artifact_reference, dict):
-                compact_item_source["artifact_reference"] = {
-                    "store_reference": _short_text(
-                        artifact_reference.get("store_reference"), 512,
-                    ),
-                    "path": _short_text(artifact_reference.get("path"), 160),
-                    "byte_count": artifact_reference.get("byte_count"),
-                    "sha256": _short_text(artifact_reference.get("sha256"), 64),
-                }
-            compact_item["source"] = compact_item_source
-        sample = item.get("sample")
-        if isinstance(sample, dict):
-            compact_sample: dict[str, Any] = {
-                "schema": _short_text(sample.get("schema"), 96),
-            }
-            if sample.get("measurement_basis") == (
-                "system-monitor-reported-resource-sample"
-            ):
-                compact_sample["measurement_basis"] = sample["measurement_basis"]
-            availability = sample.get("measurement_availability")
-            if isinstance(availability, dict):
-                compact_sample["measurement_availability"] = {
-                    key: value
-                    for key, value in availability.items()
-                    if key in {
-                        "host.cpu_count", "host.cpu_utilization",
-                        "host.load_average", "host.memory_total_bytes",
-                        "host.memory_available_bytes",
-                    }
-                    and value in {"measured", "derived", "unavailable"}
-                }
-            if type(sample.get("observed_at")) is int:
-                compact_sample["observed_at"] = sample["observed_at"]
-            sample_time = sample.get("sample_time")
-            if isinstance(sample_time, dict):
-                compact_sample["sample_time"] = {
-                    key: sample_time[key]
-                    for key in ("wall_time_unix_ms", "monotonic_ns")
-                    if key in sample_time
-                    and (type(sample_time[key]) is int or sample_time[key] is None)
-                }
-            host = sample.get("host")
-            if isinstance(host, dict):
-                compact_host = {}
-                for key in (
-                    "cpu_count", "memory_total_bytes", "memory_available_bytes",
-                ):
-                    if key in host and (
-                        type(host.get(key)) is int or host.get(key) is None
-                    ):
-                        compact_host[key] = host[key]
-                for key in ("cpu_utilization",):
-                    if key in host and (
-                        type(host.get(key)) in (int, float)
-                        or host.get(key) is None
-                    ):
-                        compact_host[key] = host[key]
-                load_average = host.get("load_average")
-                if "load_average" in host and (
-                    isinstance(load_average, (list, dict)) or load_average is None
-                ):
-                    compact_host["load_average"] = load_average
-                for key in ("cpu_status", "memory_available_status"):
-                    if isinstance(host.get(key), str):
-                        compact_host[key] = _short_text(host[key], 64)
-                compact_sample["host"] = compact_host
-            compact_item["sample"] = compact_sample
-        compact_resource_observations.append(compact_item)
-    compact_resource_samples = {
-        "status": _short_text(resource_samples.get("status"), 96),
-        "observation_count": resource_samples.get("observation_count", 0),
-        "records_examined": resource_samples.get("records_examined", 0),
-        "source": {
-            key: resource_source[key]
-            for key in (
-                "artifact_window_count", "artifact_window_limit",
-                "artifact_window_truncated", "selection_policy",
-                "records_omitted", "observation_identity_digest",
-            )
-            if key in resource_source
-        },
-        "observations": compact_resource_observations,
-    }
-    if len(raw_resource_observations) > len(compact_resource_observations):
-        compact_resource_samples["observations_truncated"] = True
-    if (raw_resource_observations
-            or resource_source.get("artifact_window_truncated") is True
-            or resource_source.get("records_omitted", 0) > 0):
+    compact_resource_samples = _compact_session_resource_samples(resource_samples)
+    if compact_resource_samples is not None:
         compact_activity["resource_samples"] = compact_resource_samples
 
     result = {
@@ -9815,11 +9884,24 @@ def _compact_projection(
         result["source"]["observation_records_compacted_out_count"] = (
             verified_observation_count - len(result["observations"])
         )
-    if (isinstance(raw_activity.get("resource_samples"), dict)
+    raw_resource_samples = raw_activity.get("resource_samples")
+    raw_resource_samples = (
+        raw_resource_samples if isinstance(raw_resource_samples, dict) else {}
+    )
+    raw_resource_source = raw_resource_samples.get("source")
+    raw_resource_source = (
+        raw_resource_source if isinstance(raw_resource_source, dict) else {}
+    )
+    raw_resource_observations = raw_resource_samples.get("observations")
+    raw_resource_observations = (
+        raw_resource_observations
+        if isinstance(raw_resource_observations, list) else []
+    )
+    if (raw_resource_samples
             and not raw_resource_observations
-            and resource_source.get("artifact_window_truncated") is not True
-            and resource_source.get("records_omitted", 0) == 0):
-        status = raw_activity["resource_samples"].get("status")
+            and raw_resource_source.get("artifact_window_truncated") is not True
+            and raw_resource_source.get("records_omitted", 0) == 0):
+        status = raw_resource_samples.get("status")
         if isinstance(status, str):
             compact_with_empty_resource_status = dict(result)
             compact_with_empty_resource_status["session_activity"] = dict(
@@ -9829,7 +9911,7 @@ def _compact_projection(
                 "resource_samples"
             ] = {"status": _short_text(status, 96)}
             for key in ("observation_count", "records_examined"):
-                value = raw_activity["resource_samples"].get(key)
+                value = raw_resource_samples.get(key)
                 if type(value) is int and value >= 0:
                     compact_with_empty_resource_status["session_activity"][
                         "resource_samples"

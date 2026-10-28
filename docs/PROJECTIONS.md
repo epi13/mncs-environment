@@ -818,6 +818,12 @@ Size-compacted projections retain the resource-sample status and observation
 count even when the selected session has no samples, distinguishing
 `not-captured-in-session` from fields omitted because the compact response ran
 out of space.
+If a last-resort or evidence-priority session-activity overview is needed, it
+keeps at most the newest sample together with its session, campaign, Work Intent, invocation and
+completion events, and verified Store artifact pointer and digest. Older
+samples are marked as omitted by the response budget. Host fields remain
+sanitized, and the compact view states that this is host state at capture time,
+not agent-attributed consumption or evidence of resource pressure or causation.
 
 When a campaign observation records an `outcome.related_resource_sample`
 identity, the projection exposes `resource_sample_relation` beside that

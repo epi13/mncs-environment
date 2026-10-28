@@ -4156,6 +4156,133 @@ def test_session_diagnostic_history_is_projected_and_budgeted(
     assert "ses_other" not in json.dumps(cross_session)
 
 
+def test_resource_sample_survives_last_resort_session_activity_compaction() -> None:
+    sample = {
+        "schema": capability_intelligence.SYSTEM_RESOURCE_SAMPLE_SCHEMA,
+        "measurement_basis": "system-monitor-reported-resource-sample",
+        "measurement_availability": {
+            "host.cpu_count": "measured",
+            "host.cpu_utilization": "unavailable",
+            "host.memory_available_bytes": "measured",
+            "unknown.private_field": "measured",
+        },
+        "observed_at": 1793167500000,
+        "sample_time": {"wall_time_unix_ms": 1793167500000},
+        "host": {
+            "cpu_count": 8,
+            "cpu_utilization": None,
+            "memory_available_bytes": 24_182_595_584,
+            "hostname": "private-host-name",
+        },
+        "hostname": "private-host-name",
+        "processes": [{"command": "private-process-command"}],
+    }
+    newest = {
+        "identity": "rsm_newest-authentic-sample",
+        "status": "available",
+        "context": {
+            "session_id": "ses_observed-session",
+            "campaign_id": "cmp_observed-campaign",
+            "work_intent_id": "int_observed-goal",
+            "private_context": "omit-me",
+        },
+        "source": {
+            "capability": "mncs-system-monitor:system-resource-sample",
+            "binding_id": "cap_resource_sample",
+            "provider_request_id": "req_resource_sample",
+            "event_correlation_status": "matched-by-provider-request-id",
+            "invocation_event": {
+                "identity": "evt_resource_sample_invoked",
+                "sequence": 51,
+                "type": "capability.invoked",
+                "observed_at": "2026-10-28T06:00:00Z",
+                "private_payload": "omit-me",
+            },
+            "completion_event": {
+                "identity": "evt_resource_sample_completed",
+                "sequence": 52,
+                "type": "invocation.completed",
+            },
+            "artifact_reference": {
+                "store_reference": "mncs-store:ses_observed-session:resource-sample:abc123",
+                "path": "system-resource-sample.json",
+                "byte_count": 461,
+                "sha256": "a" * 64,
+            },
+        },
+        "sample": sample,
+    }
+    older = {
+        **newest,
+        "identity": "rsm_older-authentic-sample",
+        "sample": {**sample, "observed_at": 1793167400000},
+    }
+    source_samples = {
+        "status": "available",
+        "observation_count": 2,
+        "records_examined": 2,
+        "source": {
+            "artifact_window_count": 2,
+            "artifact_window_limit": 8,
+            "artifact_window_truncated": False,
+            "selection_policy": "newest-successful-sample-per-binding",
+            "records_omitted": 0,
+            "observation_identity_digest": "b" * 16,
+        },
+        "observations": [newest, older],
+    }
+
+    compact = capability_intelligence._compact_session_activity_budget_overview(
+        {"status": "partial", "interaction_count": 4},
+        {"resource_samples": source_samples},
+    )
+
+    assert compact is not None
+    resource_samples = compact["resource_samples"]
+    assert resource_samples["status"] == "available"
+    assert resource_samples["observation_count"] == 2
+    assert resource_samples["records_examined"] == 2
+    assert resource_samples["observations_truncated"] is True
+    assert resource_samples["observations_omitted_by_response_budget"] == 1
+    observation = resource_samples["observations"][0]
+    assert observation["identity"] == "rsm_newest-authentic-sample"
+    assert observation["context"] == {
+        "session_id": "ses_observed-session",
+        "campaign_id": "cmp_observed-campaign",
+        "work_intent_id": "int_observed-goal",
+    }
+    assert observation["source"]["invocation_event"]["identity"] == (
+        "evt_resource_sample_invoked"
+    )
+    assert observation["source"]["completion_event"]["identity"] == (
+        "evt_resource_sample_completed"
+    )
+    assert observation["source"]["artifact_reference"]["sha256"] == "a" * 64
+    assert observation["sample"]["host"] == {
+        "cpu_count": 8,
+        "cpu_utilization": None,
+        "memory_available_bytes": 24_182_595_584,
+    }
+    assert "hostname" not in json.dumps(compact)
+    assert "private-process-command" not in json.dumps(compact)
+    assert "private_payload" not in json.dumps(compact)
+    assert resource_samples["measurement_limits"] == [
+        "Host resource samples describe host state at capture time; they are not agent-attributed consumption and do not establish resource pressure or causation.",
+    ]
+    evidence_priority = (
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            {"status": "partial", "resource_samples": source_samples},
+        )
+    )
+    assert evidence_priority is not None
+    assert evidence_priority["resource_samples"]["observations"][0]["identity"] == (
+        "rsm_newest-authentic-sample"
+    )
+    assert evidence_priority["resource_samples"][
+        "observations_omitted_by_response_budget"
+    ] == 1
+
+
 def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     tmp_path: Path,
 ) -> None:
