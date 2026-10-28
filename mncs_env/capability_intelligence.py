@@ -291,6 +291,7 @@ MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
 MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS = 8
 MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_SECONDS = 1.0
 MAX_AMBIENT_VERIFICATION_ISSUES = 8
+MAX_AMBIENT_VERIFICATION_CANDIDATE_SOURCE_RECORDS = 4
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -3959,6 +3960,120 @@ def _verification_executor_obligation_candidates(
     return candidates
 
 
+def _verification_executor_candidate_summary(
+    candidates: Any, linked_rows: Any = None,
+) -> dict[str, Any]:
+    """Summarize bounded, integrity-verified verification candidates."""
+    candidates = candidates if isinstance(candidates, list) else []
+    reason_counts: dict[str, int] = {}
+    repository_counts: dict[str, int] = {}
+    reason_repository_counts: dict[str, dict[str, int]] = {}
+    source_records: dict[tuple[str, str], None] = {}
+    valid_candidate_count = 0
+    for candidate in candidates[:MAX_AMBIENT_VERIFICATION_ISSUES]:
+        if not isinstance(candidate, dict):
+            continue
+        reason = candidate.get("unmeasurable_reason")
+        repository = candidate.get("repository")
+        if (
+            not isinstance(reason, str)
+            or re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", reason) is None
+            or not isinstance(repository, str)
+            or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", repository) is None
+        ):
+            continue
+        valid_candidate_count += 1
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        repository_counts[repository] = repository_counts.get(repository, 0) + 1
+        by_repository = reason_repository_counts.setdefault(reason, {})
+        by_repository[repository] = by_repository.get(repository, 0) + 1
+        verification_reference = candidate.get(
+            "verification_evidence_reference",
+        )
+        owner_reference = candidate.get("owner_result_reference")
+        if (
+            isinstance(verification_reference, str)
+            and isinstance(owner_reference, str)
+            and all(
+                re.fullmatch(r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference)
+                is not None
+                and re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])
+                is not None
+                for reference in (verification_reference, owner_reference)
+            )
+        ):
+            source_records[(verification_reference, owner_reference)] = None
+
+    source_record_pairs = sorted(source_records)
+    linked_source_records = set()
+    for row in linked_rows if isinstance(linked_rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        verification_reference = row.get("verification_evidence_reference")
+        owner_reference = row.get("owner_result_reference")
+        if isinstance(verification_reference, str) and isinstance(owner_reference, str):
+            linked_source_records.add((verification_reference, owner_reference))
+    linked_source_record_count = sum(
+        pair in linked_source_records for pair in source_record_pairs
+    )
+    unlinked_source_records = [
+        pair for pair in source_record_pairs if pair not in linked_source_records
+    ]
+    returned_source_records = unlinked_source_records[
+        :MAX_AMBIENT_VERIFICATION_CANDIDATE_SOURCE_RECORDS
+    ]
+    limit_reached = valid_candidate_count >= MAX_AMBIENT_VERIFICATION_ISSUES
+    return {
+        "schema_version": (
+            "mncs.environment.ambient-verification-investigation-candidates/1"
+        ),
+        "status": "observed",
+        "scope": (
+            "selected-session-integrity-verified-unmeasurable-"
+            "verification-obligations"
+        ),
+        "interpretation": "investigation-candidate-occurrences-only",
+        "candidate_occurrence_count": valid_candidate_count,
+        "candidate_completeness_status": "not-established",
+        "candidate_limit": MAX_AMBIENT_VERIFICATION_ISSUES,
+        "candidate_limit_reached": limit_reached,
+        "candidate_coverage_status": (
+            "possibly-truncated-at-candidate-limit"
+            if limit_reached else "bounded-extracted-candidate-set"
+        ),
+        "unmeasurable_reason_counts": dict(sorted(reason_counts.items())),
+        "repository_counts": dict(sorted(repository_counts.items())),
+        "reason_repository_counts": {
+            reason: dict(sorted(by_repository.items()))
+            for reason, by_repository in sorted(reason_repository_counts.items())
+        },
+        "source_evidence_record_count": len(source_record_pairs),
+        "source_evidence_records_returned_count": len(returned_source_records),
+        "source_evidence_records_linked_count": linked_source_record_count,
+        "source_evidence_records_omitted_count": max(
+            0, len(unlinked_source_records) - len(returned_source_records),
+        ),
+        "source_evidence_records": [
+            {
+                "verification_evidence_reference": verification_reference,
+                "verification_source_integrity_status": "verified",
+                "owner_result_reference": owner_reference,
+                "owner_result_content_integrity_status": (
+                    "content-integrity-verified"
+                ),
+            }
+            for verification_reference, owner_reference in returned_source_records
+        ],
+        "environmental_defect_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "cross_session_recurrence_status": "not-established",
+        "measurement_limits": [
+            "Selected-session bounded extraction only; completeness is not established.",
+            "Reason/repository groups are candidate occurrences, not unique causes or defects.",
+        ],
+    }
+
+
 def _ambient_verification_executor_readiness_relation(
     ambient_service_execution: Any, capability_delivery: Any,
 ) -> dict[str, Any] | None:
@@ -4089,7 +4204,7 @@ def _ambient_verification_executor_readiness_relation(
         and len(links) == len(candidates)
         and unmatched_context == 0 and unmatched_candidates == 0
     )
-    return {
+    relation = {
         "schema_version": "mncs.environment.ambient-verification-readiness-link/1",
         "status": "observed" if complete else "partial",
         "scope": "selected-session-exact-verification-evidence-and-provider-readiness",
@@ -4120,6 +4235,101 @@ def _ambient_verification_executor_readiness_relation(
             "Exact source joins provide traceability; they do not establish that a provider caused the verification outcome or fulfilled an agent need.",
             "Availability and checkout fields are current-session observations; readiness, agent receipt, and intervention burden remain unestablished or unmeasured.",
             "Same-provider capability rows are identity-correlated and do not establish a dependency.",
+        ],
+    }
+    if candidates:
+        relation["investigation_candidate_summary"] = (
+            _verification_executor_candidate_summary(candidates, links)
+        )
+    return relation
+
+
+def _session_activity_pressure_candidate_summary(
+    activity: Any,
+) -> dict[str, Any]:
+    """Count bounded activity candidate occurrences by existing source."""
+    activity = activity if isinstance(activity, dict) else {}
+
+    def row_count(key: str) -> int:
+        rows = activity.get(key)
+        return len(rows) if isinstance(rows, list) else 0
+
+    service_readiness = activity.get("service_readiness")
+    readiness_summary = (
+        service_readiness.get("summary")
+        if isinstance(service_readiness, dict) else None
+    )
+    readiness_summary = (
+        readiness_summary if isinstance(readiness_summary, dict) else {}
+    )
+    readiness_candidates = readiness_summary.get(
+        "investigation_candidate_count", 0,
+    )
+    if type(readiness_candidates) is not int or readiness_candidates < 0:
+        readiness_candidates = 0
+
+    service_accountability = activity.get("service_accountability")
+    service_summary = (
+        service_accountability.get("summary")
+        if isinstance(service_accountability, dict) else None
+    )
+    service_summary = service_summary if isinstance(service_summary, dict) else {}
+    readiness_relation = service_summary.get(
+        "ambient_verification_executor_readiness_relation",
+    )
+    candidate_summary = (
+        readiness_relation.get("investigation_candidate_summary")
+        if isinstance(readiness_relation, dict) else None
+    )
+    if isinstance(candidate_summary, dict):
+        verified_verification_candidates = candidate_summary.get(
+            "candidate_occurrence_count", 0,
+        )
+    else:
+        relation_summary = (
+            readiness_relation.get("summary")
+            if isinstance(readiness_relation, dict) else None
+        )
+        relation_summary = (
+            relation_summary if isinstance(relation_summary, dict) else {}
+        )
+        verified_verification_candidates = relation_summary.get(
+            "integrity_verified_candidate_count", 0,
+        )
+    if (type(verified_verification_candidates) is not int
+            or verified_verification_candidates < 0):
+        verified_verification_candidates = 0
+
+    counts = {
+        "rpc-failure-candidates": row_count("rpc_failure_candidates"),
+        "authority-denial-candidates": row_count(
+            "authority_denial_candidates",
+        ),
+        "coordination-deferral-candidates": row_count(
+            "coordination_deferral_candidates",
+        ),
+        "service-readiness-investigation-candidates": readiness_candidates,
+        "verified-unmeasurable-verification-obligations": (
+            verified_verification_candidates
+        ),
+    }
+    return {
+        "schema_version": (
+            "mncs.environment.session-activity-candidate-summary/1"
+        ),
+        "status": "observed",
+        "scope": "selected-session-bounded-candidate-occurrences",
+        "candidate_occurrence_count": sum(counts.values()),
+        "candidate_occurrence_counts_by_source": counts,
+        "unique_pressure_count_status": "not-established",
+        "cross_source_overlap_status": "not-assessed",
+        "environmental_defect_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "recurrence_status": "not-established",
+        "measurement_limits": [
+            "Counts are bounded source-category occurrences and may overlap; they are not a count of unique causes or defects.",
+            "The nested verification candidate summary retains exact Store evidence references and its own coverage limits.",
+            "The selected session event and verification windows do not establish cross-session recurrence or agent intervention burden.",
         ],
     }
 
@@ -10600,6 +10810,43 @@ def _compact_projection(
     if compact_resource_samples is not None:
         compact_activity["resource_samples"] = compact_resource_samples
 
+    candidate_summary = projection.get(
+        "session_activity_pressure_candidate_summary",
+    )
+    compact_candidate_summary = None
+    if (
+        isinstance(candidate_summary, dict)
+        and candidate_summary.get("schema_version")
+        == "mncs.environment.session-activity-candidate-summary/1"
+    ):
+        candidate_counts = candidate_summary.get(
+            "candidate_occurrence_counts_by_source",
+        )
+        candidate_counts = (
+            candidate_counts if isinstance(candidate_counts, dict) else {}
+        )
+        compact_candidate_summary = {
+            key: candidate_summary[key]
+            for key in (
+                "schema_version", "status", "scope",
+                "candidate_occurrence_count", "unique_pressure_count_status",
+                "cross_source_overlap_status", "environmental_defect_status",
+                "agent_intervention_burden_status", "recurrence_status",
+            )
+            if key in candidate_summary
+        }
+        compact_candidate_summary["candidate_occurrence_counts_by_source"] = {
+            key: count for key, count in candidate_counts.items()
+            if isinstance(key, str) and type(count) is int and count >= 0
+        }
+        limits = candidate_summary.get("measurement_limits")
+        if isinstance(limits, list):
+            compact_candidate_summary["measurement_limits"] = [
+                _short_text(limit, 320)
+                for limit in limits[:4]
+                if isinstance(limit, str)
+            ]
+
     result = {
         "schema_version": SCHEMA,
         "identity": projection["identity"],
@@ -10623,6 +10870,11 @@ def _compact_projection(
         "session_activity_pressure_candidate_count": projection.get(
             "session_activity_pressure_candidate_count", 0,
         ),
+        **({
+            "session_activity_pressure_candidate_summary": (
+                compact_candidate_summary
+            ),
+        } if compact_candidate_summary is not None else {}),
         "improvement_relation_count": projection["improvement_relation_count"],
         "pressure_hypotheses": compact_hypotheses,
         "improvement_relations": compact_improvements,
@@ -30440,6 +30692,9 @@ def project(
         },
         campaign_state_available=campaign_state is not None,
     )
+    session_activity_candidate_summary = (
+        _session_activity_pressure_candidate_summary(activity)
+    )
     projection: dict[str, Any] = {
         "schema_version": SCHEMA,
         "identity": "eci_" + digest_hex({
@@ -30681,16 +30936,16 @@ def project(
         **({"pressure_evidence_summary": pressure_evidence_summary} if (
             pressure_evidence_summary is not None
         ) else {}),
-        "session_activity_pressure_candidate_count": len(
-            activity.get("rpc_failure_candidates", [])
-        ) + len(activity.get("authority_denial_candidates", [])) + len(
-            activity.get("coordination_deferral_candidates", [])
-        ) + (
-            activity.get("service_readiness", {})
-            .get("summary", {})
-            .get("investigation_candidate_count", 0)
-            if isinstance(activity.get("service_readiness"), dict) else 0
+        "session_activity_pressure_candidate_count": (
+            session_activity_candidate_summary["candidate_occurrence_count"]
         ),
+        **({
+            "session_activity_pressure_candidate_summary": (
+                session_activity_candidate_summary
+            ),
+        } if session_activity_candidate_summary[
+            "candidate_occurrence_counts_by_source"
+        ]["verified-unmeasurable-verification-obligations"] > 0 else {}),
         "improvement_relation_count": len(improvement_relations),
         "pressure_hypotheses": hypotheses,
         "improvement_relations": improvement_relations,

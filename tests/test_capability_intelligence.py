@@ -8730,6 +8730,113 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "candidate_context_not_returned_count": 0,
         "candidate_context_absence_attribution_status": "not-applicable",
     }
+    verification_candidate_summary = readiness_relation[
+        "investigation_candidate_summary"
+    ]
+    assert verification_candidate_summary["candidate_occurrence_count"] == 1
+    assert verification_candidate_summary["candidate_completeness_status"] == (
+        "not-established"
+    )
+    assert verification_candidate_summary["unmeasurable_reason_counts"] == {
+        "suite-undeclared": 1,
+    }
+    assert verification_candidate_summary["repository_counts"] == {
+        "mncs-test": 1,
+    }
+    assert verification_candidate_summary["reason_repository_counts"] == {
+        "suite-undeclared": {"mncs-test": 1},
+    }
+    assert verification_candidate_summary["source_evidence_records"] == []
+    assert verification_candidate_summary[
+        "source_evidence_records_linked_count"
+    ] == 1
+    assert verification_candidate_summary["environmental_defect_status"] == (
+        "not-established"
+    )
+    assert verification_candidate_summary[
+        "agent_intervention_burden_status"
+    ] == "not-measured"
+
+    second_verification_reference = (
+        f"mncs-store:{session_id}:verification:" + "d" * 64
+    )
+    second_owner_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + "e" * 64
+    )
+    grouped_candidate_summary = (
+        capability_intelligence._verification_executor_candidate_summary([
+            executor_obligations[0],
+            {
+                **executor_obligations[0],
+                "repository": "mncs-commons",
+                "unmeasurable_reason": "executor-not-native",
+                "verification_evidence_reference": (
+                    second_verification_reference
+                ),
+                "owner_result_reference": second_owner_reference,
+            },
+        ])
+    )
+    assert grouped_candidate_summary["candidate_occurrence_count"] == 2
+    assert grouped_candidate_summary["unmeasurable_reason_counts"] == {
+        "executor-not-native": 1,
+        "suite-undeclared": 1,
+    }
+    assert grouped_candidate_summary["repository_counts"] == {
+        "mncs-commons": 1,
+        "mncs-test": 1,
+    }
+    assert grouped_candidate_summary["reason_repository_counts"] == {
+        "executor-not-native": {"mncs-commons": 1},
+        "suite-undeclared": {"mncs-test": 1},
+    }
+    assert grouped_candidate_summary["source_evidence_record_count"] == 2
+
+    activity_candidate_summary = (
+        capability_intelligence._session_activity_pressure_candidate_summary({
+            "rpc_failure_candidates": [{}],
+            "service_readiness": {
+                "summary": {"investigation_candidate_count": 2},
+            },
+            "service_accountability": accountability,
+        })
+    )
+    assert activity_candidate_summary["candidate_occurrence_count"] == 4
+    assert activity_candidate_summary[
+        "candidate_occurrence_counts_by_source"
+    ]["verified-unmeasurable-verification-obligations"] == 1
+    assert activity_candidate_summary["unique_pressure_count_status"] == (
+        "not-established"
+    )
+    projection["session_activity"]["service_accountability"] = accountability
+    projection["session_activity_pressure_candidate_summary"] = (
+        capability_intelligence._session_activity_pressure_candidate_summary(
+            projection["session_activity"],
+        )
+    )
+    projection["session_activity_pressure_candidate_count"] = (
+        projection["session_activity_pressure_candidate_summary"][
+            "candidate_occurrence_count"
+        ]
+    )
+    accountable_compact_projection = capability_intelligence._compact_projection(
+        projection, 100_000, capability_intelligence.MAX_RESULT_BYTES,
+    )
+    assert accountable_compact_projection[
+        "session_activity_pressure_candidate_count"
+    ] == 1
+    assert accountable_compact_projection[
+        "session_activity_pressure_candidate_summary"
+    ]["candidate_occurrence_counts_by_source"][
+        "verified-unmeasurable-verification-obligations"
+    ] == 1
+    assert accountable_compact_projection["session_activity"][
+        "service_accountability"
+    ]["summary"]["ambient_verification_executor_readiness_relation"][
+        "links"
+    ][0]["verification_evidence_reference"] == verification_reference
+
     readiness_link = readiness_relation["links"][0]
     assert readiness_link["repository"] == "mncs-test"
     assert readiness_link["obligation_identity"] == (

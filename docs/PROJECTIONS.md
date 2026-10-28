@@ -1502,6 +1502,26 @@ absent candidate was omitted; absence attribution remains unestablished.
 Ambient fulfillment and intervention burden remain not established or not
 measured.
 
+The relation also exposes a bounded `investigation_candidate_summary` with
+counts by unmeasurable reason and repository, their reason/repository cross
+tabulation, and exact verification/owner-result Store reference pairs. These
+are integrity-verified candidate occurrences from the selected session's
+recorded ambient verification results. Candidate completeness beyond the
+bounded extraction is not established, and reaching the candidate limit is
+reported as possible truncation. The summary does not establish an
+environmental defect, agent intervention burden, or cross-session recurrence.
+
+At the projection root, `session_activity_pressure_candidate_count` now
+includes these verified unmeasurable verification-obligation candidates
+alongside the existing RPC, authority, coordination, and service-readiness
+candidate sources. When such verification candidates are present, the
+projection also returns `session_activity_pressure_candidate_summary` with the
+source counts. This is a count of bounded source-category occurrences;
+categories may overlap, so it is not a count of unique pressures or causes.
+The summary explicitly leaves uniqueness, defect attribution, and
+intervention burden unestablished. The nested verification summary carries
+the source pointers needed to inspect the underlying records.
+
 When a Family ambient pass persists `family_last_summary`, ECI exposes it as
 `session_activity.family_ambient_observation`, with the selected session,
 Environment, snapshot sequence, an observation-epoch key when recorded, and a
