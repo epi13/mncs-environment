@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_continuity_pressure_definition_live_readback_20261028",
+  "captured_at": "2026-10-28T16:14:48Z",
+  "measurement_basis": "live-eci-readback-after-three-append-only-pressure-definition-corrections",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_9d54f32d6ceec6ee",
+    "campaign_evidence_count_before_recording": 169,
+    "implementation_commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:e1be2ae7a47c"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-result-pressure-definition-correction-readback",
+    "source_interface": "MNCS Environment campaign-state capability-intelligence projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_9d54f32d6ceec6ee",
+      "campaign_evidence_count": 169,
+      "evidence_page_offset": 162,
+      "evidence_page_limit": 7,
+      "eci_identity": "eci_5757e6d8082a620e",
+      "eci_content_digest": "d6edd5af5fbbbb1397c99117053a2c21",
+      "pressure_hypothesis_identity": "ph_environment_ambient_owner_result_continuity_20261028"
+    },
+    "outcome": {
+      "definition_status": "consistent",
+      "definition_conflict_fields": [],
+      "record_correction_count": 3,
+      "record_corrections_applied_count": 3,
+      "record_corrections_unverified_count": 0,
+      "occurrence_observation_count": 1,
+      "distinct_recorded_session_count": 1,
+      "recurrence_status": "not-established",
+      "correction_statuses": [
+        "corrected-by-verified-record",
+        "corrected-by-verified-record",
+        "corrected-by-verified-record"
+      ],
+      "interpretation": "The live ECI projection applies all three append-only corrections using the integrity-verified occurrence recommendation, so the pressure definition is consistent. One occurrence in one recorded session remains insufficient evidence for recurrence."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_continuity_20261028",
+    "title": "Owner-result evidence is lost when the scheduler trace is replaced",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment incremental owner-pass results, retained execution history, and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Carry the bounded scheduler result classification and its explicit verification limit into retained execution history, then expose it through the existing exact owner/execution correlation."
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_ambient_owner_result_continuity_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "18674be7801c9d57e722d304c6a635cb20c758c9",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-pressure-20261028.json",
+      "sha256": "f07b9b455ca190218fcf72c6c725c0f06439f8b31ed2ffeb524dde9cbd7882d9"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_ambient_owner_result_continuity_verification_recommendation_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "69ac807834186712e03fba5e3c40a710b1ad64c6",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-verification-recommendation-correction-20261028.json",
+      "sha256": "c49472929ef30f0c70e0639da60499a4ff04868f271427c8e62ffda445c7ee4a"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_ambient_owner_result_continuity_readback_recommendation_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "69ac807834186712e03fba5e3c40a710b1ad64c6",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-readback-recommendation-correction-20261028.json",
+      "sha256": "5159d776410c4a86b51b4b9ecfc14559fb9149361bdf0c7096529b997e5091f0"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_ambient_owner_result_continuity_improvement_recommendation_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "69ac807834186712e03fba5e3c40a710b1ad64c6",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-improvement-recommendation-correction-20261028.json",
+      "sha256": "0d1c8e3e30806157a675f850bfb4b5e69ed6c15a3645c8a51616f8edad5b91da"
+    }
+  ],
+  "measurement_limits": [
+    "The correction status confirms ECI applied the exact replacement text from a verified occurrence; it does not independently verify the original operational claims in the observation records.",
+    "The pressure still has only one occurrence and one distinct recorded session, so recurrence remains not-established.",
+    "This readback does not establish service correctness, agent need fulfillment, or reduced agent intervention."
+  ]
+}
