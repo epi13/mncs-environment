@@ -1,0 +1,102 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_ambient_owner_decision_summary_improvement_20261028",
+  "captured_at": "2026-10-28T08:12:09Z",
+  "measurement_basis": "verified-ambient-service-accountability-improvement-link",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "c414c2f0605f8cf3fa03901a090fb68e42c1b6cb"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability intelligence response compactor",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_owner_decision_compaction",
+      "verification_observation_identity": "ev_environment_eci_ambient_owner_decision_summary_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_ambient_owner_decision_summary_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "effectiveness_assessment": "focused-regression-and-live-projection-readback-verified; agent-intervention reduction not assessed",
+      "interpretation_limit": "The change makes observed owner-pass identities and their scheduled or skipped decision counts discoverable under ECI response pressure; it does not establish agent need, service fulfillment, receipt, or burden reduction."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_decision_compaction",
+    "title": "Compact ECI hides identities of observed ambient services",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability intelligence service accountability",
+    "owner": "mncs-environment",
+    "basis": "The compact ECI response reported seven scheduler decisions but returned one owner-pass observation and omitted six detailed rows, so the selected response did not identify the other observed Environment services.",
+    "actionable_recommendation": "Preserve a bounded per-owner summary of recorded scheduler decisions through response compaction, with source coverage explicit and agent opportunity, fulfillment, receipt, and intervention burden left unmeasured unless evidence establishes them.",
+    "recurrence": "one selected campaign-window response; recurrence across response shapes or sessions is not established",
+    "not_measured": [
+      "agent time or tool calls caused by omitted owner-pass identities",
+      "whether any omitted owner was relevant to an agent need",
+      "frequency of owner-summary omission across other evidence windows",
+      "whether omission changed a development decision"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_ambient_owner_decision_summary_verified_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_owner_decision_compaction",
+    "implementation_reference": {
+      "identity": "mncs_environment_owner_decision_summary_c414c2f",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "c414c2f0605f8cf3fa03901a090fb68e42c1b6cb",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1fffed1c420e2db64749294c7114ebf0ff2508e01f6998972570ffce07071b57"
+    },
+    "verification_observation_identity": "ev_environment_eci_ambient_owner_decision_summary_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_ambient_owner_decision_summary_readback_20261028",
+    "basis": "Focused regressions pass, and the subsequent live ECI readback exposes all seven recorded owner-pass identities with complete source coverage while retaining a detailed result pointer.",
+    "not_measured": [
+      "agent receipt or intervention burden",
+      "recurrence across sessions or response shapes",
+      "whether discoverability changed an agent decision or development outcome",
+      "longer-term service fulfillment or effectiveness"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_eci_ambient_owner_decision_summary_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "3518600ea4d430ef0ea3a922584766db8dc23ce9",
+      "path": "evidence/environmental-capability/eci-ambient-owner-decision-summary-pressure-20261028.json",
+      "sha256": "9c918d705d98f3bf3cd591f6d9cf534b89a3b248fc6a9302415d4b827e24bfdf"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_ambient_owner_decision_summary_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "3518600ea4d430ef0ea3a922584766db8dc23ce9",
+      "path": "evidence/environmental-capability/eci-ambient-owner-decision-summary-verification-20261028.json",
+      "sha256": "001737151b2ca012d876519a9d45a22ddc5874b63bb776d1ae4baa51103d8b26"
+    },
+    {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_owner_decision_summary_c414c2f",
+      "repository": "mncs-environment",
+      "commit": "c414c2f0605f8cf3fa03901a090fb68e42c1b6cb",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "1fffed1c420e2db64749294c7114ebf0ff2508e01f6998972570ffce07071b57"
+    }
+  ],
+  "measurement_limits": [
+    "The linked result establishes the summary's source trace and focused verification, not service correctness, agent receipt, or fulfilled need.",
+    "The overall ECI projection remains partial and response-truncated; this slice summarizes owner decisions rather than restoring every detail row.",
+    "Agent burden, cross-session recurrence, and causal effects on development outcomes remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
