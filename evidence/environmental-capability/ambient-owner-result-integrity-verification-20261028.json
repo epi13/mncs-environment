@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_integrity_verification_20261028",
+  "captured_at": "2026-10-28T02:17:17Z",
+  "measurement_basis": "focused-regression-full-environment-suite-and-vertical-proof",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "e53eade5e07f24e3ff60803e25fd305f831c8add"
+  },
+  "observation": {
+    "kind": "environmental-implementation-verification",
+    "source_interface": "MNCS Environment repository verification",
+    "request": {
+      "focused_module_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "repository_suite_command": "python3 -m pytest tests/ -q",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py",
+      "syntax_and_diff_checks": [
+        "python3 -m compileall -q mncs_env tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_module_after_final_regression_addition": {
+        "passed": 173,
+        "failed": 0,
+        "elapsed_seconds": 6.27
+      },
+      "repository_suite": {
+        "passed": 1150,
+        "skipped": 82,
+        "failed": 0,
+        "elapsed_seconds": 771.12
+      },
+      "vertical_proof": {
+        "status": "pass",
+        "verified_steps": 8,
+        "cross_process_resume": "passed",
+        "protected_write_boundary": "denied-as-expected"
+      },
+      "syntax_and_diff_checks": "passed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_owner_result_integrity_e53eade",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "e53eade5e07f24e3ff60803e25fd305f831c8add",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4ba84d210a8e32295900b9973d8def3c40eef482ccf2d2120ef16eb1e885ea1e"
+    },
+    {
+      "identity": "mncs_environment_ambient_owner_result_integrity_tests_e53eade",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "e53eade5e07f24e3ff60803e25fd305f831c8add",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "1502119e85870978fa07f342d15f1fa5a13fbaccd06b90301ff875d8163e82fd"
+    },
+    {
+      "identity": "mncs_environment_ambient_owner_result_integrity_docs_e53eade",
+      "kind": "projection-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "e53eade5e07f24e3ff60803e25fd305f831c8add",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "735f1b8959d87d8958c08ac200360d4c803b8684ddf90acfbacef1c35bb49a2f"
+    },
+    {
+      "identity": "mncs_environment_vertical_proof_e53eade",
+      "kind": "integration-proof-script",
+      "repository": "mncs-environment",
+      "commit": "35b03b7a31cb699e2c03ccb63eb5a53de6d99117",
+      "path": "scripts/vertical_proof.py",
+      "sha256": "b6036ffe94d02694043f8c2bd21e7c50b16513752245d42df7e1607928b9fb7"
+    }
+  ],
+  "measurement_limits": [
+    "The repository suite ran before the final budget-specific regression was added; the final focused capability-intelligence module passed with that regression included.",
+    "The 82 skipped tests remain unverified under their skipped conditions.",
+    "The vertical proof establishes the canonical lifecycle path and protected-write behavior, not production-scale Store latency or agent burden reduction."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

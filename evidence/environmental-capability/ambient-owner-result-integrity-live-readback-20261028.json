@@ -1,0 +1,115 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_integrity_live_readback_20261028",
+  "captured_at": "2026-10-28T02:17:17Z",
+  "measurement_basis": "paired-main-and-feature-branch-eci-readback-of-one-authentic-session",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "e53eade5e07f24e3ff60803e25fd305f831c8add"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-limit 1",
+    "request": {
+      "baseline_projection_identity": "eci_edcc0f40b79d76b7",
+      "feature_projection_identity": "eci_99048b376e5592c2",
+      "selected_session_owner_result_count": 7
+    },
+    "outcome": {
+      "baseline_owner_result_content_integrity_summary": null,
+      "feature_owner_result_content_integrity": {
+        "scope": "selected-session-owner-result-store-content",
+        "coverage_status": "complete",
+        "store_result_record_count": 7,
+        "content_integrity_verified_count": 7,
+        "content_integrity_unverified_count": 0,
+        "content_integrity_not_checked_count": 0,
+        "result_records_omitted": 0,
+        "limit": 8,
+        "read_time_budget_seconds": 1.0,
+        "integrity_elapsed_seconds": 0.051976,
+        "status_counts": {
+          "content-integrity-verified": 7
+        }
+      },
+      "service_accountability_summary_exposes_integrity_coverage": true,
+      "ambient_fulfillment_status": "not-established",
+      "agent_intervention_burden_status": "not-measured",
+      "service_verification_status": "not-established",
+      "interpretation_limit": "The projection establishes selected-session owner-result record digest and result-identity integrity. It does not establish service correctness, need fulfillment, agent receipt, or burden reduction."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:doctor",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:doctor:f2947b6a3ad8ea777bcebd4a4141a755d8c1760a19944b00a85a9af9df42f42b",
+      "result_identity": "b2aae1dc516f412b953deadf6b9bc157bd58672c2dccdabf1767261b13dc788e"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:semantics",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:semantics:4ef6dc651292c8e8b5df7100a01d5d7798d13fc6e33ca5156be9cb735aa29f98",
+      "result_identity": "73375e3133b9ef951b480101bc2aae2e581ef062d3f896a7592fb69a4855c41e"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:actions",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:actions:9cf576fe853b130a49aaf9e55c4319001d6efa542a2de43074ea811ca976373f",
+      "result_identity": "5c4bc54a9d7425df1c0a956d9e2001798eb25a0d68ef2aa8327984a6c3c15eb1"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:verification",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:diagnostics",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:diagnostics:4f487b3cefdb35abaefe539c77041b98fa32ef69e34eae58de70aae53fadf7bb",
+      "result_identity": "7c0c64bd4b2be68724c35564b24e7cb9b1b9d11b2396203a390528192b12f7b6"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:family",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:family:4e4e16012b06977739f09b2be5ada39df71eb0ef73b8632d300ab37b9f7ed9b8",
+      "result_identity": "9164cdcc3596da4ecec2c2d210a9f824dcaffd912a4f1ff4c96a82149174bd25"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:projections",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:projections:e2c1a81ef2de3def467d1c7f255125aa1a9c74425ae1c3f819da1dd700a10328",
+      "result_identity": "e0d7e9618cfc154470cab449ec3ecf8b51266a0520dee454d17028649fcb2baf"
+    },
+    {
+      "identity": "mncs_environment_ambient_owner_result_integrity_e53eade",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "e53eade5e07f24e3ff60803e25fd305f831c8add",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4ba84d210a8e32295900b9973d8def3c40eef482ccf2d2120ef16eb1e885ea1e"
+    }
+  ],
+  "measurement_limits": [
+    "The readback is tied to one existing session and does not establish recurrence across agents or sessions.",
+    "A complete content-integrity check does not establish owner-pass correctness, ambient service fulfillment, agent receipt, or reduced intervention burden.",
+    "The 1-second limit is a pre-read deadline; an individual Store read already in progress cannot be cancelled by this projection."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

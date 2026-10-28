@@ -1,0 +1,98 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_integrity_improvement_20261028",
+  "captured_at": "2026-10-28T02:17:17Z",
+  "measurement_basis": "implementation-commit-focused-and-repository-verification-paired-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "e53eade5e07f24e3ff60803e25fd305f831c8add"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_owner_result_content_integrity",
+      "implementation_commit": "e53eade5e07f24e3ff60803e25fd305f831c8add",
+      "verification_observation_identity": "ev_environment_ambient_owner_result_integrity_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_owner_result_integrity_live_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "ECI now verifies up to eight exact selected-session ambient owner-result Store records against their record digest and linked result identity, within a one-second pre-read budget. It exposes per-result integrity status and bounded aggregate coverage through the existing ambient service-execution trace and service-accountability summary.",
+      "verified_change": "The final focused capability-intelligence module passed 173 tests, the repository suite passed 1,150 tests with 82 skipped, the eight-step vertical proof passed, and the paired live ECI readback verified all seven recorded owner results under the bounded check.",
+      "effectiveness_assessment": "owner-result-content-integrity-observability-verified; service-fulfillment-and-agent-burden-effect-not-established",
+      "interpretation_limit": "The improvement adds traceable integrity evidence. It does not establish service correctness, agent receipt, reduced agent intervention, or generalize beyond this selected-session readback."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_content_integrity",
+    "title": "Ambient owner-pass result pointers are not checked by the service-accountability projection",
+    "category": "environment-service-accountability-and-provenance",
+    "subsystem": "MNCS Environment ECI ambient service execution",
+    "owner": "mncs-environment",
+    "basis": "The baseline projection made exact owner-result pointers visible without projecting a content-integrity check. The implementation adds only bounded source integrity evidence and keeps correctness, fulfillment, receipt, and burden separate.",
+    "actionable_recommendation": "Observe future sessions to determine whether this relationship remains discoverable and whether integrity checks support useful investigation without exceeding their declared resource budget.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "agent receipt or use of the new field",
+      "service correctness or outcome quality",
+      "agent intervention burden or productivity",
+      "long-term Store read latency"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_owner_result_integrity_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_owner_result_content_integrity",
+    "implementation_reference": {
+      "identity": "mncs_environment_ambient_owner_result_integrity_e53eade",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "e53eade5e07f24e3ff60803e25fd305f831c8add",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "4ba84d210a8e32295900b9973d8def3c40eef482ccf2d2120ef16eb1e885ea1e"
+    },
+    "verification_observation_identity": "ev_environment_ambient_owner_result_integrity_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_owner_result_integrity_live_readback_20261028",
+    "basis": "The regression suite covers digest and result-identity mismatch, foreign-session non-read, the eight-check cap, the pre-read time budget, compact projection preservation, and separation from correctness and fulfillment. A paired readback of the same active session contrasts the main projection with the implementation projection.",
+    "not_measured": [
+      "agent intervention burden or productivity",
+      "service fulfillment or correctness",
+      "recurrence across agents and sessions",
+      "whether the projection changes subsequent agent behavior"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-verification-20261028.json"
+    },
+    {
+      "identity": "ev_environment_ambient_owner_result_integrity_live_readback_20261028",
+      "kind": "live-capability-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-integrity-live-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The full repository suite ran before the final budget-specific regression was added; the final focused suite includes that regression.",
+    "The 82 skipped tests remain unverified under their skipped conditions.",
+    "The live evidence covers one session and does not establish an improvement in service fulfillment or agent burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

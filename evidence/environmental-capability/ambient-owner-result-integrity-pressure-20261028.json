@@ -1,0 +1,123 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_integrity_pressure_20261028",
+  "captured_at": "2026-10-28T02:17:17Z",
+  "measurement_basis": "paired-read-only-eci-projections-on-main-and-campaign-branch",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_base_commit": "35b03b7a31cb699e2c03ccb63eb5a53de6d99117"
+  },
+  "observation": {
+    "kind": "ambient-owner-result-integrity-pressure",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "baseline_projection_identity": "eci_edcc0f40b79d76b7",
+      "baseline_repository_branch": "main",
+      "selected_session_owner_result_count": 7,
+      "source_reference_status": "store-record"
+    },
+    "outcome": {
+      "observed_limitation": "The main projection exposed seven exact owner-pass Store references but did not project checks of their Store record digests or linked result identities.",
+      "baseline_owner_result_integrity_summary_status": "not-present",
+      "baseline_owner_result_content_integrity_status": "not-projected",
+      "ambient_fulfillment_status": "not-established",
+      "agent_intervention_burden_status": "not-measured",
+      "causal_status": "confirmed-for-projection-coverage; agent impact not measured"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_content_integrity",
+    "title": "Ambient owner-pass result pointers are not checked by the service-accountability projection",
+    "category": "environment-service-accountability-and-provenance",
+    "subsystem": "MNCS Environment ECI ambient service execution",
+    "owner": "mncs-environment",
+    "basis": "The same selected session exposes seven recorded owner-pass results by exact session Store pointer. The baseline ECI projection has no content-integrity status for those results, leaving their source relationship unaudited in this view.",
+    "actionable_recommendation": "Check a bounded set of selected-session owner-result Store references against their record digest and linked result identity, and expose coverage separately from service correctness and fulfillment.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "agent receipt or use of owner-pass evidence",
+      "agent intervention burden or productivity",
+      "whether the missing integrity view caused prior agent work",
+      "recurrence across sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_owner_result_integrity_base_35b03b7",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "35b03b7a31cb699e2c03ccb63eb5a53de6d99117",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "27d71175a1146c087fe6cb897f617ef24dd2fd0cbcf49d79be3b127cf979a0bc"
+    },
+    {
+      "kind": "main-baseline-eci-projection",
+      "projection_identity": "eci_edcc0f40b79d76b7",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:doctor",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:doctor:f2947b6a3ad8ea777bcebd4a4141a755d8c1760a19944b00a85a9af9df42f42b",
+      "result_identity": "b2aae1dc516f412b953deadf6b9bc157bd58672c2dccdabf1767261b13dc788e"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:semantics",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:semantics:4ef6dc651292c8e8b5df7100a01d5d7798d13fc6e33ca5156be9cb735aa29f98",
+      "result_identity": "73375e3133b9ef951b480101bc2aae2e581ef062d3f896a7592fb69a4855c41e"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:actions",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:actions:9cf576fe853b130a49aaf9e55c4319001d6efa542a2de43074ea811ca976373f",
+      "result_identity": "5c4bc54a9d7425df1c0a956d9e2001798eb25a0d68ef2aa8327984a6c3c15eb1"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:verification",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:diagnostics",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:diagnostics:4f487b3cefdb35abaefe539c77041b98fa32ef69e34eae58de70aae53fadf7bb",
+      "result_identity": "7c0c64bd4b2be68724c35564b24e7cb9b1b9d11b2396203a390528192b12f7b6"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:family",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:family:4e4e16012b06977739f09b2be5ada39df71eb0ef73b8632d300ab37b9f7ed9b8",
+      "result_identity": "9164cdcc3596da4ecec2c2d210a9f824dcaffd912a4f1ff4c96a82149174bd25"
+    },
+    {
+      "kind": "current-owner-result",
+      "owner": "incremental-coherence:projections",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:projections:e2c1a81ef2de3def467d1c7f255125aa1a9c74425ae1c3f819da1dd700a10328",
+      "result_identity": "e0d7e9618cfc154470cab449ec3ecf8b51266a0520dee454d17028649fcb2baf"
+    }
+  ],
+  "measurement_limits": [
+    "The baseline and changed projection are readbacks of one selected session and do not establish recurrence across agents or sessions.",
+    "No agent receipt, manual fallback, intervention burden, or change in service correctness was measured.",
+    "The missing integrity projection does not establish that any Store record was corrupt."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
