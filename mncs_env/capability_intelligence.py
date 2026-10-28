@@ -3087,6 +3087,26 @@ def _compact_ambient_verification_evidence(
             detail_complete = (
                 issue_omissions == 0 and len(examples) == count
             )
+            obligation_repository_examples = []
+            for issue in examples:
+                repository = issue.get("repository")
+                obligation = issue.get("obligation")
+                if (not isinstance(repository, str)
+                        or not isinstance(obligation, str)):
+                    continue
+                example: dict[str, Any] = {
+                    "repository": repository,
+                    "obligation": obligation,
+                }
+                for source_key in ("outcome", "reason"):
+                    value = issue.get(source_key)
+                    output_key = f"verification_{source_key}"
+                    if isinstance(value, str):
+                        example[output_key] = value
+                        example[f"{output_key}_status"] = "recorded"
+                    else:
+                        example[f"{output_key}_status"] = "not-recorded"
+                obligation_repository_examples.append(example)
             candidates.append({
                 "kind": "unmeasurable-verification-obligations",
                 "interpretation": "investigation-candidate",
@@ -3101,15 +3121,9 @@ def _compact_ambient_verification_evidence(
                     issue["obligation"] for issue in examples
                     if isinstance(issue.get("obligation"), str)
                 ],
-                "obligation_repository_examples": [
-                    {
-                        "repository": issue["repository"],
-                        "obligation": issue["obligation"],
-                    }
-                    for issue in examples
-                    if isinstance(issue.get("repository"), str)
-                    and isinstance(issue.get("obligation"), str)
-                ],
+                "obligation_repository_examples": (
+                    obligation_repository_examples
+                ),
                 "obligation_example_status": (
                     "complete" if detail_complete
                     else "partial" if examples else "not-present"
@@ -3243,6 +3257,21 @@ def _verification_executor_obligation_candidates(
                 )
                 if (len(capability) > 256 or capability in seen):
                     continue
+                verification_details: dict[str, Any] = {}
+                for field in ("outcome", "reason"):
+                    detail_key = f"verification_{field}"
+                    status_key = f"{detail_key}_status"
+                    detail = example.get(detail_key)
+                    detail_status = example.get(status_key)
+                    if (detail_status == "recorded"
+                            and isinstance(detail, str)
+                            and re.fullmatch(
+                                r"[a-z][a-z0-9_-]{0,79}", detail,
+                            ) is not None):
+                        verification_details[detail_key] = detail
+                        verification_details[status_key] = "recorded"
+                    else:
+                        verification_details[status_key] = "not-recorded"
                 seen.add(capability)
                 candidates.append({
                     "repository": repository,
@@ -3250,6 +3279,7 @@ def _verification_executor_obligation_candidates(
                     "unmeasurable_reason": reason,
                     "obligation_example_status": example_status,
                     "capability_identity": capability,
+                    **verification_details,
                     "verification_evidence_reference": evidence_reference,
                     "owner_result_reference": owner_reference,
                 })
@@ -6329,6 +6359,19 @@ def _compact_projection(
                 "agent_receipt_status": "not-established",
                 "agent_intervention_burden_status": "not-measured",
             }
+            for field in ("outcome", "reason"):
+                detail_key = f"verification_{field}"
+                status_key = f"{detail_key}_status"
+                detail = relation.get(detail_key)
+                if (relation.get(status_key) == "recorded"
+                        and isinstance(detail, str)
+                        and re.fullmatch(
+                            r"[a-z][a-z0-9_-]{0,79}", detail,
+                        ) is not None):
+                    compact_relation[detail_key] = detail
+                    compact_relation[status_key] = "recorded"
+                else:
+                    compact_relation[status_key] = "not-recorded"
             for reference_key in (
                 "verification_evidence_reference", "owner_result_reference",
             ):
@@ -15162,6 +15205,20 @@ def _capability_delivery_view(
         owner_reference = item.get("owner_result_reference")
         reason = item.get("unmeasurable_reason")
         example_status = item.get("obligation_example_status", "not-recorded")
+        verification_details: dict[str, Any] = {}
+        for field in ("outcome", "reason"):
+            detail_key = f"verification_{field}"
+            status_key = f"{detail_key}_status"
+            detail = item.get(detail_key)
+            detail_status = item.get(status_key)
+            if (detail_status == "recorded"
+                    and isinstance(detail, str)
+                    and re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", detail)
+                    is not None):
+                verification_details[detail_key] = detail
+                verification_details[status_key] = "recorded"
+            else:
+                verification_details[status_key] = "not-recorded"
         expected_capability = (
             f"{repository}:verification-executor/{obligation}"
             if isinstance(repository, str) and isinstance(obligation, str)
@@ -15200,6 +15257,7 @@ def _capability_delivery_view(
             "unmeasurable_reason": reason,
             "obligation_example_status": example_status,
             "capability_identity": capability,
+            **verification_details,
             "verification_evidence_reference": evidence_reference,
             "owner_result_reference": owner_reference,
         })
@@ -15347,6 +15405,14 @@ def _capability_delivery_view(
             "obligation_example_status": candidate[
                 "obligation_example_status"
             ],
+            **{
+                key: candidate[key]
+                for key in (
+                    "verification_outcome", "verification_outcome_status",
+                    "verification_reason", "verification_reason_status",
+                )
+                if key in candidate
+            },
             "capability_identity": capability,
             "binding_relation_status": relation_status,
             "matching_binding_count": len(provider_matches),

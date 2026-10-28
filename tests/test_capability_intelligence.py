@@ -5703,6 +5703,10 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
                 "repository": "mncs-test",
                 "obligation_identity": "mncs-test.native-provider.execution",
                 "unmeasurable_reason": "suite-undeclared",
+                "verification_outcome": "excluded",
+                "verification_outcome_status": "recorded",
+                "verification_reason": "executor_not_runnable",
+                "verification_reason_status": "recorded",
                 "capability_identity": verification_capability,
                 "verification_evidence_reference": (
                     "mncs-store:ses_probe:verification:" + "a" * 64
@@ -5736,11 +5740,21 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     assert obligation_relation["binding"]["availability_status"] == "available"
     assert obligation_relation["binding"]["availability_verification"] == "substrate"
     assert obligation_relation["binding"]["invocation_count"] == 0
+    assert obligation_relation["verification_outcome"] == "excluded"
+    assert obligation_relation["verification_outcome_status"] == "recorded"
+    assert obligation_relation["verification_reason"] == "executor_not_runnable"
+    assert obligation_relation["verification_reason_status"] == "recorded"
     assert obligation_relation["ambient_fulfillment_status"] == "not-established"
     assert obligation_relation["agent_intervention_burden_status"] == "not-measured"
     assert verification_context["obligations"][1][
         "binding_relation_status"
     ] == "not-present-in-current-binding-snapshot"
+    assert verification_context["obligations"][1][
+        "verification_outcome_status"
+    ] == "not-recorded"
+    assert verification_context["obligations"][1][
+        "verification_reason_status"
+    ] == "not-recorded"
 
     incomplete_delivery = capability_intelligence._capability_delivery_view(
         {"bindings": [{
@@ -5792,6 +5806,9 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     ][0]["binding_relation_status"] == (
         "not-present-in-current-binding-snapshot"
     )
+    assert absent_delivery["verification_executor_context"][
+        "obligations"
+    ][0]["verification_outcome_status"] == "not-recorded"
 
     readiness = {
         "status": "observed",
@@ -7104,6 +7121,10 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
             "mncs-test:verification-executor/"
             "mncs-test.native-provider.execution"
         ),
+        "verification_outcome": "excluded",
+        "verification_outcome_status": "recorded",
+        "verification_reason": "executor_not_runnable",
+        "verification_reason_status": "recorded",
         "verification_evidence_reference": verification_reference,
         "owner_result_reference": owner_reference,
     }]
@@ -7141,6 +7162,10 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         verification_reference
     )
     assert compact_obligation["owner_result_reference"] == owner_reference
+    assert compact_obligation["verification_outcome"] == "excluded"
+    assert compact_obligation["verification_reason"] == "executor_not_runnable"
+    assert compact_obligation["verification_outcome_status"] == "recorded"
+    assert compact_obligation["verification_reason_status"] == "recorded"
     assert compact_obligation["binding"]["binding_id"] == (
         "cap_native_provider_execution"
     )
@@ -7163,6 +7188,10 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "obligation_repository_examples": [{
             "repository": "mncs-test",
             "obligation": "mncs-test.native-provider.execution",
+            "verification_outcome": "excluded",
+            "verification_outcome_status": "recorded",
+            "verification_reason": "executor_not_runnable",
+            "verification_reason_status": "recorded",
         }],
         "obligation_example_status": "complete",
         "source_integrity_status": "verified",

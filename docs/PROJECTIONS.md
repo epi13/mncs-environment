@@ -1192,7 +1192,12 @@ are ordered before unmatched examples; if the response budget omits rows, the
 returned and omitted counts make that loss explicit. A missing binding is
 distinguished from an incomplete inventory scan. This is an identity-based
 integration context only: an available executor does not establish readiness,
-intended use, an eligible opportunity, or fulfillment.
+intended use, an eligible opportunity, or fulfillment. When the integrity-
+verified source records per-obligation outcome and reason codes, the relation
+preserves them with separate `recorded` or `not-recorded` status for each
+field. These are the verifier's recorded classifications; they do not by
+themselves establish an environmental defect, explain its cause, or show that
+the bound provider was selected or could have run.
 
 `session_activity.service_accountability` connects each declared service's
 probe capability to the current session binding inventory and its recorded
