@@ -6312,6 +6312,94 @@ class SessionTests(unittest.TestCase):
             finally:
                 session.close()
 
+    def test_context_exposes_bounded_capability_availability_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            try:
+                unavailable = [{
+                    "binding_id": f"cap_unavailable_{index}",
+                    "capability": f"fixture.provider:operation-{index}",
+                    "provider": "fixture-provider",
+                    "contract_revision": "r1",
+                    "availability": {
+                        "status": "unavailable",
+                        "code": "provider-invocation-unresolvable",
+                        "observed_at": "2026-10-28T08:34:01+00:00",
+                        "verification": "substrate",
+                        "reason": (
+                            "private /workspace/path must not appear in context"
+                        ),
+                        **({
+                            "resolution_issue": {
+                                "code": "repository-checkout-not-selected",
+                                "dependency": {
+                                    "repository": "mncs-compiler",
+                                    "path": "/private/workspace/path",
+                                },
+                                "environment_name": "MNCS_COMPILER_CHECKOUT",
+                            },
+                        } if index == 0 else {}),
+                    },
+                } for index in range(9)]
+                unknown_codes = [
+                    *(f"unknown-code-{index}" for index in range(9)),
+                    "unknown-code-0",
+                    None,
+                ]
+                unknown = [{
+                    "binding_id": f"cap_unknown_{index}",
+                    "capability": f"fixture.provider:unknown-{index}",
+                    "provider": "fixture-provider",
+                    "availability": {
+                        "status": "unknown",
+                        **({"code": code} if code is not None else {}),
+                    },
+                } for index, code in enumerate(unknown_codes)]
+                session.snapshot["bindings"] = [*unavailable, *unknown]
+
+                capabilities = session.context()["capabilities"]
+                attention = capabilities["availability_attention"]
+
+                self.assertEqual(capabilities["unavailable_count"], 9)
+                self.assertEqual(capabilities["unknown_count"], 11)
+                self.assertEqual(attention["scope"], "selected-session-binding-snapshot")
+                self.assertEqual(len(attention["unavailable_bindings"]), 8)
+                self.assertEqual(
+                    attention["unavailable_bindings_omitted_count"], 1,
+                )
+                first_unavailable = attention["unavailable_bindings"][0]
+                self.assertEqual(first_unavailable["binding_id"], "cap_unavailable_0")
+                self.assertEqual(
+                    first_unavailable["resolution_issue"],
+                    {
+                        "code": "repository-checkout-not-selected",
+                        "dependency_repository": "mncs-compiler",
+                        "environment_name": "MNCS_COMPILER_CHECKOUT",
+                    },
+                )
+                self.assertEqual(
+                    attention["unknown_reason_code_counts"],
+                    [
+                        {"code": "unknown-code-0", "count": 2},
+                        *({"code": f"unknown-code-{index}", "count": 1}
+                          for index in range(1, 8)),
+                    ],
+                )
+                self.assertEqual(
+                    attention["unknown_reason_code_categories_omitted_count"],
+                    1,
+                )
+                self.assertEqual(
+                    attention["unknown_without_reason_code_count"], 1,
+                )
+                self.assertNotIn(
+                    "/private/workspace/path",
+                    json.dumps(attention, sort_keys=True),
+                )
+                self.assertNotIn("reason", first_unavailable)
+            finally:
+                session.close()
+
     def test_context_surfaces_bounded_unknown_capability_opportunities(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))

@@ -657,6 +657,19 @@ independently of durable session lifecycle:
 | `degraded` | Required checks pass, but optional capabilities/services are unavailable, or no callable capabilities were found. |
 | `blocked` | A required capability/service or complete workspace observation is unavailable. |
 
+The first-use `capabilities.availability_attention` view makes the selected
+binding snapshot's operational gaps inspectable without another query. It lists
+at most eight explicitly unavailable bindings with their capability/provider
+identities, stable reason code, observation time, verification basis, and
+bounded dependency resolution facts such as the missing repository and
+required environment variable. Free-text reasons and filesystem paths are
+omitted. `unavailable_bindings_omitted_count` reports bindings beyond that
+limit. Unknown bindings remain distinct: the context aggregates their bounded
+reason-code counts without listing each binding, and reports unknown bindings
+that have no reason code. Use the `capabilities` or `health` action for the
+full binding view. These values come from the selected session snapshot;
+`readiness.observation` indicates whether the snapshot was revalidated.
+
 Substrate availability is explicitly labeled; it does not prove a compiler's
 semantic correctness or that a service is resident. Unaddressed provider
 contracts remain discoverable with stable diagnostic codes. Fingerprints

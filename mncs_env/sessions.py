@@ -93,6 +93,8 @@ _CONTEXT_RESPONSE_UNAVAILABLE_REASONS = frozenset({
 _CONTEXT_RESPONSE_PARTIAL_REASONS = frozenset({
     "capability-summary-unavailable", "capability-summary-invalid",
 })
+MAX_CONTEXT_UNAVAILABLE_BINDINGS = 8
+MAX_CONTEXT_UNKNOWN_REASON_CODES = 8
 
 
 def is_valid_context_response_summary(value: Any) -> bool:
@@ -10373,10 +10375,21 @@ class Session:
         )
         available: list[dict[str, Any]] = []
         unavailable = 0
+        unavailable_detail_count = 0
+        unavailable_details: list[dict[str, Any]] = []
         unknown = 0
+        unknown_reason_code_counts: dict[str, int] = {}
+        unknown_without_reason_code_count = 0
         unknown_provider_evidence_reference_count = 0
         unknown_provider_evidence_without_callable_address_count = 0
         unknown_provider_declarations_omitted_count = 0
+
+        def safe_context_value(value: Any, pattern: str) -> str | None:
+            if (not isinstance(value, str) or len(value) > 192
+                    or re.fullmatch(pattern, value) is None):
+                return None
+            return value
+
         for binding in self.snapshot.get("bindings", []):
             availability = binding.get("availability") or {}
             if availability.get("status") == "available":
@@ -10388,6 +10401,15 @@ class Session:
                 })
             elif availability.get("status") == "unknown":
                 unknown += 1
+                reason_code = safe_context_value(
+                    availability.get("code"), r"[a-z][a-z0-9-]{0,79}",
+                )
+                if reason_code is None:
+                    unknown_without_reason_code_count += 1
+                else:
+                    unknown_reason_code_counts[reason_code] = (
+                        unknown_reason_code_counts.get(reason_code, 0) + 1
+                    )
                 provenance = binding.get("provenance")
                 provenance = provenance if isinstance(provenance, dict) else {}
                 raw_declarations = provenance.get("coalesced_declarations")
@@ -10415,6 +10437,68 @@ class Session:
                         unknown_provider_evidence_without_callable_address_count += 1
             else:
                 unavailable += 1
+                if availability.get("status") == "unavailable":
+                    unavailable_detail_count += 1
+                    if len(unavailable_details) < MAX_CONTEXT_UNAVAILABLE_BINDINGS:
+                        item: dict[str, Any] = {
+                            "status": "unavailable",
+                        }
+                        for key, pattern in (
+                            ("binding_id", r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"),
+                            ("capability", r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,191}"),
+                            ("provider", r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}"),
+                            ("contract_revision", r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"),
+                        ):
+                            safe_value = safe_context_value(binding.get(key), pattern)
+                            if safe_value is not None:
+                                item[key] = safe_value
+                        code = safe_context_value(
+                            availability.get("code"), r"[a-z][a-z0-9-]{0,79}",
+                        )
+                        if code is not None:
+                            item["code"] = code
+                        observed_at = safe_context_value(
+                            availability.get("observed_at"),
+                            r"\d{4}-\d{2}-\d{2}T[0-9:.+Z-]{1,40}",
+                        )
+                        if observed_at is not None:
+                            item["observed_at"] = observed_at
+                        verification = safe_context_value(
+                            availability.get("verification"),
+                            r"[a-z][a-z0-9-]{0,63}",
+                        )
+                        if verification is not None:
+                            item["verification"] = verification
+                        raw_issue = availability.get("resolution_issue")
+                        if isinstance(raw_issue, dict):
+                            issue: dict[str, str] = {}
+                            issue_code = safe_context_value(
+                                raw_issue.get("code"), r"[a-z][a-z0-9-]{0,79}",
+                            )
+                            if issue_code is not None:
+                                issue["code"] = issue_code
+                            dependency = raw_issue.get("dependency")
+                            if isinstance(dependency, dict):
+                                repository = safe_context_value(
+                                    dependency.get("repository"),
+                                    r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}",
+                                )
+                                if repository is not None:
+                                    issue["dependency_repository"] = repository
+                            environment_name = safe_context_value(
+                                raw_issue.get("environment_name"),
+                                r"[A-Z][A-Z0-9_]{0,127}",
+                            )
+                            if environment_name is not None:
+                                issue["environment_name"] = environment_name
+                            if issue:
+                                item["resolution_issue"] = issue
+                        unavailable_details.append(item)
+
+        unknown_reason_codes = sorted(
+            unknown_reason_code_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )
 
         max_capabilities = 20
         session_id = self.session_id
@@ -10569,6 +10653,26 @@ class Session:
                 "available": available[:max_capabilities],
                 "available_count": len(available),
                 "unavailable_count": unavailable,
+                "availability_attention": {
+                    "scope": "selected-session-binding-snapshot",
+                    "unavailable_bindings": unavailable_details,
+                    "unavailable_bindings_omitted_count": max(
+                        0, unavailable_detail_count - len(unavailable_details),
+                    ),
+                    "unknown_reason_code_counts": [
+                        {"code": code, "count": count}
+                        for code, count in unknown_reason_codes[
+                            :MAX_CONTEXT_UNKNOWN_REASON_CODES
+                        ]
+                    ],
+                    "unknown_reason_code_categories_omitted_count": max(
+                        0, len(unknown_reason_codes)
+                        - MAX_CONTEXT_UNKNOWN_REASON_CODES,
+                    ),
+                    "unknown_without_reason_code_count": (
+                        unknown_without_reason_code_count
+                    ),
+                },
                 "unknown_count": unknown,
                 "unknown_provider_declared_evidence_reference_count": (
                     unknown_provider_evidence_reference_count
