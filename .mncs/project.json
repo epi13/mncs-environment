@@ -67,7 +67,7 @@
       },
       {
         "contract": "projection-evidence-inspection",
-        "version": "1",
+        "version": "2",
         "kind": "read-only-projection-evidence-inspection",
         "effects": [
           "read"
@@ -90,6 +90,7 @@
             "{session_id}"
           ]
         },
+        "output_limit_bytes": 131072,
         "stability": "experimental",
         "output_scope": "read-only recorded projection evidence and history for the authorized Environment session"
       },

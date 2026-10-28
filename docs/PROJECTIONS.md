@@ -75,6 +75,13 @@ retrievable with:
 ./scripts/mncs-env projections <session> --evidence
 ```
 
+The read-only `projection-evidence-inspection` capability declares a
+131,072-byte output limit (up to 65,536 bytes each for standard output and
+standard error). This keeps evidence readback bounded while allowing the
+current 62,917-byte evidence page to arrive without capture truncation. If a
+future response exceeds its bound, Environment continues to report the
+truncated capture explicitly.
+
 When the planner cannot be called, a deferred projection record includes the
 planner binding state and, when present, the exact matching
 `consumed_provider_diagnostics` entry from the session workspace snapshot.

@@ -81,9 +81,10 @@
         "path": "scripts/mncs-env"
       },
       "kind": "read-only-projection-evidence-inspection",
+      "output_limit_bytes": 131072,
       "output_scope": "read-only recorded projection evidence and history for the authorized Environment session",
       "stability": "experimental",
-      "version": "1"
+      "version": "2"
     },
     {
       "contract": "campaign-state-inspection",

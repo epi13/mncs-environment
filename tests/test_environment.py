@@ -5132,6 +5132,8 @@ class CapabilityTests(unittest.TestCase):
             if item.get("contract") == "projection-evidence-inspection"
         )
         self.assertEqual(contract["effects"], ["read"])
+        self.assertEqual(contract["version"], "2")
+        self.assertEqual(contract["output_limit_bytes"], 131072)
         self.assertEqual(contract["invocation"], {
             "kind": "executable",
             "path": "scripts/mncs-env",
@@ -5139,6 +5141,19 @@ class CapabilityTests(unittest.TestCase):
         })
         for source in contract["fingerprint_sources"]:
             self.assertTrue((ROOT / source).is_file(), source)
+        discovered_projection_evidence = next(
+            binding for binding in capabilities._from_manifest(
+                ROOT, FAMILY, ""
+            )
+            if binding["capability"] ==
+            "mncs-environment:projection-evidence-inspection"
+        )
+        self.assertEqual(
+            discovered_projection_evidence["contract_revision"], "2",
+        )
+        self.assertEqual(
+            discovered_projection_evidence["output_limit_bytes"], 131072,
+        )
 
         campaign_state = next(
             item for item in manifest["contracts"]["provides"]
