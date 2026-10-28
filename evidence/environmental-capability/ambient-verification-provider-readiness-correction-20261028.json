@@ -1,0 +1,106 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_provider_readiness_correction_20261028",
+  "captured_at": "2026-10-28T05:40:12Z",
+  "measurement_basis": "append-only-exact-field-correction-after-ECI-rejected-unlinked-improvement-path",
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+    "category": "environmental-service-accountability",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability delivery and verification readiness projection",
+    "title": "Budgeted ECI hides provider readiness context for an excluded verification obligation",
+    "actionable_recommendation": "Retain a bounded, provenance-linked verification executor and provider readiness relationship in the ECI evidence-priority response."
+  },
+  "observation": {
+    "kind": "environmental-observation-contract-correction",
+    "source_interface": "MNCS Environment append-only environmental observation correction mechanism",
+    "request": {
+      "operation": "supply the missing top-level improvement relation for the exact committed improvement observation",
+      "projection_identity": "eci_a8d4711a32c5253c",
+      "target_identity": "ev_environment_ambient_verification_provider_readiness_improvement_20261028",
+      "corrected_field_paths": ["improvement_relation"]
+    },
+    "outcome": {
+      "reason": "The ECI projection verified the source records but did not form the pressure-to-improvement path because the immutable improvement record placed its relation inside observation.outcome instead of the authoritative top-level improvement_relation field.",
+      "interpretation_limit": "This correction preserves the original record and adds only its missing explicit relationship. It does not establish that the provider is ready, the obligation ran, an eligible opportunity was fulfilled, or agent burden was reduced."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_ambient_verification_provider_readiness_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "2a3d48d75044b3bd7f296772b5f9297abc22202b",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-improvement-20261028.json",
+      "sha256": "aa50f66f9ae43ba909aa40e6f207604bf408a2d01ed70a1bcbe5625c6e5cad9c"
+    },
+    "corrected_field_paths": ["improvement_relation"],
+    "replacement_values": {
+      "improvement_relation": {
+        "identity": "im_environment_ambient_verification_provider_readiness_20261028",
+        "addresses_hypothesis_identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+        "implementation_reference": {
+          "identity": "mncs_environment_ambient_verification_readiness_implementation_5b5a9c8",
+          "repository": "mncs-environment",
+          "commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "769d40c03e3ea3a024f921e1abdcc06270bc82964e862e4e368e5f7b223a5da8"
+        },
+        "verification_observation_identity": "ev_environment_ambient_verification_provider_readiness_verification_20261028",
+        "subsequent_observation_identity": "ev_environment_ambient_verification_provider_readiness_postpublication_readback_20261028",
+        "basis": "The implementation, targeted regression tests, projection conformance, and live ECI readback verify the bounded provider readiness relationship for the selected session. The correction supplies the explicit link from the recorded pressure to that implementation and to subsequent readback while retaining uncertainty about readiness, causality, agent receipt, fulfillment, and burden reduction.",
+        "not_measured": [
+          "Whether a future session can execute the external verification after its selected checkout and declared toolchain are ready.",
+          "Whether this projection reduces investigation or coordination burden for another agent.",
+          "Whether the same-provider unavailable capability is a causal dependency of the verification executor."
+        ]
+      }
+    },
+    "reason": "The committed improvement observation omitted its top-level improvement_relation, so ECI could not link its verified implementation to the pressure. This exact-field append-only correction supplies that relationship without rewriting the immutable source record."
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_state_checkpoint_id_before_recording": "chk_dcefc444fee54172",
+    "campaign_evidence_count_before_recording": 51,
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:401886ff1eaf",
+      "claim:mncs-environment:worktree:e59fda9cc543"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_improvement_20261028",
+      "kind": "exact-correction-target",
+      "repository": "mncs-environment",
+      "commit": "2a3d48d75044b3bd7f296772b5f9297abc22202b",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-improvement-20261028.json",
+      "sha256": "aa50f66f9ae43ba909aa40e6f207604bf408a2d01ed70a1bcbe5625c6e5cad9c"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_verification_20261028",
+      "kind": "committed-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "2a3d48d75044b3bd7f296772b5f9297abc22202b",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-verification-20261028.json",
+      "sha256": "429f6c8f2a114d59f276230a6d175015a80d9b0b426ba40658408bbd27fd8962"
+    }
+  ],
+  "not_measured": [
+    "Whether the corrected relationship makes the pressure path discoverable in subsequent bounded ECI responses until the post-correction readback is recorded.",
+    "Whether the recorded change reduces agent intervention burden or improves later verification fulfillment."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  }
+}
