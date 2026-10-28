@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_standalone_observation_budget_improvement_20261028",
+  "captured_at": "2026-10-28T07:43:54Z",
+  "measurement_basis": "append-only-improvement-relation-with-source-integrity-and-live-follow-up",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "56a3f61f1200e4e0a49b814e04c08863613e2573"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI response compactor",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_standalone_observation_budget",
+      "verification_observation_identity": "ev_environment_eci_standalone_observation_budget_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_standalone_observation_budget_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "effectiveness_assessment": "focused-regression-and-selected-live-readback-verified; agent-intervention reduction not assessed",
+      "interpretation_limit": "The change and bounded visibility behavior are verified; this does not establish that the broader partial ECI response is complete or that agents received or used the returned row."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_standalone_observation_budget",
+    "title": "ECI response budgeting can omit a verified standalone campaign observation",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment environmental capability projection",
+    "owner": "mncs-environment",
+    "basis": "A pre-change selected-page readback verified but omitted the only campaign observation. Focused regression tests and the subsequent selected-page readback establish that the row is retained under secondary session context pressure.",
+    "actionable_recommendation": "Inspect other ECI evidence families for response shapes where useful selected records lack pressure or improvement links and could be lost to secondary context.",
+    "recurrence": "one reproduced selected-window response; recurrence across other evidence shapes or sessions is not established",
+    "not_measured": [
+      "agent intervention burden after this change",
+      "response size and resource cost across unrelated evidence families",
+      "long-term recurrence or downstream development impact"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_standalone_observation_budget_verified_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_standalone_observation_budget",
+    "implementation_reference": {
+      "identity": "mncs_environment_standalone_observation_budget_priority_56a3f61",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "56a3f61f1200e4e0a49b814e04c08863613e2573",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "92890f1f36c1a84de98151021dc7d13b8c3743257313803cd3800acb32fe33e2"
+    },
+    "verification_observation_identity": "ev_environment_eci_standalone_observation_budget_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_standalone_observation_budget_readback_20261028",
+    "basis": "The exact implementation blob is integrity-addressed. Focused regression tests preserve standalone selected evidence under an oversized secondary context, and the post-change ECI query returned the selected authentic campaign observation.",
+    "not_measured": [
+      "agent time or tool calls saved",
+      "systemwide ambient fulfillment ratio",
+      "cross-session recurrence or causal effect on development outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "99a7f913893ec41fe980f0d88f1f1b69ce1083d8",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-pressure-20261028.json",
+      "sha256": "b8ed40c66ddd0fc6b6e4d1223ec99c1e4cd43fabf11910c9bd33ebca38ba9a89"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_standalone_observation_budget_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "99a7f913893ec41fe980f0d88f1f1b69ce1083d8",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-verification-20261028.json",
+      "sha256": "c59080853831399363597bc1ece580749ffae92b34ca3e6abf47450ec8ce8b25"
+    },
+    {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_standalone_observation_budget_priority_56a3f61",
+      "repository": "mncs-environment",
+      "commit": "56a3f61f1200e4e0a49b814e04c08863613e2573",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "92890f1f36c1a84de98151021dc7d13b8c3743257313803cd3800acb32fe33e2"
+    }
+  ],
+  "measurement_limits": [
+    "The source response remains partial and reports response truncation; this relation concerns selected-row visibility only.",
+    "Verification and readback do not measure agent receipt, intervention reduction, or sustained effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

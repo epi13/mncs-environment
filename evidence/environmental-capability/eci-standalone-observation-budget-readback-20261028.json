@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_standalone_observation_budget_readback_20261028",
+  "captured_at": "2026-10-28T07:43:54Z",
+  "measurement_basis": "live-ECI-post-change-single-selected-record-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "56a3f61f1200e4e0a49b814e04c08863613e2573"
+  },
+  "observation": {
+    "kind": "eci-standalone-campaign-observation-budget-live-readback",
+    "source_interface": "MNCS Environment ECI projection",
+    "request": {
+      "projection_identity": "eci_90419ee67d4c28b9",
+      "campaign_state_checkpoint_id": "chk_37df90366cc0682e",
+      "history_pages": 1,
+      "evidence_page_offset": 78,
+      "evidence_page_limit": 1,
+      "session_event_before_sequence": 637,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 1,
+      "observation_records_verified": 1,
+      "observation_records_unavailable": 0,
+      "observation_records_compacted_out_count_status": "not-reported",
+      "returned_observation_count": 1,
+      "returned_observation": {
+        "identity": "ev_environment_eci_pointer_correction_budget_readback_20261028",
+        "pressure_hypothesis_status": "not-recorded",
+        "related_work": {
+          "campaign_id": "cmp_c2d1ef45b03f9f1c",
+          "session_id": "ses_9db7b7c6f04e4d19",
+          "environment_id": "renv_36f68baa06a187b0",
+          "work_intent_id": "int_e9a2959ffe2e952c"
+        },
+        "evidence_reference": {
+          "repository": "mncs-environment",
+          "commit": "c8e1e891f613e08ec9dad442813318bd55002325",
+          "path": "evidence/environmental-capability/eci-pointer-correction-budget-readback-20261028.json",
+          "sha256": "718d52d29dcc4c02cd1269955c6c5f3755f6a8df99bb7ea4256ddc59e6480c3d"
+        }
+      },
+      "response_byte_count": 157192,
+      "response_truncated": true,
+      "session_activity_status": "partial-no-invocations-in-selected-window",
+      "capability_accountability_link_status": "source-context-unavailable"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "pre-change-pressure-observation",
+      "identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "99a7f913893ec41fe980f0d88f1f1b69ce1083d8",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-pressure-20261028.json",
+      "sha256": "b8ed40c66ddd0fc6b6e4d1223ec99c1e4cd43fabf11910c9bd33ebca38ba9a89"
+    }
+  ],
+  "measurement_limits": [
+    "The selected row is returned and its source reference is integrity-verified, while the overall projection remains partial and reports response truncation.",
+    "The response does not report an explicit compacted-out count for this selected row; returned row visibility is recorded directly without converting the absent count to a measured zero.",
+    "The projection does not establish agent receipt, causal attribution, or intervention burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
