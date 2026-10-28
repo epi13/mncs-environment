@@ -1,0 +1,210 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_operation_accountability_20261028",
+  "captured_at": "2026-10-28T07:10:32Z",
+  "measurement_basis": "post-implementation-authenticated-session-event-projection-and-read-only-git-state-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "fcef32c8801cd9fc9b832d2f9d8fe8781ea7d514"
+  },
+  "observation": {
+    "kind": "retirement-operation-accountability-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability and read-only Git state",
+    "request": {
+      "projection_identity": "eci_0f2235f7664b26a4",
+      "projection_status": "partial",
+      "session_event_count": 652,
+      "event_window": {
+        "sequence_start": 397,
+        "sequence_end": 652,
+        "truncated": true
+      },
+      "retirement_activity": {
+        "status": "recorded",
+        "event_count": 6,
+        "invalid_event_count": 0,
+        "operation_count": 2,
+        "operations_omitted_count": 0,
+        "event_window_digest": "dd845916895be6e4"
+      }
+    },
+    "outcome": {
+      "operation_receipt_count": 2,
+      "recorded_retired_target_count": 2,
+      "eligible_service_opportunity_count": null,
+      "ambient_fulfillment_status": "not-measured",
+      "agent_intervention_burden_status": "not-measured",
+      "operations": [
+        {
+          "target_kind": "worktree",
+          "request_id": "req_retire_7f4b888791e5d2398fe6b0600a30fd734a71b7fd60e3c79b",
+          "eligibility_event": {
+            "identity": "evt_a73cc9faa76cc983",
+            "sequence": 631,
+            "type": "environment.retirement.requested"
+          },
+          "target_receipt_event": {
+            "identity": "evt_6af4eb02d20e78b4",
+            "sequence": 632,
+            "type": "environment.retirement.target-completed"
+          },
+          "completion_event": {
+            "identity": "evt_305c4ff64cde4302",
+            "sequence": 633,
+            "type": "environment.retirement.completed"
+          },
+          "eligibility": {
+            "verdict": "allow",
+            "authorization_basis": "writable-repository-rights",
+            "decision_domain": "eligibility",
+            "persistent_authority_required": false,
+            "operation_executed": false,
+            "coordination_status": "target-conflicts-checked-by-retirement-adapter"
+          },
+          "operation_receipt": {
+            "completion_status": "completed",
+            "exit_code": 0,
+            "mutation_performed": true,
+            "dry_run": false,
+            "target_retired": true,
+            "result_reason": "clean and free of conflicting live claims"
+          },
+          "post_operation_git_state": {
+            "worktree_path_exists": false,
+            "worktree_registered": false
+          }
+        },
+        {
+          "target_kind": "branch",
+          "target_branch": "campaign/retire-eligibility-without-claim-20261028",
+          "request_id": "req_retire_f750045baff3da532d3020c649d21d49f0c3e76ef8267c6f",
+          "eligibility_event": {
+            "identity": "evt_924b3c51d4ab3977",
+            "sequence": 634,
+            "type": "environment.retirement.requested"
+          },
+          "target_receipt_event": {
+            "identity": "evt_7660aeee36fb4682",
+            "sequence": 635,
+            "type": "environment.retirement.target-completed"
+          },
+          "completion_event": {
+            "identity": "evt_a5434c64725b4163",
+            "sequence": 636,
+            "type": "environment.retirement.completed"
+          },
+          "eligibility": {
+            "verdict": "allow",
+            "authorization_basis": "writable-repository-rights",
+            "decision_domain": "eligibility",
+            "persistent_authority_required": false,
+            "operation_executed": false,
+            "coordination_status": "target-conflicts-checked-by-retirement-adapter"
+          },
+          "operation_receipt": {
+            "completion_status": "completed",
+            "exit_code": 0,
+            "mutation_performed": true,
+            "dry_run": false,
+            "target_retired": true,
+            "result_reason": "merged into origin/main"
+          },
+          "post_operation_git_state": {
+            "local_branch_ref_present": false,
+            "origin_main": "34bd0346191ff6b6ac2f96acf5622d90721113dc",
+            "merged_commit_is_ancestor_of_origin_main": true
+          }
+        }
+      ],
+      "interpretation_limit": "The recorded policy and receipts establish that both exact retirement operations passed adapter checks and returned completed mutation receipts. They do not establish service fulfillment, intervention reduction, or cross-session recurrence."
+    }
+  },
+  "verification": {
+    "status": "passed",
+    "test_command": "PYTHONPATH=. python -m pytest -q tests/test_capability_intelligence.py tests/test_authority_policy_guidance.py tests/test_retire.py",
+    "passed_test_count": 221,
+    "additional_checks": [
+      "python -m compileall -q mncs_env",
+      "git diff --check"
+    ],
+    "implementation_reference": {
+      "repository": "mncs-environment",
+      "commit": "fcef32c8801cd9fc9b832d2f9d8fe8781ea7d514",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "da02718893650a6af097c8dbeb270f5ea0291764b52210d16537f2f746425bb0"
+    },
+    "test_reference": {
+      "repository": "mncs-environment",
+      "commit": "fcef32c8801cd9fc9b832d2f9d8fe8781ea7d514",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "08f9cb7537a97f0802920d6a4a4668d33ef0bad114b8e6f99e00e927ab097939"
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_retirement_claim_gate",
+    "title": "Exact local retirement requires a persistent claim before target safety checks",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment retirement authority and Git adapter",
+    "owner": "mncs-environment",
+    "basis": "The baseline policy deferred exact retirement without a claim; the changed policy permits the existing retirement adapter to check an exact target from writable repository rights.",
+    "actionable_recommendation": "Admit explicit branch, registered-worktree, and metadata-prune operations from writable repository rights; keep exact target validation, applicable live-claim conflict checks, Git conditional updates, and separate delete escalation in the adapter and policy contracts.",
+    "recurrence": "one reproduced policy class; recurrence across sessions is not established",
+    "not_measured": [
+      "whether claim release was necessary before these particular operations",
+      "coordination steps or waiting eliminated",
+      "cross-session recurrence",
+      "the cause of unrelated pickup, merge, and publish failures",
+      "independent verification beyond the recorded Git readback"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "fcef32c8801cd9fc9b832d2f9d8fe8781ea7d514",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "da02718893650a6af097c8dbeb270f5ea0291764b52210d16537f2f746425bb0"
+    },
+    {
+      "kind": "baseline-pressure-observation",
+      "identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-pressure-20261028.json",
+      "sha256": "98fb100be9074d282ed63dc67a0356b0b1f36cc8a24b5a40e4ca098d3df2c42f"
+    },
+    {
+      "kind": "prior-verification-observation",
+      "identity": "ev_environment_eci_retirement_claim_gate_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-verification-20261028.json",
+      "sha256": "fa04044b15d2b23e59dd67e246072e6d857e9ba4ca67380a9b9a95f1afdc50dd"
+    },
+    {
+      "kind": "prior-improvement-relation",
+      "identity": "ev_environment_eci_retirement_claim_gate_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-improvement-20261028.json",
+      "sha256": "f2e49cfb8dc20438cd92e844c8c0a0bcf9a3c05a5e8299e427a5c0c84e243f41"
+    }
+  ],
+  "measurement_limits": [
+    "The ECI session event window is truncated and covers only sequences 397 through 652; the six retirement events and both operation chains are present in that window.",
+    "The operation events report writable-rights eligibility and target-adapter checks; they do not prove the absence of other claims at admission time.",
+    "The local Git readback confirms the target worktree and local branch ref are absent and the previously merged commit remains reachable from origin/main at capture time.",
+    "The selected workflow does not establish that claim negotiation, claim release, or other manual coordination was avoided.",
+    "Agent need, service fulfillment, intervention burden, and recurrence across sessions remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

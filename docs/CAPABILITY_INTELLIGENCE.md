@@ -260,6 +260,17 @@ of requesting owner authorization. The focused regression confirms no
 retirement adapter ran; live recovery and coordination overhead remain
 unmeasured.
 
+The subsequent
+[`eci-retirement-operation-accountability-20261028.json`](../evidence/environmental-capability/eci-retirement-operation-accountability-20261028.json)
+records a live ECI readback of the claim-free eligibility change and two
+completed target retirements. `session_activity.retirement_activity` joins each
+exact eligibility event to its target and operation receipts, retains the
+session's campaign relationship, and keeps the event references available for
+inspection. The worktree and merged branch are absent from the local checkout
+after the operations. This verifies the projection path and recorded outcomes;
+the selected workflow does not establish that claim release or coordination
+work was avoided, or that intervention burden fell.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact
