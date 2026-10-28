@@ -1,0 +1,83 @@
+{
+  "captured_at": "2026-10-28T06:20:00Z",
+  "identity": "ev_environment_eci_resource_sample_budget_pressure_20261028",
+  "measurement_basis": "same-session-before-and-after-ECI-response-budget-readback",
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "outcome": {
+      "baseline_projection": {
+        "content_digest": "28c2536bea6b546124ca69c513b4cf3b",
+        "detail_status": "evidence-priority-response-budget",
+        "identity": "eci_9aea82a2e74366a6",
+        "repository_revision": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75",
+        "resource_sample_count": null,
+        "resource_sample_section_present": false,
+        "response_truncated": true,
+        "session_event_count": 546,
+        "status": "partial"
+      },
+      "interpretation_limit": "The missing compact response section showed a projection visibility gap. It did not mean the sample was absent from Store, agent-attributed, or evidence of resource pressure or causation.",
+      "observed_limitation": "A verified system resource sample was present in the session Store and normal activity projection but disappeared from the evidence-priority ECI response-budget overview.",
+      "same_session_event_count": 546,
+      "stored_resource_sample": {
+        "artifact_reference": "mncs-store:ses_9db7b7c6f04e4d19:capability-invocation-artifacts:649601e6b23596ffec42414c432f5b762f95d28d13b69407f1d8463ef1575cc2",
+        "artifact_sha256": "39ba526c262560fa3bf8dccedfab1a6b459d50dfcc87e551aab4f83baa3092da",
+        "identity": "rsm_d3ff4fbb297dad7e"
+      }
+    },
+    "request": {
+      "operation": "Read the same session activity under the evidence-priority response-budget view before changing resource-sample compaction.",
+      "projection_content_digest": "28c2536bea6b546124ca69c513b4cf3b",
+      "projection_identity": "eci_9aea82a2e74366a6",
+      "repository_revision": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75"
+    },
+    "source_interface": "MNCS Environment projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain one newest verified resource sample with objective, event, and Store provenance in bounded summary and evidence-priority responses, while preserving host-only measurement limits.",
+    "category": "environmental-observability",
+    "identity": "ph_environment_eci_resource_sample_budget_context",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability-intelligence session-activity projection",
+    "title": "ECI evidence-priority compaction drops recorded resource context"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 58,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_80b238079db2599c",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:7acb2036d851"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75",
+      "content_digest": "28c2536bea6b546124ca69c513b4cf3b",
+      "identity": "eci_9aea82a2e74366a6",
+      "kind": "pre-change-main-ECI-readback",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "rsm_d3ff4fbb297dad7e",
+      "kind": "integrity-verified-session-resource-sample",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:capability-invocation-artifacts:649601e6b23596ffec42414c432f5b762f95d28d13b69407f1d8463ef1575cc2",
+      "repository": "mncs-environment",
+      "sha256": "39ba526c262560fa3bf8dccedfab1a6b459d50dfcc87e551aab4f83baa3092da"
+    }
+  ]
+}

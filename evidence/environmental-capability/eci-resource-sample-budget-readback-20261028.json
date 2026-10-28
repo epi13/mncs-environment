@@ -1,0 +1,110 @@
+{
+  "captured_at": "2026-10-28T06:20:00Z",
+  "identity": "ev_environment_eci_resource_sample_budget_readback_20261028",
+  "measurement_basis": "same-session-before-and-after-live-ECI-response-budget-readback",
+  "observation": {
+    "kind": "post-implementation-ECI-projection-readback",
+    "outcome": {
+      "baseline_projection": {
+        "content_digest": "28c2536bea6b546124ca69c513b4cf3b",
+        "detail_status": "evidence-priority-response-budget",
+        "identity": "eci_9aea82a2e74366a6",
+        "repository_revision": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75",
+        "resource_sample_count": null,
+        "resource_sample_section_present": false,
+        "response_truncated": true,
+        "session_event_count": 546,
+        "status": "partial"
+      },
+      "comparison": "Both projections used session event count 546 and the same selected session. The baseline evidence-priority response omitted resource_samples; the implementation response returned the exact sample and Store digest while preserving partial/truncated status.",
+      "interpretation_limit": "This verifies that the sample becomes inspectable through this response-budget path. It does not establish that an agent consumed the sample, that resource pressure existed, or that agent work or intervention burden changed.",
+      "post_implementation_projection": {
+        "content_digest": "54da22e0ba8eaac981edba77f46b21e5",
+        "detail_status": "evidence-priority-response-budget",
+        "identity": "eci_9e3b1c635ac0a031",
+        "implementation_revision": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+        "measurement_limit": "Host resource sample describes host state at capture time; it is not agent-attributed consumption and does not establish resource pressure or causation.",
+        "resource_sample_artifact_reference": "mncs-store:ses_9db7b7c6f04e4d19:capability-invocation-artifacts:649601e6b23596ffec42414c432f5b762f95d28d13b69407f1d8463ef1575cc2",
+        "resource_sample_artifact_sha256": "39ba526c262560fa3bf8dccedfab1a6b459d50dfcc87e551aab4f83baa3092da",
+        "resource_sample_context": {
+          "campaign_id": "cmp_c2d1ef45b03f9f1c",
+          "definition_id": "env_e37e615224015d39",
+          "environment_id": "renv_36f68baa06a187b0",
+          "session_id": "ses_9db7b7c6f04e4d19",
+          "work_intent_id": "int_e9a2959ffe2e952c"
+        },
+        "resource_sample_count": 1,
+        "resource_sample_identity": "rsm_d3ff4fbb297dad7e",
+        "resource_sample_section_present": true,
+        "response_truncated": true,
+        "session_event_count": 546,
+        "status": "partial"
+      }
+    },
+    "request": {
+      "baseline_repository_revision": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75",
+      "implementation_revision": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+      "operation": "Read the main baseline and implementation worktree ECI projections for the same session, selected repositories, history depth, evidence page size, and event limit.",
+      "projection_parameters": {
+        "evidence_limit": 32,
+        "history_pages": 4,
+        "session_event_limit": 256
+      }
+    },
+    "source_interface": "MNCS Environment projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain one newest verified resource sample with objective, event, and Store provenance in bounded summary and evidence-priority responses, while preserving host-only measurement limits.",
+    "category": "environmental-observability",
+    "identity": "ph_environment_eci_resource_sample_budget_context",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability-intelligence session-activity projection",
+    "title": "ECI evidence-priority compaction drops recorded resource context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 58,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_80b238079db2599c",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:7acb2036d851"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75",
+      "content_digest": "28c2536bea6b546124ca69c513b4cf3b",
+      "identity": "eci_9aea82a2e74366a6",
+      "kind": "pre-change-ECI-projection",
+      "repository": "mncs-environment"
+    },
+    {
+      "commit": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+      "content_digest": "54da22e0ba8eaac981edba77f46b21e5",
+      "identity": "eci_9e3b1c635ac0a031",
+      "kind": "post-change-ECI-projection",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "rsm_d3ff4fbb297dad7e",
+      "kind": "integrity-verified-session-resource-sample",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:capability-invocation-artifacts:649601e6b23596ffec42414c432f5b762f95d28d13b69407f1d8463ef1575cc2",
+      "repository": "mncs-environment",
+      "sha256": "39ba526c262560fa3bf8dccedfab1a6b459d50dfcc87e551aab4f83baa3092da"
+    }
+  ]
+}

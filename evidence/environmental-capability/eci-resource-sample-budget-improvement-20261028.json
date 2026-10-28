@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-28T06:20:00Z",
+  "identity": "ev_environment_eci_resource_sample_budget_improvement_20261028",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_eci_resource_sample_budget_context",
+    "basis": "Shared compaction sanitization now retains one newest resource-sample record in the last-resort overview and carries it through evidence-priority compaction. Regression tests verify bounded provenance, sanitization, truncation accounting, and host-only measurement limits; same-session ECI readback verifies that the previously omitted sample is returned in the actual evidence-priority response.",
+    "identity": "im_environment_eci_resource_sample_budget_20261028",
+    "implementation_reference": {
+      "commit": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+      "identity": "mncs_environment_eci_resource_sample_budget_4f0d5dd",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "433f6a163e2a3225ee74590b84ae1dee124e915db55918d6a1618263ab01b2b9"
+    },
+    "not_measured": [
+      "Whether another agent inspects or uses the returned resource sample.",
+      "Whether any agent-attributed resource consumption or resource pressure exists.",
+      "Whether environment service fulfillment or intervention burden changes.",
+      "Whether the same evidence-preservation behavior remains useful across later workloads and environmental versions."
+    ],
+    "subsequent_observation_identity": "ev_environment_eci_resource_sample_budget_readback_20261028",
+    "verification_observation_identity": "ev_environment_eci_resource_sample_budget_verification_20261028"
+  },
+  "measurement_basis": "validated-pressure-to-implementation-verification-and-subsequent-readback-relation",
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "Projection retention and provenance are verified. Agent receipt, reduced intervention, resource pressure, and causal effects remain unestablished or unmeasured.",
+      "verified_change": "ECI ordinary summary and evidence-priority response-budget views retain at most the newest session resource sample with its objective context, exact event links, and Store digest."
+    },
+    "request": {
+      "operation": "Record the bounded pressure, verified implementation, and same-session post-implementation readback relationship."
+    },
+    "source_interface": "MNCS Environment capability-intelligence projection, regression suite, and campaign evidence ledger"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain one newest verified resource sample with objective, event, and Store provenance in bounded summary and evidence-priority responses, while preserving host-only measurement limits.",
+    "category": "environmental-observability",
+    "identity": "ph_environment_eci_resource_sample_budget_context",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability-intelligence session-activity projection",
+    "title": "ECI evidence-priority compaction drops recorded resource context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 58,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_80b238079db2599c",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:7acb2036d851"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_resource_sample_budget_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-pressure-20261028.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_eci_resource_sample_budget_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-verification-20261028.json",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_eci_resource_sample_budget_readback_20261028",
+      "kind": "post-implementation-ECI-readback",
+      "path": "evidence/environmental-capability/eci-resource-sample-budget-readback-20261028.json",
+      "repository": "mncs-environment"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "captured_at": "2026-10-28T06:20:00Z",
+  "identity": "ev_environment_eci_resource_sample_budget_verification_20261028",
+  "measurement_basis": "targeted-regression-tests-compile-projection-conformance-and-live-ECI-readback",
+  "observation": {
+    "kind": "implementation-verification",
+    "outcome": {
+      "capability_intelligence_tests": "175 passed",
+      "compileall": "pass",
+      "diff_check": "pass",
+      "interpretation_limit": "Verification establishes the bounded projection representation and provenance preservation. It does not establish agent attribution, resource pressure, reduced intervention burden, or subsequent service effectiveness.",
+      "privacy_checks": "Regression coverage confirms hostname, process command, private payload, and unrecognized context fields are omitted.",
+      "projection_conformance": {
+        "native_receipt": "f36ae687e5d46847ddcb18f5b7a14214cd91fa93fa3fd24b6e75a800b333e9db",
+        "receipt_identity": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e",
+        "verdict": "pass"
+      },
+      "verified_behavior": "Ordinary response-budget and evidence-priority session-activity overviews retain at most the newest resource sample with bounded objective context, invocation and completion event references, Store artifact pointer and digest, sanitized host measurements, and explicit truncation and measurement limits."
+    },
+    "request": {
+      "commands": [
+        "PYTHONPATH=. python -m pytest -q tests/test_capability_intelligence.py",
+        "python -m compileall -q mncs_env",
+        "git diff --check",
+        "python scripts/verify_projection_contracts.py --workspace /home/epi13/Documents/Projects --repository mncs-environment"
+      ],
+      "implementation_commit": "4f0d5dd33716adca6b3886c6105aaae719979a8b"
+    },
+    "source_interface": "MNCS Environment ECI regression suite and projection-conformance verifier"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain one newest verified resource sample with objective, event, and Store provenance in bounded summary and evidence-priority responses, while preserving host-only measurement limits.",
+    "category": "environmental-observability",
+    "identity": "ph_environment_eci_resource_sample_budget_context",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability-intelligence session-activity projection",
+    "title": "ECI evidence-priority compaction drops recorded resource context"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_evidence_count_before_recording": 58,
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_state_checkpoint_id_before_recording": "chk_80b238079db2599c",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:7acb2036d851"
+    ],
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+      "identity": "mncs_environment_eci_resource_sample_budget_4f0d5dd",
+      "kind": "committed-implementation",
+      "path": "mncs_env/capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "433f6a163e2a3225ee74590b84ae1dee124e915db55918d6a1618263ab01b2b9"
+    },
+    {
+      "commit": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+      "identity": "mncs_environment_eci_resource_sample_budget_tests_4f0d5dd",
+      "kind": "committed-regression-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "repository": "mncs-environment",
+      "sha256": "dc2063183232fb8eb0c0b895f63d6aa92818d6b98e1c9cf678256889bdba1c43"
+    },
+    {
+      "commit": "4f0d5dd33716adca6b3886c6105aaae719979a8b",
+      "identity": "mncs_environment_eci_resource_sample_budget_docs_4f0d5dd",
+      "kind": "projection-documentation",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "a36e5e493480939e35c464a8a2d4db1ddcb2ed830f75a664e765218fb7c7c1e6"
+    },
+    {
+      "identity": "mncs_environment_eci_resource_sample_budget_projection_contracts_4f0d5dd",
+      "kind": "projection-conformance-receipt",
+      "reference": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e",
+      "repository": "mncs-environment"
+    }
+  ]
+}
