@@ -1665,6 +1665,9 @@ def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
             },
         },
     }
+    all_correction_observations = deepcopy(
+        evidence_priority_candidate["observations"],
+    )
     assert capability_intelligence._compact_campaign_evidence_priority_rows(
         evidence_priority_candidate,
     )
@@ -1687,6 +1690,23 @@ def test_observation_correction_cannot_rewrite_valid_pressure_recommendation(
     assert evidence_priority_candidate["source"][
         "campaign_observation_preflight"
     ]["status"] == "validated"
+
+    compact_without_rejection_row = {
+        **evidence_priority_candidate,
+        "observations": [deepcopy(evidence_priority_candidate["observations"][0])],
+    }
+    compact_without_rejection_row.pop("correction_rejection_summaries", None)
+    compact_without_rejection_row.pop("record_correction_summaries", None)
+    assert capability_intelligence._compact_campaign_evidence_priority_rows(
+        compact_without_rejection_row,
+        correction_observations=all_correction_observations,
+    )
+    assert compact_without_rejection_row["correction_rejection_summaries"] == [
+        evidence_priority_candidate["correction_rejection_summaries"][0]
+    ]
+    assert compact_without_rejection_row["record_correction_summaries"] == [
+        evidence_priority_candidate["record_correction_summaries"][0]
+    ]
 
 
 def test_verified_occurrence_can_reconcile_pressure_recommendation_wording(
@@ -16651,6 +16671,223 @@ def test_four_page_history_retains_newest_pressure_within_read_ceiling(
     )
     assert latest_pressure["evidence_reference"]["identity"] == (
         "ev_environment_four_page_history_27"
+    )
+
+
+def test_record_correction_reads_exact_target_skipped_by_page_budget(
+    tmp_path: Path,
+) -> None:
+    def project_correction(root: Path, *, corrupt_target_digest: bool):
+        target = _observation(
+            "ev_environment_budget_skipped_correction_target",
+            "ses_budget_skipped_correction",
+            "cmp_budget_skipped_correction",
+        )
+        reports = [target] + [
+            _observation(
+                f"ev_environment_budget_fill_{index:02d}",
+                "ses_budget_skipped_correction",
+                "cmp_budget_skipped_correction",
+            )
+            for index in range(1, 17)
+        ]
+        session, state = _session(root, reports)
+        target_reference = dict(state["evidence"][0])
+        if corrupt_target_digest:
+            target_reference["sha256"] = "e" * 64
+
+        correction = _observation(
+            "ev_environment_budget_skipped_target_correction",
+            "ses_budget_skipped_correction",
+            "cmp_budget_skipped_correction",
+        )
+        _drop_pressure_hypothesis(correction)
+        correction["record_correction"] = {
+            "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+            "target_reference": target_reference,
+            "corrected_field_paths": ["not_measured"],
+            "replacement_values": {
+                "not_measured": ["the exact older target was read on demand"],
+            },
+            "reason": "Preserve and verify an append-only correction target.",
+        }
+        relative = (
+            "evidence/environmental-capability/budget-skipped-target-correction.json"
+        )
+        raw = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        checkout = Path(session.snapshot["selected_checkouts"][
+            "mncs-environment"
+        ]["path"])
+        correction_path = checkout / relative
+        correction_path.write_bytes(raw)
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", "append target correction")
+        state["evidence"].append({
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        })
+        state["evidence_count"] = len(state["evidence"])
+
+        latest_page = {
+            **state,
+            "evidence": state["evidence"][9:],
+            "evidence_offset": 9,
+            "evidence_limit": 9,
+            "previous_evidence_offset": 0,
+            "next_evidence_offset": None,
+            "evidence_truncated": True,
+        }
+        older_page = {
+            **state,
+            "evidence": state["evidence"][:9],
+            "evidence_offset": 0,
+            "evidence_limit": 9,
+            "previous_evidence_offset": None,
+            "next_evidence_offset": 9,
+            "evidence_truncated": True,
+        }
+        session.campaign_state = lambda *, evidence_offset, evidence_limit: (
+            older_page if evidence_offset == 0 else latest_page
+        )
+        return capability_intelligence.project(
+            session, campaign_state=latest_page, history_pages=2,
+        )
+
+    verified = project_correction(
+        tmp_path / "verified", corrupt_target_digest=False,
+    )
+    assert verified["source"]["evidence_history_page_offsets"] == [9, 0]
+    assert verified["source"]["evidence_history_checkpoint_consistent"] is True
+    assert verified["source"]["observation_records_verified"] == 16
+    assert verified["source"]["observation_records_skipped_by_page_budget"] == 2
+    assert verified["source"]["record_correction_target_read_count"] == 1
+    assert verified["source"]["record_corrections_applied_count"] == 1
+    assert verified["source"]["record_corrections_unverified_count"] == 0
+    correction_view = next(
+        item for item in verified["observations"]
+        if item["identity"] == "ev_environment_budget_skipped_target_correction"
+    )
+    assert correction_view["record_correction"]["status"] == (
+        "applied-to-verified-target"
+    )
+    assert all(
+        item["identity"] != "ev_environment_budget_skipped_correction_target"
+        for item in verified["observations"]
+    )
+    target_diagnostic = next(
+        item for item in verified["source"]["observation_reference_diagnostics"]
+        if item["identity"] == "ev_environment_budget_skipped_correction_target"
+    )
+    assert target_diagnostic["verification"] == "verified"
+    assert target_diagnostic["page_budget_verification"] == (
+        "not-read-page-observation-budget"
+    )
+    assert target_diagnostic["record_correction_target_read"] == "verified"
+    assert target_diagnostic["read_basis"] == (
+        "bounded-record-correction-target-read"
+    )
+
+    mismatched = project_correction(
+        tmp_path / "mismatched", corrupt_target_digest=True,
+    )
+    assert mismatched["source"]["record_correction_target_read_count"] == 0
+    assert mismatched["source"]["record_corrections_applied_count"] == 0
+    assert mismatched["source"]["record_corrections_unverified_count"] == 1
+    mismatched_view = next(
+        item for item in mismatched["observations"]
+        if item["identity"] == "ev_environment_budget_skipped_target_correction"
+    )
+    assert mismatched_view["record_correction"]["status"] == (
+        "target-reference-mismatch"
+    )
+
+
+def test_record_correction_target_reads_have_a_hard_projection_bound(
+    tmp_path: Path,
+) -> None:
+    targets = [
+        _observation(
+            f"ev_environment_bounded_correction_target_{index}",
+            "ses_bounded_correction_targets",
+            "cmp_bounded_correction_targets",
+        )
+        for index in range(5)
+    ]
+    reports = targets + [
+        _observation(
+            f"ev_environment_bounded_correction_fill_{index:02d}",
+            "ses_bounded_correction_targets",
+            "cmp_bounded_correction_targets",
+        )
+        for index in range(12)
+    ]
+    session, state = _session(tmp_path, reports)
+    checkout = Path(session.snapshot["selected_checkouts"][
+        "mncs-environment"
+    ]["path"])
+    target_references = [dict(state["evidence"][index]) for index in range(5)]
+    for index, target_reference in enumerate(target_references):
+        correction = _observation(
+            f"ev_environment_bounded_correction_{index}",
+            "ses_bounded_correction_targets",
+            "cmp_bounded_correction_targets",
+        )
+        _drop_pressure_hypothesis(correction)
+        correction["record_correction"] = {
+            "schema_version": capability_intelligence.OBSERVATION_CORRECTION_SCHEMA,
+            "target_reference": target_reference,
+            "corrected_field_paths": ["not_measured"],
+            "replacement_values": {
+                "not_measured": [f"verified bounded target {index}"],
+            },
+            "reason": "Exercise the bounded exact target reader.",
+        }
+        relative = (
+            "evidence/environmental-capability/"
+            f"bounded-correction-target-{index}.json"
+        )
+        raw = json.dumps(
+            correction, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        correction_path = checkout / relative
+        correction_path.parent.mkdir(parents=True, exist_ok=True)
+        correction_path.write_bytes(raw)
+        _git(checkout, "add", relative)
+        _git(checkout, "commit", "--quiet", "-m", "append bounded target correction")
+        state["evidence"].append({
+            "identity": correction["identity"],
+            "repository": "mncs-environment",
+            "commit": _git(checkout, "rev-parse", "HEAD"),
+            "path": relative,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+        })
+    state["evidence_count"] = len(state["evidence"])
+    state["evidence_offset"] = 0
+    state["evidence_limit"] = len(state["evidence"])
+    state["previous_evidence_offset"] = None
+    state["next_evidence_offset"] = None
+
+    result = capability_intelligence.project(session, campaign_state=state)
+
+    assert len(state["evidence"]) == 22
+    assert result["source"]["observation_records_verified"] == 16
+    assert result["source"]["observation_records_skipped_by_page_budget"] == 6
+    assert result["source"]["record_correction_target_read_count"] == (
+        capability_intelligence.MAX_OBSERVATION_CORRECTION_TARGET_READS
+    )
+    assert result["source"]["record_corrections_applied_count"] == 4
+    assert result["source"]["record_corrections_unverified_count"] == 1
+    rejected = next(
+        item for item in result["observations"]
+        if item["identity"] == "ev_environment_bounded_correction_4"
+    )
+    assert rejected["record_correction"]["status"] == (
+        "correction-target-read-limit-reached"
     )
 
 

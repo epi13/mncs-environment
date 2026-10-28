@@ -1753,7 +1753,15 @@ replacement fields must make the complete observation contract valid. It keeps
 the original record inspectable through
 its evidence reference and exposes the effective values with a link to the
 correction record. A target outside the selected pages remains explicitly
-unresolved; an invalid or conflicting correction is not applied. An
+unresolved. If an exact target is present in the selected pages but skipped
+only by the normal page read allocation, ECI may read that target on demand to
+verify the correction. This exception is limited to four target records per
+projection and shares the existing observation-read deadline. The projection
+reports the extra read count and preserves both the original page-budget
+decision and the exact-read result in the target diagnostic; this does not add
+the target to the normal observation rows. A target-reference mismatch,
+unreadable target, invalid correction, or conflicting correction remains
+unresolved. An
 `improvement_relation` correction may repair only an existing invalid relation.
 It must preserve the relation identity, hypothesis, verification and follow-up
 identities, basis, measurement limits, and implementation repository, commit,
@@ -1765,9 +1773,12 @@ this correction path. This restores inspectability without asserting that the
 linked change was effective; effectiveness remains `not-assessed` until
 independent later evidence supports an assessment.
 
-The query considers at most 32 campaign evidence references, reads at most 16
-observation records of 64 KiB each within one 8 second Git-read budget, and
-caps its response at 72 KiB. If a response reaches that bound, operation
+The query considers at most 32 campaign evidence references per page and
+normally selects at most 16 observation records of 64 KiB each across its
+history window. Exact in-window record-correction targets skipped by that
+allocation may add up to four bounded reads. These reads share the same 8
+second Git-read deadline, and the response is capped at 72 KiB. If a response
+reaches that bound, operation
 payloads are summarized by digest and the exact evidence pointers remain
 available for inspection. Compacted observations retain bounded request
 identifiers and outcome context, including original contract diagnostics and
@@ -1798,6 +1809,9 @@ to disclose which observation rows were removed. Up to four rejected
 observation-correction summaries retain their status, target, bounded
 rejection reason, and exact source pointer alongside that path, so a useful
 diagnostic does not disappear when its full observation row is compacted out.
+Those summaries are derived from the selected observation rows before response
+compaction, so a rejected correction remains attributable even when its row is
+not part of the retained evidence path.
 
 Before dropping environmental observation summaries to meet this bound, the
 compactor can omit nested owner-audit source-detail entries one at a time.

@@ -201,6 +201,7 @@ MAX_SOURCE_HASH_BYTES = 4 * 1024 * 1024
 MAX_OBSERVATION_READ_SECONDS = 8.0
 MAX_SOURCE_POINTER_VERIFICATIONS = 32
 MAX_EVIDENCE_REFERENCE_CORRECTIONS = 8
+MAX_OBSERVATION_CORRECTION_TARGET_READS = 4
 MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
 MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
 MAX_RESULT_BYTES = 72 * 1024
@@ -5417,12 +5418,17 @@ def _compact_owner_pass_decision_summary(
 
 def _compact_campaign_evidence_priority_rows(
     result: dict[str, Any],
+    *, correction_observations: list[dict[str, Any]] | None = None,
 ) -> bool:
     """Keep one evidence path and the correction records that qualify it."""
     observations = result.get("observations")
     hypotheses = result.get("pressure_hypotheses")
     relations = result.get("improvement_relations")
     observations = observations if isinstance(observations, list) else []
+    correction_observations = (
+        correction_observations
+        if isinstance(correction_observations, list) else observations
+    )
     hypotheses = hypotheses if isinstance(hypotheses, list) else []
     relations = relations if isinstance(relations, list) else []
     if not (observations and hypotheses and relations):
@@ -5483,7 +5489,7 @@ def _compact_campaign_evidence_priority_rows(
 
     correction_rejection_summaries = []
     record_correction_summaries = []
-    for item in observations:
+    for item in correction_observations:
         if not isinstance(item, dict):
             continue
         correction = item.get("record_correction")
@@ -5686,7 +5692,8 @@ def _compact_campaign_evidence_priority_rows(
             "observation_records_verified",
             "observation_records_unavailable",
             "observation_records_skipped_by_page_budget",
-            "record_correction_count", "record_corrections_applied_count",
+            "record_correction_count", "record_correction_target_read_count",
+            "record_corrections_applied_count",
             "record_corrections_unverified_count",
             "observation_reference_diagnostic_count",
             "improvement_relations_unverified_count",
@@ -6088,6 +6095,7 @@ def _compact_projection(
                     "observation_records_verified",
                     "observation_records_unavailable",
                     "record_correction_count",
+                    "record_correction_target_read_count",
                     "record_corrections_applied_count",
                     "record_corrections_unverified_count",
                     "evidence_reference_correction_count",
@@ -6131,7 +6139,8 @@ def _compact_projection(
     for key in (
         "observation_reference_diagnostic_count",
         "improvement_relations_unverified_count",
-        "record_correction_count", "record_corrections_applied_count",
+        "record_correction_count", "record_correction_target_read_count",
+        "record_corrections_applied_count",
         "record_corrections_unverified_count",
         "evidence_reference_correction_count",
         "evidence_reference_corrections_applied_count",
@@ -6149,7 +6158,8 @@ def _compact_projection(
             for key in (
                 "identity", "record_identity", "repository", "commit",
                 "sha256", "verification", "path", "correction_status",
-                "correction_observation_identity",
+                "correction_observation_identity", "page_budget_verification",
+                "record_correction_target_read", "read_basis",
             )
             if isinstance(diagnostic.get(key), str)
         }
@@ -9611,6 +9621,9 @@ def _compact_projection(
         deepcopy(result.get("session_activity", {}))
         if max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES else {}
     )
+    priority_correction_observation_source = deepcopy(
+        projection.get("observations", []),
+    )
     if priority_activity_source and isinstance(raw_activity.get("source"), dict):
         compact_source = priority_activity_source.get("source")
         if isinstance(compact_source, dict):
@@ -9637,7 +9650,10 @@ def _compact_projection(
         if compact_activity is None:
             return None
         candidate["session_activity"] = compact_activity
-        if not _compact_campaign_evidence_priority_rows(candidate):
+        if not _compact_campaign_evidence_priority_rows(
+            candidate,
+            correction_observations=priority_correction_observation_source,
+        ):
             return None
         if _projection_response_size(candidate) > max_result_bytes:
             return None
@@ -27205,6 +27221,11 @@ def project(
                 reference.get("contract_diagnostics_truncated") is True
             )
         observation_reference_diagnostics.append(diagnostic)
+    observation_reference_diagnostics_by_identity = {
+        diagnostic["identity"]: diagnostic
+        for diagnostic in observation_reference_diagnostics
+        if isinstance(diagnostic.get("identity"), str)
+    }
     source_integrity: dict[tuple[str, str, str, str], str] = {}
     source_payloads: dict[tuple[str, str, str, str], bytes] = {}
     attempted_sources: set[tuple[str, str, str, str]] = set()
@@ -27267,6 +27288,8 @@ def project(
     ] = {}
     correction_status_by_record: dict[str, dict[str, Any]] = {}
     unverified_record_correction_count = 0
+    correction_target_read_count = 0
+    correction_target_records: dict[str, dict[str, Any]] = {}
     for correction_record, correction_reference in projected_records:
         raw_correction = correction_record.get("record_correction")
         if raw_correction is None:
@@ -27300,28 +27323,6 @@ def project(
             }
             unverified_record_correction_count += 1
             continue
-        verification = selected_reference.get("verification")
-        if verification == "not-read-page-observation-budget":
-            correction_status_by_record[correction_record["identity"]] = {
-                "status": "target-not-read-page-budget",
-                "target_identity": target_identity,
-                "target_reference": target_reference,
-            }
-            unverified_record_correction_count += 1
-            continue
-        target_is_contract_invalid = (
-            verification == "observation-contract-invalid"
-            and target_identity in contract_invalid_records
-        )
-        if verification != "verified" and not target_is_contract_invalid:
-            correction_status_by_record[correction_record["identity"]] = {
-                "status": "target-not-verified-in-projection",
-                "target_identity": target_identity,
-                "target_reference": target_reference,
-                "target_verification": verification,
-            }
-            unverified_record_correction_count += 1
-            continue
         correction_position = page_reference_positions.get(
             correction_record["identity"],
         )
@@ -27335,11 +27336,120 @@ def project(
             }
             unverified_record_correction_count += 1
             continue
+        verification = selected_reference.get("verification")
+        if verification == "not-read-page-observation-budget":
+            if correction_target_read_count >= (
+                MAX_OBSERVATION_CORRECTION_TARGET_READS
+            ):
+                correction_status_by_record[correction_record["identity"]] = {
+                    "status": "correction-target-read-limit-reached",
+                    "target_identity": target_identity,
+                    "target_reference": target_reference,
+                }
+                unverified_record_correction_count += 1
+                continue
+            if root is None:
+                correction_status_by_record[correction_record["identity"]] = {
+                    "status": "correction-target-read-unavailable",
+                    "target_identity": target_identity,
+                    "target_reference": target_reference,
+                    "target_verification": "workspace-unavailable",
+                }
+                unverified_record_correction_count += 1
+                continue
+            correction_target_read_count += 1
+            target_record, target_verification = _load_observation(
+                session, target_reference, root, deadline=read_deadline,
+            )
+            if (target_record is None or target_verification not in {
+                "verified", "observation-contract-invalid",
+            }):
+                correction_status_by_record[correction_record["identity"]] = {
+                    "status": "correction-target-read-unverified",
+                    "target_identity": target_identity,
+                    "target_reference": target_reference,
+                    "target_verification": target_verification,
+                }
+                unverified_record_correction_count += 1
+                continue
+            selected_reference["page_budget_verification"] = verification
+            selected_reference["verification"] = target_verification
+            selected_reference["record_correction_target_read"] = (
+                "verified" if target_verification == "verified"
+                else "content-verified-contract-invalid"
+            )
+            repository_read_basis = target_record.get(
+                "_projection_repository_read_basis",
+            )
+            if repository_read_basis == "workspace-read-only-checkout":
+                selected_reference["repository_read_basis"] = (
+                    repository_read_basis
+                )
+            correction_target_records[target_identity] = target_record
+            if target_verification == "observation-contract-invalid":
+                contract_invalid_records[target_identity] = (
+                    target_record, selected_reference,
+                )
+            diagnostic = observation_reference_diagnostics_by_identity.get(
+                target_identity,
+            )
+            if diagnostic is None:
+                path = selected_reference["path"]
+                diagnostic = {
+                    key: selected_reference[key]
+                    for key in (
+                        "identity", "record_identity", "repository", "commit",
+                        "sha256",
+                    )
+                    if selected_reference.get(key) is not None
+                } | {
+                    "verification": target_verification,
+                    "page_budget_verification": verification,
+                    "record_correction_target_read": (
+                        selected_reference["record_correction_target_read"]
+                    ),
+                    "path": path[:512],
+                    "path_truncated": len(path) > 512,
+                }
+                if target_verification == "verified":
+                    diagnostic["read_basis"] = (
+                        "bounded-record-correction-target-read"
+                    )
+                observation_reference_diagnostics.append(diagnostic)
+                observation_reference_diagnostics_by_identity[
+                    target_identity
+                ] = diagnostic
+            else:
+                diagnostic["page_budget_verification"] = verification
+                diagnostic["verification"] = target_verification
+                diagnostic["record_correction_target_read"] = (
+                    selected_reference["record_correction_target_read"]
+                )
+                if target_verification == "verified":
+                    diagnostic["read_basis"] = (
+                        "bounded-record-correction-target-read"
+                    )
+            verification = target_verification
+        target_is_contract_invalid = (
+            verification == "observation-contract-invalid"
+            and target_identity in contract_invalid_records
+        )
+        if verification != "verified" and not target_is_contract_invalid:
+            correction_status_by_record[correction_record["identity"]] = {
+                "status": "target-not-verified-in-projection",
+                "target_identity": target_identity,
+                "target_reference": target_reference,
+                "target_verification": verification,
+            }
+            unverified_record_correction_count += 1
+            continue
         target_record = projected_records_by_identity.get(target_identity)
         if target_record is None:
             invalid_target = contract_invalid_records.get(target_identity)
             if invalid_target is not None:
                 target_record = invalid_target[0]
+        if target_record is None:
+            target_record = correction_target_records.get(target_identity)
         if target_record is None:
             correction_status_by_record[correction_record["identity"]] = {
                 "status": "target-not-projected",
@@ -28497,6 +28607,9 @@ def project(
                 "record_correction_count": sum(
                     record.get("record_correction") is not None
                     for record, _ in projected_records
+                ),
+                "record_correction_target_read_count": (
+                    correction_target_read_count
                 ),
                 "record_corrections_applied_count": len(correction_by_target),
                 "record_corrections_unverified_count": (
