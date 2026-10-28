@@ -358,6 +358,11 @@ def _latest_by_identity(all_records: list[dict[str, Any]]) -> dict[str, dict[str
     return latest
 
 
+def latest_claims(all_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return the latest state of each claim, omitting earlier versions."""
+    return list(_latest_by_identity(all_records).values())
+
+
 def latest_record_for(
     records: list[dict[str, Any]], claim_id: str,
 ) -> dict[str, Any] | None:

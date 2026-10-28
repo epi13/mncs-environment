@@ -43,6 +43,20 @@ report whether the Control-owned transport is ready; direct CLI use outside
 that execution reports a structured persistence error instead of switching
 to file persistence.
 
+## Claim discovery
+
+`mncs-env claims SESSION` returns a bounded page of the latest held claim
+record for each scope, including expired held records with `live: false` so
+stale work remains discoverable. The default page contains at most 25 records
+and reports its total, live count, and number of retained history records.
+Released and superseded versions are available through `--history`, which
+returns bounded claim-identity/version pages; versions are newest first
+within each claim. Add `--claim-id` to scope that history to one exact claim.
+Without `--history`, `--claim-id` reads the latest record for one exact claim.
+`--repository` reads the bounded latest-record page and owner-liveness detail
+for one repository. These read paths preserve the claim ledger and do not
+change ownership.
+
 Claims acquired without an explicit scope follow the session's selected
 worktree and are nonexclusive. Repository-wide claims require an explicit
 scope. An agent can propose changes in a distinct observed worktree without

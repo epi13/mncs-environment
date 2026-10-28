@@ -8,6 +8,8 @@ exclusive owners remain protected.
 
 from __future__ import annotations
 
+import io
+import json
 import tempfile
 import threading
 import unittest
@@ -862,6 +864,109 @@ class AcquireRecoveryTests(RecoveryFixture):
             reason="after restart",
             scope={"kind": "paths", "paths": ["out/gen.json"]})
         self.assertEqual(record["session_id"], "ses_new")
+
+
+class ClaimDiscoveryTests(RecoveryFixture):
+    def _query(self, *options: str) -> dict:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with mock.patch("sys.stdout", stdout), mock.patch("sys.stderr", stderr):
+            code = cli.main([
+                "--persistence", "file", "--state-dir", self.temp.name,
+                "claims", "ses_reader", *options,
+            ])
+        self.assertEqual(code, 0, stderr.getvalue())
+        self.assertEqual(stderr.getvalue(), "")
+        return json.loads(stdout.getvalue())
+
+    def test_default_claim_discovery_returns_bounded_current_state(self):
+        current = claims.acquire(
+            self.store, repository="r", session_id="ses_owner_0",
+            consumer_id="owner-0", basis=claims.BASIS_EXPLICIT,
+            reason="current scope",
+        )
+        owner = "ses_owner_0"
+        for index in range(20):
+            claims.release(
+                self.store, session_id=owner,
+                claim_id=current["claim_id"],
+            )
+            owner = f"ses_owner_{index + 1}"
+            current = claims.acquire(
+                self.store, repository="r", session_id=owner,
+                consumer_id=f"owner-{index + 1}",
+                basis=claims.BASIS_EXPLICIT, reason="current scope",
+            )
+        other = claims.acquire(
+            self.store, repository="s", session_id="ses_other",
+            consumer_id="other", basis=claims.BASIS_EXPLICIT,
+            reason="independent current scope",
+        )
+
+        first = self._query("--limit", "1")
+        second = self._query("--offset", "1", "--limit", "1")
+
+        self.assertEqual(
+            first["schema_version"], "mncs.environment.claim-current-page/1",
+        )
+        self.assertEqual(first["total"], 2)
+        self.assertEqual(first["history_record_count"], 42)
+        self.assertEqual(first["history_status"], "omitted; use --history")
+        self.assertEqual(first["next_offset"], 1)
+        self.assertEqual(first["returned_count"], 1)
+        self.assertFalse(first["response_budget_truncated"])
+        self.assertEqual(len(first["claims"]), 1)
+        self.assertEqual(first["claims"][0]["claim_id"], current["claim_id"])
+        self.assertTrue(first["claims"][0]["live"])
+        self.assertEqual(second["claims"][0]["claim_id"], other["claim_id"])
+        self.assertIsNone(second["next_offset"])
+
+    def test_full_claim_history_is_explicit_and_version_paginated(self):
+        first = claims.acquire(
+            self.store, repository="r", session_id="ses_owner_a",
+            consumer_id="owner-a", basis=claims.BASIS_EXPLICIT,
+            reason="first state",
+        )
+        claims.release(
+            self.store, session_id="ses_owner_a", claim_id=first["claim_id"],
+        )
+        current = claims.acquire(
+            self.store, repository="r", session_id="ses_owner_b",
+            consumer_id="owner-b", basis=claims.BASIS_EXPLICIT,
+            reason="current state",
+        )
+
+        latest_page = self._query("--history", "--limit", "1")
+        older_page = self._query(
+            "--history", "--offset", "1", "--limit", "2",
+        )
+
+        self.assertEqual(
+            latest_page["schema_version"], "mncs.environment.claim-history-page/1",
+        )
+        self.assertEqual(
+            latest_page["order"],
+            "claim-id-ascending-version-descending",
+        )
+        self.assertEqual(latest_page["total"], 3)
+        self.assertEqual(latest_page["next_offset"], 1)
+        self.assertEqual(latest_page["claims"][0]["claim_id"], current["claim_id"])
+        self.assertTrue(latest_page["claims"][0]["latest"])
+        self.assertEqual(older_page["claims"][0]["status"], "released")
+        self.assertFalse(older_page["claims"][0]["latest"])
+        self.assertEqual(older_page["claims"][1]["status"], "held")
+        self.assertFalse(older_page["claims"][1]["latest"])
+        self.assertIsNone(older_page["next_offset"])
+
+        one_claim_history = self._query(
+            "--history", "--claim-id", first["claim_id"], "--limit", "2",
+        )
+        self.assertEqual(one_claim_history["total"], 3)
+        self.assertEqual(
+            [item["version"] for item in one_claim_history["claims"]],
+            [current["version"], 2],
+        )
+        self.assertEqual(one_claim_history["next_offset"], 2)
 
 
 if __name__ == "__main__":

@@ -1375,19 +1375,39 @@ def _claim_owner_liveness(
 
 def cmd_claims(args: argparse.Namespace) -> int:
     expected_generation = getattr(args, "expected_store_generation", None)
+    history_view = bool(getattr(args, "history", False))
+    if history_view and any((
+        args.acquire, args.release, args.release_claim, args.transfer_to,
+        args.explain, args.repository is not None,
+        args.transfer_consumer, args.paths, args.worktree, args.branch,
+        args.repository_paths, args.adopt,
+        args.basis != claims_module.BASIS_EXPLICIT, args.reason,
+        args.ttl != 24, expected_generation is not None,
+    )):
+        return fail(
+            "--history is read-only and cannot be combined with claim mutations, --repository, or --explain"
+        )
     if expected_generation is not None:
         if type(expected_generation) is not int or expected_generation < 0:
             return fail("expected Store generation must be a non-negative integer")
         if not args.acquire or any((
             args.release, args.release_claim, args.transfer_to, args.claim_id, args.explain,
             args.repository is not None, args.offset is not None,
-            args.limit is not None,
+            args.limit is not None, history_view,
         )):
             return fail(
                 "--expected-store-generation requires --acquire and cannot be combined with other claim operations"
             )
-    if args.repository is None and (args.offset is not None or args.limit is not None):
-        return fail("claim pagination requires --repository")
+    if (args.offset is not None and args.offset < 0
+            or args.limit is not None and not 1 <= args.limit <= 128):
+        return fail("claim page requires offset >= 0 and limit between 1 and 128")
+    if ((args.offset is not None or args.limit is not None)
+            and (args.acquire or args.release or args.release_claim
+                 or args.transfer_to or (args.claim_id and not history_view)
+                 or args.explain)):
+        return fail("claim pagination is available only on read-only claim queries")
+    if args.claim_id and args.explain:
+        return fail("--claim-id and --explain are separate read-only queries")
     if args.repository is not None:
         if (not isinstance(args.repository, str) or not args.repository.strip()
                 or len(args.repository) > 120):
@@ -1398,6 +1418,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
             or args.transfer_consumer or args.paths or args.worktree or args.branch
             or args.repository_paths
             or args.adopt or args.reason or args.basis != claims_module.BASIS_EXPLICIT
+            or history_view
             or args.ttl != 24
         ):
             return fail(
@@ -1405,8 +1426,6 @@ def cmd_claims(args: argparse.Namespace) -> int:
             )
         offset = 0 if args.offset is None else args.offset
         limit = 100 if args.limit is None else args.limit
-        if offset < 0 or limit < 1 or limit > 128:
-            return fail("claim page requires offset >= 0 and limit between 1 and 128")
     if args.repository_paths and not args.paths:
         return fail("--repository-paths requires --paths")
     if args.repository_paths and args.worktree:
@@ -1424,7 +1443,7 @@ def cmd_claims(args: argparse.Namespace) -> int:
             args.acquire, args.claim_id, args.transfer_to, args.explain,
             args.repository is not None, args.offset is not None, args.limit is not None,
             args.transfer_consumer, args.paths, args.worktree, args.branch,
-            args.repository_paths, args.adopt,
+            args.repository_paths, args.adopt, history_view,
         )):
             return fail(
                 "--release-claim accepts one exact claim ID and cannot be combined with other claim operations"
@@ -1681,6 +1700,79 @@ def cmd_claims(args: argparse.Namespace) -> int:
                 page = page[:-1]
             out(response)
             return 0
+        if history_view:
+            offset = 0 if args.offset is None else args.offset
+            limit = 100 if args.limit is None else args.limit
+            history_records = [
+                record for record in records
+                if not args.claim_id
+                or str(record.get("claim_id", "")) == args.claim_id
+            ]
+            if args.claim_id and not history_records:
+                return fail(f"unknown claim {args.claim_id}")
+            latest_keys = {
+                (str(record.get("claim_id", "")), int(record.get("version", 0)))
+                for record in claims_module.latest_claims(records)
+            }
+            live_keys = {
+                (str(record.get("claim_id", "")), int(record.get("version", 0)))
+                for record in claims_module.active_claims(records).values()
+            }
+            annotated = []
+            for record in history_records:
+                if not isinstance(record, dict):
+                    continue
+                try:
+                    version = int(record.get("version", 0))
+                except (TypeError, ValueError):
+                    version = 0
+                key = (str(record.get("claim_id", "")), version)
+                copy = dict(record)
+                copy["latest"] = key in latest_keys
+                copy["live"] = key in live_keys
+                annotated.append(copy)
+            annotated.sort(key=lambda record: (
+                str(record.get("claim_id", "")),
+                -int(record.get("version", 0)),
+            ))
+            page = annotated[offset:offset + limit]
+            while True:
+                response = {
+                    "schema_version": "mncs.environment.claim-history-page/1",
+                    "offset": offset,
+                    "limit": limit,
+                    "total": len(annotated),
+                    "returned_count": len(page),
+                    "response_budget_truncated": len(page) < min(
+                        limit, max(0, len(annotated) - offset),
+                    ),
+                    "next_offset": (
+                        offset + len(page)
+                        if offset + len(page) < len(annotated) else None
+                    ),
+                    "order": "claim-id-ascending-version-descending",
+                    "claims": page,
+                }
+                encoded = json.dumps(
+                    response, ensure_ascii=False, indent=2, sort_keys=True,
+                ).encode("utf-8")
+                if len(encoded) <= MAX_CLAIM_PAGE_OUTPUT_BYTES:
+                    break
+                if len(page) <= 1:
+                    return fail(
+                        "one claim record exceeds the bounded query response size",
+                        code=3,
+                        diagnostics={
+                            "code": "claim-record-too-large",
+                            "publication_completed": False,
+                            "claim_id": page[0]["claim_id"] if page else None,
+                            "next_offset": offset + 1 if page else offset,
+                            "next": "inspect the claim through a transport that can return its exact full scope",
+                        },
+                    )
+                page = page[:-1]
+            out(response)
+            return 0
         if args.explain:
             latest = None
             for record in records:
@@ -1702,13 +1794,83 @@ def cmd_claims(args: argparse.Namespace) -> int:
         live_keys = {(str(item.get("claim_id", "")),
                       int(item.get("version", 0)))
                      for item in live.values()}
-        annotated = []
-        for record in records:
+        if args.claim_id:
+            annotated = []
+            for record in records:
+                copy = dict(record)
+                copy["live"] = (
+                    str(record.get("claim_id", "")),
+                    int(record.get("version", 0)),
+                ) in live_keys
+                annotated.append(copy)
+            out(annotated)
+            return 0
+        latest = sorted(
+            (
+                record for record in claims_module.latest_claims(records)
+                if record.get("status") == "held"
+            ),
+            key=lambda record: (
+                (
+                    str(record.get("claim_id", "")),
+                    int(record.get("version", 0)),
+                ) not in live_keys,
+                str(record.get("repository", "")),
+                str(record.get("claim_id", "")),
+            ),
+        )
+        current_claims = []
+        for record in latest:
             copy = dict(record)
-            copy["live"] = (str(record.get("claim_id", "")),
-                            int(record.get("version", 0))) in live_keys
-            annotated.append(copy)
-        out(annotated)
+            try:
+                version = int(record.get("version", 0))
+            except (TypeError, ValueError):
+                version = 0
+            copy["live"] = (str(record.get("claim_id", "")), version) in live_keys
+            current_claims.append(copy)
+        offset = 0 if args.offset is None else args.offset
+        limit = 25 if args.limit is None else args.limit
+        page = current_claims[offset:offset + limit]
+        while True:
+            response = {
+                "schema_version": "mncs.environment.claim-current-page/1",
+                "offset": offset,
+                "limit": limit,
+                "total": len(current_claims),
+                "returned_count": len(page),
+                "response_budget_truncated": len(page) < min(
+                    limit, max(0, len(current_claims) - offset),
+                ),
+                "live_count": sum(
+                    1 for record in current_claims if record.get("live") is True
+                ),
+                "history_record_count": len(records),
+                "history_status": "omitted; use --history",
+                "next_offset": (
+                    offset + len(page)
+                    if offset + len(page) < len(current_claims) else None
+                ),
+                "claims": page,
+            }
+            encoded = json.dumps(
+                response, ensure_ascii=False, indent=2, sort_keys=True,
+            ).encode("utf-8")
+            if len(encoded) <= MAX_CLAIM_PAGE_OUTPUT_BYTES:
+                break
+            if len(page) <= 1:
+                return fail(
+                    "one claim record exceeds the bounded query response size",
+                    code=3,
+                    diagnostics={
+                        "code": "claim-record-too-large",
+                        "publication_completed": False,
+                        "claim_id": page[0]["claim_id"] if page else None,
+                        "next_offset": offset + 1 if page else offset,
+                        "next": "inspect the claim through a transport that can return its exact full scope",
+                    },
+                )
+            page = page[:-1]
+        out(response)
         return 0
     finally:
         close_store(store)
@@ -2815,10 +2977,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--repository", default=None,
         help="read a bounded page of latest claim records for one repository",
     )
+    claims.add_argument(
+        "--history", action="store_true",
+        help="read a bounded claim history page; versions are newest first within each claim",
+    )
     claims.add_argument("--offset", type=int, default=None,
-                        help="claim page offset (requires --repository)")
+                        help="claim page offset (default-current, --repository, or --history view)")
     claims.add_argument("--limit", type=int, default=None,
-                        help="claim page size from 1 to 128 (requires --repository)")
+                        help="claim page size from 1 to 128")
     claims.add_argument("--transfer-to", default=None,
                         help="session id receiving an explicit claim transfer")
     claims.add_argument("--transfer-consumer", default="",
