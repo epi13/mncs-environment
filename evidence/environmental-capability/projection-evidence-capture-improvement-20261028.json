@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_evidence_capture_improvement_20261028",
+  "captured_at": "2026-10-28T04:46:50Z",
+  "measurement_basis": "committed-bounded-output-contract-and-provenance-linked-completion-capture-status-with-live-ECI-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_af8641d7bfd44554",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3935e101791f",
+      "claim:mncs-environment:worktree:eab5f280e68a",
+      "claim:mncs-environment:worktree:84126eb53bf9"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability contract, invocation completion event, and ECI projection",
+    "request": {
+      "operation": "preserve agent-facing output delivery completeness through the existing capability and ECI path",
+      "addresses_hypothesis_identity": "ph_environment_projection_evidence_capture_delivery",
+      "implementation_commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "verification_observation_identity": "ev_environment_projection_evidence_capture_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_projection_evidence_capture_readback_20261028"
+    },
+    "outcome": {
+      "implementation_scope": "projection-evidence-inspection provider contract and invocation completion plus ECI interaction compaction",
+      "implementation_change": "Declared a bounded 131072-byte output allowance for projection-evidence inspection. Invocation completion events now record capture status and the configured limit without copying output. ECI exposes that status in session interactions and retains it through bounded response compaction.",
+      "verified_change": "A real 62917-byte projection response now completes with truncated=false, exit code zero, and an authenticated completion record containing output_capture.status=complete and limit_bytes=131072. A historical event without capture metadata remains not-recorded in ECI.",
+      "effectiveness_assessment": "delivery-and-projection-behavior-verified-for-the-selected-session; long-term-agent-burden-reduction-not-assessed",
+      "interpretation_limit": "Complete capture establishes only that output fit the declared bound; it does not establish provider correctness, service fulfillment, or agent receipt."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_evidence_capture_delivery",
+    "title": "Capability completion status omits whether output was delivered within the configured capture bound",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability invocation and environmental-capability projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Declare a bounded output allowance for projection evidence and preserve capture completeness in invocation completion events and compact ECI interactions."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_projection_evidence_capture_20261028",
+    "addresses_hypothesis_identity": "ph_environment_projection_evidence_capture_delivery",
+    "implementation_reference": {
+      "identity": "mncs_environment_capture_eci_implementation_91a9cd8",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "89af8da3cdf0e76c731ca206ed07702d76a6e3103ce51a826cc8c6083777fd0e"
+    },
+    "verification_observation_identity": "ev_environment_projection_evidence_capture_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_projection_evidence_capture_readback_20261028",
+    "basis": "The provider now returns the full current projection evidence page within an explicit bounded capture contract, completion events preserve completeness evidence, and compact ECI interactions make the status discoverable by source-event reference. This establishes behavior for this workflow only; agent benefit remains unmeasured.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "Whether independent sessions or other capabilities experience fewer delivery failures.",
+      "Whether agents rely on the projected capture status or perform less manual investigation.",
+      "Whether all future projection evidence pages fit within the configured bound."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/projection-evidence-capture-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_projection_evidence_capture_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/projection-evidence-capture-verification-20261028.json"
+    }
+  ],
+  "not_measured": [
+    "Long-term agent burden reduction, cross-agent usability, and recurrence.",
+    "Provider correctness or service fulfillment from output capture alone.",
+    "Whether the new allowance is sufficient for future evidence pages larger than this selected page."
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_evidence_capture_verification_20261028",
+  "captured_at": "2026-10-28T04:46:50Z",
+  "measurement_basis": "focused-session-and-ECI-regression-suites-projection-conformance-vertical-lifecycle-proof-and-authentic-provider-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_af8641d7bfd44554",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3935e101791f",
+      "claim:mncs-environment:worktree:eab5f280e68a",
+      "claim:mncs-environment:worktree:84126eb53bf9"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment unittest/pytest, projection conformance, vertical proof, and live capability invocation",
+    "request": {
+      "commands": [
+        "PYTHONPATH=tests:. python3 -m unittest test_environment.SessionTests -q",
+        "PYTHONPATH=tests:. python3 -m unittest test_environment.CapabilityTests -q",
+        "python3 -m pytest tests/test_capability_intelligence.py tests/test_project_view_capability_discovery.py -q",
+        "python3 scripts/verify_projection_contracts.py --workspace /home/epi13/Documents/Projects --repository mncs-environment",
+        "python3 scripts/vertical_proof.py"
+      ],
+      "live_invocation_event": {
+        "identity": "evt_15a032edcebfd202",
+        "sequence": 303,
+        "type": "capability.invoked"
+      },
+      "live_completion_event": {
+        "identity": "evt_473aa248fd5f6981",
+        "sequence": 304,
+        "type": "invocation.completed"
+      }
+    },
+    "outcome": {
+      "session_tests": "92 passed",
+      "capability_tests": "29 passed",
+      "eci_and_project_view_tests": "174 passed",
+      "projection_conformance": "pass",
+      "vertical_proof": "pass",
+      "compileall_and_diff_check": "pass",
+      "live_invocation": {
+        "outer_exit_code": 0,
+        "provider_status": "ok",
+        "provider_returncode": 0,
+        "stdout_bytes": 62917,
+        "stderr_bytes": 0,
+        "truncated": false,
+        "output_capture_status": "complete",
+        "output_limit_bytes": 131072
+      },
+      "verification_status": "focused-verification-and-real-invocation-passed",
+      "interpretation_limit": "The tests and live call establish the covered invocation and projection behavior; they do not establish provider correctness, service fulfillment, long-term recurrence, or agent burden reduction."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_evidence_capture_delivery",
+    "title": "Capability completion status omits whether output was delivered within the configured capture bound",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability invocation and environmental-capability projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Declare a bounded output allowance for projection evidence and preserve capture completeness in invocation completion events and compact ECI interactions."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_capture_eci_implementation_91a9cd8",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "89af8da3cdf0e76c731ca206ed07702d76a6e3103ce51a826cc8c6083777fd0e"
+    },
+    {
+      "identity": "mncs_environment_capture_completion_event_implementation_91a9cd8",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "mncs_env/sessions.py",
+      "sha256": "db824e7b3fc99f7dc0e5910233c0bef78057a874a1baed81781e56c91c6252eb"
+    },
+    {
+      "identity": "mncs_environment_capture_eci_tests_91a9cd8",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "360bcbd2d7d2788d8a814700d6d28741d4cf4eb7cde3b1c09857838c82d6a64f"
+    },
+    {
+      "identity": "mncs_environment_capture_session_tests_91a9cd8",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "tests/test_environment.py",
+      "sha256": "d51c6b77d2c01953d5254e4d8aa8b7460952ddb1545a910af979e624c8e44db7"
+    }
+  ],
+  "not_measured": [
+    "Cross-session behavior, other providers, alternate output sizes, and independent agent runtimes.",
+    "Long-term reduction in agent intervention or improved service quality after deployment."
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_evidence_capture_readback_20261028",
+  "captured_at": "2026-10-28T04:46:50Z",
+  "measurement_basis": "paired-authenticated-historical-and-current-ECI-projections-of-capability-capture-events",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_af8641d7bfd44554",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3935e101791f",
+      "claim:mncs-environment:worktree:eab5f280e68a",
+      "claim:mncs-environment:worktree:84126eb53bf9"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment environmental-capability projection over authenticated session activity",
+    "request": {
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "history_pages": 1,
+      "evidence_offset": 34,
+      "evidence_limit": 1,
+      "historical_event_before_sequence": 260,
+      "historical_event_limit": 8,
+      "historical_projection_identity": "eci_b242619f930d036d",
+      "current_event_window_sequences": [
+        300,
+        307
+      ],
+      "current_event_limit": 8,
+      "current_projection_identity": "eci_3d67dfa797c04846",
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 1 --evidence-offset 34 --session-event-limit 8"
+    },
+    "outcome": {
+      "historical": {
+        "projection_identity": "eci_b242619f930d036d",
+        "content_digest": "92187d6ccb53ed5f1d4c348c3fe47968",
+        "event_window_sequences": [
+          252,
+          259
+        ],
+        "invocation_event": "evt_1de4bd556894a8f7",
+        "completion_event": "evt_b78277b72d4710c5",
+        "provider_status": "ok",
+        "returncode": 0,
+        "output_capture_status": "not-recorded-in-completion-event",
+        "response_truncated": true
+      },
+      "current": {
+        "projection_identity": "eci_3d67dfa797c04846",
+        "content_digest": "8c398070c37e24fa937845a642fea8bc",
+        "event_window_sequences": [
+          300,
+          307
+        ],
+        "invocation_event": "evt_15a032edcebfd202",
+        "completion_event": "evt_473aa248fd5f6981",
+        "provider_status": "ok",
+        "returncode": 0,
+        "stdout_bytes": 62917,
+        "output_capture": {
+          "status": "complete",
+          "limit_bytes": 131072,
+          "basis": "invocation.completed.output_capture"
+        },
+        "interaction_correlation_status": "matched-by-provider-request-id",
+        "response_truncated": true,
+        "final_response_bytes": 64406
+      },
+      "result": "The ECI projection preserves the distinction between an old completion with unrecorded capture evidence and a current complete capture, including the configured bound and exact invocation/completion event links. The current projection remains response-truncated due to unrelated accumulated session context.",
+      "effectiveness_assessment": "agent-visible-delivery-and-evidence-path-verified-for-this-session; broader burden reduction and service fulfillment not established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_evidence_capture_delivery",
+    "title": "Capability completion status omits whether output was delivered within the configured capture bound",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability invocation and environmental-capability projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Declare a bounded output allowance for projection evidence and preserve capture completeness in invocation completion events and compact ECI interactions."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "evt_1de4bd556894a8f7",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 258,
+      "type": "capability.invoked"
+    },
+    {
+      "identity": "evt_b78277b72d4710c5",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 259,
+      "type": "invocation.completed"
+    },
+    {
+      "identity": "evt_15a032edcebfd202",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 303,
+      "type": "capability.invoked"
+    },
+    {
+      "identity": "evt_473aa248fd5f6981",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 304,
+      "type": "invocation.completed"
+    },
+    {
+      "identity": "mncs_environment_capture_eci_implementation_91a9cd8",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "89af8da3cdf0e76c731ca206ed07702d76a6e3103ce51a826cc8c6083777fd0e"
+    }
+  ],
+  "not_measured": [
+    "Whether other agent sessions receive the same experience under their own goals and runtime configurations.",
+    "Whether the current ECI response truncation prevented an agent from using other projection sections.",
+    "Whether the change reduces long-term manual inspection or improves environmental service outcomes."
+  ]
+}

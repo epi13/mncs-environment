@@ -1,0 +1,106 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+  "captured_at": "2026-10-28T04:46:50Z",
+  "measurement_basis": "agent-observed-invocation-delivery-failure-correlated-with-authenticated-session-events-and-bounded-ECI-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_af8641d7bfd44554",
+    "campaign_evidence_count_before_recording": 35,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3935e101791f",
+      "claim:mncs-environment:worktree:eab5f280e68a",
+      "claim:mncs-environment:worktree:84126eb53bf9"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment capability invocation and environmental-capability projection",
+    "request": {
+      "operation": "inspect the bounded projection-evidence service invocation and its correlated completion",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "event_window_sequences": [
+        252,
+        259
+      ],
+      "invocation_event": {
+        "identity": "evt_1de4bd556894a8f7",
+        "sequence": 258,
+        "type": "capability.invoked"
+      },
+      "completion_event": {
+        "identity": "evt_b78277b72d4710c5",
+        "sequence": 259,
+        "type": "invocation.completed"
+      },
+      "historical_projection_identity": "eci_b242619f930d036d"
+    },
+    "outcome": {
+      "agent_observed_cli_result": {
+        "outer_exit_code": 4,
+        "warning": "provider invocation output was truncated by the capture limit",
+        "provider_status": "ok",
+        "provider_returncode": 0,
+        "observed_provider_stdout_bytes": 62917
+      },
+      "authenticated_completion_event": {
+        "status": "ok",
+        "returncode": 0,
+        "output_capture_metadata": "not-recorded"
+      },
+      "historical_eci_output_capture_status": "not-recorded-in-completion-event",
+      "interpretation": "The agent-facing invocation failed delivery because the captured output was truncated, while the completion event and ECI projection only showed successful provider execution. The event itself did not record enough evidence to establish capture completeness.",
+      "cause_hypothesis": "The projection capability had no explicit output limit in its binding and inherited the generic capture budget, which allocated 32768 bytes to stdout for this invocation."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_evidence_capture_delivery",
+    "title": "Capability completion status omits whether output was delivered within the configured capture bound",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability invocation and environmental-capability projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Declare a bounded output allowance for projection evidence and preserve capture completeness in invocation completion events and compact ECI interactions."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "evt_1de4bd556894a8f7",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 258,
+      "type": "capability.invoked"
+    },
+    {
+      "identity": "evt_b78277b72d4710c5",
+      "kind": "authenticated-session-event",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "sequence": 259,
+      "type": "invocation.completed"
+    },
+    {
+      "identity": "eci_b242619f930d036d",
+      "kind": "historical-ECI-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "64e788691d342268f3e9f84f27f931fba1bf9832"
+    }
+  ],
+  "not_measured": [
+    "Whether the same capture mismatch affects other capabilities or agent runtimes.",
+    "Whether this single invocation pattern recurred across independent sessions.",
+    "Whether the output was useful to an agent beyond establishing the truncation and projection-page size.",
+    "Whether the incident reduced or increased overall agent intervention burden."
+  ]
+}
