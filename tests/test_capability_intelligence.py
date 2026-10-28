@@ -6238,6 +6238,7 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
         "owner-pass-context"
     )
     assert observed_activity["summary"] == {
+        "scoped_invocation_count": 0,
         "unclassified_invocation_count": 1,
         "invalid_context_event_count": 0,
         "capability_group_count": 1,
@@ -6262,6 +6263,32 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     ]] == [
         "evt_service_activity_invoked", "evt_service_activity_completed",
     ]
+
+    mixed_owner_activity = dict(activity["ambient_owner_pass_activity"])
+    mixed_owner_activity["scoped_invocation_count"] = 1
+    mixed_accountability = capability_intelligence._session_service_accountability(
+        activity["service_readiness"],
+        activity.get("capability_delivery"),
+        session.snapshot,
+        mixed_owner_activity,
+        activity["ambient_service_execution"],
+        observed_activity["source"],
+    )
+    mixed_observed = mixed_accountability["observed_capability_activity"]
+    assert mixed_observed["summary"]["scoped_invocation_count"] == 1
+    assert mixed_observed["summary"]["unclassified_invocation_count"] == 1
+    assert mixed_observed["groups"][0]["capability"] == (
+        "mncs-doc:documentation-projection"
+    )
+    assert mixed_observed["agent_attribution_status"] == "not-established"
+    assert mixed_observed["agent_intervention_burden_status"] == "not-measured"
+    assert mixed_observed["causal_status"] == "not-established"
+    mixed_compact = capability_intelligence._compact_service_accountability_overview(
+        mixed_accountability, activity["ambient_service_execution"],
+    )
+    assert mixed_compact["observed_capability_activity"]["summary"][
+        "scoped_invocation_count"
+    ] == 1
 
     compact = capability_intelligence._compact_service_accountability_overview(
         accountability, activity["ambient_service_execution"],

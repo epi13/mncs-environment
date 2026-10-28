@@ -7473,13 +7473,15 @@ def _compact_service_observed_capability_activity(
     compact_summary = {
         key: summary[key]
         for key in (
-            "unclassified_invocation_count", "invalid_context_event_count",
+            "scoped_invocation_count", "unclassified_invocation_count",
+            "invalid_context_event_count",
             "capability_group_count", "returned_capability_group_count",
             "omitted_capability_group_count", "eligible_service_opportunity_count",
             "group_details_referenced_count",
         )
         if type(summary.get(key)) is int and summary[key] >= 0
-        or (key == "eligible_service_opportunity_count"
+        or (key in {"scoped_invocation_count",
+                    "eligible_service_opportunity_count"}
             and key in summary and summary[key] is None)
     }
     raw_groups = value.get("groups")
@@ -24327,6 +24329,9 @@ def _service_observed_capability_activity(
     unclassified_invocations = value.get("unclassified_invocation_count", 0)
     if type(unclassified_invocations) is not int or unclassified_invocations < 0:
         unclassified_invocations = 0
+    scoped_invocations = value.get("scoped_invocation_count")
+    if type(scoped_invocations) is not int or scoped_invocations < 0:
+        scoped_invocations = None
     invalid_context_events = value.get("invalid_context_event_count", 0)
     if type(invalid_context_events) is not int or invalid_context_events < 0:
         invalid_context_events = 0
@@ -24393,6 +24398,7 @@ def _service_observed_capability_activity(
         ),
         "source": source,
         "summary": {
+            "scoped_invocation_count": scoped_invocations,
             "unclassified_invocation_count": unclassified_invocations,
             "invalid_context_event_count": invalid_context_events,
             "capability_group_count": group_count,
@@ -24449,14 +24455,10 @@ def _session_service_accountability(
             isinstance(environment_execution, dict)
             and environment_execution.get("status") != "not-recorded-in-session"
         )
-        activity_has_no_scoped_calls = (
-            isinstance(ambient_owner_pass_activity, dict)
-            and ambient_owner_pass_activity.get("scoped_invocation_count") == 0
-        )
         observed_capability_activity = (
             _service_observed_capability_activity(
                 ambient_owner_pass_activity, event_window_source,
-            ) if has_environment_execution and activity_has_no_scoped_calls
+            ) if has_environment_execution
             else None
         )
         snapshot = snapshot if isinstance(snapshot, dict) else {}

@@ -294,6 +294,12 @@ Every ambient subsystem so far converges on the same small set:
 - bounded budgets with honest deferred states;
 - fail-closed unknowns that never become silent passes.
 
+The service-accountability projection keeps capability calls without valid
+ambient owner-pass context visible even when the same selected event window
+also contains owner-scoped calls. Their event references and scoped-call count
+make mixed activity inspectable; missing context is a possible integration
+gap, not proof of agent intervention or service failure.
+
 A future campaign that needs another cache, event, or evidence
 architecture should first check whether these primitives already
 solve the generic part. Generalize only demonstrated shared
