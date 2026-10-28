@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_standalone_observation_budget_definition_correction_readback_20261028",
+  "captured_at": "2026-10-28T07:50:41Z",
+  "measurement_basis": "live-ECI-post-correction-selected-campaign-page-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "56a3f61f1200e4e0a49b814e04c08863613e2573"
+  },
+  "observation": {
+    "kind": "eci-pressure-definition-correction-live-readback",
+    "source_interface": "MNCS Environment ECI projection",
+    "request": {
+      "projection_identity": "eci_f263c0eb74bc0cbf",
+      "campaign_state_checkpoint_id": "chk_78d46bcd5eee7676",
+      "history_pages": 1,
+      "evidence_page_offset": 79,
+      "evidence_page_limit": 5,
+      "session_event_before_sequence": 772,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_records_considered": 5,
+      "observation_records_verified": 5,
+      "observation_records_unavailable": 0,
+      "observation_records_compacted_out_count": 4,
+      "returned_observation_count": 1,
+      "returned_observation_identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028",
+      "pressure_hypothesis": {
+        "identity": "ph_environment_eci_standalone_observation_budget",
+        "definition_status": "consistent",
+        "observation_count": 1,
+        "distinct_session_count": 1,
+        "recurrence_status": "not-established"
+      },
+      "improvement_relation": {
+        "identity": "im_environment_eci_standalone_observation_budget_verified_20261028",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "record_correction_counts": "omitted-from-compact-response",
+      "source_pointer_content_integrity_verified_count": 6,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "response_byte_count": 175517,
+      "response_truncated": true
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "append-only-pressure-definition-correction",
+      "identity": "ev_environment_eci_standalone_observation_budget_improvement_definition_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "4c9caaf0581d1f11dec6c2f0feb377f6a4b92918",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-improvement-definition-correction-20261028.json",
+      "sha256": "53de6c4f4896f8e6f701f3b6af90d4021d843b93e2f93bf3e614549e4a306751"
+    },
+    {
+      "kind": "verified-pressure-occurrence",
+      "identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "99a7f913893ec41fe980f0d88f1f1b69ce1083d8",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-pressure-20261028.json",
+      "sha256": "b8ed40c66ddd0fc6b6e4d1223ec99c1e4cd43fabf11910c9bd33ebca38ba9a89"
+    }
+  ],
+  "measurement_limits": [
+    "ECI now reports a consistent definition for the previously conflicting pressure identity; the selected response does not expose record-correction counts or the correction row itself.",
+    "The query remains partial and compacts four of five campaign records, so it does not establish that every related source detail is visible in one response.",
+    "One pressure occurrence does not establish recurrence, and the projection does not measure agent intervention or sustained improvement effectiveness."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
