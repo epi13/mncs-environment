@@ -1,0 +1,69 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_session_store_source_chain_readback_20261028",
+  "captured_at": "2026-10-28T01:39:09Z",
+  "measurement_basis": "live-eci-readback-of-verified-pressure-implementation-and-subsequent-evidence-links",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "82bf84ab51066d67bda14f16415485537f1726c4"
+  },
+  "observation": {
+    "kind": "environmental-improvement-chain-live-readback",
+    "source_interface": "python3 -m mncs_env.cli projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 21",
+    "request": {
+      "projection_identity": "eci_ed8a9c6b602524e9",
+      "campaign_state_checkpoint_id": "chk_39b05d2825ed5ef7",
+      "campaign_evidence_count": 21,
+      "improvement_relation_identity": "im_environment_eci_session_store_sources_20261028"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "improvement_relation_status": "present-in-projection",
+      "pressure_hypothesis_status": "present-in-projection",
+      "implementation_content_integrity_status": "content-integrity-verified",
+      "verification_record_status": "record-integrity-verified-in-projection",
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "source_pointer_count": 14,
+      "source_pointer_content_integrity_verified_count": 14,
+      "source_pointer_content_integrity_not_verified_count": 0,
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The ECI projection resolves and integrity-checks the pressure, implementation, verification, and subsequent-observation relationship. The projection does not establish that agents received or used the information, that their intervention burden declined, or that the four older unavailable records were recovered."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1"
+    },
+    {
+      "identity": "mncs_environment_eci_session_store_sources_82bf84a",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "82bf84ab51066d67bda14f16415485537f1726c4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "27d71175a1146c087fe6cb897f617ef24dd2fd0cbcf49d79be3b127cf979a0bc"
+    }
+  ],
+  "measurement_limits": [
+    "The selected campaign page still reports four older observation records unavailable because their source commit/path objects cannot be read.",
+    "All 14 selected source pointers were integrity-verified in this projection; that does not prove the linked verification conclusion is correct.",
+    "Agent receipt, usefulness, and intervention-burden change remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
