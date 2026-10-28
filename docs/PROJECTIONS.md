@@ -150,6 +150,15 @@ pressures from the newest page of authenticated campaign evidence:
   --interpret environmental-capability
 ```
 
+The capability-observation entry profile selects `mncs-test` as the provider
+for `mncs.test-verification-coherence/1`. If an older session records a failed
+ambient verification pass, the service-accountability projection reads only
+that pass's exact immutable result and linked verification evidence. It exposes
+the recorded reason code and evidence pointer, and keeps the source integrity
+and verification status distinct from a verified service outcome. Missing or
+mismatched Store evidence is reported without inferring a reason. This does not
+estimate agent need, intervention burden, or ambient fulfillment.
+
 For bounded recurrence analysis across earlier campaign evidence pages, request
 an explicit page window:
 
@@ -1285,6 +1294,15 @@ a telemetry store. The relation does not independently verify the result,
 prove service fulfillment, or measure agent receipt or intervention burden.
 Entry-only traces can show a result summary but do not claim a durable result
 reference.
+
+The nested `environment_service_execution.summary` also retains a bounded
+`owner_failure_details` list so response compaction does not hide a recorded
+failure behind aggregate counts. Where an owner result links to an immutable
+verification record, the projection resolves that exact record and exposes its
+allowlisted reason code, source schema, integrity status, and references.
+`owner_failure_details_status` distinguishes complete, partial, invalid, and
+`not-recorded` failure coverage. This is failure evidence, not an assertion that
+the service caused the failure or that any agent received the result.
 
 When a Family ambient pass persists `family_last_summary`, ECI exposes it as
 `session_activity.family_ambient_observation`, with the selected session,

@@ -51,15 +51,19 @@ def test_development_definition_tracks_the_current_linked_worktree():
     assert checkout["path"] == str(ROOT.resolve())
 
 
-def test_capability_observation_definition_has_bounded_scope_and_no_services():
+def test_capability_observation_definition_includes_ambient_verification_provider():
     definition = json.loads(
         (ROOT / ".mncs" / "environment-observation.json").read_text()
     )
 
     assert definition["working_checkout"] == "current"
     assert definition["workspace_scope"]["repositories"] == [
-        "mncs-environment", "mncs-store", "mncs-rights-provenance",
-        "mncs-system-monitor", "mncs-automation",
+        "mncs-environment", "mncs-test", "mncs-store",
+        "mncs-rights-provenance", "mncs-system-monitor",
+        "mncs-automation", "mncs-commons",
+    ]
+    assert definition["required_capabilities"] == [
+        "mncs.test-verification-coherence/1",
     ]
     assert definition["services"] == []
     assert definition["intent"]["repositories"] == ["mncs-environment"]

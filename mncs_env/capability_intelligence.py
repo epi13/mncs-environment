@@ -24,6 +24,7 @@ from typing import Any
 
 from . import authority as authority_module
 from . import claims as claims_module
+from . import evidence_store
 from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
@@ -261,6 +262,7 @@ MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS = 8
 MAX_SESSION_SERVICE_READINESS_RECORDS = 16
 MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
+MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
 MAX_COMPACT_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 1
 MAX_SESSION_CLAIM_OWNER_EVENT_SESSIONS = 4
 MAX_SESSION_CLAIM_OWNER_EVENT_PAGE = 32
@@ -2610,6 +2612,8 @@ def _compact_service_accountability_overview(
                 "owner_pass_outcome_reason_counts",
                 "owner_pass_service_availability_counts",
                 "owner_pass_service_availability_reason_counts",
+                "owner_failure_details_status", "owner_failure_detail_count",
+                "owner_failure_details_omitted_count",
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
             )
@@ -2619,6 +2623,13 @@ def _compact_service_accountability_overview(
             or (key == "owner_failure_count" and key in execution_summary
                 and execution_summary.get(key) is None)
         }
+        failure_details = _compact_environment_owner_failure_details(
+            execution_summary.get("owner_failure_details"),
+        )
+        if failure_details:
+            compact_environment_summary["owner_failure_details"] = (
+                failure_details
+            )
         result_status_counts = execution_summary.get(
             "owner_pass_result_status_counts",
         )
@@ -2729,21 +2740,48 @@ def _compact_ambient_service_execution_overview(
             }
             results = owner_results.get("results")
             results = results if isinstance(results, list) else []
-            compact_results["results"] = [
-                {
+            failure_owners = execution.get("owner_failures")
+            failure_owners = (
+                set(failure_owners) if isinstance(failure_owners, list)
+                else set()
+            )
+            selected_results = [
+                row for row in results[:2] if isinstance(row, dict)
+            ]
+            for row in results:
+                if not isinstance(row, dict):
+                    continue
+                failure_evidence = row.get("failure_evidence")
+                is_failure = (
+                    row.get("owner") in failure_owners
+                    or row.get("owner_outcome_status") == "failure-reported"
+                    or row.get("operation_status") in {"retry", "failed", "error"}
+                    or (isinstance(failure_evidence, dict)
+                        and failure_evidence.get("status") == "recorded")
+                )
+                if (is_failure and row not in selected_results
+                        and len(selected_results) < 4):
+                    selected_results.append(row)
+            compact_results["results"] = []
+            for row in selected_results:
+                compact_row = {
                     key: row[key]
                     for key in (
                         "owner", "service_execution_id", "result_status",
-                        "verification_status", "result_identity",
-                        "source_reference_status", "source_reference",
-                        "outcome_disposition", "outcome_reason_code",
-                        "agent_response_emitted",
+                        "operation_status", "verification_status",
+                        "result_identity", "source_reference_status",
+                        "source_reference", "outcome_disposition",
+                        "outcome_reason_code", "agent_response_emitted",
                         "service_availability_status",
                         "service_availability_reason_code",
                     ) if key in row
                 }
-                for row in results[:2] if isinstance(row, dict)
-            ]
+                failure_evidence = _compact_service_failure_evidence(
+                    row.get("failure_evidence"),
+                )
+                if failure_evidence is not None:
+                    compact_row["failure_evidence"] = failure_evidence
+                compact_results["results"].append(compact_row)
             compact_results["results_omitted_by_response_budget"] = max(
                 0, len(results) - len(compact_results["results"]),
             )
@@ -2759,6 +2797,86 @@ def _compact_ambient_service_execution_overview(
             "Per-pass decisions were omitted by the response budget; use the projection digest and session snapshot context to request the bounded trace again.",
         ],
     }
+
+
+def _compact_service_failure_evidence(value: Any) -> dict[str, str] | None:
+    """Keep only bounded, allowlisted fields from exact service evidence."""
+    if not isinstance(value, dict):
+        return None
+    status = value.get("status")
+    if status not in {
+        "recorded", "no-failure-recorded", "unsupported-source-schema",
+        "evidence-reference-unavailable", "source-unavailable",
+        "source-integrity-failure", "result-identity-mismatch",
+    }:
+        return None
+    result = {"status": status}
+    reason_code = value.get("reason_code")
+    if (isinstance(reason_code, str)
+            and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", reason_code)):
+        result["reason_code"] = reason_code
+    source_schema = value.get("source_schema")
+    if source_schema == "mncs.environment.verification/1":
+        result["source_schema"] = source_schema
+    integrity = value.get("source_integrity_status")
+    if integrity in {"verified", "unavailable", "not-verified"}:
+        result["source_integrity_status"] = integrity
+    for key in ("source_reference", "owner_result_reference"):
+        reference = value.get(key)
+        if (isinstance(reference, str)
+                and re.fullmatch(
+                    r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                )
+                and re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])):
+            result[key] = reference
+    return result
+
+
+def _compact_environment_owner_failure_details(
+    value: Any,
+) -> list[dict[str, Any]]:
+    """Keep a few exact, bounded owner failure records in accountability views."""
+    rows = value if isinstance(value, list) else []
+    result: list[dict[str, Any]] = []
+    for row in rows[:MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS]:
+        if not isinstance(row, dict):
+            continue
+        owner = row.get("owner_pass")
+        if (not isinstance(owner, str)
+                or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner) is None):
+            continue
+        compact: dict[str, Any] = {"owner_pass": owner}
+        execution_id = row.get("service_execution_id")
+        if (isinstance(execution_id, str)
+                and re.fullmatch(r"ase_[0-9a-f]{32}", execution_id)):
+            compact["service_execution_id"] = execution_id
+        for key in (
+            "result_status", "operation_status", "source_reference_status",
+        ):
+            value = row.get(key)
+            if (isinstance(value, str)
+                    and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", value)):
+                compact[key] = value
+        identity = row.get("result_identity")
+        if (isinstance(identity, str)
+                and re.fullmatch(r"[0-9a-f]{64}", identity)):
+            compact["result_identity"] = identity
+        reference = row.get("source_reference")
+        if (isinstance(reference, str)
+                and re.fullmatch(
+                    r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                )
+                and re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])):
+            compact["source_reference"] = reference
+        failure_evidence = _compact_service_failure_evidence(
+            row.get("failure_evidence"),
+        )
+        if failure_evidence is not None:
+            compact["failure_evidence"] = failure_evidence
+        if row.get("result_record_status") == "not-recorded-for-failure":
+            compact["result_record_status"] = "not-recorded-for-failure"
+        result.append(compact)
+    return result
 
 
 def _compact_family_ambient_observation(value: Any) -> dict[str, Any] | None:
@@ -3153,6 +3271,13 @@ def _compact_session_activity_budget_overview(
                 if isinstance(execution_summary, dict):
                     compact_execution["summary"] = dict(execution_summary)
                     execution_summary = compact_execution["summary"]
+                    failure_details = _compact_environment_owner_failure_details(
+                        execution_summary.get("owner_failure_details"),
+                    )
+                    if failure_details:
+                        execution_summary["owner_failure_details"] = (
+                            failure_details
+                        )
                     pass_observations = execution_summary.get(
                         "owner_pass_observations",
                     )
@@ -3204,6 +3329,7 @@ def _compact_session_activity_budget_overview(
                                 "owner_pass", "result_status", "result_identity",
                                 "verification_status",
                                 "source_reference_status", "source_reference",
+                                "failure_evidence",
                             )
                             if key in item
                         })
@@ -3566,9 +3692,19 @@ def _compact_session_activity_evidence_priority_overview(
                             "owner_pass_decision_coverage",
                             "scheduled_pass_count", "skipped_pass_count",
                             "owner_failure_count",
+                            "owner_failure_details_status",
+                            "owner_failure_detail_count",
+                            "owner_failure_details_omitted_count",
                         )
                         if key in execution_summary
                     }
+                    failure_details = _compact_environment_owner_failure_details(
+                        execution_summary.get("owner_failure_details"),
+                    )
+                    if failure_details:
+                        compact_execution_summary["owner_failure_details"] = (
+                            failure_details
+                        )
                     pass_observations = execution_summary.get(
                         "owner_pass_observations",
                     )
@@ -18065,6 +18201,10 @@ def _environment_service_execution_accountability(
             "owner_pass_decision_coverage", "unavailable",
         ),
         "owner_failure_observation_status": "not-recorded",
+        "owner_failure_details_status": "not-recorded",
+        "owner_failure_detail_count": 0,
+        "owner_failure_details_omitted_count": 0,
+        "owner_failure_details": [],
         "ambient_fulfillment_status": "not-established",
         "agent_intervention_burden_status": "not-measured",
         "verification_status": "not-established",
@@ -18159,6 +18299,81 @@ def _environment_service_execution_accountability(
             summary["owner_pass_service_availability_reason_counts"] = dict(
                 sorted(service_availability_reason_counts.items()),
             )
+        reported_failure_owners = execution.get("owner_failures")
+        reported_failure_owners = (
+            reported_failure_owners
+            if isinstance(reported_failure_owners, list) else []
+        )
+        valid_failure_owners = list(dict.fromkeys(
+            owner for owner in reported_failure_owners
+            if isinstance(owner, str)
+            and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner)
+        ))
+        failure_detail_rows: list[dict[str, Any]] = []
+        recorded_failure_owners: set[str] = set()
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            owner = item.get("owner")
+            if not isinstance(owner, str):
+                continue
+            failure_evidence = item.get("failure_evidence")
+            is_failure = (
+                owner in valid_failure_owners
+                or item.get("owner_outcome_status") == "failure-reported"
+                or item.get("operation_status") in {"retry", "failed", "error"}
+                or (isinstance(failure_evidence, dict)
+                    and failure_evidence.get("status") == "recorded")
+            )
+            if not is_failure:
+                continue
+            failure_detail_rows.append({
+                "owner_pass": owner,
+                **{
+                    key: item[key]
+                    for key in (
+                        "service_execution_id", "result_status",
+                        "operation_status", "result_identity",
+                        "source_reference_status", "source_reference",
+                        "failure_evidence",
+                    )
+                    if key in item
+                },
+            })
+            recorded_failure_owners.add(owner)
+        for owner in valid_failure_owners:
+            if owner not in recorded_failure_owners:
+                failure_detail_rows.append({
+                    "owner_pass": owner,
+                    "result_record_status": "not-recorded-for-failure",
+                })
+        compact_failure_details = _compact_environment_owner_failure_details(
+            failure_detail_rows,
+        )
+        detail_source_status = execution.get(
+            "owner_failure_observation_status", "not-recorded",
+        )
+        failure_count = execution.get("owner_failure_count")
+        if detail_source_status == "complete":
+            details_complete = (
+                type(failure_count) is int
+                and failure_count == len(valid_failure_owners)
+                and len(failure_detail_rows) == failure_count
+            )
+            summary["owner_failure_details_status"] = (
+                "complete"
+                if details_complete
+                and len(failure_detail_rows)
+                <= MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS
+                else "partial"
+            )
+        elif detail_source_status in {"partial", "invalid"}:
+            summary["owner_failure_details_status"] = detail_source_status
+        summary["owner_failure_detail_count"] = len(compact_failure_details)
+        summary["owner_failure_details_omitted_count"] = max(
+            0, len(failure_detail_rows) - len(compact_failure_details),
+        )
+        summary["owner_failure_details"] = compact_failure_details
         scheduled = execution.get("scheduled_passes")
         scheduled = scheduled if isinstance(scheduled, list) else []
         skipped = execution.get("skipped_passes")
@@ -18224,6 +18439,11 @@ def _environment_service_execution_accountability(
                     value = result.get(key)
                     if isinstance(value, str) or type(value) is bool:
                         row[key] = value
+                failure_evidence = _compact_service_failure_evidence(
+                    result.get("failure_evidence"),
+                )
+                if failure_evidence is not None:
+                    row["failure_evidence"] = failure_evidence
                 result_summary = result.get("summary")
                 if isinstance(result_summary, dict):
                     row["result_summary"] = {
@@ -19923,6 +20143,19 @@ def _session_ambient_service_execution(
     execution = project_trace(
         raw_trace, session_id=session_id if isinstance(session_id, str) else None,
     )
+    if isinstance(execution, dict):
+        owner_results = execution.get("owner_pass_results")
+        owner_results = owner_results if isinstance(owner_results, dict) else {}
+        result_rows = owner_results.get("results")
+        if isinstance(result_rows, list):
+            for row in result_rows:
+                if not isinstance(row, dict):
+                    continue
+                failure_evidence = _ambient_verification_failure_evidence(
+                    session, row,
+                )
+                if failure_evidence is not None:
+                    row["failure_evidence"] = failure_evidence
     campaign = snapshot.get("campaign")
     campaign = campaign if isinstance(campaign, dict) else {}
     intent = snapshot.get("intent")
@@ -19966,6 +20199,107 @@ def _session_ambient_service_execution(
                 "The stored scheduler trace could not be projected safely."
             ]
         ),
+    }
+
+
+def _ambient_verification_failure_evidence(
+    session: Any, owner_result: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Read an exact verification source only for a reported failed pass."""
+    if (owner_result.get("owner") != "verification"
+            or (owner_result.get("operation_status") not in {
+                "retry", "failed", "error",
+            }
+                and owner_result.get("owner_outcome_status")
+                != "failure-reported")):
+        return None
+    session_id = getattr(session, "session_id", None)
+    owner_reference = owner_result.get("source_reference")
+    owner_prefix = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        if isinstance(session_id, str) else ""
+    )
+    if (not owner_prefix or owner_result.get("source_reference_status")
+            != "store-record" or not isinstance(owner_reference, str)
+            or not owner_reference.startswith(owner_prefix)
+            or re.fullmatch(r"[0-9a-f]{64}", owner_reference[len(owner_prefix):])
+            is None):
+        return None
+
+    try:
+        owner_record = evidence_store.read(
+            session, "incremental-coherence:verification", owner_reference,
+        )
+        block = owner_record.get("block")
+        if (not isinstance(block, dict)
+                or digest_hex(block, length=64)
+                != owner_result.get("result_identity")):
+            return {
+                "status": "result-identity-mismatch",
+                "owner_result_reference": owner_reference,
+                "source_integrity_status": "not-verified",
+            }
+        evidence_reference = block.get("evidence")
+        evidence_prefix = f"mncs-store:{session_id}:verification:"
+        if (not isinstance(evidence_reference, str)
+                or not evidence_reference.startswith(evidence_prefix)
+                or re.fullmatch(
+                    r"[0-9a-f]{64}",
+                    evidence_reference[len(evidence_prefix):],
+                ) is None):
+            return {
+                "status": "evidence-reference-unavailable",
+                "owner_result_reference": owner_reference,
+                "source_integrity_status": "verified",
+            }
+        verification = evidence_store.read(
+            session, "verification", evidence_reference,
+        )
+    except StoreIntegrityFailure:
+        return {
+            "status": "source-integrity-failure",
+            "owner_result_reference": owner_reference,
+            "source_integrity_status": "not-verified",
+        }
+    except (AttributeError, KeyError, OSError, StoreUnavailable, TypeError,
+            ValueError):
+        return {
+            "status": "source-unavailable",
+            "owner_result_reference": owner_reference,
+            "source_integrity_status": "unavailable",
+        }
+
+    if verification.get("schema_version") != "mncs.environment.verification/1":
+        return {
+            "status": "unsupported-source-schema",
+            "owner_result_reference": owner_reference,
+            "source_reference": evidence_reference,
+            "source_integrity_status": "verified",
+        }
+    failure = verification.get("failure")
+    if not isinstance(failure, dict):
+        return {
+            "status": "no-failure-recorded",
+            "owner_result_reference": owner_reference,
+            "source_reference": evidence_reference,
+            "source_schema": "mncs.environment.verification/1",
+            "source_integrity_status": "verified",
+        }
+    reason = failure.get("reason")
+    if isinstance(reason, str) and reason.startswith("execution-failed:"):
+        reason_code = "execution-failed"
+    elif isinstance(reason, str) and re.fullmatch(
+            r"[a-z][a-z0-9-]{0,79}", reason):
+        reason_code = reason
+    else:
+        reason_code = "unclassified-failure"
+    return {
+        "status": "recorded",
+        "reason_code": reason_code,
+        "owner_result_reference": owner_reference,
+        "source_reference": evidence_reference,
+        "source_schema": "mncs.environment.verification/1",
+        "source_integrity_status": "verified",
     }
 
 

@@ -6450,6 +6450,199 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     ] == "not-established"
 
 
+def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    session_id = session.session_id
+    execution_ids = {
+        owner: "ase_" + character * 32
+        for owner, character in (
+            ("doctor", "a"), ("semantics", "b"), ("verification", "c"),
+        )
+    }
+    verification_evidence = {
+        "schema_version": "mncs.environment.verification/1",
+        "failure": {"reason": "coherence-unavailable"},
+        "summary": {"blockers": 1, "executed": 0},
+    }
+    verification_reference = (
+        f"mncs-store:{session_id}:verification:"
+        + capability_intelligence.digest_hex(verification_evidence, length=64)
+    )
+    verification_result = {
+        "operation_status": "retry",
+        "evidence": verification_reference,
+        "summary": {"blockers": 1, "executed": 0},
+    }
+    owner_record = {"block": verification_result}
+    owner_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + capability_intelligence.digest_hex(owner_record, length=64)
+    )
+    scheduled = [
+        {
+            "owner": owner,
+            "service_execution_id": execution_ids[owner],
+            "disposition": 1,
+            "wave": 0,
+            "run_elapsed_seconds": 0.2,
+            "inputs": [],
+        }
+        for owner in execution_ids
+    ]
+    result_rows = [
+        {
+            "owner": owner,
+            "service_execution_id": execution_ids[owner],
+            "result_status": "result-recorded",
+            "result_identity": (
+                capability_intelligence.digest_hex(verification_result, length=64)
+                if owner == "verification" else character * 64
+            ),
+            "source_reference_status": (
+                "store-record" if owner == "verification" else "not-recorded"
+            ),
+            **({"source_reference": owner_reference}
+               if owner == "verification" else {}),
+            "operation_status": "retry" if owner == "verification" else "complete",
+            "summary": {"blockers": 1 if owner == "verification" else 0},
+        }
+        for owner, character in (
+            ("doctor", "d"), ("semantics", "e"), ("verification", "f"),
+        )
+    ]
+    trace = {
+        "mode": "bounded_reconciliation",
+        "trace_persistence_status": "store",
+        "event_count": 3,
+        "elapsed_seconds": 0.6,
+        "scheduled": scheduled,
+        "skipped": [],
+        "owner_failures": ["verification"],
+        "owner_pass_results": result_rows,
+    }
+    snapshot = {"coherence": {"last_trace": trace}}
+
+    def read_evidence(_session, owner: str, reference: str) -> dict:
+        if owner == "incremental-coherence:verification":
+            assert reference == owner_reference
+            return owner_record
+        assert owner == "verification"
+        assert reference == verification_reference
+        return verification_evidence
+
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        side_effect=read_evidence,
+    ):
+        activity = capability_intelligence._session_ambient_service_execution(
+            session, snapshot,
+        )
+
+    verification_row = activity["execution"]["owner_pass_results"]["results"][2]
+    assert verification_row["failure_evidence"] == {
+        "status": "recorded",
+        "reason_code": "coherence-unavailable",
+        "owner_result_reference": owner_reference,
+        "source_reference": verification_reference,
+        "source_schema": "mncs.environment.verification/1",
+        "source_integrity_status": "verified",
+    }
+
+    readiness = {
+        "services": [],
+        "source": {"service_declaration_status": "explicit-empty"},
+        "summary": {},
+    }
+    accountability = capability_intelligence._session_service_accountability(
+        readiness, {}, snapshot, ambient_service_execution=activity,
+    )
+    execution_summary = accountability["environment_service_execution"][
+        "summary"
+    ]
+    assert execution_summary["owner_failure_details_status"] == "complete"
+    assert execution_summary["owner_failure_detail_count"] == 1
+    verification_failure = execution_summary["owner_failure_details"][0]
+    assert verification_failure["owner_pass"] == "verification"
+    assert verification_failure["failure_evidence"]["reason_code"] == (
+        "coherence-unavailable"
+    )
+    assert verification_failure["failure_evidence"]["source_reference"] == (
+        verification_reference
+    )
+    compact_accountability = (
+        capability_intelligence._compact_service_accountability_overview(
+            accountability, activity,
+        )
+    )
+    compact_summary = compact_accountability["summary"][
+        "environment_service_execution"
+    ]["summary"]
+    assert compact_summary["owner_failure_details_status"] == "complete"
+    assert compact_summary["owner_failure_details"][0]["failure_evidence"][
+        "reason_code"
+    ] == "coherence-unavailable"
+    response_budget_activity = {
+        "status": "partial",
+        "service_accountability": accountability,
+        "ambient_service_execution": activity,
+        "source": {"event_count": 0},
+    }
+    budget_overview = (
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            response_budget_activity,
+        )
+    )
+    budget_summary = budget_overview["service_accountability"]["summary"][
+        "environment_service_execution"
+    ]["summary"]
+    assert budget_summary["owner_failure_details_status"] == "complete"
+    budget_failure = budget_summary["owner_failure_details"][0]
+    assert budget_failure["failure_evidence"]["reason_code"] == (
+        "coherence-unavailable"
+    )
+    assert budget_failure["failure_evidence"]["source_integrity_status"] == (
+        "verified"
+    )
+    pass_items = compact_accountability["summary"][
+        "environment_service_execution"
+    ]["summary"]["owner_pass_observations"]["items"]
+    compact_verification = next(
+        item for item in pass_items if item["owner_pass"] == "verification"
+    )
+    assert compact_verification["failure_evidence"]["reason_code"] == (
+        "coherence-unavailable"
+    )
+
+    compact_trace = capability_intelligence._compact_ambient_service_execution_overview(
+        activity,
+    )
+    compact_results = compact_trace["execution"]["owner_pass_results"]["results"]
+    assert [item["owner"] for item in compact_results] == [
+        "doctor", "semantics", "verification",
+    ]
+    assert compact_results[2]["failure_evidence"]["source_reference"] == (
+        verification_reference
+    )
+
+    mismatched_record = {
+        "block": {**verification_result, "summary": {"blockers": 2}},
+    }
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        return_value=mismatched_record,
+    ):
+        mismatched = capability_intelligence._session_ambient_service_execution(
+            session, snapshot,
+        )
+    mismatch_evidence = mismatched["execution"]["owner_pass_results"][
+        "results"
+    ][2]["failure_evidence"]
+    assert mismatch_evidence["status"] == "result-identity-mismatch"
+    assert "reason_code" not in mismatch_evidence
+
+
 def test_family_ambient_observation_links_exact_owner_pass_result(
     tmp_path: Path,
 ) -> None:

@@ -6,6 +6,7 @@
     "kind": "workspace",
     "repositories": [
       "mncs-environment",
+      "mncs-test",
       "mncs-store",
       "mncs-rights-provenance",
       "mncs-system-monitor",
@@ -13,7 +14,9 @@
       "mncs-commons"
     ]
   },
-  "required_capabilities": [],
+  "required_capabilities": [
+    "mncs.test-verification-coherence/1"
+  ],
   "services": [],
   "intent": {
     "goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
