@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_rejection_pressure_20261028",
+  "captured_at": "2026-10-28T05:06:47Z",
+  "measurement_basis": "authentic-campaign-correction-correlated-with-bounded-ECI-compaction-path-inspection",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_88b897c132324d52",
+    "campaign_evidence_count_before_recording": 42,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:6f70d4da5c8e",
+      "claim:mncs-environment:worktree:eb9c510e11fe"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment environmental-capability projection and append-only observation correction mechanism",
+    "request": {
+      "operation": "trace why the recorded recommendation correction was rejected and whether bounded projection compaction preserves that diagnostic",
+      "campaign_correction_identity": "ev_environment_projection_evidence_capture_postpublication_pressure_correction_20261028",
+      "campaign_state_checkpoint_id": "chk_88b897c132324d52",
+      "history_pages": 2,
+      "evidence_limit": 32,
+      "response_compaction_function": "_compact_campaign_evidence_priority_rows"
+    },
+    "outcome": {
+      "source_record": {
+        "identity": "ev_environment_projection_evidence_capture_postpublication_pressure_correction_20261028",
+        "target_identity": "ev_environment_projection_evidence_capture_postpublication_readback_20261028",
+        "status": "replacement-values-unverified-or-unchanged"
+      },
+      "compaction_gap": "The evidence-priority fallback retains one linked occurrence-to-pressure-to-improvement path and replaces the full observation list. A rejected correction outside that path therefore loses its diagnostic unless the compactor preserves a bounded summary separately.",
+      "evidence_basis": "The gap was identified in the response-compaction implementation against an authentic rejected correction in the campaign ledger. This is a projection visibility limitation; the inspection did not establish that an agent was blocked or quantify intervention burden.",
+      "interpretation_limit": "The recorded rejection applies to the selected evidence pages and does not establish that matching evidence is absent from other pages or campaigns."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_rejection_visibility",
+    "title": "Budgeted ECI responses omit why an append-only recommendation correction was rejected",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment environmental-capability projection and correction validation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded, provenance-linked correction rejection summary alongside the priority evidence path."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_projection_evidence_capture_postpublication_pressure_correction_20261028",
+      "kind": "authentic-campaign-correction-attempt",
+      "repository": "mncs-environment",
+      "commit": "9d8f95f58f44b7d75d8d50527f9696fa2338397b",
+      "path": "evidence/environmental-capability/projection-evidence-capture-postpublication-pressure-correction-20261028.json",
+      "sha256": "727fa44d8a87f8f02239ba08f504e7c1bba016562cde8161dd503036c584da46"
+    },
+    {
+      "identity": "eci_c93fd860b400cbab",
+      "kind": "bounded-ECI-live-readback",
+      "repository": "mncs-environment",
+      "commit": "ec4c5ba120edfd02ef23cdd52f008da22144ce1a"
+    }
+  ],
+  "not_measured": [
+    "Whether an agent needed extra investigation because the correction reason was omitted before this change.",
+    "Whether the same visibility gap recurs across independent sessions or other correction fields.",
+    "Whether the new summary reduces agent intervention burden.",
+    "Whether a matching occurrence exists outside the selected evidence pages."
+  ]
+}

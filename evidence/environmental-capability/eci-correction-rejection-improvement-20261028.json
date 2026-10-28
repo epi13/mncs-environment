@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_rejection_improvement_20261028",
+  "captured_at": "2026-10-28T05:06:47Z",
+  "measurement_basis": "committed-bounded-rejection-diagnostic-with-independent-regression-and-live-ECI-verification",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_88b897c132324d52",
+    "campaign_evidence_count_before_recording": 42,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:6f70d4da5c8e",
+      "claim:mncs-environment:worktree:eb9c510e11fe"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI correction projection and evidence-priority response compaction",
+    "request": {
+      "operation": "keep the reason for an unverified append-only recommendation correction inspectable in bounded ECI output",
+      "addresses_hypothesis_identity": "ph_environment_eci_correction_rejection_visibility",
+      "implementation_commit": "ec4c5ba120edfd02ef23cdd52f008da22144ce1a",
+      "verification_observation_identity": "ev_environment_eci_correction_rejection_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_correction_rejection_readback_20261028"
+    },
+    "outcome": {
+      "implementation_scope": "append-only correction validation status and bounded ECI evidence-priority response compaction",
+      "implementation_change": "Unsupported recommendation rewrites now receive a bounded reason scoped to selected evidence pages. Full compact observation rows retain that reason, and the evidence-priority response retains up to four rejected-correction summaries with their target and exact source pointers alongside the linked pressure path.",
+      "verified_change": "The existing valid-recommendation rewrite remains unverified; the new diagnostic survives normal observation compaction and evidence-priority response compaction. A live query of the authentic campaign correction returns its exact rejection status, reason, target, commit, path, and digest while retaining the existing linked pressure/improvement path.",
+      "effectiveness_assessment": "projection-behavior-verified-for-selected-campaign-evidence; agent-burden-reduction-not-assessed",
+      "interpretation_limit": "The reason means no independently verified matching occurrence was found in the selected evidence pages; it does not establish that such an occurrence is absent elsewhere or that the correction should be accepted."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_rejection_visibility",
+    "title": "Budgeted ECI responses omit why an append-only recommendation correction was rejected",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment environmental-capability projection and correction validation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded, provenance-linked correction rejection summary alongside the priority evidence path."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_eci_correction_rejection_visibility_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_correction_rejection_visibility",
+    "implementation_reference": {
+      "identity": "mncs_environment_eci_correction_summary_implementation_ec4c5ba",
+      "repository": "mncs-environment",
+      "commit": "ec4c5ba120edfd02ef23cdd52f008da22144ce1a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f6a4ea0b2a39f4182706c81774816dfc366213ad0a6f6664e3332a22c8fadf2a"
+    },
+    "verification_observation_identity": "ev_environment_eci_correction_rejection_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_correction_rejection_readback_20261028",
+    "basis": "Focused tests preserve the independent-occurrence acceptance rule and assert that the bounded reason and exact pointer survive compaction. Projection conformance passes, and the authenticated campaign readback demonstrates the summary beside the preexisting linked improvement path. This verifies projection behavior for the selected campaign evidence only.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "Whether agents needed or will need fewer investigative steps to understand rejected corrections.",
+      "Whether rejection reasons improve correction quality or reduce repeated attempts.",
+      "Whether other correction fields need distinct, similarly bounded diagnostics.",
+      "Whether agent intervention burden decreases across independent sessions."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_correction_rejection_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-correction-rejection-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_correction_rejection_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-correction-rejection-verification-20261028.json"
+    }
+  ],
+  "not_measured": [
+    "Long-term correction reliability, cross-agent usability, and recurrence.",
+    "Any reduction in agent time, tool calls, or other intervention burden.",
+    "Whether the recorded pressure is empirically eliminated by later independent work."
+  ]
+}

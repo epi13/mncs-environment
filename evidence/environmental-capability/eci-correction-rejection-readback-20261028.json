@@ -1,0 +1,110 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_rejection_readback_20261028",
+  "captured_at": "2026-10-28T05:06:47Z",
+  "measurement_basis": "authenticated-live-ECI-readback-of-existing-campaign-correction-after-projection-compaction-change",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_88b897c132324d52",
+    "campaign_evidence_count_before_recording": 42,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:6f70d4da5c8e",
+      "claim:mncs-environment:worktree:eb9c510e11fe"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment environmental-capability projection over the current authenticated campaign evidence and session state",
+    "request": {
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "history_pages": 2,
+      "evidence_offset": null,
+      "evidence_limit": 32,
+      "session_event_limit": 1,
+      "campaign_state_checkpoint_id": "chk_88b897c132324d52",
+      "projection_identity": "eci_c93fd860b400cbab",
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 2 --evidence-limit 32 --session-event-limit 1"
+    },
+    "outcome": {
+      "projection_content_digest": "9da0b2fe94b3032b8fbab567b2f1da8c",
+      "projection_status": "partial",
+      "detail_status": "evidence-priority-response-budget",
+      "serialized_response_bytes": 26055,
+      "response_budget_bytes": 73728,
+      "source_evidence": {
+        "checkpoint_id": "chk_88b897c132324d52",
+        "evidence_count": 42,
+        "page_offsets": [
+          10,
+          0
+        ],
+        "pages_read": 2,
+        "observation_records_considered": 42,
+        "observation_records_verified": 15,
+        "observation_records_unavailable": 1,
+        "response_truncated": true
+      },
+      "retained_existing_linked_path": {
+        "occurrence_identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+        "pressure_hypothesis_identity": "ph_environment_projection_evidence_capture_delivery",
+        "improvement_relation_identity": "im_environment_projection_evidence_capture_20261028"
+      },
+      "correction_rejection_summary": {
+        "identity": "ev_environment_projection_evidence_capture_postpublication_pressure_correction_20261028",
+        "target_identity": "ev_environment_projection_evidence_capture_postpublication_readback_20261028",
+        "status": "replacement-values-unverified-or-unchanged",
+        "rejection_reason": "No independently verified occurrence with the same pressure definition and replacement recommendation was found in the selected evidence pages.",
+        "source_reference": {
+          "repository": "mncs-environment",
+          "commit": "9d8f95f58f44b7d75d8d50527f9696fa2338397b",
+          "path": "evidence/environmental-capability/projection-evidence-capture-postpublication-pressure-correction-20261028.json",
+          "sha256": "727fa44d8a87f8f02239ba08f504e7c1bba016562cde8161dd503036c584da46"
+        }
+      },
+      "interpretation_limit": "The compact response retained the rejection reason and exact source pointer alongside a linked pressure/improvement path. One observation record was unavailable and other rows were omitted by the response budget. The selected-page diagnostic does not prove that a matching occurrence is absent elsewhere, establish recurring pressure, or measure agent intervention burden."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_rejection_visibility",
+    "title": "Budgeted ECI responses omit why an append-only recommendation correction was rejected",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment environmental-capability projection and correction validation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded, provenance-linked correction rejection summary alongside the priority evidence path."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "eci_c93fd860b400cbab",
+      "kind": "authenticated-ECI-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "ec4c5ba120edfd02ef23cdd52f008da22144ce1a"
+    },
+    {
+      "identity": "ev_environment_projection_evidence_capture_postpublication_pressure_correction_20261028",
+      "kind": "authentic-campaign-correction-attempt",
+      "repository": "mncs-environment",
+      "commit": "9d8f95f58f44b7d75d8d50527f9696fa2338397b",
+      "path": "evidence/environmental-capability/projection-evidence-capture-postpublication-pressure-correction-20261028.json",
+      "sha256": "727fa44d8a87f8f02239ba08f504e7c1bba016562cde8161dd503036c584da46"
+    }
+  ],
+  "not_measured": [
+    "Whether another session or independent agent finds and uses the diagnostic without additional investigation.",
+    "Whether correction outcomes are more reliable across independent workflows.",
+    "Whether the change reduces agent intervention burden or changes long-term recurrence."
+  ]
+}

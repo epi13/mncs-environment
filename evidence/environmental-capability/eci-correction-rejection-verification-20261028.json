@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_rejection_verification_20261028",
+  "captured_at": "2026-10-28T05:06:47Z",
+  "measurement_basis": "targeted-ECI-regression-suite-projection-conformance-and-actual-campaign-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_88b897c132324d52",
+    "campaign_evidence_count_before_recording": 42,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:6f70d4da5c8e",
+      "claim:mncs-environment:worktree:eb9c510e11fe"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment ECI regression tests, projection conformance verifier, and live environmental-capability projection",
+    "request": {
+      "commands": [
+        "python3 -m pytest tests/test_capability_intelligence.py -q",
+        "python3 -m compileall -q mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check",
+        "python3 scripts/verify_projection_contracts.py --workspace /home/epi13/Documents/Projects --repository mncs-environment"
+      ],
+      "live_projection_identity": "eci_c93fd860b400cbab",
+      "live_projection_content_digest": "9da0b2fe94b3032b8fbab567b2f1da8c"
+    },
+    "outcome": {
+      "eci_tests": "173 passed",
+      "compileall": "pass",
+      "diff_check": "pass",
+      "projection_conformance": {
+        "verdict": "pass",
+        "receipt_identity": "sha256:1567108fb1a6ce1a7c9db6b26014c40445a29084b39608437e8d87e8059ded9e",
+        "native_receipt": "f36ae687e5d46847ddcb18f5b7a14214cd91fa93fa3fd24b6e75a800b333e9db"
+      },
+      "verification_status": "focused-verification-and-projection-conformance-passed",
+      "interpretation_limit": "These checks cover correction acceptance, compact projection retention, and declared projection conformance. They do not establish cross-session recurrence, service fulfillment, or measured agent burden reduction."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_correction_rejection_visibility",
+    "title": "Budgeted ECI responses omit why an append-only recommendation correction was rejected",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment environmental-capability projection and correction validation",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Retain a bounded, provenance-linked correction rejection summary alongside the priority evidence path."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_eci_correction_summary_implementation_ec4c5ba",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "ec4c5ba120edfd02ef23cdd52f008da22144ce1a",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "f6a4ea0b2a39f4182706c81774816dfc366213ad0a6f6664e3332a22c8fadf2a"
+    },
+    {
+      "identity": "mncs_environment_eci_correction_summary_tests_ec4c5ba",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "ec4c5ba120edfd02ef23cdd52f008da22144ce1a",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "245a7a78991358e6751dcc9484639b435681e142fc9b62a637e9e75c509a7d7f"
+    }
+  ],
+  "not_measured": [
+    "Whether another session or agent encounters the same correction-rejection workflow.",
+    "Whether independently observed agent intervention decreases after deployment."
+  ]
+}
