@@ -271,6 +271,10 @@ after the operations. This verifies the projection path and recorded outcomes;
 the selected workflow does not establish that claim release or coordination
 work was avoided, or that intervention burden fell.
 
+After checkpointing this observation, the next ECI readback exposed an unavailable source record because its campaign evidence pointer contained a mistyped commit ID. The append-only
+[`eci-retirement-operation-pointer-correction-20261028.json`](../evidence/environmental-capability/eci-retirement-operation-pointer-correction-20261028.json)
+preserves the source identity, path, and digest and corrects only the commit reference. This records a verified pointer-integrity recovery, not a change to the operation evidence or its outcome assessment.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact

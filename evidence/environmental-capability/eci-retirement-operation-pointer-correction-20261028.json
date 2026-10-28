@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_operation_pointer_correction_20261028",
+  "captured_at": "2026-10-28T07:15:55Z",
+  "measurement_basis": "campaign-state-reference-readback-and-ECI-integrity-diagnosis",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "fcef32c8801cd9fc9b832d2f9d8fe8781ea7d514"
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  },
+  "observation": {
+    "kind": "campaign-evidence-pointer-correction",
+    "source_interface": "mncs-env campaign-state and environmental-capability projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_7529376923aaeb4c",
+      "target_observation_identity": "ev_environment_eci_retirement_operation_accountability_20261028",
+      "recorded_pointer_commit": "6ec0bc0d24f8c7b0c71d06ac44e5f9e7ebf62c85",
+      "verified_replacement_commit": "6ec0bc0ad729bf0b00d5d41faec6994c6f4dd3fc",
+      "projection_identity_with_unavailable_target": "eci_8d928e7787ee05b5"
+    },
+    "outcome": {
+      "status": "append-only-pointer-correction-recorded",
+      "correction_scope": "commit-field-only",
+      "observation_bytes_changed": false,
+      "sha256_preserved": "85c7e4a0cb09e15e470833d1b385b9257b000954f78ca105abfebd9064505d60",
+      "reason": "The campaign checkpoint stored a full commit identifier that is not present in the repository. The same path and recorded SHA-256 match the operation observation in the actual pushed commit; the correction selects that commit while preserving identity, repository, path, and content digest.",
+      "effectiveness_assessment": "pointer-recovery-awaiting-projection-readback"
+    }
+  },
+  "evidence_reference_correction": {
+    "schema_version": "mncs.environment.evidence-reference-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_retirement_operation_accountability_20261028",
+      "repository": "mncs-environment",
+      "commit": "6ec0bc0d24f8c7b0c71d06ac44e5f9e7ebf62c85",
+      "path": "evidence/environmental-capability/eci-retirement-operation-accountability-20261028.json",
+      "sha256": "85c7e4a0cb09e15e470833d1b385b9257b000954f78ca105abfebd9064505d60"
+    },
+    "replacement_reference": {
+      "identity": "ev_environment_eci_retirement_operation_accountability_20261028",
+      "repository": "mncs-environment",
+      "commit": "6ec0bc0ad729bf0b00d5d41faec6994c6f4dd3fc",
+      "path": "evidence/environmental-capability/eci-retirement-operation-accountability-20261028.json",
+      "sha256": "85c7e4a0cb09e15e470833d1b385b9257b000954f78ca105abfebd9064505d60"
+    },
+    "reason": "The campaign pointer's commit identifier was mistyped. Correct only that identifier to the pushed commit whose exact observation bytes verify against the unchanged digest."
+  },
+  "measurement_limits": [
+    "The earlier campaign checkpoint remains immutable and still contains its original pointer; this append-only correction allows ECI to recover the same source record when both references are selected.",
+    "The correction repairs source location only; it does not alter retirement operation facts, implementation behavior, or outcome assessment.",
+    "The previous readback's unavailable count was a pointer-integrity limitation, not evidence that the operation observation itself was missing or that its contents were corrupt."
+  ]
+}
