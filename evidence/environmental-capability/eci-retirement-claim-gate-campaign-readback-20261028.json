@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_retirement_claim_gate_campaign_readback_20261028",
+  "captured_at": "2026-10-28T06:52:16Z",
+  "measurement_basis": "post-correction-bounded-ECI-campaign-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "cba45a7adcd946283bbe8aa4a9014316225073ef",
+    "campaign_state_checkpoint_id": "chk_704ed204cadc3c78"
+  },
+  "observation": {
+    "kind": "environmental-capability-campaign-projection-readback",
+    "source_interface": "mncs-env projections --interpret environmental-capability",
+    "request": {
+      "projection_identity": "eci_664f6624585c6094",
+      "campaign_state_checkpoint_id": "chk_704ed204cadc3c78",
+      "evidence_page_offset": 63,
+      "evidence_page_limit": 8,
+      "campaign_evidence_count": 68
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "observation_count": 5,
+      "pressure_hypothesis_count": 1,
+      "improvement_relation_count": 1,
+      "evidence_records_considered": 5,
+      "evidence_records_integrity_verified": 5,
+      "evidence_records_unavailable": 0,
+      "observation_records_compacted_out": 4,
+      "response_truncated": true,
+      "pressure_hypothesis": {
+        "identity": "ph_environment_eci_retirement_claim_gate",
+        "definition_status": "consistent",
+        "recurrence_status": "not-established",
+        "evidence_reference_count": 1,
+        "recommendation": "Admit explicit branch, registered-worktree, and metadata-prune operations from writable repository rights; keep exact target validation, applicable live-claim conflict checks, Git conditional updates, and separate delete escalation in the adapter and policy contracts."
+      },
+      "improvement_relation": {
+        "identity": "im_environment_eci_retirement_claim_gate_20261028",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "effectiveness_assessment": "not-assessed"
+      },
+      "source_pointer_content_integrity": {
+        "verified_count": 2,
+        "not_verified_count": 2
+      },
+      "interpretation_limit": "The correction changed the selected-window pressure definition from conflicting to consistent, and the linked verification and readback records are integrity-verified. The bounded response remains partial and truncated; recurrence and operational burden reduction remain unassessed."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-pressure-observation",
+      "identity": "ev_environment_eci_retirement_claim_gate_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-pressure-20261028.json",
+      "sha256": "98fb100be9074d282ed63dc67a0356b0b1f36cc8a24b5a40e4ca098d3df2c42f"
+    },
+    {
+      "kind": "campaign-improvement-observation",
+      "identity": "ev_environment_eci_retirement_claim_gate_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "a1e6a3a1d790a84e6cde3c68c57f3ee76d7d8bb2",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-improvement-20261028.json",
+      "sha256": "f2e49cfb8dc20438cd92e844c8c0a0bcf9a3c05a5e8299e427a5c0c84e243f41"
+    },
+    {
+      "kind": "campaign-observation-correction",
+      "identity": "ev_environment_eci_retirement_claim_gate_recommendation_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "635c8f86bc84fd159cf48d9bbe4f3d4f9c946bc8",
+      "path": "evidence/environmental-capability/eci-retirement-claim-gate-recommendation-correction-20261028.json",
+      "sha256": "4a54bb8e00e65621fac38dfb0dd432e3bc8bd94cdf6f06d442f2e1793f376bb8"
+    }
+  ],
+  "measurement_limits": [
+    "The selected campaign page is bounded and does not represent all campaign evidence or other sessions.",
+    "Four source observations were compacted out of the returned observation detail; the response is explicitly truncated.",
+    "Projection record integrity does not establish implementation correctness, subsequent service effectiveness, or reduced agent intervention."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
