@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_context_unavailable_capability_pressure_20261028",
+  "captured_at": "2026-10-28T10:34:37Z",
+  "measurement_basis": "direct-selected-session-context-and-read-only-capability-inspection",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_79f4403afc83434b",
+    "campaign_evidence_count_before_recording": 118,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:cee07387f4dd",
+      "claim:mncs-environment:worktree:ffae8ef52e50"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-limitation-observation",
+    "source_interface": "MNCS Environment context and read-only capability inspection",
+    "request": {
+      "operation": "understand why a selected-session capability was unavailable using first-use context and exact read-only inspection",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "pre_change_context_capture": "observed during this campaign before implementation; no durable session event reference was recorded",
+      "inspection": {
+        "binding_id": "cap_ed361bc0def92043",
+        "capability": "mncs-test:canonical-vm-tests",
+        "provider": "mncs-test",
+        "availability_code": "provider-invocation-unresolvable",
+        "resolution_issue_code": "repository-checkout-not-selected",
+        "dependency_repository": "mncs-compiler",
+        "environment_name": "MNCS_COMPILER_CHECKOUT"
+      }
+    },
+    "outcome": {
+      "pre_change_context": {
+        "available_count": 52,
+        "unavailable_count": 1,
+        "unknown_count": 36,
+        "binding_level_unavailable_cause_present": false
+      },
+      "agent_action_required_to_resolve_context_gap": "A separate read-only capability inspection was needed to identify the unavailable binding and its resolution issue.",
+      "interpretation": "The selected-session first-use context exposed aggregate availability but not the cause of its one unavailable binding. Unknown bindings are a separate state and are not treated as failures.",
+      "scope_limit": "This evidence describes one selected Environment session snapshot and does not establish a compiler-wide failure or the cause of the earlier Btrfs incident.",
+      "recurrence_status": "not-established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_context_unavailable_capability_visibility_20261028",
+    "title": "First-use context reports unavailable capability counts without exposing a bounded actionable cause",
+    "category": "environmental-discoverability",
+    "subsystem": "MNCS Environment selected-session context and capability bindings",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose a bounded binding-level availability summary in first-use context with stable resolution identifiers, while keeping unknown bindings distinct and omitting free-text reasons and filesystem paths."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "cap_ed361bc0def92043",
+      "kind": "read-only-selected-session-capability-inspection",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "repository": "mncs-environment"
+    }
+  ],
+  "not_measured": [
+    "The time or number of agent operations spent on this one separate inspection.",
+    "Whether the same discoverability gap recurs in other sessions or capability providers.",
+    "Whether the unselected compiler checkout was intentional for this session.",
+    "Whether exposing this resolution detail reduces agent intervention or changes task outcomes."
+  ]
+}

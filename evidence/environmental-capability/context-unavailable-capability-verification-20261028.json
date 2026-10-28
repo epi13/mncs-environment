@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_context_unavailable_capability_verification_20261028",
+  "captured_at": "2026-10-28T10:34:37Z",
+  "measurement_basis": "focused-context-regression-tests-compileall-diff-check-and-pre-change-suite-baseline",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_79f4403afc83434b",
+    "campaign_evidence_count_before_recording": 118,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:cee07387f4dd",
+      "claim:mncs-environment:worktree:ffae8ef52e50"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "implementation-verification",
+    "source_interface": "MNCS Environment session-context regression tests and repository verification",
+    "request": {
+      "implementation_commit": "9d3409e967f19e4e67a9edbb020020d756a83bef",
+      "commands": [
+        "PYTHONPATH=. python3 -m pytest -q tests/test_environment.py -k 'context_exposes_bounded_capability_availability_attention or context_lists_exact_binding_ids_for_available_capabilities or context_surfaces_bounded_unknown_capability_opportunities'",
+        "python3 -m compileall -q mncs_env/sessions.py tests/test_environment.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "status": "focused-verification-passed",
+      "results": [
+        {
+          "command_index": 0,
+          "passed": 3,
+          "deselected": 285
+        },
+        {
+          "command_index": 1,
+          "status": "passed"
+        },
+        {
+          "command_index": 2,
+          "status": "passed"
+        }
+      ],
+      "coverage": "The regression test covers an eight-binding cap, omitted counts, stable resolution identifiers, redaction of free-text reasons and paths, aggregation of unknown reason codes, category bounds, and explicit missing-reason counts.",
+      "pre_change_full_suite_baseline": {
+        "commit": "5e28e00ce9f43471e236df6ed730fc89c8b372c8",
+        "command": "python3 -m pytest tests/ -q",
+        "passed": 1189,
+        "skipped": 46,
+        "failed": 10,
+        "elapsed": "15m57s",
+        "failure_scope": "Pre-change failures were in tests/test_capability_intelligence.py ECI response-budget/compaction cases; they were observed before this implementation was edited."
+      },
+      "vertical_proof_before_implementation": "passed",
+      "interpretation_limit": "The focused tests verify bounded context output and the real selected-session readback below verifies the current snapshot relationship. Neither establishes longer-term burden reduction or service effectiveness."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_context_unavailable_capability_visibility_20261028",
+    "title": "First-use context reports unavailable capability counts without exposing a bounded actionable cause",
+    "category": "environmental-discoverability",
+    "subsystem": "MNCS Environment selected-session context and capability bindings",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose a bounded binding-level availability summary in first-use context with stable resolution identifiers, while keeping unknown bindings distinct and omitting free-text reasons and filesystem paths."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_context_unavailable_capability_implementation_9d3409e",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "9d3409e967f19e4e67a9edbb020020d756a83bef",
+      "path": "mncs_env/sessions.py",
+      "sha256": "14f080f51f59bed47e1dfb88b435e31b7301fcd4764dc5acf63bd07234972145"
+    }
+  ],
+  "not_measured": [
+    "The ten pre-change ECI failures were not rerun after this change because they were outside the edited context path.",
+    "Cross-session behavior, alternate provider contracts, and long-term agent intervention."
+  ]
+}

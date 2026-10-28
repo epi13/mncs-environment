@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_context_unavailable_capability_improvement_20261028",
+  "captured_at": "2026-10-28T10:34:37Z",
+  "measurement_basis": "committed-bounded-context-contract-focused-verification-and-selected-session-readback",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_79f4403afc83434b",
+    "campaign_evidence_count_before_recording": 118,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:cee07387f4dd",
+      "claim:mncs-environment:worktree:ffae8ef52e50"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment selected-session context and capability availability snapshot",
+    "request": {
+      "operation": "make a selected-session unavailable capability cause discoverable during first-use context without returning to the full binding inventory",
+      "addresses_hypothesis_identity": "ph_environment_context_unavailable_capability_visibility_20261028",
+      "implementation_commit": "9d3409e967f19e4e67a9edbb020020d756a83bef",
+      "verification_observation_identity": "ev_environment_context_unavailable_capability_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_context_unavailable_capability_readback_20261028"
+    },
+    "outcome": {
+      "implementation_scope": "Existing Session.context capability summary and its first-use documentation",
+      "implementation_change": "First-use context now lists at most eight explicit unavailable binding summaries with validated stable identifiers, reason codes, observation time, verification basis, and safe repository/environment resolution facts. It omits free-text reasons and paths, reports omitted items, and aggregates a bounded set of unknown reason-code counts separately from unavailable status.",
+      "verified_change": "Three focused context regression tests pass. A post-commit read of the selected session exposes the exact unavailable mncs-test binding and its unselected mncs-compiler checkout dependency, while preserving 36 unknown bindings as a separate reason-code aggregate. The readback is explicitly labeled as a stored snapshot rather than a fresh probe.",
+      "effectiveness_assessment": "not-assessed",
+      "interpretation_limit": "The interface and covered output behavior are verified for this session. Reduced agent intervention, recurrence, and cross-session usefulness have not been measured."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_context_unavailable_capability_visibility_20261028",
+    "title": "First-use context reports unavailable capability counts without exposing a bounded actionable cause",
+    "category": "environmental-discoverability",
+    "subsystem": "MNCS Environment selected-session context and capability bindings",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose a bounded binding-level availability summary in first-use context with stable resolution identifiers, while keeping unknown bindings distinct and omitting free-text reasons and filesystem paths."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "improvement_relation": {
+    "identity": "im_environment_context_unavailable_capability_20261028",
+    "addresses_hypothesis_identity": "ph_environment_context_unavailable_capability_visibility_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_context_unavailable_capability_implementation_9d3409e",
+      "repository": "mncs-environment",
+      "commit": "9d3409e967f19e4e67a9edbb020020d756a83bef",
+      "path": "mncs_env/sessions.py",
+      "sha256": "14f080f51f59bed47e1dfb88b435e31b7301fcd4764dc5acf63bd07234972145"
+    },
+    "verification_observation_identity": "ev_environment_context_unavailable_capability_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_context_unavailable_capability_readback_20261028",
+    "basis": "The existing first-use context contract now carries a bounded and redacted availability-attention view, the focused regression test validates caps and distinction between unavailable and unknown states, and an authentic selected-session context readback exposes the recorded cause with its snapshot freshness. This establishes the behavior for this session only.",
+    "effectiveness_assessment": "not-assessed",
+    "not_measured": [
+      "Whether an independent agent completes relevant work with fewer inspection steps or lower reasoning burden.",
+      "Whether this issue recurs across sessions or other capability providers.",
+      "Whether the selected compiler checkout dependency was relevant to actual compiler development in this session.",
+      "Whether this context presentation changes service fulfillment or environmental reliability."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_context_unavailable_capability_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/context-unavailable-capability-pressure-20261028.json",
+      "sha256": "e82e380eccac5bda8bd0015b78a5b4cb84825122cb702b89eddb85d2efd0ba68"
+    },
+    {
+      "identity": "ev_environment_context_unavailable_capability_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/context-unavailable-capability-verification-20261028.json",
+      "sha256": "fdb2be05266e05c9203a5c348956b4325ec63ea06e842b22793b28b10b29e827"
+    },
+    {
+      "identity": "ev_environment_context_unavailable_capability_readback_20261028",
+      "kind": "campaign-live-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/context-unavailable-capability-readback-20261028.json",
+      "sha256": "122893e75f6b4c308b17784a233c9e1448fa686e63a3d3b35063b25151960338"
+    }
+  ],
+  "not_measured": [
+    "Cross-session or multi-agent burden reduction.",
+    "Long-term effect on capability discovery, support quality, or agent outcomes.",
+    "Whether the snapshot needs revalidation before an agent relies on an unavailable status."
+  ]
+}

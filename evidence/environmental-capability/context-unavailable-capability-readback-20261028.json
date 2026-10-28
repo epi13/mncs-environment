@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_context_unavailable_capability_readback_20261028",
+  "captured_at": "2026-10-28T10:34:37Z",
+  "measurement_basis": "direct-selected-session-context-readback-after-implementation-commit",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_79f4403afc83434b",
+    "campaign_evidence_count_before_recording": 118,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:cee07387f4dd",
+      "claim:mncs-environment:worktree:ffae8ef52e50"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-capability-context-readback",
+    "source_interface": "python3 scripts/mncs-env context ses_9db7b7c6f04e4d19",
+    "request": {
+      "operation": "read the committed implementation through the normal selected-session first-use context interface",
+      "implementation_commit": "9d3409e967f19e4e67a9edbb020020d756a83bef"
+    },
+    "outcome": {
+      "availability_attention_scope": "selected-session-binding-snapshot",
+      "counts": {
+        "available": 52,
+        "unavailable": 1,
+        "unknown": 36
+      },
+      "unavailable_bindings_omitted_count": 0,
+      "unavailable_binding": {
+        "binding_id": "cap_ed361bc0def92043",
+        "capability": "mncs-test:canonical-vm-tests",
+        "provider": "mncs-test",
+        "status": "unavailable",
+        "code": "provider-invocation-unresolvable",
+        "verification": "substrate",
+        "resolution_issue": {
+          "code": "repository-checkout-not-selected",
+          "dependency_repository": "mncs-compiler",
+          "environment_name": "MNCS_COMPILER_CHECKOUT"
+        }
+      },
+      "unknown_reason_code_counts": [
+        {
+          "code": "provider-invocation-undeclared",
+          "count": 36
+        }
+      ],
+      "unknown_without_reason_code_count": 0,
+      "readiness_observation": "snapshot",
+      "readiness_last_reconciled_at": "2026-10-28T04:28:49+00:00",
+      "availability_observed_at": "2026-10-28T08:34:01+00:00",
+      "interpretation_limit": "This is a current read of the selected session's stored binding snapshot, not a fresh provider probe. Substrate availability does not establish semantic test correctness. The evidence identifies one session's unselected compiler-checkout dependency and makes no claim about the active compiler campaign."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_context_unavailable_capability_visibility_20261028",
+    "title": "First-use context reports unavailable capability counts without exposing a bounded actionable cause",
+    "category": "environmental-discoverability",
+    "subsystem": "MNCS Environment selected-session context and capability bindings",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Expose a bounded binding-level availability summary in first-use context with stable resolution identifiers, while keeping unknown bindings distinct and omitting free-text reasons and filesystem paths."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_context_unavailable_capability_implementation_9d3409e",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "9d3409e967f19e4e67a9edbb020020d756a83bef",
+      "path": "mncs_env/sessions.py",
+      "sha256": "14f080f51f59bed47e1dfb88b435e31b7301fcd4764dc5acf63bd07234972145"
+    }
+  ],
+  "not_measured": [
+    "Whether another agent can act more quickly or avoid the separate inspection as a result of this presentation.",
+    "Whether an environment revalidation would resolve or preserve the stored unavailable state.",
+    "Recurrence across sessions and the effect on service reliability."
+  ]
+}
