@@ -1180,6 +1180,20 @@ does not account for use through external interfaces. These relationships make
 availability and recorded use inspectable without treating an absent record
 as evidence of poor discoverability or usability.
 
+For integrity-verified ambient verification results, the projection also
+relates unmeasurable obligation examples to provider-declared
+`<repository>:verification-executor/<obligation>` bindings in
+`capability_delivery.verification_executor_context`. These exact candidates
+are prioritized within the existing bounded binding inventory. Each relation
+retains both Store references, the provider binding identity when found, its
+substrate availability class, selected-window use observation, and whether
+its cited obligation examples are complete or partial. Exact provider matches
+are ordered before unmatched examples; if the response budget omits rows, the
+returned and omitted counts make that loss explicit. A missing binding is
+distinguished from an incomplete inventory scan. This is an identity-based
+integration context only: an available executor does not establish readiness,
+intended use, an eligible opportunity, or fulfillment.
+
 `session_activity.service_accountability` connects each declared service's
 probe capability to the current session binding inventory and its recorded
 availability and use evidence. Exact binding-attributed invocations are

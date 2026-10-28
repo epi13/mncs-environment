@@ -2325,6 +2325,7 @@ def _compact_delivery_binding(value: Any) -> dict[str, Any] | None:
             ("provider", 128), ("capability", 192),
             ("binding_id", 160), ("contract_revision", 160),
             ("availability_status", 48), ("use_observation_status", 96),
+            ("availability_verification", 64),
             ("provider_attribution", 96), ("invocation_count_basis", 96),
             ("binding_attribution_status", 96),
         )
@@ -3100,6 +3101,15 @@ def _compact_ambient_verification_evidence(
                     issue["obligation"] for issue in examples
                     if isinstance(issue.get("obligation"), str)
                 ],
+                "obligation_repository_examples": [
+                    {
+                        "repository": issue["repository"],
+                        "obligation": issue["obligation"],
+                    }
+                    for issue in examples
+                    if isinstance(issue.get("repository"), str)
+                    and isinstance(issue.get("obligation"), str)
+                ],
                 "obligation_example_status": (
                     "complete" if detail_complete
                     else "partial" if examples else "not-present"
@@ -3135,6 +3145,117 @@ def _compact_ambient_verification_evidence(
                 ],
             }
     return result
+
+
+def _verification_executor_obligation_candidates(
+    ambient_service_execution: Any,
+) -> list[dict[str, Any]]:
+    """Return exact provider executor identities from verified owner results."""
+    if not isinstance(ambient_service_execution, dict):
+        return []
+    execution = ambient_service_execution.get("execution")
+    execution = execution if isinstance(execution, dict) else {}
+    owner_results = execution.get("owner_pass_results")
+    owner_results = owner_results if isinstance(owner_results, dict) else {}
+    raw_results = owner_results.get("results")
+    raw_results = raw_results if isinstance(raw_results, list) else []
+    candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for result in raw_results[:MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS]:
+        if (
+            not isinstance(result, dict)
+            or result.get("owner") != "verification"
+            or result.get("result_status") != "result-recorded"
+            or result.get("source_content_integrity_status")
+            != "content-integrity-verified"
+        ):
+            continue
+        evidence = result.get("verification_evidence")
+        if (
+            not isinstance(evidence, dict)
+            or evidence.get("status") != "recorded"
+            or evidence.get("source_integrity_status") != "verified"
+            or evidence.get("owner_result_content_integrity_status")
+            != "content-integrity-verified"
+        ):
+            continue
+        evidence_reference = evidence.get("source_reference")
+        owner_reference = evidence.get("owner_result_reference")
+        if any(
+            not isinstance(reference, str)
+            or re.fullmatch(r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference)
+            is None
+            or re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])
+            is None
+            for reference in (evidence_reference, owner_reference)
+        ):
+            continue
+        candidate_view = evidence.get("investigation_candidates")
+        if (
+            not isinstance(candidate_view, dict)
+            or candidate_view.get("status") != "observed"
+            or candidate_view.get("scope")
+            != "selected-session-recorded-ambient-verification-result"
+        ):
+            continue
+        raw_candidates = candidate_view.get("candidates")
+        raw_candidates = raw_candidates if isinstance(raw_candidates, list) else []
+        for candidate in raw_candidates[:8]:
+            if (
+                not isinstance(candidate, dict)
+                or candidate.get("kind")
+                != "unmeasurable-verification-obligations"
+                or candidate.get("interpretation") != "investigation-candidate"
+                or candidate.get("source_integrity_status") != "verified"
+                or candidate.get("owner_result_content_integrity_status")
+                != "content-integrity-verified"
+                or candidate.get("source_reference") != evidence_reference
+                or candidate.get("owner_result_reference") != owner_reference
+            ):
+                continue
+            reason = candidate.get("unmeasurable_reason")
+            if (not isinstance(reason, str)
+                    or re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", reason) is None):
+                continue
+            example_status = candidate.get("obligation_example_status")
+            if (not isinstance(example_status, str)
+                    or example_status not in {
+                        "complete", "partial", "not-present",
+                    }):
+                example_status = "not-recorded"
+            raw_examples = candidate.get("obligation_repository_examples")
+            raw_examples = raw_examples if isinstance(raw_examples, list) else []
+            for example in raw_examples[:MAX_AMBIENT_VERIFICATION_ISSUES]:
+                if not isinstance(example, dict):
+                    continue
+                repository = example.get("repository")
+                obligation = example.get("obligation")
+                if (
+                    not isinstance(repository, str)
+                    or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", repository) is None
+                    or not isinstance(obligation, str)
+                    or re.fullmatch(r"[a-z][a-z0-9.-]{0,159}", obligation) is None
+                    or not obligation.startswith(repository + ".")
+                ):
+                    continue
+                capability = (
+                    f"{repository}:verification-executor/{obligation}"
+                )
+                if (len(capability) > 256 or capability in seen):
+                    continue
+                seen.add(capability)
+                candidates.append({
+                    "repository": repository,
+                    "obligation_identity": obligation,
+                    "unmeasurable_reason": reason,
+                    "obligation_example_status": example_status,
+                    "capability_identity": capability,
+                    "verification_evidence_reference": evidence_reference,
+                    "owner_result_reference": owner_reference,
+                })
+                if len(candidates) >= MAX_AMBIENT_VERIFICATION_ISSUES:
+                    return candidates
+    return candidates
 
 
 def _compact_environment_owner_failure_details(
@@ -6144,6 +6265,132 @@ def _compact_projection(
         compact_capability_delivery["bindings"] = compact_capability_bindings
         if len(raw_capability_bindings) > len(compact_capability_bindings):
             compact_capability_delivery["bindings_truncated"] = True
+    raw_verification_context = raw_capability_delivery.get(
+        "verification_executor_context",
+    )
+    if (isinstance(raw_verification_context, dict)
+            and raw_verification_context.get("status") == "observed"
+            and raw_verification_context.get("scope")
+            == "selected-session-integrity-verified-unmeasurable-verification-obligations"):
+        raw_obligations = raw_verification_context.get("obligations")
+        raw_obligations = raw_obligations if isinstance(raw_obligations, list) else []
+        compact_obligations = []
+        for relation in raw_obligations[:MAX_AMBIENT_VERIFICATION_ISSUES]:
+            if not isinstance(relation, dict):
+                continue
+            repository = relation.get("repository")
+            obligation = relation.get("obligation_identity")
+            capability = relation.get("capability_identity")
+            reason = relation.get("unmeasurable_reason")
+            example_status = relation.get("obligation_example_status")
+            if (not isinstance(example_status, str)
+                    or example_status not in {
+                        "complete", "partial", "not-present", "not-recorded",
+                    }):
+                example_status = "not-recorded"
+            if (
+                not isinstance(repository, str)
+                or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", repository) is None
+                or not isinstance(obligation, str)
+                or re.fullmatch(r"[a-z][a-z0-9.-]{0,159}", obligation) is None
+                or not obligation.startswith(repository + ".")
+                or capability != f"{repository}:verification-executor/{obligation}"
+                or not isinstance(reason, str)
+                or re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", reason) is None
+                or relation.get("verification_source_integrity_status") != "verified"
+                or relation.get("owner_result_content_integrity_status")
+                != "content-integrity-verified"
+            ):
+                continue
+            compact_relation = {
+                "repository": repository,
+                "obligation_identity": obligation,
+                "unmeasurable_reason": reason,
+                "obligation_example_status": example_status,
+                "capability_identity": capability,
+                "binding_relation_status": relation.get(
+                    "binding_relation_status",
+                    "not-observed-in-incomplete-binding-snapshot",
+                ),
+                "matching_binding_count": relation.get(
+                    "matching_binding_count", 0,
+                ),
+                "verification_evidence_reference": relation.get(
+                    "verification_evidence_reference",
+                ),
+                "verification_source_integrity_status": "verified",
+                "owner_result_reference": relation.get("owner_result_reference"),
+                "owner_result_content_integrity_status": (
+                    "content-integrity-verified"
+                ),
+                "interpretation": "potential-provider-integration-context",
+                "causal_status": "not-established",
+                "ambient_fulfillment_status": "not-established",
+                "agent_receipt_status": "not-established",
+                "agent_intervention_burden_status": "not-measured",
+            }
+            for reference_key in (
+                "verification_evidence_reference", "owner_result_reference",
+            ):
+                reference = compact_relation.get(reference_key)
+                if (not isinstance(reference, str)
+                        or re.fullmatch(
+                            r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                        ) is None
+                        or re.fullmatch(
+                            r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1],
+                        ) is None):
+                    break
+            else:
+                if (not isinstance(compact_relation["binding_relation_status"], str)
+                        or compact_relation["binding_relation_status"] not in {
+                    "exact-provider-obligation-binding",
+                    "ambiguous-multiple-provider-bindings",
+                    "provider-attribution-mismatch",
+                    "not-present-in-current-binding-snapshot",
+                    "not-observed-in-incomplete-binding-snapshot",
+                } or type(compact_relation["matching_binding_count"]) is not int
+                        or compact_relation["matching_binding_count"] < 0):
+                    continue
+                binding = relation.get("binding")
+                if (isinstance(binding, dict)
+                        and compact_relation["binding_relation_status"]
+                        == "exact-provider-obligation-binding"
+                        and compact_relation["matching_binding_count"] == 1):
+                    compact_binding = {
+                        key: _short_text(binding[key], 160)
+                        for key in (
+                            "provider", "binding_id", "contract_revision",
+                            "availability_status", "availability_verification",
+                            "use_observation_status", "binding_attribution_status",
+                        )
+                        if isinstance(binding.get(key), str)
+                    }
+                    for key in ("invocation_count", "completion_count"):
+                        if type(binding.get(key)) is int and binding[key] >= 0:
+                            compact_binding[key] = binding[key]
+                    compact_relation["binding"] = compact_binding
+                if type(relation.get("binding_details_selected")) is bool:
+                    compact_relation["binding_details_selected"] = relation[
+                        "binding_details_selected"
+                    ]
+                compact_obligations.append(compact_relation)
+        if compact_obligations:
+            compact_capability_delivery["verification_executor_context"] = {
+                "status": "observed",
+                "scope": raw_verification_context["scope"],
+                "obligation_count": len(compact_obligations),
+                "obligations_returned": len(compact_obligations),
+                "binding_scan_complete": (
+                    raw_verification_context.get("binding_scan_complete") is True
+                ),
+                "obligations": compact_obligations,
+                "measurement_limits": [
+                    "The relation follows the Environment capability naming contract for the exact provider and obligation identity; it does not establish provider execution semantics beyond the declaration.",
+                    "Availability is a substrate observation and invocation status is bounded by selected session history; neither establishes readiness, receipt, opportunity, or fulfillment.",
+                    "Only integrity-verified verification and owner-result records contribute; bounded example completeness is preserved per relation.",
+                ],
+            }
     binding_evidence_summary = _compact_binding_evidence_summary(
         raw_capability_delivery.get("binding_evidence_summary"),
     )
@@ -8524,6 +8771,26 @@ def _compact_projection(
             )
         elif result.get("context_pressure_candidates"):
             result["context_pressure_candidates"].pop(0)
+        elif (isinstance(delivery_result, dict)
+                and isinstance(delivery_result.get(
+                    "verification_executor_context",
+                ), dict)
+                and delivery_result["verification_executor_context"].get(
+                    "obligations")):
+            verification_context = delivery_result[
+                "verification_executor_context"
+            ]
+            obligations = verification_context["obligations"]
+            obligations.pop()
+            verification_context["obligations_returned"] = len(obligations)
+            verification_context[
+                "obligations_omitted_by_response_budget"
+            ] = verification_context.get(
+                "obligations_omitted_by_response_budget", 0,
+            ) + 1
+            verification_context[
+                "obligations_truncated_by_response_budget"
+            ] = True
         elif isinstance(
             result["session_activity"].get("capability_delivery"), dict,
         ):
@@ -14349,6 +14616,7 @@ def _capability_delivery_view(
     *, event_window_truncated: bool, event_page_scoped: bool,
     invocation_summaries_omitted: int,
     service_probe_capabilities: list[str] | None = None,
+    verification_executor_obligations: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Relate this session's binding snapshot to bounded, observed capability use."""
     complete_history = not event_window_truncated and not event_page_scoped
@@ -14880,6 +15148,72 @@ def _capability_delivery_view(
             item.get("contract_revision", ""),
         ))
 
+    verification_candidates: list[dict[str, Any]] = []
+    seen_verification_capabilities: set[str] = set()
+    for item in (verification_executor_obligations or [])[
+        :MAX_AMBIENT_VERIFICATION_ISSUES
+    ]:
+        if not isinstance(item, dict):
+            continue
+        repository = item.get("repository")
+        obligation = item.get("obligation_identity")
+        capability = item.get("capability_identity")
+        evidence_reference = item.get("verification_evidence_reference")
+        owner_reference = item.get("owner_result_reference")
+        reason = item.get("unmeasurable_reason")
+        example_status = item.get("obligation_example_status", "not-recorded")
+        expected_capability = (
+            f"{repository}:verification-executor/{obligation}"
+            if isinstance(repository, str) and isinstance(obligation, str)
+            else None
+        )
+        if (
+            not isinstance(repository, str)
+            or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", repository) is None
+            or not isinstance(obligation, str)
+            or re.fullmatch(r"[a-z][a-z0-9.-]{0,159}", obligation) is None
+            or not obligation.startswith(repository + ".")
+            or not isinstance(capability, str)
+            or capability != expected_capability
+            or capability in seen_verification_capabilities
+            or not isinstance(reason, str)
+            or re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", reason) is None
+            or not isinstance(example_status, str)
+            or example_status not in {
+                "complete", "partial", "not-present", "not-recorded",
+            }
+            or any(
+                not isinstance(reference, str)
+                or re.fullmatch(
+                    r"mncs-store:[A-Za-z0-9_.:-]{1,240}", reference,
+                ) is None
+                or re.fullmatch(r"[0-9a-f]{64}", reference.rsplit(":", 1)[-1])
+                is None
+                for reference in (evidence_reference, owner_reference)
+            )
+        ):
+            continue
+        seen_verification_capabilities.add(capability)
+        verification_candidates.append({
+            "repository": repository,
+            "obligation_identity": obligation,
+            "unmeasurable_reason": reason,
+            "obligation_example_status": example_status,
+            "capability_identity": capability,
+            "verification_evidence_reference": evidence_reference,
+            "owner_result_reference": owner_reference,
+        })
+    verification_candidates.sort(key=lambda candidate: (
+        not any(
+            binding.get("provider") == candidate["repository"]
+            for binding in bindings_by_capability_records.get(
+                candidate["capability_identity"], [],
+            )
+        ),
+        candidate["repository"],
+        candidate["obligation_identity"],
+    ))
+
     exact_use_binding_keys: list[tuple[str, str, str, str]] = []
     seen_exact_use_binding_keys: set[tuple[str, str, str, str]] = set()
     for interaction in interactions:
@@ -14928,6 +15262,18 @@ def _capability_delivery_view(
         elif capability_bindings:
             select_binding(capability_bindings[0])
 
+    # Keep exact executor bindings linked to integrity-verified excluded
+    # obligations ahead of unclassified inventory rows, within the same bound.
+    for candidate in verification_candidates:
+        for binding in bindings_by_capability_records.get(
+            candidate["capability_identity"], [],
+        ):
+            if binding.get("provider") != candidate["repository"]:
+                continue
+            if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
+                break
+            select_binding(binding)
+
     # Then preserve exact binding use; capability-name-only events follow.
     records_by_exact_identity = {
         (
@@ -14972,6 +15318,76 @@ def _capability_delivery_view(
         if len(selected_binding_records) >= MAX_SESSION_ACTIVITY_BINDINGS:
             break
         select_binding(binding)
+
+    verification_executor_relations = []
+    binding_scan_complete = (
+        binding_records_not_examined == 0 and invalid_binding_count == 0
+    )
+    for candidate in verification_candidates:
+        capability = candidate["capability_identity"]
+        named_matches = bindings_by_capability_records.get(capability, [])
+        provider_matches = [
+            binding for binding in named_matches
+            if binding.get("provider") == candidate["repository"]
+        ]
+        if len(provider_matches) == 1:
+            relation_status = "exact-provider-obligation-binding"
+        elif len(provider_matches) > 1:
+            relation_status = "ambiguous-multiple-provider-bindings"
+        elif named_matches:
+            relation_status = "provider-attribution-mismatch"
+        elif binding_scan_complete:
+            relation_status = "not-present-in-current-binding-snapshot"
+        else:
+            relation_status = "not-observed-in-incomplete-binding-snapshot"
+        relation: dict[str, Any] = {
+            "repository": candidate["repository"],
+            "obligation_identity": candidate["obligation_identity"],
+            "unmeasurable_reason": candidate["unmeasurable_reason"],
+            "obligation_example_status": candidate[
+                "obligation_example_status"
+            ],
+            "capability_identity": capability,
+            "binding_relation_status": relation_status,
+            "matching_binding_count": len(provider_matches),
+            "verification_evidence_reference": (
+                candidate["verification_evidence_reference"]
+            ),
+            "verification_source_integrity_status": "verified",
+            "owner_result_reference": candidate["owner_result_reference"],
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+            "interpretation": "potential-provider-integration-context",
+            "causal_status": "not-established",
+            "ambient_fulfillment_status": "not-established",
+            "agent_receipt_status": "not-established",
+            "agent_intervention_burden_status": "not-measured",
+        }
+        if provider_matches:
+            binding = provider_matches[0]
+            binding_summary = _compact_delivery_binding(binding)
+            if binding_summary is not None:
+                relation["binding"] = {
+                    key: binding_summary[key]
+                    for key in (
+                        "provider", "binding_id", "contract_revision",
+                        "availability_status", "availability_verification",
+                        "use_observation_status", "invocation_count",
+                        "completion_count", "binding_attribution_status",
+                    )
+                    if key in binding_summary
+                }
+                binding_key = (
+                    binding.get("provider", ""),
+                    binding.get("capability", ""),
+                    binding.get("binding_id", ""),
+                    binding.get("contract_revision", ""),
+                )
+                relation["binding_details_selected"] = (
+                    binding_key in selected_binding_keys
+                )
+        verification_executor_relations.append(relation)
 
     binding_count = len(binding_records)
     omitted_bindings = max(0, binding_count - MAX_SESSION_ACTIVITY_BINDINGS)
@@ -15034,12 +15450,24 @@ def _capability_delivery_view(
         "bindings_omitted": omitted_bindings,
         "bindings": selected_binding_records,
         "binding_details_selection_basis": (
-            "declared-service-probes-then-exact-invocation-bindings-then-provider-evidence-references-then-observed-capabilities-then-capability-provider-order"
+            "declared-service-probes-then-integrity-verified-verification-executors-then-exact-invocation-bindings-then-provider-evidence-references-then-observed-capabilities-then-capability-provider-order"
         ),
         "service_probe_binding_counts": probe_binding_counts,
         "service_probe_binding_count_scan_complete": (
             probe_binding_count_scan_complete
         ),
+        **({"verification_executor_context": {
+            "status": "observed",
+            "scope": "selected-session-integrity-verified-unmeasurable-verification-obligations",
+            "obligation_count": len(verification_executor_relations),
+            "binding_scan_complete": binding_scan_complete,
+            "obligations": verification_executor_relations,
+            "measurement_limits": [
+                "Provider binding names are joined to obligation identities through the Environment verification-executor capability convention; this exact identity link does not establish intended invocation or capability semantics beyond the provider declaration.",
+                "Availability is a substrate observation and invocation status is bounded by the selected session event history; neither establishes provider readiness, agent receipt, an eligible service opportunity, or fulfillment.",
+                "Only unmeasurable obligations from content-integrity-verified verification and owner-result records are considered; bounded example completeness is preserved per relation.",
+            ],
+        }} if verification_executor_relations else {}),
         "binding_evidence_summary": binding_evidence_summary,
         "availability_transition_event_count": transition_count,
         "availability_transition_events_omitted": max(
@@ -22456,12 +22884,18 @@ def _session_activity(
         and isinstance(item.get("capability"), str)
         and item["capability"]
     ))
+    verification_executor_obligations = (
+        _verification_executor_obligation_candidates(
+            ambient_service_execution,
+        )
+    )
     capability_delivery = _capability_delivery_view(
         snapshot, all_capability_summaries, interactions, events,
         event_window_truncated=event_window_truncated,
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,
         service_probe_capabilities=declared_service_probe_capabilities,
+        verification_executor_obligations=verification_executor_obligations,
     )
     ambient_owner_pass_activity = _session_ambient_owner_pass_activity(
         ambient_owner_pass_records, len(invocation_events),
