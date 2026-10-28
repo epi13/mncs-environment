@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_standalone_observation_budget_improvement_definition_correction_20261028",
+  "captured_at": "2026-10-28T07:48:46Z",
+  "measurement_basis": "append-only-reconciliation-to-verified-pressure-occurrence-definition",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI pressure-definition reconciliation",
+    "request": {
+      "target_observation_identity": "ev_environment_eci_standalone_observation_budget_improvement_20261028",
+      "corrected_field_paths": ["pressure_hypothesis.actionable_recommendation"],
+      "basis_observation_identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028"
+    },
+    "outcome": {
+      "status": "append-only-pressure-recommendation-correction-recorded",
+      "definition_field": "actionable_recommendation",
+      "replacement": "When secondary session context makes a bounded ECI response too large, summarize that context before discarding the selected campaign observation, including observations that lack a pressure hypothesis or improvement relation."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_standalone_observation_budget_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "fc4d5dc8f97c95ba0df2aa49ab614a5d48e2c1c5",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-improvement-20261028.json",
+      "sha256": "fc7b8d6fc1638b59ed2fe989d926291da18fa696e241dfc379ee13f6d99e42f0"
+    },
+    "corrected_field_paths": ["pressure_hypothesis.actionable_recommendation"],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "When secondary session context makes a bounded ECI response too large, summarize that context before discarding the selected campaign observation, including observations that lack a pressure hypothesis or improvement relation."
+    },
+    "reason": "The verified pressure occurrence supplies the definition for this hypothesis identity. Align the improvement supporting-context record to that exact recommendation while preserving its implementation, verification, and follow-up links."
+  },
+  "supporting_sources": [
+    {
+      "kind": "verified-pressure-occurrence",
+      "identity": "ev_environment_eci_standalone_observation_budget_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "99a7f913893ec41fe980f0d88f1f1b69ce1083d8",
+      "path": "evidence/environmental-capability/eci-standalone-observation-budget-pressure-20261028.json",
+      "sha256": "b8ed40c66ddd0fc6b6e4d1223ec99c1e4cd43fabf11910c9bd33ebca38ba9a89"
+    }
+  ],
+  "measurement_limits": [
+    "The correction targets one recommendation field and adds no new pressure occurrence or recurrence evidence.",
+    "It does not change implementation or verification results, and it does not establish agent burden reduction."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
