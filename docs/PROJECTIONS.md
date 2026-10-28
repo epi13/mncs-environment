@@ -1494,6 +1494,20 @@ window and latest stored trace are bounded, so an absent match may mean the
 relevant trace was entry-only or has since been replaced. No opportunity
 denominator or fulfillment ratio is inferred from these records.
 
+`session_activity.retirement_activity` relates the selected session's
+`environment.retirement.requested`, `environment.retirement.target-completed`,
+and `environment.retirement.completed` events by exact request identity.
+Each operation keeps eligibility separate from the Environment's later
+operation receipt and bounded per-target results. Branch names and exact event
+references remain inspectable; local worktree paths and free-form result text
+are omitted. Incomplete request, target, or completion chains remain explicit
+within the selected event window. The view is an operation-accountability
+projection: recorded eligibility and receipts do not independently verify the
+repository state, establish agent need or intervention burden, or demonstrate
+that an ambient service fulfilled an opportunity. The compact ECI response
+retains a bounded operation link and its event provenance when detailed session
+activity is omitted.
+
 `session_activity.projection_coherence_history` exposes the selected session's
 recorded projection-pass summaries and their evidence references, together
 with the latest stored epoch summary and campaign context. It reuses the existing

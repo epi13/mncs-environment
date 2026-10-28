@@ -261,6 +261,7 @@ MAX_SESSION_ACTIVITY_CLAIM_RECOVERIES = 8
 MAX_SESSION_ACTIVITY_CLAIM_COORDINATION = 16
 MAX_SESSION_ACTIVITY_CLAIM_LIFECYCLE_CORRELATIONS = 8
 MAX_SESSION_ACTIVITY_OPERATION_DEFERRALS = 8
+MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS = 8
 MAX_SESSION_ACTIVITY_COORDINATION_DEFERRALS = 8
 MAX_SESSION_SERVICE_READINESS_RECORDS = 16
 MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
@@ -285,6 +286,11 @@ CLAIM_COORDINATION_EVENT_ACTIONS = {
     "lease.recovered-away": "recovered-away",
     "lease.owner-recovery-reconciled": "owner-recovery-reconciled",
 }
+RETIREMENT_OPERATION_EVENT_TYPES = frozenset({
+    "environment.retirement.requested",
+    "environment.retirement.target-completed",
+    "environment.retirement.completed",
+})
 SOURCE_INTEGRITY_VERIFIED = frozenset({
     "content-integrity-verified",
     "record-integrity-verified-in-projection",
@@ -4338,10 +4344,21 @@ def _compact_session_activity_budget_overview(
             for key in (
                 "event_count", "ambient_service_execution_digest",
                 "family_ambient_observation_digest",
+                "retirement_activity_digest",
             )
             if (isinstance(source.get(key), str)
                 or type(source.get(key)) in (int, bool))
         }
+
+    retirement_activity = activity.get("retirement_activity")
+    if (not isinstance(retirement_activity, dict)
+            and isinstance(source_activity, dict)):
+        retirement_activity = source_activity.get("retirement_activity")
+    compact_retirement_activity = _compact_session_retirement_activity(
+        retirement_activity, operation_limit=1, target_limit=1,
+    )
+    if compact_retirement_activity is not None:
+        result["retirement_activity"] = compact_retirement_activity
 
     resource_samples = None
     if isinstance(source_activity, dict):
@@ -4867,9 +4884,15 @@ def _compact_session_activity_evidence_priority_overview(
             for key in (
                 "event_count", "ambient_service_execution_digest",
                 "family_ambient_observation_digest",
+                "retirement_activity_digest",
             )
             if key in source
         }
+    retirement_activity = _compact_session_retirement_activity(
+        activity.get("retirement_activity"), operation_limit=1, target_limit=1,
+    )
+    if retirement_activity is not None:
+        result["retirement_activity"] = retirement_activity
     resource_samples = _compact_session_resource_samples(
         activity.get("resource_samples"), observation_limit=1,
         preserve_empty=True, response_budget_overview=True,
@@ -6593,6 +6616,7 @@ def _compact_projection(
             "ambient_service_execution_digest",
             "family_ambient_observation_digest",
             "ambient_owner_pass_activity_digest",
+            "retirement_activity_digest",
             "claim_coordination_events_considered",
             "claim_coordination_records_returned",
             "claim_coordination_records_omitted",
@@ -6615,6 +6639,11 @@ def _compact_projection(
             "repository_ref_transition_records_invalid",
             "repository_ref_transition_events_invalid",
             "repository_ref_transition_selection_policy",
+            "retirement_operation_events_considered",
+            "retirement_operation_records_returned",
+            "retirement_operation_records_omitted",
+            "retirement_operation_events_invalid",
+            "retirement_operation_selection_policy",
         )
         if key in activity_source
         and (
@@ -9004,6 +9033,11 @@ def _compact_projection(
         )
         if len(raw_repository_ref_transitions) > len(compact_repository_ref_transitions):
             compact_activity["repository_ref_transitions_truncated"] = True
+    compact_retirement_activity = _compact_session_retirement_activity(
+        activity.get("retirement_activity"),
+    )
+    if compact_retirement_activity is not None:
+        compact_activity["retirement_activity"] = compact_retirement_activity
     if raw_authority_candidates:
         compact_activity["authority_denial_candidates"] = compact_authority_candidates
         if len(raw_authority_candidates) > len(compact_authority_candidates):
@@ -17825,6 +17859,477 @@ def _claim_coordination_event_projection(
     return row
 
 
+def _retirement_admission_summary(value: Any) -> dict[str, Any] | None:
+    """Keep decision facts while excluding free-form targets and path data."""
+    if not isinstance(value, dict):
+        return None
+    result: dict[str, Any] = {}
+    for key in (
+        "verdict", "decision_domain", "authorization_basis",
+        "coordination_status",
+    ):
+        item = value.get(key)
+        if (isinstance(item, str)
+                and re.fullmatch(r"[a-z][a-z0-9._-]{0,95}", item)):
+            result[key] = item
+    for key in ("persistent_authority_required", "operation_executed"):
+        item = value.get(key)
+        if type(item) is bool:
+            result[key] = item
+    target_index = value.get("target_index")
+    if type(target_index) is int and 0 <= target_index <= 1024:
+        result["target_index"] = target_index
+    return result or None
+
+
+def _retirement_target_receipt(
+    event: dict[str, Any], *, request_admissions: list[Any],
+) -> dict[str, Any] | None:
+    """Sanitize one target receipt without exposing checkout paths or prose."""
+    reference = _event_reference(event)
+    payload = event.get("payload")
+    payload = payload if isinstance(payload, dict) else {}
+    target_spec = payload.get("target_spec")
+    target_spec = target_spec if isinstance(target_spec, dict) else {}
+    result = payload.get("result")
+    result = result if isinstance(result, dict) else {}
+    kind = target_spec.get("kind", result.get("kind"))
+    target_index = target_spec.get("index")
+    retired = result.get("retired")
+    dry_run = result.get("dry_run")
+    if (
+        reference is None
+        or not isinstance(kind, str)
+        or re.fullmatch(r"[a-z][a-z0-9-]{0,31}", kind) is None
+        or (target_index is not None
+            and (type(target_index) is not int or not 0 <= target_index <= 1024))
+        or type(retired) is not bool
+        or type(dry_run) is not bool
+    ):
+        return None
+    target: dict[str, Any] = {
+        "kind": kind,
+        "retired": retired,
+        "dry_run": dry_run,
+        "event_reference": reference,
+    }
+    if target_index is not None:
+        target["target_index"] = target_index
+    scope = target_spec.get("scope")
+    if isinstance(scope, dict):
+        scope_kind = scope.get("kind")
+        if isinstance(scope_kind, str) and scope_kind in {
+            "repository", "worktree",
+        }:
+            target["scope_kind"] = scope_kind
+        branch = scope.get("branch")
+        if (scope_kind == "repository" and isinstance(branch, str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,159}", branch)
+                and ".." not in branch):
+            target["branch"] = branch
+    status = result.get("status")
+    if (isinstance(status, str)
+            and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", status)):
+        target["result_status"] = status
+    admission = _retirement_admission_summary(payload.get("admission"))
+    if admission is None and target_index is not None:
+        matching = [
+            item for item in request_admissions
+            if isinstance(item, dict) and item.get("target_index") == target_index
+        ]
+        if len(matching) == 1:
+            admission = _retirement_admission_summary(matching[0])
+    if admission is not None:
+        target["admission"] = admission
+    return target
+
+
+def _session_retirement_activity(
+    events: list[dict[str, Any]], session_id: str,
+) -> dict[str, Any] | None:
+    """Join bounded retirement decisions and receipts by exact request ID."""
+    retirement_events = [
+        event for event in events
+        if isinstance(event.get("type"), str)
+        and event.get("type") in RETIREMENT_OPERATION_EVENT_TYPES
+    ]
+    if not retirement_events:
+        return None
+
+    identifier = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,159}")
+    operations: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    invalid_events = 0
+    for event in retirement_events:
+        reference = _event_reference(event)
+        payload = event.get("payload")
+        if (reference is None or not isinstance(payload, dict)
+                or (event.get("session_id") is not None
+                    and event.get("session_id") != session_id)):
+            invalid_events += 1
+            continue
+        event_type = event.get("type")
+        if event_type == "environment.retirement.target-completed":
+            request_id = payload.get("parent_request_id")
+            if request_id is None:
+                request_id = payload.get("request_id")
+            group_name = "targets"
+        elif event_type == "environment.retirement.requested":
+            request_id = payload.get("request_id")
+            group_name = "requests"
+        else:
+            request_id = payload.get("request_id")
+            group_name = "completions"
+        if (not isinstance(request_id, str)
+                or not identifier.fullmatch(request_id)):
+            invalid_events += 1
+            continue
+        operations.setdefault(request_id, {
+            "requests": [], "targets": [], "completions": [],
+        })[group_name].append(event)
+
+    rows: list[dict[str, Any]] = []
+    invalid_records = 0
+    for request_id, group in sorted(
+        operations.items(),
+        key=lambda item: max(
+            _event_reference(event)["sequence"]
+            for rows_for_type in item[1].values()
+            for event in rows_for_type
+            if _event_reference(event) is not None
+        ),
+        reverse=True,
+    ):
+        request_events = sorted(
+            group["requests"], key=lambda event: _event_reference(event)["sequence"],
+        )
+        target_events = sorted(
+            group["targets"], key=lambda event: _event_reference(event)["sequence"],
+        )
+        completion_events = sorted(
+            group["completions"],
+            key=lambda event: _event_reference(event)["sequence"],
+        )
+        row: dict[str, Any] = {
+            "identity": "retire_" + digest_hex({
+                "session_id": session_id, "request_id": request_id,
+            }, length=16),
+            "request_id": request_id,
+            "request_observation_status": (
+                "recorded" if len(request_events) == 1 else
+                "ambiguous" if len(request_events) > 1 else
+                "not-recorded-in-selected-window"
+            ),
+            "completion_observation_status": (
+                "recorded" if len(completion_events) == 1 else
+                "ambiguous" if len(completion_events) > 1 else
+                "not-recorded-in-selected-window"
+            ),
+        }
+        expected_count: int | None = None
+        if len(request_events) == 1:
+            request_event = request_events[0]
+            row["request_event"] = _event_reference(request_event)
+            request_payload = request_event.get("payload", {})
+            request_payload = (
+                request_payload if isinstance(request_payload, dict) else {}
+            )
+            target_specs = request_payload.get("target_specs")
+            if isinstance(target_specs, list) and len(target_specs) <= 1024:
+                expected_count = len(target_specs)
+                row["expected_target_count"] = expected_count
+            request_admissions = request_payload.get("admissions")
+            request_admissions = (
+                request_admissions if isinstance(request_admissions, list) else []
+            )
+            objective_source = request_payload
+        else:
+            request_admissions = []
+            objective_source = {}
+
+        receipts: list[dict[str, Any]] = []
+        for event in target_events:
+            receipt = _retirement_target_receipt(
+                event, request_admissions=request_admissions,
+            )
+            if receipt is None:
+                invalid_records += 1
+                continue
+            receipts.append(receipt)
+            if not objective_source:
+                payload = event.get("payload")
+                objective_source = payload if isinstance(payload, dict) else {}
+        if receipts:
+            row["target_receipts"] = receipts[:MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS]
+        if len(receipts) > MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS:
+            row["target_receipts_omitted_count"] = (
+                len(receipts) - MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS
+            )
+        row["target_receipt_count"] = len(receipts)
+        expected_count = row.get("expected_target_count")
+        row["target_receipt_coverage"] = (
+            "complete-for-requested-targets"
+            if type(expected_count) is int and len(receipts) == expected_count
+            else "partial-for-requested-targets"
+            if type(expected_count) is int and len(receipts) < expected_count
+            else "count-exceeds-requested-targets"
+            if type(expected_count) is int and len(receipts) > expected_count
+            else "observed-count-only" if receipts
+            else "not-recorded-in-selected-window"
+        )
+
+        if len(completion_events) == 1:
+            completion_event = completion_events[0]
+            completion_reference = _event_reference(completion_event)
+            if completion_reference is not None:
+                row["completion_event"] = completion_reference
+            completion_payload = completion_event.get("payload")
+            completion_payload = (
+                completion_payload if isinstance(completion_payload, dict) else {}
+            )
+            response = completion_payload.get("response")
+            response = response if isinstance(response, dict) else {}
+            completion: dict[str, Any] = {}
+            completion_status = response.get("completion_status")
+            if (isinstance(completion_status, str)
+                    and re.fullmatch(r"[a-z][a-z0-9-]{0,63}", completion_status)):
+                completion["status"] = completion_status
+            exit_code = response.get("exit_code")
+            if type(exit_code) is int and -255 <= exit_code <= 255:
+                completion["exit_code"] = exit_code
+            for key in ("mutation_performed", "dry_run"):
+                value = response.get(key)
+                if type(value) is bool:
+                    completion[key] = value
+            response_results = response.get("results")
+            if isinstance(response_results, list) and len(response_results) <= 1024:
+                completion["result_count"] = len(response_results)
+                if "expected_target_count" not in row:
+                    expected_count = len(response_results)
+                    row["expected_target_count"] = expected_count
+            if completion:
+                row["operation_receipt"] = completion
+                objective_source = {**objective_source, **completion_payload}
+        row["target_receipt_coverage"] = (
+            "complete-for-requested-targets"
+            if type(expected_count) is int and len(receipts) == expected_count
+            else "partial-for-requested-targets"
+            if type(expected_count) is int and len(receipts) < expected_count
+            else "observed-count-only" if receipts
+            else "not-recorded-in-selected-window"
+        )
+
+        objective = _authority_event_objective_context(objective_source)
+        for key in ("campaign_id", "work_intent_id"):
+            value = objective.get(key)
+            if isinstance(value, str) and identifier.fullmatch(value):
+                row[key] = value
+        row["recorded_retired_target_count"] = sum(
+            receipt.get("retired") is True and receipt.get("dry_run") is False
+            for receipt in receipts
+        )
+        row["recorded_nonretired_target_count"] = sum(
+            receipt.get("retired") is False or receipt.get("dry_run") is True
+            for receipt in receipts
+        )
+        row["outcome_observation_status"] = (
+            "operation-and-target-receipts-recorded"
+            if len(completion_events) == 1 and receipts
+            and row["request_observation_status"] != "ambiguous"
+            and type(expected_count) is int and len(receipts) == expected_count
+            else "partial-operation-evidence"
+        )
+        rows.append(row)
+
+    omitted = max(0, len(rows) - MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS)
+    returned = rows[:MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS]
+    invalid_events += invalid_records
+    return {
+        "schema_version": "mncs.environment.retirement-activity/1",
+        "status": "recorded" if not invalid_events and not omitted else "partial",
+        "scope": "selected-session-retirement-operation-events",
+        "source": {
+            "event_count": len(retirement_events),
+            "invalid_event_count": invalid_events,
+            "operation_count": len(rows),
+            "operations_omitted_count": omitted,
+            "selection_policy": "newest-request-identities-in-selected-session-event-window",
+            "event_window_digest": digest_hex(
+                [
+                    reference for event in retirement_events
+                    if (reference := _event_reference(event)) is not None
+                ], length=16,
+            ),
+        },
+        "summary": {
+            "operation_count": len(rows),
+            "operation_receipt_count": sum(
+                row.get("completion_observation_status") == "recorded"
+                for row in rows
+            ),
+            "recorded_retired_target_count": sum(
+                row.get("recorded_retired_target_count", 0) for row in rows
+            ),
+            "eligible_service_opportunity_count": None,
+            "ambient_fulfillment_status": "not-measured",
+            "agent_intervention_burden_status": "not-measured",
+        },
+        "operations": returned,
+        "measurement_limits": [
+            "The projection joins Environment retirement eligibility and operation receipts by exact request identity; it does not independently verify repository state or external side effects.",
+            "The selected session event window does not establish agent need, service fulfillment, agent attribution, or intervention burden.",
+            "Missing request, target, or completion records may be outside the bounded event window and remain unknown.",
+        ],
+    }
+
+
+def _compact_session_retirement_activity(
+    value: Any, *, operation_limit: int = MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS,
+    target_limit: int = MAX_SESSION_ACTIVITY_RETIREMENT_OPERATIONS,
+) -> dict[str, Any] | None:
+    """Retain bounded retirement provenance through ECI response compaction."""
+    if not isinstance(value, dict):
+        return None
+    compact: dict[str, Any] = {}
+    for key in ("schema_version", "status", "scope"):
+        item = value.get(key)
+        if isinstance(item, str):
+            compact[key] = _short_text(item, 96)
+    source = value.get("source")
+    if isinstance(source, dict):
+        compact["source"] = {
+            key: source[key]
+            for key in (
+                "event_count", "invalid_event_count", "operation_count",
+                "operations_omitted_count", "selection_policy",
+                "event_window_digest",
+            )
+            if (type(source.get(key)) is int and source[key] >= 0)
+            or (isinstance(source.get(key), str) and key in {
+                "selection_policy", "event_window_digest",
+            })
+        }
+    summary = value.get("summary")
+    if isinstance(summary, dict):
+        compact["summary"] = {
+            key: summary[key]
+            for key in (
+                "operation_count", "operation_receipt_count",
+                "recorded_retired_target_count",
+                "eligible_service_opportunity_count",
+                "ambient_fulfillment_status",
+                "agent_intervention_burden_status",
+            )
+            if (type(summary.get(key)) is int and summary[key] >= 0)
+            or summary.get(key) is None
+            or isinstance(summary.get(key), str)
+        }
+    raw_operations = value.get("operations")
+    raw_operations = raw_operations if isinstance(raw_operations, list) else []
+    operations: list[dict[str, Any]] = []
+    for item in raw_operations[:max(0, operation_limit)]:
+        if not isinstance(item, dict):
+            continue
+        row = {
+            key: _short_text(item[key], 192)
+            for key in (
+                "identity", "request_id", "request_observation_status",
+                "completion_observation_status", "target_receipt_coverage",
+                "outcome_observation_status", "campaign_id", "work_intent_id",
+            )
+            if isinstance(item.get(key), str)
+        }
+        for key in (
+            "expected_target_count", "target_receipt_count",
+            "target_receipts_omitted_count", "recorded_retired_target_count",
+            "recorded_nonretired_target_count",
+        ):
+            if type(item.get(key)) is int and item[key] >= 0:
+                row[key] = item[key]
+        for key in ("request_event", "completion_event"):
+            reference = item.get(key)
+            if isinstance(reference, dict):
+                row[key] = {
+                    field: reference[field]
+                    for field in ("identity", "sequence", "type")
+                    if field in reference
+                }
+        receipt = item.get("operation_receipt")
+        if isinstance(receipt, dict):
+            row["operation_receipt"] = {
+                key: receipt[key]
+                for key in (
+                    "status", "exit_code", "mutation_performed", "dry_run",
+                    "result_count",
+                )
+                if (isinstance(receipt.get(key), str)
+                    or type(receipt.get(key)) in (int, bool))
+            }
+        raw_targets = item.get("target_receipts")
+        if isinstance(raw_targets, list):
+            targets = []
+            for target in raw_targets[:max(0, target_limit)]:
+                if not isinstance(target, dict):
+                    continue
+                target_row = {
+                    key: _short_text(target[key], 160)
+                    for key in (
+                        "kind", "scope_kind", "branch", "result_status",
+                    )
+                    if isinstance(target.get(key), str)
+                }
+                for key in ("retired", "dry_run", "target_index"):
+                    if type(target.get(key)) in (bool, int):
+                        target_row[key] = target[key]
+                reference = target.get("event_reference")
+                if isinstance(reference, dict):
+                    target_row["event_reference"] = {
+                        field: reference[field]
+                        for field in ("identity", "sequence", "type")
+                        if field in reference
+                    }
+                admission = target.get("admission")
+                if isinstance(admission, dict):
+                    target_row["admission"] = {
+                        key: _short_text(admission[key], 128)
+                        if isinstance(admission.get(key), str)
+                        else admission[key]
+                        for key in (
+                            "verdict", "decision_domain", "authorization_basis",
+                            "coordination_status",
+                            "persistent_authority_required",
+                            "operation_executed", "target_index",
+                        )
+                        if (isinstance(admission.get(key), str)
+                            or type(admission.get(key)) in (int, bool))
+                    }
+                targets.append(target_row)
+            row["target_receipts"] = targets
+            if len(raw_targets) > len(targets):
+                row["target_receipts_omitted_count"] = (
+                    row.get("target_receipts_omitted_count", 0)
+                    + len(raw_targets) - len(targets)
+                )
+        if row:
+            operations.append(row)
+    compact["operations"] = operations
+    if len(raw_operations) > len(operations):
+        compact["operations_omitted_count"] = max(
+            0,
+            len(raw_operations) - len(operations)
+            + (source.get("operations_omitted_count", 0)
+               if isinstance(source, dict)
+               and type(source.get("operations_omitted_count")) is int else 0),
+        )
+    raw_limits = value.get("measurement_limits")
+    if isinstance(raw_limits, list):
+        compact["measurement_limits"] = [
+            _short_text(item, 256)
+            for item in raw_limits[:3]
+            if isinstance(item, str)
+        ]
+    return compact
+
+
 def _claim_event_identity_matches(
     event: dict[str, Any], *, repository: str, claim_id: str,
 ) -> bool:
@@ -23867,6 +24372,30 @@ def _session_activity(
         and isinstance(event.get("payload"), dict)
         and isinstance(event["payload"].get("repository_ref_transitions"), list)
     ]
+    retirement_operation_events = [
+        event for event in events
+        if isinstance(event.get("type"), str)
+        and event.get("type") in RETIREMENT_OPERATION_EVENT_TYPES
+    ]
+    retirement_activity = _session_retirement_activity(
+        events, session.session_id,
+    )
+    retirement_activity_source = (
+        retirement_activity.get("source")
+        if isinstance(retirement_activity, dict)
+        and isinstance(retirement_activity.get("source"), dict) else {}
+    )
+    retirement_activity_partial = (
+        retirement_activity_source.get("invalid_event_count", 0) > 0
+        or retirement_activity_source.get("operations_omitted_count", 0) > 0
+    )
+    if retirement_activity_partial:
+        partial = True
+        status = "partial"
+    if retirement_operation_events:
+        limits.append(
+            "Retirement activity links recorded eligibility, target, and operation events by exact request identity; it does not independently verify state changes, agent need, fulfillment, or reduced intervention."
+        )
     if integration_eligibility_events:
         limits.append(
             "Integration eligibility records are preflight decisions; they do "
@@ -25550,6 +26079,24 @@ def _session_activity(
                 ),
             } if repository_ref_transition_events else {}),
             **({
+                "retirement_operation_events_considered": len(
+                    retirement_operation_events,
+                ),
+                "retirement_operation_records_returned": len(
+                    retirement_activity.get("operations", [])
+                ),
+                "retirement_operation_records_omitted": (
+                    retirement_activity_source.get("operations_omitted_count", 0)
+                ),
+                "retirement_operation_events_invalid": (
+                    retirement_activity_source.get("invalid_event_count", 0)
+                ),
+                "retirement_operation_selection_policy": (
+                    "newest-request-identities-in-selected-session-event-window"
+                ),
+                "retirement_activity_digest": digest_hex(retirement_activity),
+            } if isinstance(retirement_activity, dict) else {}),
+            **({
                 "authority_claim_state_lookup": claim_state_lookup,
             } if denial_events else {}),
             **({
@@ -25706,6 +26253,8 @@ def _session_activity(
             "claim_coordination_count": len(claim_coordination),
             "claim_coordination": claim_coordination,
         } if claim_coordination_events else {}),
+        **({"retirement_activity": retirement_activity}
+           if isinstance(retirement_activity, dict) else {}),
         **({
             "claim_lifecycle_correlations": claim_lifecycle_correlations,
         } if claim_lifecycle_correlations else {}),

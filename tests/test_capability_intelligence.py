@@ -11149,6 +11149,152 @@ def test_claim_coordination_projects_bounded_objective_linked_transitions(
     assert private_checkout not in json.dumps(compact)
 
 
+def test_retirement_activity_joins_eligibility_to_bounded_operation_receipts(
+    tmp_path: Path,
+) -> None:
+    record = _observation(
+        "ev_environment_retirement_activity",
+        "ses_environment_retirement_activity",
+        "cmp_environment_retirement_activity",
+    )
+    session, _state = _session(tmp_path, [record])
+    private_checkout = "/private/agent/worktrees/retirement-target"
+
+    def event(identity: str, sequence: int, kind: str, payload: dict) -> dict:
+        return {
+            "identity": identity, "sequence": sequence, "type": kind,
+            "session_id": session.session_id, "payload": payload,
+        }
+
+    branch_request = "req_retire_branch_campaign"
+    events = [
+        event("evt_retirement_branch_requested", 10,
+              "environment.retirement.requested", {
+                  "request_id": branch_request,
+                  "campaign_id": "cmp_environment_retirement_activity",
+                  "admissions": [{
+                      "verdict": "allow",
+                      "decision_domain": "eligibility",
+                      "authorization_basis": "writable-repository-rights",
+                      "persistent_authority_required": False,
+                      "operation_executed": False,
+                      "coordination_status": "target-conflicts-checked-by-retirement-adapter",
+                      "target_index": 0,
+                  }],
+                  "target_specs": [{
+                      "index": 0,
+                      "kind": "branch",
+                      "scope": {
+                          "kind": "repository",
+                          "branch": "campaign/retirement-fix",
+                      },
+                      "target": "campaign/retirement-fix",
+                  }],
+              }),
+        event("evt_retirement_branch_target", 11,
+              "environment.retirement.target-completed", {
+                  "request_id": "req_retire_branch_target",
+                  "parent_request_id": branch_request,
+                  "target_spec": {
+                      "index": 0,
+                      "kind": "branch",
+                      "scope": {
+                          "kind": "repository",
+                          "branch": "campaign/retirement-fix",
+                      },
+                  },
+                  "result": {
+                      "dry_run": False, "kind": "branch",
+                      "retired": True, "status": "retired",
+                      "target": "campaign/retirement-fix",
+                  },
+              }),
+        event("evt_retirement_branch_complete", 12,
+              "environment.retirement.completed", {
+                  "request_id": branch_request,
+                  "response": {
+                      "completion_status": "completed", "dry_run": False,
+                      "exit_code": 0, "mutation_performed": True,
+                      "results": [{"retired": True}],
+                  },
+              }),
+        event("evt_retirement_worktree_target", 13,
+              "environment.retirement.target-completed", {
+                  "request_id": "req_retire_worktree_target",
+                  "parent_request_id": "req_retire_worktree_campaign",
+                  "admission": {
+                      "verdict": "allow",
+                      "decision_domain": "eligibility",
+                      "authorization_basis": "writable-repository-rights",
+                      "persistent_authority_required": False,
+                      "operation_executed": False,
+                      "coordination_status": "target-conflicts-checked-by-retirement-adapter",
+                      "scope": {"kind": "worktree", "checkout": private_checkout},
+                      "session_id": session.session_id,
+                      "target_index": 0,
+                  },
+                  "target_spec": {
+                      "index": 0, "kind": "worktree",
+                      "scope": {"kind": "worktree", "checkout": private_checkout},
+                      "target": private_checkout,
+                  },
+                  "result": {
+                      "dry_run": False, "kind": "worktree",
+                      "retired": True, "status": "retired",
+                      "target": private_checkout,
+                  },
+              }),
+        event("evt_retirement_worktree_complete", 14,
+              "environment.retirement.completed", {
+                  "request_id": "req_retire_worktree_campaign",
+                  "response": {
+                      "completion_status": "completed", "dry_run": False,
+                      "exit_code": 0, "mutation_performed": True,
+                      "results": [{"retired": True}],
+                  },
+              }),
+    ]
+    session.recent_events = lambda *, limit, before_sequence=None: {
+        "event_count": len(events), "events": events[-limit:],
+        "truncated": False, "next_before_sequence": None,
+    }
+
+    activity = capability_intelligence.project(session)["session_activity"]
+    retirement = activity["retirement_activity"]
+    assert retirement["status"] == "recorded"
+    assert retirement["scope"] == "selected-session-retirement-operation-events"
+    assert retirement["summary"]["operation_count"] == 2
+    assert retirement["summary"]["operation_receipt_count"] == 2
+    assert retirement["summary"]["recorded_retired_target_count"] == 2
+    assert retirement["summary"]["eligible_service_opportunity_count"] is None
+    assert retirement["summary"]["agent_intervention_burden_status"] == "not-measured"
+
+    by_request = {item["request_id"]: item for item in retirement["operations"]}
+    branch = by_request[branch_request]
+    assert branch["request_event"]["identity"] == "evt_retirement_branch_requested"
+    assert branch["completion_event"]["identity"] == "evt_retirement_branch_complete"
+    assert branch["target_receipt_coverage"] == "complete-for-requested-targets"
+    assert branch["target_receipts"][0]["branch"] == "campaign/retirement-fix"
+    assert branch["target_receipts"][0]["admission"][
+        "persistent_authority_required"
+    ] is False
+    assert "/private/agent" not in json.dumps(branch)
+
+    worktree = by_request["req_retire_worktree_campaign"]
+    assert worktree["request_observation_status"] == "not-recorded-in-selected-window"
+    assert worktree["operation_receipt"]["mutation_performed"] is True
+    assert worktree["target_receipts"][0]["kind"] == "worktree"
+    assert private_checkout not in json.dumps(retirement)
+
+    compact_activity = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+    )["session_activity"]
+    compact_retirement = compact_activity["retirement_activity"]
+    assert compact_retirement["operations"]
+    assert compact_retirement["operations"][0]["completion_event"]
+    assert private_checkout not in json.dumps(compact_activity)
+
+
 def test_session_activity_discloses_bounded_event_and_interaction_windows(
     tmp_path: Path,
 ) -> None:
