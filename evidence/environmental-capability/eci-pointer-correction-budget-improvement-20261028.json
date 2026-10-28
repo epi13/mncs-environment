@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pointer_correction_budget_improvement_20261028",
+  "captured_at": "2026-10-28T07:23:16Z",
+  "measurement_basis": "implementation-linked-regression-and-post-change-ECI-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI response compactor",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_pointer_correction_budget",
+      "implementation_commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7",
+      "verification_observation_identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_pointer_correction_budget_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "When a selected append-only pointer correction is applied, ECI first reduces secondary session activity to its bounded evidence-priority view and ranks the recovered target and correction rows for retention. This preserves their exact pointers and correction statuses within the response budget.",
+      "effectiveness_assessment": "focused-regression-and-live-projection-evidence-visibility-verified; agent-intervention reduction not assessed",
+      "interpretation_limit": "The change verifies that this selected correction path remains inspectable under response pressure. It does not establish that every evidence type is preserved under every response shape or that subsequent agents required less work."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_pointer_correction_budget",
+    "title": "ECI response budgeting can hide verified source-correction evidence",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment environmental capability projection",
+    "owner": "mncs-environment",
+    "basis": "The pre-change projection verified the corrected records but omitted both observation rows from its bounded response. The implementation preserves the correction path by reducing secondary activity detail first.",
+    "actionable_recommendation": "Observe other bounded projection paths to determine whether additional verified evidence classes need explicit response-priority behavior.",
+    "recurrence": "one reproduced selected-window response; recurrence across sessions is not established",
+    "not_measured": [
+      "agent intervention burden after this change",
+      "response-size behavior across unrelated evidence families",
+      "long-term recurrence or correction-recovery frequency"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_pointer_correction_budget_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_pointer_correction_budget",
+    "implementation_reference": {
+      "identity": "mncs_environment_pointer_correction_evidence_priority_8570526",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "0d6ab209bd08e69f5bea3866120e7e3bf73936521a7a569792abde4973c3cbd19"
+    },
+    "verification_observation_identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_pointer_correction_budget_readback_20261028",
+    "basis": "Focused regression tests preserve the verified target and applied correction rows under oversized secondary context. The subsequent live ECI readback returns both exact evidence references and reports the applied correction with no unverified or unavailable source record.",
+    "effectiveness_assessment": "selected-response-evidence-retention-verified; agent intervention burden not assessed",
+    "not_measured": [
+      "agent time or tool calls saved",
+      "response behavior for other correction and evidence types",
+      "cross-session recurrence"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_pointer_correction_budget_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-verification-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "Verification and readback establish a bounded projection capability, not reduced agent intervention or sustained environmental improvement.",
+    "The response remains partial because other session context is intentionally bounded."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

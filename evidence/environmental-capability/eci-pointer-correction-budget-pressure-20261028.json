@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pointer_correction_budget_pressure_20261028",
+  "captured_at": "2026-10-28T07:23:16Z",
+  "measurement_basis": "live-ECI-pre-change-response-budget-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "observation": {
+    "kind": "verified-campaign-records-compacted-out-by-secondary-session-context",
+    "source_interface": "MNCS Environment ECI projection",
+    "request": {
+      "projection_identity": "eci_8a2437614f5772ce",
+      "campaign_state_checkpoint_id": "chk_6c6a42c16b208247",
+      "evidence_page_offset": 69,
+      "evidence_page_limit": 2,
+      "history_pages": 1,
+      "session_event_before_sequence": 637,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "response_status": "partial",
+      "observation_records_considered": 2,
+      "observation_records_verified": 2,
+      "observation_records_unavailable": 0,
+      "evidence_reference_correction_count": 1,
+      "evidence_reference_corrections_applied_count": 1,
+      "evidence_reference_corrections_unverified_count": 0,
+      "observation_records_compacted_out_count": 2,
+      "response_byte_count_before_compaction": 165385,
+      "returned_compact_json_bytes": 64778,
+      "response_truncated": true
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_pointer_correction_budget",
+    "title": "ECI response budgeting can hide verified source-correction evidence",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment environmental capability projection",
+    "owner": "mncs-environment",
+    "basis": "The selected ledger page contained the original operation observation and its appended pointer correction. ECI verified both and applied the correction, but compacted both observation rows out while retaining secondary session activity.",
+    "actionable_recommendation": "When a verified pointer correction is applied, summarize secondary session context before discarding the corrected source row and its correction evidence; preserve their exact references and correction status within the response budget.",
+    "recurrence": "one reproduced selected-window response; recurrence across sessions is not established",
+    "not_measured": [
+      "agent time or tool calls caused by the omitted rows",
+      "frequency of the omission across other session and evidence shapes",
+      "whether other verified evidence classes are similarly omitted"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "corrected-operation-observation",
+      "identity": "ev_environment_eci_retirement_operation_accountability_20261028",
+      "repository": "mncs-environment",
+      "commit": "6ec0bc0ad729bf0b00d5d41faec6994c6f4dd3fc",
+      "path": "evidence/environmental-capability/eci-retirement-operation-accountability-20261028.json",
+      "sha256": "85c7e4a0cb09e15e470833d1b385b9257b000954f78ca105abfebd9064505d60"
+    },
+    {
+      "kind": "append-only-pointer-correction",
+      "identity": "ev_environment_eci_retirement_operation_pointer_correction_20261028",
+      "repository": "mncs-environment",
+      "commit": "f7f29b29562593937643484f3f733f17b5beb40e",
+      "path": "evidence/environmental-capability/eci-retirement-operation-pointer-correction-20261028.json",
+      "sha256": "546a3db0e551d72481cdba0a6090878f70f878670842516234576593bc35711e"
+    }
+  ],
+  "measurement_limits": [
+    "This is a response-budget and evidence-visibility observation, not evidence that source records were missing or corrupt.",
+    "It does not measure agent intervention burden, service opportunity recall, or cross-session recurrence."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
