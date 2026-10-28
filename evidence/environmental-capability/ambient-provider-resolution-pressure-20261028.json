@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_provider_resolution_pressure_20261028",
+  "captured_at": "2026-10-28T08:37:04Z",
+  "measurement_basis": "pre-change-live-ECI-verification-readiness-projection",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id": "chk_6d41d4af7ebdbb1b"
+  },
+  "observation": {
+    "kind": "provider-toolchain-resolution-cause-is-clipped-in-eci",
+    "source_interface": "MNCS Environment environmental capability projection",
+    "request": {
+      "projection_identity": "eci_5603607e539ff8f8",
+      "campaign_state_checkpoint_id": "chk_6d41d4af7ebdbb1b",
+      "evidence_page_offset": 89,
+      "evidence_page_limit": 4,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "verification_obligation_identity": "mncs-test.native-application-build-vm",
+      "verification_outcome": "excluded",
+      "verification_reason": "executor_not_runnable",
+      "verification_source_integrity_status": "verified",
+      "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "owner_result_content_integrity_status": "content-integrity-verified",
+      "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "executor_capability_identity": "mncs-test:verification-executor/mncs-test.native-application-build-vm",
+      "provider_capability_identity": "mncs-test:canonical-vm-tests",
+      "provider_availability_code": "provider-invocation-unresolvable",
+      "provider_availability_reason_status": "clipped-before-declared-repository-and-path-were-readable",
+      "provider_resolution_issue_status": "not-structured-in-pre-change-projection",
+      "causal_status": "not-established",
+      "agent_intervention_burden_status": "not-measured"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_provider_resolution_context",
+    "title": "ECI obscures the declared input behind an unavailable provider capability",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability binding and verification readiness projection",
+    "owner": "mncs-environment",
+    "basis": "The live projection joined integrity-verified verification evidence to an exact executor binding and exposed an unavailable same-provider capability, but its clipped reason did not preserve a structured repository and relative-path input for investigation.",
+    "actionable_recommendation": "Preserve provider-declared repository-toolchain resolution findings as bounded structured context and carry them through the existing verification-readiness projection, while keeping the relationship to the verification outcome unestablished.",
+    "recurrence_status": "not-established"
+  },
+  "measurement_limits": [
+    "The exact provider binding and integrity-verified verification records are traceable, but the same-provider capability relation does not establish that the capability was a dependency of this obligation or caused its exclusion.",
+    "The selected ECI response returned two of eight obligation contexts; six were omitted by the response budget.",
+    "The observation establishes loss of actionable detail in this projection, not agent receipt, service fulfillment, intervention burden, or recurring pressure across sessions."
+  ],
+  "supporting_sources": [
+    {
+      "kind": "verification-evidence-store-reference",
+      "identity": "5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c"
+    },
+    {
+      "kind": "owner-result-store-reference",
+      "identity": "fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+    },
+    {
+      "kind": "provider-declared-contract",
+      "repository": "mncs-test",
+      "path": ".mncs/project.json",
+      "contract": "canonical-vm-tests/1"
+    }
+  ],
+  "recorder": "mncs-environment-capability-campaign"
+}

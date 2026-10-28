@@ -1,0 +1,77 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_provider_resolution_verification_20261028",
+  "captured_at": "2026-10-28T08:37:04Z",
+  "measurement_basis": "focused-provider-resolution-and-eci-projection-regressions",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0"
+  },
+  "observation": {
+    "kind": "provider-toolchain-resolution-context-regression-verification",
+    "source_interface": "MNCS Environment pytest, compileall, Ruff, and live capability projection",
+    "request": {
+      "command": "python -m pytest -q tests/test_environment.py::CapabilityTests::test_declared_composition_toolchain_gap_is_structured tests/test_environment.py::CapabilityTests::test_unresolvable_invocation_names_its_cause tests/test_capability_intelligence.py::test_service_probe_bindings_survive_large_inventory_truncation tests/test_capability_intelligence.py::test_ambient_verification_failure_surfaces_verified_reason_under_budget",
+      "compile_command": "python -m compileall -q mncs_env/capabilities.py mncs_env/capability_intelligence.py",
+      "lint_command": "ruff check --select UP031 --output-format concise mncs_env/capabilities.py",
+      "projection_identity": "eci_fe146bc7bbebbc5d"
+    },
+    "outcome": {
+      "result": "4 passed in 0.22s",
+      "verification_status": "passed",
+      "compile_status": "passed",
+      "lint_status": "passed",
+      "diff_whitespace_status": "passed",
+      "verified_behaviors": [
+        "Capability discovery classifies a declared repository checkout absent from the selected checkout closure and retains its repository, relative path, and toolchain environment variable.",
+        "An unavailable provider invocation exposes a bounded structured resolution issue without a host checkout path.",
+        "Capability-delivery compaction carries the issue into the same-provider readiness context and the exact verification-evidence relationship.",
+        "The live post-change ECI readback preserves the exact verification and owner-result Store references alongside the structured provider input finding.",
+        "Readiness and causality remain not established; agent receipt and intervention burden remain unmeasured."
+      ]
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_provider_resolution_04ce01d",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "mncs_env/capabilities.py",
+      "sha256": "63a84e9dd40423d7f96cdb4f382ec940a6a66306d9eb154e9ae20d3bd5b27992"
+    },
+    {
+      "kind": "source-code-projection",
+      "identity": "mncs_environment_eci_provider_resolution_04ce01d",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9d93961c7fa7ebccef69f732cd58d0dd796bb5e8df5ca42d5fd89a0200d8fc87"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_provider_resolution_discovery_test_04ce01d",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "tests/test_environment.py",
+      "sha256": "a9f77860589976fe7f00670cf262ee8301a03ee5fd44fd6cef3f0760c3996b82"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_eci_provider_resolution_test_04ce01d",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "861b4ac9f703b14112e510510a4bc3aee9a04dff296d0a5480439ee0882fb839"
+    }
+  ],
+  "measurement_limits": [
+    "The selected tests cover provider-resolution and ECI propagation paths, not every provider declaration or repository closure configuration.",
+    "The live ECI response is partial and omits six of eight verification-obligation contexts by response budget.",
+    "Passing tests and source-linked availability evidence do not establish that the unavailable provider capability caused the historical verification exclusion or that agent burden was reduced."
+  ],
+  "recorder": "mncs-environment-capability-campaign"
+}

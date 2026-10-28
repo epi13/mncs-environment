@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_provider_resolution_improvement_20261028",
+  "captured_at": "2026-10-28T08:37:04Z",
+  "measurement_basis": "verified-provider-resolution-to-eci-readiness-integration",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability discovery and capability intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_provider_resolution_context",
+      "verification_observation_identity": "ev_environment_ambient_provider_resolution_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_provider_resolution_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "commit-and-source-blob-sha256-verified",
+      "functionality": "Provider-declared repository-toolchain resolution failures carry a bounded structured issue from capability discovery through the existing ECI verification-readiness context.",
+      "effectiveness_assessment": "structured investigation context is present in focused verification and a live ECI readback; service fulfillment, causal contribution to the excluded verification result, and agent-intervention reduction are not assessed.",
+      "interpretation_limit": "The current same-provider relation does not prove that canonical-vm-tests was a dependency of the excluded verification obligation."
+    }
+  },
+  "improvement_relation": {
+    "identity": "im_environment_provider_resolution_context_verified_20261028",
+    "addresses_hypothesis_identity": "ph_environment_provider_resolution_context",
+    "implementation_reference": {
+      "identity": "mncs_environment_provider_resolution_04ce01d",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "mncs_env/capabilities.py",
+      "sha256": "63a84e9dd40423d7f96cdb4f382ec940a6a66306d9eb154e9ae20d3bd5b27992"
+    },
+    "verification_observation_identity": "ev_environment_ambient_provider_resolution_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_provider_resolution_readback_20261028",
+    "basis": "Focused regressions pass and the live ECI relation retains the exact selected-checkout resolution issue with both integrity-verified verification Store references.",
+    "effectiveness_assessment": "structured-resolution-context-verified; ambient-service-effectiveness-not-assessed",
+    "not_measured": [
+      "whether the provider capability caused or was required by the verification exclusion",
+      "agent receipt or intervention burden",
+      "cross-session recurrence",
+      "whether this visibility changes implementation decisions or improves service outcomes"
+    ]
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_provider_resolution_context",
+    "title": "ECI obscures the declared input behind an unavailable provider capability",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability binding and verification readiness projection",
+    "owner": "mncs-environment",
+    "basis": "The pre-change live ECI readiness relation exposed only a clipped provider-unavailability reason for the selected same-provider capability.",
+    "actionable_recommendation": "Preserve provider-declared repository-toolchain resolution findings as bounded structured context and carry them through the existing verification-readiness projection.",
+    "recurrence_status": "not-established"
+  },
+  "supporting_sources": [
+    {
+      "kind": "environmental-pressure-observation",
+      "identity": "ev_environment_ambient_provider_resolution_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-provider-resolution-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_provider_resolution_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-provider-resolution-verification-20261028.json"
+    },
+    {
+      "kind": "source-code-projection",
+      "identity": "mncs_environment_eci_provider_resolution_04ce01d",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "9d93961c7fa7ebccef69f732cd58d0dd796bb5e8df5ca42d5fd89a0200d8fc87"
+    }
+  ],
+  "measurement_limits": [
+    "The implementation improves traceability and discovery only; it does not repair the selected provider's checkout closure or change the verification result.",
+    "The ECI relation is exact for verification and owner-result evidence, but the unavailable same-provider capability remains identity-correlated rather than proven as an obligation dependency.",
+    "No claim is made that agent effort, execution cost, or service failure rate improved."
+  ],
+  "recorder": "mncs-environment-capability-campaign"
+}

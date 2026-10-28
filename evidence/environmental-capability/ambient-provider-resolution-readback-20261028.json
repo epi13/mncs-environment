@@ -1,0 +1,103 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_provider_resolution_readback_20261028",
+  "captured_at": "2026-10-28T08:37:04Z",
+  "measurement_basis": "live-ECI-post-change-provider-resolution-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0"
+  },
+  "observation": {
+    "kind": "eci-provider-resolution-and-verification-source-live-readback",
+    "source_interface": "MNCS Environment environmental capability projection",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-offset 89 --evidence-limit 4 --session-event-limit 1",
+      "projection_identity": "eci_fe146bc7bbebbc5d",
+      "campaign_state_checkpoint_id": "chk_6d41d4af7ebdbb1b",
+      "evidence_page_offset": 89,
+      "evidence_page_limit": 4,
+      "session_event_limit": 1
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "verification_context_status": "observed",
+      "verification_obligation_count": 8,
+      "verification_obligations_returned": 2,
+      "verification_obligations_omitted_by_response_budget": 6,
+      "readiness_relation_status": "partial",
+      "exact_link_count": 2,
+      "target_obligation_identity": "mncs-test.native-application-build-vm",
+      "target_verification_outcome": "excluded",
+      "target_verification_reason": "executor_not_runnable",
+      "verification_source_integrity_status": "verified",
+      "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "owner_result_content_integrity_status": "content-integrity-verified",
+      "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "provider_executor_capability_identity": "mncs-test:verification-executor/mncs-test.native-application-build-vm",
+      "provider_executor_availability_status": "available",
+      "provider_executor_availability_verification": "substrate",
+      "related_provider_capability_identity": "mncs-test:canonical-vm-tests",
+      "related_provider_capability_availability_status": "unavailable",
+      "availability_resolution_issue": {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": "repository-checkout-not-selected",
+        "dependency": {
+          "repository": "mncs-compiler",
+          "path": "."
+        },
+        "resolution_scope": "selected-checkout-closure",
+        "status": "unresolved",
+        "environment_name": "MNCS_COMPILER_CHECKOUT"
+      },
+      "same_provider_dependency_status": "not-established",
+      "provider_readiness_status": "not-established",
+      "causal_status": "not-established",
+      "ambient_fulfillment_status": "not-established",
+      "agent_receipt_status": "not-established",
+      "agent_intervention_burden_status": "not-measured"
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_provider_resolution_context",
+    "title": "ECI obscures the declared input behind an unavailable provider capability",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment capability binding and verification readiness projection",
+    "owner": "mncs-environment",
+    "basis": "The pre-change projection linked the same evidence but did not retain the dependency as structured relative repository-and-path context; the post-change projection now does.",
+    "actionable_recommendation": "Use the structured provider resolution finding to inspect the relevant provider declaration and selected checkout closure, while treating any relationship to the verification obligation as unestablished unless direct dependency evidence is available.",
+    "recurrence_status": "not-established"
+  },
+  "supporting_sources": [
+    {
+      "kind": "pre-change-pressure-observation",
+      "identity": "ev_environment_ambient_provider_resolution_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-provider-resolution-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_provider_resolution_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-provider-resolution-verification-20261028.json"
+    },
+    {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_provider_resolution_04ce01d",
+      "repository": "mncs-environment",
+      "commit": "04ce01d29a282900d3cd4b4d262715e64bd641a0",
+      "path": "mncs_env/capabilities.py",
+      "sha256": "63a84e9dd40423d7f96cdb4f382ec940a6a66306d9eb154e9ae20d3bd5b27992"
+    }
+  ],
+  "measurement_limits": [
+    "The readiness relation is partial because six integrity-verified obligation contexts were omitted by response budget.",
+    "The observed same-provider capability carries a direct unresolved toolchain-selection finding; its dependency relationship to the verification obligation is not established.",
+    "The invocation executor is only substrate-available; it is not proven runnable or ready.",
+    "The projection does not measure whether an agent received this context, whether the service fulfilled an eligible need, or whether intervention burden changed."
+  ],
+  "recorder": "mncs-environment-capability-campaign"
+}
