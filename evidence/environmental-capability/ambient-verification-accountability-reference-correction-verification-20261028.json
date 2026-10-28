@@ -1,0 +1,73 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_accountability_reference_correction_verification_20261028",
+  "captured_at": "2026-10-28T00:34:03Z",
+  "measurement_basis": "bounded-git-object-and-blob-digest-verification",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id": "chk_006531d25ec46a3a",
+    "campaign_evidence_count_before_recording": 5
+  },
+  "observation": {
+    "kind": "campaign-evidence-source-pointer-correction-verification",
+    "source_interface": "MNCS Environment ECI campaign-evidence source-pointer integrity checks",
+    "request": {
+      "corrected_source_commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "records_checked": 4,
+      "verification": "git cat-file path availability plus SHA-256 of each committed blob"
+    },
+    "outcome": {
+      "commit_paths_available": 4,
+      "blob_digests_matched": 4,
+      "invalid_original_campaign_pointers_rewritten": 0,
+      "correction_mode": "append-only"
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_verification_accountability_pressure_20261028",
+      "kind": "corrected-campaign-observation-source",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-pressure-20261028.json",
+      "sha256": "0998d85fa7f273b681898c51cca1cbeedf91ba3f49d23cf7f6ee099c524143c8"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_verification_20261028",
+      "kind": "corrected-campaign-observation-source",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-verification-20261028.json",
+      "sha256": "af2549e2a129e8e46555150cb49d781eb5f75b6a96c925457c9bd2dfd2d4315b"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_live_readback_20261028",
+      "kind": "corrected-campaign-observation-source",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-live-readback-20261028.json",
+      "sha256": "da8fdc432419c862628ece5f0ae3c6d7eab80d135a9ab0208512cbe09b224912"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_improvement_20261028",
+      "kind": "corrected-campaign-observation-source",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-improvement-20261028.json",
+      "sha256": "a385a1bccb471a75d095abe81dd891440c3b32d04969fa4b4f25ad3f2ea81bab"
+    }
+  ],
+  "measurement_limits": [
+    "The four original campaign ledger references retain their incorrect commit and remain unavailable; this observation records and exposes their corrected source pointers without rewriting history.",
+    "ECI readback is required to establish how many supporting blobs it independently verifies from this record."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
