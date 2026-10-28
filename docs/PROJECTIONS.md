@@ -875,6 +875,17 @@ source diagnostics retain exact identities and revisions so an agent can
 decide whether to add read-only context or leave the source outside the current
 environment.
 
+When a campaign checkpoint appends an `ev_environment_*` reference from
+`mncs-environment/evidence/environmental-capability/`, Environment performs a
+bounded pre-publication read when that exact repository checkout is already
+selected. It verifies the referenced blob digest, record identity, observation
+contract, and any append-only correction contract before adding the reference
+to campaign history. A malformed readable record is rejected before it can
+become durable campaign evidence. Evidence outside the selected checkout is
+left unverified by this preflight; it receives no inferred validity or added
+repository authority and remains subject to the projection's normal
+content-integrity and contract checks.
+
 Campaign evidence and current session activity have independent availability.
 If the campaign ledger cannot be read but the session contains authenticated
 tool interactions, Control read observations, authority denials, or verified

@@ -22,6 +22,7 @@ import secrets
 import shlex
 import stat
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -670,6 +671,94 @@ def _append_campaign_evidence(
                 "prior immutable checkpoints retain the evicted references"
             )
     return added, [*previous_history, *added]
+
+
+def _preflight_campaign_observation_evidence(
+    session: Any, references: list[dict[str, str]],
+) -> None:
+    """Reject malformed Environment observations before publishing their refs.
+
+    This preflight is deliberately limited to Environment observation records
+    whose exact repository checkout is already selected and readable. It does
+    not acquire repository scope or infer validity for evidence outside that
+    selected checkout.
+    """
+    candidates = [
+        reference for reference in references
+        if reference.get("repository") == "mncs-environment"
+        and reference.get("identity", "").startswith("ev_environment_")
+        and reference.get("path", "").startswith(
+            "evidence/environmental-capability/"
+        )
+        and reference.get("path", "").endswith(".json")
+    ]
+    if not candidates:
+        return
+
+    # Import lazily to keep the ordinary checkpoint path independent of ECI.
+    from . import capability_intelligence as capability_intelligence_module
+
+    root = capability_intelligence_module._workspace_root(session)
+    if root is None:
+        return
+    checkout = capability_intelligence_module._checkout(
+        session, "mncs-environment", root,
+    )
+    if checkout is None:
+        return
+
+    deadline = time.monotonic() + 5.0
+    for reference in candidates:
+        raw, status = capability_intelligence_module._git_blob(
+            checkout,
+            reference["commit"],
+            reference["path"],
+            deadline=deadline,
+            max_bytes=capability_intelligence_module.MAX_OBSERVATION_BYTES,
+        )
+        if raw is None:
+            raise ValueError(
+                "campaign observation preflight could not read "
+                f"{reference['identity']}: {status}"
+            )
+        if hashlib.sha256(raw).hexdigest() != reference.get("sha256"):
+            raise ValueError(
+                "campaign observation preflight found a content digest "
+                f"mismatch for {reference['identity']}"
+            )
+        try:
+            record = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError(
+                "campaign observation preflight found invalid JSON for "
+                f"{reference['identity']}"
+            ) from error
+        if not isinstance(record, dict):
+            raise ValueError(
+                "campaign observation preflight requires an object for "
+                f"{reference['identity']}"
+            )
+        if record.get("identity") != reference["identity"]:
+            raise ValueError(
+                "campaign observation preflight found an identity mismatch "
+                f"for {reference['identity']}"
+            )
+        diagnostics = capability_intelligence_module._observation_contract_diagnostics(
+            record,
+        )
+        if diagnostics:
+            raise ValueError(
+                "campaign observation preflight rejected "
+                f"{reference['identity']}: {', '.join(diagnostics)}"
+            )
+        if (record.get("record_correction") is not None
+                and capability_intelligence_module._validate_observation_correction(
+                    record["record_correction"],
+                ) is None):
+            raise ValueError(
+                "campaign observation preflight found an invalid append-only "
+                f"correction in {reference['identity']}"
+            )
 
 
 def normalize_campaign_delivery(value: Any) -> dict[str, Any]:
@@ -9370,6 +9459,10 @@ class Session:
                 normalize_campaign_evidence(
                     campaign_evidence_delta_value,
                     require_environmental_observation_sha256=True,
+                )
+            if campaign_evidence_delta_value:
+                _preflight_campaign_observation_evidence(
+                    self, campaign_evidence_delta_value,
                 )
             if normalized_delivery is not None:
                 campaign_delivery_value = normalized_delivery

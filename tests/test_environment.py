@@ -10412,6 +10412,104 @@ class SessionTests(unittest.TestCase):
                 ],
             )
 
+    def test_checkpoint_preflights_selected_environment_observation_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            state_dir = base / "state"
+            workspace_root = base / "workspace"
+            repository_root = workspace_root / "mncs-environment"
+            evidence_path = (
+                repository_root / "evidence/environmental-capability"
+                / "checkpoint-observation.json"
+            )
+            evidence_path.parent.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q", str(repository_root)], check=True)
+            session = make_session(state_dir)
+            campaign_identity = "cmp_checkpoint_observation_preflight"
+            session.snapshot["workspace"]["root"] = str(workspace_root)
+            session.snapshot["selected_checkouts"] = {
+                "mncs-environment": {"path": str(repository_root)},
+            }
+            session.snapshot["campaign"]["identity"] = campaign_identity
+            session._save()
+
+            first = session.checkpoint(
+                progress="initialize observation preflight history",
+                request_id="req_checkpoint_observation_preflight_init",
+                campaign_base_checkpoint="none",
+                campaign_evidence=[],
+            )
+            observation = {
+                "schema_version": capability_intelligence.OBSERVATION_SCHEMA,
+                "identity": "ev_environment_checkpoint_observation_preflight",
+                "captured_at": "2026-10-28T00:00:00Z",
+                "observation": {
+                    "kind": "service-readiness-observation",
+                    "source_interface": "MNCS Environment checkpoint",
+                    "request": {"operation": "campaign-evidence-append"},
+                    "outcome": {"status": "recorded"},
+                },
+                "related_work": {
+                    "campaign_id": campaign_identity,
+                    "session_id": session.session_id,
+                },
+                "recorder": "invalid-recorder-string",
+            }
+
+            def commit_observation(record: dict) -> dict[str, str]:
+                encoded = json.dumps(
+                    record, sort_keys=True, separators=(",", ":"),
+                ).encode()
+                evidence_path.write_bytes(encoded)
+                subprocess.run(
+                    ["git", "-C", str(repository_root), "add",
+                     "evidence/environmental-capability/checkpoint-observation.json"],
+                    check=True,
+                )
+                subprocess.run(
+                    ["git", "-C", str(repository_root), "-c",
+                     "user.name=Environment Test", "-c",
+                     "user.email=environment-test@example.invalid", "commit",
+                     "-q", "-m", "record checkpoint preflight observation"],
+                    check=True,
+                )
+                commit = subprocess.run(
+                    ["git", "-C", str(repository_root), "rev-parse", "HEAD"],
+                    check=True, capture_output=True, text=True,
+                ).stdout.strip()
+                return {
+                    "identity": record["identity"],
+                    "repository": "mncs-environment",
+                    "commit": commit,
+                    "path": "evidence/environmental-capability/checkpoint-observation.json",
+                    "sha256": hashlib.sha256(encoded).hexdigest(),
+                }
+
+            invalid_reference = commit_observation(observation)
+            with self.assertRaisesRegex(ValueError, "invalid-recorder-object"):
+                session.checkpoint(
+                    progress="reject malformed Environment observation before ledger append",
+                    request_id="req_checkpoint_observation_preflight_reject",
+                    campaign_base_checkpoint=first["identity"],
+                    campaign_evidence_delta=[invalid_reference],
+                )
+
+            observation["recorder"] = {
+                "campaign_id": campaign_identity,
+                "session_id": session.session_id,
+                "consumer_id": "tester",
+            }
+            valid_reference = commit_observation(observation)
+            accepted = session.checkpoint(
+                progress="append the contract-valid Environment observation",
+                request_id="req_checkpoint_observation_preflight_accept",
+                campaign_base_checkpoint=first["identity"],
+                campaign_evidence_delta=[valid_reference],
+            )
+            self.assertEqual(
+                accepted["campaign_state"]["evidence_delta"], [valid_reference],
+            )
+
     def test_campaign_evidence_and_delivery_are_checkpointed_and_reconstructed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state_dir = Path(directory)
