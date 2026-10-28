@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-10-28T09:30:34Z",
+  "identity": "ev_environment_campaign_preflight_outcome_readback_20261028",
+  "measurement_basis": "live-ECI-projection-after-accepted-campaign-checkpoint",
+  "measurement_limits": [
+    "This is one selected campaign-session projection, not a cross-session service fulfillment rate.",
+    "The response was partial and compacted; the source summary and two linked records were retained.",
+    "The readback establishes status visibility and source integrity, not agent receipt, reduced intervention burden, or long-term effectiveness."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-outcome-projection-readback",
+    "outcome": {
+      "campaign_observation_preflight": {
+        "reason": "selected-checkout-blob-and-observation-contract-verified",
+        "reference_count": 2,
+        "status": "validated",
+        "validated_reference_count": 2
+      },
+      "observation_records_unavailable": 0,
+      "observation_records_verified": 2,
+      "pressure_definition_status": "consistent",
+      "pressure_hypothesis_identity": "ph_environment_campaign_preflight_outcome_visibility_20261028",
+      "projection_status": "partial",
+      "recurrence_status": "not-established",
+      "response_truncated": true
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_5254b32a586cbb2a",
+      "command": "python scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 2 --session-event-limit 64",
+      "implementation_commit": "568ed6c148505507a2c15701deb79bf66dc7c253",
+      "projection_identity": "eci_5430710f24b189f7"
+    },
+    "source_interface": "mncs-env projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Keep the result inspectable while preserving uncertainty about skipped source reads, rejected attempts, and downstream burden.",
+    "basis": "The bounded ECI source now reports the accepted checkpoint preflight decision and the exact count of candidate references that passed it.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_outcome_visibility_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment campaign checkpoint and ECI projection",
+    "title": "Accepted campaign checkpoint did not expose its observation preflight result"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "6427612c8a32572d19e63c2f7ba2bf77ac012112",
+      "identity": "ev_environment_campaign_preflight_outcome_pressure_20261028",
+      "kind": "pressure-observation",
+      "path": "evidence/environmental-capability/campaign-preflight-outcome-pressure-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "d5567ee3d7b95d5406ae85045b3ed61897d8ac1d2b115a46d88809553189d28f"
+    },
+    {
+      "commit": "6427612c8a32572d19e63c2f7ba2bf77ac012112",
+      "identity": "ev_environment_campaign_preflight_outcome_verification_20261028",
+      "kind": "verification-observation",
+      "path": "evidence/environmental-capability/campaign-preflight-outcome-verification-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "9e5080a0805654cd1f4abd756b36bd88b38bf975d119ceb8cddef87cb01a125c"
+    }
+  ]
+}
