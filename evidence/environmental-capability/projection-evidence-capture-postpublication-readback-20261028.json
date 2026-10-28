@@ -1,0 +1,142 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_projection_evidence_capture_postpublication_readback_20261028",
+  "captured_at": "2026-10-28T04:51:51Z",
+  "measurement_basis": "authenticated-post-checkpoint-ECI-projection-with-content-integrity-and-append-only-correction-verification",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_c80e29ec93da27a9",
+    "campaign_evidence_count_before_recording": 40,
+    "claim_ids": [
+      "claim:mncs-environment:worktree:eab5f280e68a",
+      "claim:mncs-environment:worktree:84126eb53bf9",
+      "claim:mncs-environment:worktree:d86f5a375d87",
+      "claim:mncs-environment:worktree:e9415c423aa4"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment environmental-capability projection over authenticated campaign evidence and session events",
+    "request": {
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "history_pages": 1,
+      "evidence_offset": 35,
+      "evidence_limit": 5,
+      "session_event_before_sequence": 305,
+      "session_event_limit": 5,
+      "campaign_state_checkpoint_id": "chk_c80e29ec93da27a9",
+      "projection_identity": "eci_7ba04b9e6b2cbe28",
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-offset 35 --evidence-limit 5 --session-event-before-sequence 305 --session-event-limit 5"
+    },
+    "outcome": {
+      "projection_content_digest": "471bc57cb14dcb60a37ae21a7c5a12fc",
+      "projection_status": "partial",
+      "response_truncated": true,
+      "final_response_bytes": 24608,
+      "source_projection_response_bytes": 170784,
+      "campaign_evidence": {
+        "checkpoint_id": "chk_c80e29ec93da27a9",
+        "evidence_count": 40,
+        "observation_records_considered": 5,
+        "observation_records_verified": 5,
+        "observation_records_unavailable": 0,
+        "observation_records_compacted_out_count": 4,
+        "record_corrections_applied_count": 1,
+        "record_corrections_unverified_count": 0,
+        "improvement_relations_unverified_count": 0
+      },
+      "retained_evidence_path": {
+        "occurrence_identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+        "pressure_hypothesis_identity": "ph_environment_projection_evidence_capture_delivery",
+        "pressure_hypothesis_observation_count": 1,
+        "pressure_hypothesis_recurrence_status": "not-established",
+        "improvement_relation_identity": "im_environment_projection_evidence_capture_20261028",
+        "verification_observation_identity": "ev_environment_projection_evidence_capture_verification_20261028",
+        "subsequent_observation_identity": "ev_environment_projection_evidence_capture_readback_20261028",
+        "effectiveness_assessment": "not-assessed",
+        "implementation_source_status": "content-integrity-verified",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_record_status": "record-integrity-verified-in-projection",
+        "append_only_role_correction_status": "applied-to-verified-target"
+      },
+      "event_capture_readback": {
+        "invocation_event": "evt_15a032edcebfd202",
+        "completion_event": "evt_473aa248fd5f6981",
+        "output_capture_status": "complete",
+        "output_limit_bytes": 131072,
+        "stdout_bytes": 62917,
+        "event_relation_available_in_prior_projection_readback": true
+      },
+      "interpretation_limit": "The bounded ECI retained one full occurrence-to-pressure-to-improvement path with verified implementation, verification, subsequent-readback, and correction references. Four other observation rows and detailed session activity were omitted by response budgeting. This demonstrates discoverability and provenance for this workflow, not cross-session recurrence or reduced agent burden."
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_projection_evidence_capture_delivery",
+    "title": "Capability completion status omits whether output was delivered within the configured capture bound",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment capability invocation and environmental-capability projection",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Declare bounded service output allowances and retain capture completeness through durable events and compact evidence projections."
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_projection_evidence_capture_pressure_20261028",
+      "kind": "campaign-pressure-observation",
+      "repository": "mncs-environment",
+      "commit": "0289d641ab57968c20f4e624301c2f5aff69b5e4",
+      "path": "evidence/environmental-capability/projection-evidence-capture-pressure-20261028.json",
+      "sha256": "ab8b2967e06c1a70e9bac0fecf48d576010e0f963739e7f2de38adfa1fdbcb62"
+    },
+    {
+      "identity": "ev_environment_projection_evidence_capture_improvement_20261028",
+      "kind": "campaign-improvement-relation",
+      "repository": "mncs-environment",
+      "commit": "0289d641ab57968c20f4e624301c2f5aff69b5e4",
+      "path": "evidence/environmental-capability/projection-evidence-capture-improvement-20261028.json",
+      "sha256": "85783854cbcb5e54a6a903b7af5b946855cfc5ab775e165482211b85042c259e"
+    },
+    {
+      "identity": "ev_environment_projection_evidence_capture_verification_20261028",
+      "kind": "campaign-verification-observation",
+      "repository": "mncs-environment",
+      "commit": "0289d641ab57968c20f4e624301c2f5aff69b5e4",
+      "path": "evidence/environmental-capability/projection-evidence-capture-verification-20261028.json",
+      "sha256": "3f4cda267cd50cef64cc5e51550defea916daba9ff555e43e91d564cb3606853"
+    },
+    {
+      "identity": "ev_environment_projection_evidence_capture_pressure_role_correction_20261028",
+      "kind": "append-only-observation-correction",
+      "repository": "mncs-environment",
+      "commit": "858db9e38cb8b989f4b6b1fb2da908aa56cc342e",
+      "path": "evidence/environmental-capability/projection-evidence-capture-pressure-role-correction-20261028.json",
+      "sha256": "3b70a352f80ebc4e489d8ea0cd537bf04c583209604810bafd0fa645473992b7"
+    },
+    {
+      "identity": "mncs_environment_capture_eci_implementation_91a9cd8",
+      "kind": "committed-implementation",
+      "repository": "mncs-environment",
+      "commit": "91a9cd8a23a3bdb819f603d2f9da56b7b5b5e662",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "89af8da3cdf0e76c731ca206ed07702d76a6e3103ce51a826cc8c6083777fd0e"
+    }
+  ],
+  "not_measured": [
+    "Whether other agents can discover and use the same path without manual query tuning.",
+    "Whether environmental service behavior changes across other sessions or workloads.",
+    "Whether the improvement reduces agent intervention burden or establishes fulfillment of an eligible service opportunity."
+  ]
+}
