@@ -1,0 +1,130 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_provider_readiness_postpublication_readback_20261028",
+  "captured_at": "2026-10-28T05:44:18Z",
+  "measurement_basis": "post-publication-ECI-readback-after-valid-improvement-link-was-appended-to-campaign-ledger",
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+    "category": "environmental-service-accountability",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment capability delivery and verification readiness projection",
+    "title": "Budgeted ECI hides provider readiness context for an excluded verification obligation",
+    "actionable_recommendation": "Retain a bounded, provenance-linked verification executor and provider readiness relationship in the ECI evidence-priority response."
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment environmental-capability projection over the authenticated campaign evidence history and current session binding snapshot",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-limit 8",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "campaign_state_checkpoint_id": "chk_ff5a7560d5c41903",
+      "projection_identity": "eci_99062c91310e5183",
+      "projection_content_digest": "5fa8373782c52c733f379a3daa4023f6"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "detail_status": "evidence-priority-response-budget",
+      "response_truncated": true,
+      "response_byte_count": 207452,
+      "campaign_evidence_count": 53,
+      "source_observation_records_verified": 8,
+      "source_observation_records_unavailable": 0,
+      "retained_pressure_path": {
+        "occurrence_identity": "ev_environment_ambient_verification_provider_readiness_pressure_20261028",
+        "pressure_hypothesis_identity": "ph_environment_ambient_verification_provider_readiness_visibility",
+        "improvement_relation_identity": "im_environment_ambient_verification_provider_readiness_eci_path_20261028",
+        "improvement_relation_evidence_identity": "ev_environment_ambient_verification_provider_readiness_improvement_link_20261028",
+        "implementation_commit": "5b5a9c869945327a136ab3bb24b2feb804940c3c",
+        "implementation_path": "mncs_env/capability_intelligence.py",
+        "implementation_content_integrity_status": "content-integrity-verified",
+        "verification_observation_identity": "ev_environment_ambient_verification_provider_readiness_verification_20261028",
+        "verification_record_status": "record-integrity-verified-in-projection",
+        "subsequent_observation_identity": "ev_environment_ambient_verification_provider_readiness_readback_20261028",
+        "subsequent_record_status": "record-integrity-verified-in-projection"
+      },
+      "retained_provider_readiness": {
+        "repository": "mncs-test",
+        "obligation_identity": "mncs-test.native-application-build-vm",
+        "verification_outcome": "excluded",
+        "verification_reason": "executor_not_runnable",
+        "verification_source_integrity_status": "verified",
+        "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+        "owner_result_content_integrity_status": "content-integrity-verified",
+        "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+        "executor_availability_status": "available",
+        "executor_availability_verification": "substrate",
+        "provider_checkout_clean_status": "observed-dirty",
+        "provider_checkout_head": "57802fba4dea04ad50004d3e1e6768b507b889bb",
+        "same_provider_unavailable_capability": "mncs-test:canonical-vm-tests",
+        "same_provider_unavailable_code": "provider-invocation-unresolvable",
+        "same_provider_unavailable_reason": "The selected capability declares a compiler toolchain checkout that cannot resolve in the authorized closure; same-provider identity does not establish a dependency.",
+        "binding_scan_complete": true,
+        "readiness_status": "not-established",
+        "ambient_fulfillment_status": "not-established",
+        "agent_receipt_status": "not-established",
+        "agent_intervention_burden_status": "not-measured"
+      },
+      "rejected_correction_context": {
+        "projection_identity": "eci_9a7e140da6eabaa9",
+        "projection_content_digest": "4287b2f810ae631ab89cc36dd2e7ac92",
+        "target_identity": "ev_environment_ambient_verification_provider_readiness_improvement_20261028",
+        "status": "replacement-values-unverified-or-unchanged",
+        "reason": "The append-only correction contract requires an existing invalid improvement_relation to repair; the original record had no top-level relation. A separate valid improvement observation now supplies the link without modifying the original."
+      },
+      "interpretation_limit": "This readback verifies that the compact ECI can expose the authentic occurrence-to-pressure-to-implementation path and the exact current provider readiness evidence together. The projection remains partial because of response budgeting. The executor remains excluded, readiness and fulfillment are not established, and agent burden is not measured."
+    }
+  },
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "campaign_state_checkpoint_id_before_recording": "chk_ff5a7560d5c41903",
+    "campaign_evidence_count_before_recording": 53,
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:401886ff1eaf",
+      "claim:mncs-environment:worktree:e59fda9cc543",
+      "claim:mncs-environment:worktree:564f03a8d693"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "eci_99062c91310e5183",
+      "kind": "authenticated-post-publication-ECI-projection-readback",
+      "repository": "mncs-environment",
+      "commit": "34d4eb1994212cc47c3c4471859828c96ab5718d"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_improvement_link_20261028",
+      "kind": "committed-improvement-relation",
+      "repository": "mncs-environment",
+      "commit": "34d4eb1994212cc47c3c4471859828c96ab5718d",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-improvement-link-20261028.json",
+      "sha256": "31f59a9fad7c80bd409a1628e93c18247196d3b191d3507bdac9f72730157ca1"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_provider_readiness_correction_20261028",
+      "kind": "append-only-correction-record-with-unverified-replacement",
+      "repository": "mncs-environment",
+      "commit": "0df3b79265f994b0f9ae4cded20badb0ee49943e",
+      "path": "evidence/environmental-capability/ambient-verification-provider-readiness-correction-20261028.json",
+      "sha256": "b7051e229b8597fe99569163b268af1b3d79d3df9a540fb3f5afdff55cc5e865"
+    }
+  ],
+  "not_measured": [
+    "Whether the executor becomes runnable after the compiler checkout and provider closure become available.",
+    "Whether another agent receives or uses the readiness context without additional investigation.",
+    "Whether ambient intervention burden decreases or future eligible opportunities are fulfilled."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "definition_id": "env_e37e615224015d39",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  }
+}
