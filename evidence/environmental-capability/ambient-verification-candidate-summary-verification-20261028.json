@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_verification_candidate_summary_verification_20261028",
+  "captured_at": "2026-10-28T17:36:15Z",
+  "measurement_basis": "focused-regression-tests-and-cross-process-vertical-proof",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "f358adcf82f7a2b921be87ecb9990b107166582e"
+  },
+  "observation": {
+    "kind": "environmental-implementation-verification",
+    "source_interface": "MNCS Environment repository verification",
+    "request": {
+      "focused_module_command": "python3 -m pytest tests/test_capability_intelligence.py -q",
+      "repository_suite_command": "python3 -m pytest tests/ -q",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py",
+      "syntax_and_diff_checks": [
+        "python3 -m py_compile mncs_env/capability_intelligence.py tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "focused_module_after_change": {
+        "passed": 194,
+        "failed": 0,
+        "elapsed_seconds": 7.19
+      },
+      "repository_suite_baseline_before_change": {
+        "passed": 1185,
+        "skipped": 82,
+        "failed": 0,
+        "elapsed_seconds": 779.11,
+        "relation_to_implementation": "pre-change-baseline-only"
+      },
+      "vertical_proof": {
+        "status": "pass",
+        "verified_steps": 8,
+        "cross_process_resume": "passed",
+        "protected_write_boundary": "denied-as-expected"
+      },
+      "syntax_and_diff_checks": "passed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_verification_candidate_summary_f358adc",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "703ef0ecb171fd27df58db8f14d70715d1f8b923a3737e0d8920614a2e8d5a93"
+    },
+    {
+      "identity": "mncs_environment_verification_candidate_summary_tests_f358adc",
+      "kind": "committed-regression-tests",
+      "repository": "mncs-environment",
+      "commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "071db37f9a5fc933acb012c9d721fb265ce0ae9635734b0b38f32b17b5c69eaf"
+    },
+    {
+      "identity": "mncs_environment_verification_candidate_summary_docs_f358adc",
+      "kind": "projection-contract-documentation",
+      "repository": "mncs-environment",
+      "commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+      "path": "docs/PROJECTIONS.md",
+      "sha256": "d5345802b5075be4afdc87eaa1287ed60e68b3e31ce8824e68f7d1ec19bd3da1"
+    }
+  ],
+  "measurement_limits": [
+    "The 82 skipped tests remain unverified under their skipped conditions.",
+    "The full repository suite was a pre-change baseline; only capability-intelligence tests ran after the implementation.",
+    "The vertical proof establishes the canonical lifecycle path and protected-write behavior, not projection correctness or agent-burden reduction."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

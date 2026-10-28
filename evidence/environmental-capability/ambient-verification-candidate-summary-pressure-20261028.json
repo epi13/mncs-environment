@@ -1,0 +1,71 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_verification_candidate_summary_pressure_20261028",
+  "captured_at": "2026-10-28T17:36:15Z",
+  "measurement_basis": "paired-read-only-main-and-campaign-branch-eci-readback-of-one-authentic-session",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_base_commit": "6146d676f7e469b1903a6c470b461066e2d365a0"
+  },
+  "observation": {
+    "kind": "ambient-verification-candidate-summary-pressure",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "baseline_projection_identity": "eci_9909f8bc4d76196b",
+      "baseline_repository_branch": "main",
+      "integrity_verified_candidate_count": 8,
+      "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+    },
+    "outcome": {
+      "observed_limitation": "The main projection reported zero top-level session activity candidates while its nested exact readiness relation contained eight integrity-verified unmeasurable verification obligations. Only two provider-context links were returned and no reason/repository aggregate was available.",
+      "candidate_occurrence_count_status": "observed-in-bounded-selected-session-records",
+      "environmental_defect_status": "not-established",
+      "agent_intervention_burden_status": "not-measured",
+      "causal_status": "projection-summary-coverage-gap-observed; agent-impact-not-established"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_verification_candidate_root_omission",
+    "title": "Verified ambient verification candidates are absent from the ECI root candidate summary",
+    "category": "environment-service-accountability-and-verification",
+    "subsystem": "MNCS Environment ECI session activity candidate projection",
+    "owner": "mncs-environment",
+    "basis": "A read-only projection of the selected session showed eight integrity-verified unmeasurable verification obligations in the nested readiness relation while the root candidate count remained zero. This establishes a projection coverage gap, not a service defect or agent burden.",
+    "actionable_recommendation": "Include these verified candidate occurrences in the root bounded candidate summary, group them by repository and unmeasurable reason, and preserve exact source provenance and uncertainty through response compaction.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "agent receipt or use of the nested candidate evidence",
+      "agent intervention burden or productivity",
+      "whether the projection gap caused manual work",
+      "recurrence across sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "integrity-verified-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c"
+    },
+    {
+      "kind": "content-integrity-verified-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+    }
+  ],
+  "measurement_limits": [
+    "The baseline is one selected-session projection and does not establish recurrence across agents or sessions.",
+    "The projection gap does not establish a defective verification provider or any corrupted source record.",
+    "No agent receipt, manual fallback, intervention burden, or downstream correctness change was measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

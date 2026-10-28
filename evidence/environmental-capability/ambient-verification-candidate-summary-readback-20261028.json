@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_verification_candidate_summary_readback_20261028",
+  "captured_at": "2026-10-28T17:36:15Z",
+  "measurement_basis": "paired-main-and-implementation-branch-eci-readback-of-one-authentic-session",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "f358adcf82f7a2b921be87ecb9990b107166582e"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability",
+    "request": {
+      "baseline_projection_identity": "eci_9909f8bc4d76196b",
+      "implementation_projection_identity": "eci_2e916fbc3e62601d",
+      "baseline_candidate_occurrence_count": 0,
+      "baseline_integrity_verified_verification_candidate_count": 8,
+      "implementation_candidate_occurrence_count": 8,
+      "implementation_candidate_limit": 8,
+      "implementation_candidate_limit_reached": true
+    },
+    "outcome": {
+      "candidate_occurrence_counts_by_source": {
+        "rpc-failure-candidates": 0,
+        "authority-denial-candidates": 0,
+        "coordination-deferral-candidates": 0,
+        "service-readiness-investigation-candidates": 0,
+        "verified-unmeasurable-verification-obligations": 8
+      },
+      "unmeasurable_reason_counts": {
+        "executor-not-native": 7,
+        "suite-undeclared": 1
+      },
+      "repository_counts": {
+        "mncs-commons": 5,
+        "mncs-test": 3
+      },
+      "reason_repository_counts": {
+        "executor-not-native": {
+          "mncs-commons": 5,
+          "mncs-test": 2
+        },
+        "suite-undeclared": {
+          "mncs-test": 1
+        }
+      },
+      "source_evidence_record_count": 1,
+      "exact_provider_context_links_returned": 2,
+      "provider_context_candidates_not_returned": 6,
+      "response_budget_omitted_context_count": 6,
+      "baseline_response_bytes": 57900,
+      "implementation_response_bytes": 60231,
+      "response_limit_bytes": 73728,
+      "candidate_completeness_status": "not-established-limit-reached",
+      "environmental_defect_status": "not-established",
+      "agent_intervention_burden_status": "not-measured",
+      "effectiveness_assessment": "verification-candidate-discoverability-and-source-accountability-observed; agent-burden-effect-not-assessed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "integrity-verified-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c"
+    },
+    {
+      "kind": "content-integrity-verified-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+    },
+    {
+      "identity": "mncs_environment_verification_candidate_summary_f358adc",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "703ef0ecb171fd27df58db8f14d70715d1f8b923a3737e0d8920614a2e8d5a93"
+    }
+  ],
+  "measurement_limits": [
+    "The paired readbacks are for one selected session; no cross-session recurrence is established.",
+    "The eight extracted candidates reach the configured limit, so additional candidates may be omitted.",
+    "Six provider-context links were omitted by the bounded response; absence attribution and readiness remain unestablished.",
+    "The readback establishes projection content, not service correctness, agent receipt, or reduced intervention."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

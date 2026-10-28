@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_verification_candidate_summary_improvement_20261028",
+  "captured_at": "2026-10-28T17:36:15Z",
+  "measurement_basis": "implementation-verification-and-paired-live-eci-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "f358adcf82f7a2b921be87ecb9990b107166582e"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_verification_candidate_root_omission",
+      "implementation_commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+      "verification_observation_identity": "ev_environment_verification_candidate_summary_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_verification_candidate_summary_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "ECI now includes integrity-verified unmeasurable verification-obligation candidates in its bounded root candidate count. It adds reason/repository counts, exact source-record accounting and provenance, and explicit candidate-window, defect, recurrence, and burden limits. The information is preserved through response compaction without duplicating source pairs already present in exact provider-context links.",
+      "verified_change": "The focused capability-intelligence suite passed 194 tests after the change. The cross-process vertical proof passed. A read-only comparison on the same selected session changed the root candidate occurrence count from 0 to 8 and exposed the bounded reason/repository distribution while retaining exact Store source relationships.",
+      "effectiveness_assessment": "verification-candidate-discoverability-and-provenance-observability-verified; service-fulfillment-and-agent-burden-effect-not-established",
+      "interpretation_limit": "The projection demonstrates that existing verified candidates are now countable and inspectable at the root. It does not establish a provider defect, complete candidate coverage, service correctness, agent receipt, or reduced intervention."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_verification_candidate_root_omission",
+    "title": "Verified ambient verification candidates are absent from the ECI root candidate summary",
+    "category": "environment-service-accountability-and-verification",
+    "subsystem": "MNCS Environment ECI session activity candidate projection",
+    "owner": "mncs-environment",
+    "basis": "The read-only baseline projection had a zero root candidate count while the nested readiness relation contained eight integrity-verified candidates. The implementation exposes those bounded occurrences and exact provenance without claiming that the provider or its service is defective.",
+    "actionable_recommendation": "Use the repository/reason groups and exact Store references to inspect which verification executor obligations lack native provider context, and observe future sessions before assessing recurrence or agent burden.",
+    "recurrence": "not-established-across-sessions",
+    "not_measured": [
+      "agent receipt or use of the new projection fields",
+      "agent intervention burden or productivity",
+      "verification service correctness or need fulfillment",
+      "recurrence across sessions"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_verification_candidate_summary_20261028",
+    "addresses_hypothesis_identity": "ph_environment_verification_candidate_root_omission",
+    "implementation_reference": {
+      "identity": "mncs_environment_verification_candidate_summary_f358adc",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "f358adcf82f7a2b921be87ecb9990b107166582e",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "703ef0ecb171fd27df58db8f14d70715d1f8b923a3737e0d8920614a2e8d5a93"
+    },
+    "verification_observation_identity": "ev_environment_verification_candidate_summary_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_verification_candidate_summary_readback_20261028",
+    "basis": "The regression suite covers repository/reason grouping, exact source linkage, root candidate aggregation, and compact projection preservation. The paired readback of the same authentic session confirms the root now includes the previously nested integrity-verified candidates and keeps their limits explicit.",
+    "not_measured": [
+      "agent intervention burden or productivity",
+      "service fulfillment or verification correctness",
+      "recurrence across agents and sessions",
+      "whether the projection changed subsequent agent behavior"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_verification_candidate_summary_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_verification_candidate_summary_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-verification-20261028.json"
+    },
+    {
+      "identity": "ev_environment_verification_candidate_summary_readback_20261028",
+      "kind": "live-capability-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The before/after projection records are read-only observations of one selected session.",
+    "Candidate extraction reached its limit and provider readiness context returned two of eight candidates.",
+    "No cross-session recurrence, service outcome quality, agent receipt, or intervention reduction is established.",
+    "The full repository suite was run before the change; post-change verification includes 194 focused tests and the vertical proof."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
