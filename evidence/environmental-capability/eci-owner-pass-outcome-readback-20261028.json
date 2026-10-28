@@ -1,0 +1,82 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_pass_outcome_readback_20261028",
+  "captured_at": "2026-10-28T11:05:09Z",
+  "measurement_basis": "post-change-live-selected-session-ECI-service-accountability-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_725a36db8b034913",
+    "implementation_commit": "bb3029fef9020ede9d0c56f542a642512b302808"
+  },
+  "observation": {
+    "kind": "live-selected-session-owner-pass-outcome-summary-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "command": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-offset 122 --evidence-limit 4 --session-event-limit 4",
+      "projection_identity": "eci_819a55d52e816f06",
+      "readback_timestamp_status": "not-recorded; observed during this session immediately before evidence capture",
+      "evidence_page_offset": 122,
+      "evidence_page_limit": 4,
+      "session_event_limit": 4
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_byte_count": 175146,
+      "response_truncated": true,
+      "owner_decision_summary_status": "complete",
+      "owner_source_observation_count": 7,
+      "owner_source_observations_omitted_count": 0,
+      "owner_rows_returned": 7,
+      "per_owner_observed_status_counts": {
+        "result_status": "result-recorded: 1 per owner",
+        "scheduler_outcome_status": "no-failure-reported: 1 per owner",
+        "verification_status": "not-established: 1 per owner"
+      },
+      "service_readiness_declaration_status": "explicit-empty",
+      "ambient_fulfillment_status": "not-measured",
+      "interpretation": "The compact ECI view now exposes all seven returned owner rows with their observed result, scheduler-outcome, and verification status counts while retaining complete source coverage for this selected trace.",
+      "effectiveness_status": "per-owner-status-discoverability-verified; agent-intervention-reduction-not-assessed"
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_pass_outcome_visibility_20261028",
+    "title": "Compact owner-pass summaries omit per-owner result and verification states",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Add bounded per-owner counts for recorded result, scheduler-outcome, and verification statuses to the existing compact owner summary, preserving source coverage and avoiding fulfillment claims."
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5f30e0dc10a5cd6a523e826cf9854fd07f1236806ac4df273385148acf5d3cd5"
+    },
+    {
+      "kind": "regression-test",
+      "repository": "mncs-environment",
+      "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "bdd28aa8df631ede57e05437584cd77c2638f0cb714e45e7bc46f6f3bf43c506"
+    }
+  ],
+  "measurement_limits": [
+    "The projection remains partial and response-truncated; this readback covers one selected session and one stored Environment owner-pass trace.",
+    "A `result-recorded` or `no-failure-reported` state is not independent proof of correctness or fulfillment.",
+    "The empty readiness-service declaration is scoped to declared readiness needs and does not imply an absence of ambient Environment work.",
+    "Agent receipt, intervention burden, cross-session recurrence, and causal effects remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  }
+}

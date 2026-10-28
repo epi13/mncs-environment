@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_pass_outcome_verification_20261028",
+  "captured_at": "2026-10-28T11:05:09Z",
+  "measurement_basis": "capability-intelligence-module-regression-suite-and-source-integrity-checks",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_725a36db8b034913",
+    "implementation_commit": "bb3029fef9020ede9d0c56f542a642512b302808"
+  },
+  "observation": {
+    "kind": "ambient-owner-result-summary-regression-verification",
+    "source_interface": "MNCS Environment pytest and Python compileall",
+    "request": {
+      "commands": [
+        "python3 -m pytest -q tests/test_capability_intelligence.py",
+        "python3 -m compileall -q mncs_env tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "180 passed in 6.09s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "The compact owner summary preserves result, scheduler-outcome, and verification status counts grouped by owner when those fields are present.",
+        "Partial source coverage remains explicit, and a second compaction preserves the validated status summary.",
+        "The existing strict 8 KB ECI response-budget test passes with the extended owner summary.",
+        "The implementation and test module compile, and the source diff passed the repository's whitespace check."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_eci_owner_outcome_summary_bb3029f",
+        "repository": "mncs-environment",
+        "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "5f30e0dc10a5cd6a523e826cf9854fd07f1236806ac4df273385148acf5d3cd5"
+      }
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_pass_outcome_visibility_20261028",
+    "title": "Compact owner-pass summaries omit per-owner result and verification states",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Add bounded per-owner counts for recorded result, scheduler-outcome, and verification statuses to the existing compact owner summary, preserving source coverage and avoiding fulfillment claims."
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5f30e0dc10a5cd6a523e826cf9854fd07f1236806ac4df273385148acf5d3cd5"
+    },
+    {
+      "kind": "regression-test",
+      "repository": "mncs-environment",
+      "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "bdd28aa8df631ede57e05437584cd77c2638f0cb714e45e7bc46f6f3bf43c506"
+    },
+    {
+      "kind": "documentation",
+      "repository": "mncs-environment",
+      "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+      "path": "docs/CAPABILITY_INTELLIGENCE.md",
+      "sha256": "cb725fead426ef0b3103b01d23796f1626ae2c5bd6823487640a14423201b58e"
+    }
+  ],
+  "measurement_limits": [
+    "The full capability-intelligence test module is a focused slice; the full repository suite was not rerun.",
+    "Tests establish compaction and status preservation, not whether any service fulfilled an agent opportunity.",
+    "Agent receipt, burden reduction, and long-term service outcome quality remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  }
+}

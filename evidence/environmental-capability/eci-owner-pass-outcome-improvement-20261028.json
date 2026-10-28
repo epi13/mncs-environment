@@ -1,0 +1,93 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_pass_outcome_improvement_20261028",
+  "captured_at": "2026-10-28T11:05:09Z",
+  "measurement_basis": "source-linked-ambient-service-pressure-implementation-verification-and-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_725a36db8b034913",
+    "implementation_commit": "bb3029fef9020ede9d0c56f542a642512b302808"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_owner_pass_outcome_visibility_20261028",
+      "verification_observation_identity": "ev_environment_eci_owner_pass_outcome_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_owner_pass_outcome_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "verification_status": "focused-regression-module-passed",
+      "effectiveness_assessment": "per-owner-status-visibility-verified; service-fulfillment-and-agent-burden-not-assessed",
+      "interpretation_limit": "The change makes recorded owner result and verification states discoverable under ECI response pressure. It does not establish that any owner fulfilled an agent opportunity or that the change reduced agent work."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_pass_outcome_visibility_20261028",
+    "title": "Compact owner-pass summaries omit per-owner result and verification states",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The pre-change live projection summarized scheduled/skipped decisions for seven owners but retained detail for only one owner and omitted per-owner result and verification statuses from the compact summary.",
+    "actionable_recommendation": "Add bounded per-owner counts for recorded result, scheduler-outcome, and verification statuses to the existing compact owner summary, preserving source coverage and avoiding fulfillment claims."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_owner_pass_outcome_summary_verified_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_owner_pass_outcome_visibility_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_eci_owner_outcome_summary_bb3029f",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "bb3029fef9020ede9d0c56f542a642512b302808",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "5f30e0dc10a5cd6a523e826cf9854fd07f1236806ac4df273385148acf5d3cd5"
+    },
+    "verification_observation_identity": "ev_environment_eci_owner_pass_outcome_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_owner_pass_outcome_readback_20261028",
+    "basis": "All 180 ECI tests pass, including the strict compact-response budget regression. The selected-session readback projects result, scheduler-outcome, and verification states for all seven source owners with complete source-observation coverage.",
+    "effectiveness_assessment": "status-discoverability-verified; agent-intervention-and-fulfillment-effectiveness-not-assessed",
+    "not_measured": [
+      "whether agents needed or received any owner-pass service",
+      "whether the summary changes a development decision or avoids follow-up work",
+      "correctness of the recorded owner results",
+      "recurrence across sessions and later outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_eci_owner_pass_outcome_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-pass-outcome-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_owner_pass_outcome_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-pass-outcome-verification-20261028.json"
+    },
+    {
+      "kind": "subsequent-live-readback",
+      "identity": "ev_environment_eci_owner_pass_outcome_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-pass-outcome-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The pre-change live readback was not saved as a durable artifact; its projection identity and retained fields are recorded without asserting a missing historical timestamp.",
+    "The change adds compact observed-state counts, not a service-opportunity denominator or independent verification result.",
+    "Long-term fulfillment, agent receipt, intervention burden, and service quality remain unmeasured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  }
+}

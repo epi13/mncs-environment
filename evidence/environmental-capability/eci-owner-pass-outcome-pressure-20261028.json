@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_pass_outcome_pressure_20261028",
+  "captured_at": "2026-10-28T11:05:09Z",
+  "measurement_basis": "same-session-live-ECI-readback-before-owner-outcome-summary-change",
+  "related_work": {
+    "campaign_objective": "MNCS Environmental Capability Intelligence & Continuous Improvement Campaign",
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39",
+    "campaign_state_checkpoint_id_before_recording": "chk_725a36db8b034913",
+    "campaign_evidence_count_before_recording": 126,
+    "claim_ids": ["claim:mncs-environment:worktree:606297e3a2bf"]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "observation": {
+    "kind": "environmental-service-observability-limitation",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "operation": "inspect the compact accountability view for the selected session's recorded Environment owner passes",
+      "command": "python3 scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --history-pages 1 --evidence-offset 122 --evidence-limit 4 --session-event-limit 4",
+      "projection_identity": "eci_cb984be4a651ee9a",
+      "readback_timestamp_status": "not-recorded; observed during this session before the owner outcome summary change",
+      "owner_pass_decision_summary": {
+        "status": "complete",
+        "source_observation_count": 7,
+        "source_omitted_observation_count": 0,
+        "owners_returned": 7,
+        "fields_by_owner": ["scheduled_count", "skipped_count", "unclassified_decision_count"]
+      },
+      "owner_pass_observations": {
+        "source_count": 7,
+        "detail_items_returned": 1,
+        "detail_items_omitted": 6,
+        "returned_detail_owner": "doctor",
+        "returned_detail_result_status": "result-recorded",
+        "returned_detail_verification_status": "not-established"
+      }
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_byte_count": 179349,
+      "response_truncated": true,
+      "service_accountability_scope_status": "empty-declared-scope",
+      "environment_owner_pass_execution_status": "observed",
+      "interpretation": "The complete bounded scheduler-decision summary identified seven owners, but it exposed only scheduled/skipped counts. Response compaction retained one detailed owner result and omitted six details, so the compact per-owner summary did not expose the corresponding result and verification states.",
+      "scope_limit": "This describes one selected-session recorded owner-pass execution. An empty readiness-service declaration does not establish that ambient services were absent or idle.",
+      "recurrence_status": "not-established"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_pass_outcome_visibility_20261028",
+    "title": "Compact owner-pass summaries omit per-owner result and verification states",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Add bounded per-owner counts for recorded result, scheduler-outcome, and verification statuses to the existing compact owner summary, preserving source coverage and avoiding fulfillment claims."
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "supporting_sources": [
+    {
+      "identity": "eci_cb984be4a651ee9a",
+      "kind": "same-session-live-ECI-owner-pass-readback",
+      "repository": "mncs-environment",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "durable_readback_artifact_status": "not-recorded"
+    }
+  ],
+  "not_measured": [
+    "Whether an agent needed any of these owner passes or received a useful result.",
+    "Whether compact omission required an agent to perform extra work.",
+    "Correctness or independent verification of the recorded owner results.",
+    "Recurrence across other sessions, traces, or response budgets."
+  ]
+}
