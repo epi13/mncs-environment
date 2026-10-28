@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import time
+from copy import deepcopy
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
@@ -1022,6 +1023,38 @@ def test_append_only_correction_requires_exact_verified_observation_pointer(
     compact = capability_intelligence._compact_projection(
         verified, 100_000, 24_000,
     )
+    priority = deepcopy(verified)
+    priority_activity = (
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            priority.get("session_activity"),
+        )
+    )
+    if priority_activity is not None:
+        priority["session_activity"] = priority_activity
+    assert capability_intelligence._compact_campaign_evidence_priority_rows(
+        priority,
+    )
+    assert priority["source"]["record_correction_count"] == 1
+    assert priority["source"]["record_corrections_applied_count"] == 1
+    assert priority["source"]["record_corrections_unverified_count"] == 0
+    correction_summaries = priority["record_correction_summaries"]
+    corrected_summary = next(
+        item for item in correction_summaries
+        if item.get("identity") == "ev_environment_correctable_followup_relation"
+    )
+    correction_summary = next(
+        item for item in correction_summaries
+        if item.get("identity") == "ev_environment_corrected_followup_relation"
+    )
+    assert corrected_summary["status"] == "corrected-by-verified-record"
+    assert corrected_summary["correction_evidence_reference"]["identity"] == (
+        "ev_environment_corrected_followup_relation"
+    )
+    assert correction_summary["status"] == "applied-to-verified-target"
+    assert correction_summary["target_identity"] == (
+        "ev_environment_correctable_followup_relation"
+    )
+    assert len(json.dumps(priority, ensure_ascii=False, sort_keys=True).encode()) <= 24_000
     compact_original = next(
         item for item in compact["observations"]
         if item["identity"] == "ev_environment_correctable_followup_relation"

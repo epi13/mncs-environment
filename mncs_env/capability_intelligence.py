@@ -5034,7 +5034,7 @@ def _compact_session_activity_evidence_priority_overview(
 def _compact_campaign_evidence_priority_rows(
     result: dict[str, Any],
 ) -> bool:
-    """Keep one inspectable observation-to-pressure-to-improvement path."""
+    """Keep one evidence path and the correction records that qualify it."""
     observations = result.get("observations")
     hypotheses = result.get("pressure_hypotheses")
     relations = result.get("improvement_relations")
@@ -5098,12 +5098,45 @@ def _compact_campaign_evidence_priority_rows(
         }
 
     correction_rejection_summaries = []
+    record_correction_summaries = []
     for item in observations:
         if not isinstance(item, dict):
             continue
         correction = item.get("record_correction")
         if not isinstance(correction, dict):
             continue
+        correction_summary = {
+            key: correction[key]
+            for key in (
+                "status", "target_identity", "correction_observation_identity",
+                "basis", "reason", "rejection_reason",
+            )
+            if isinstance(correction.get(key), str)
+        }
+        if not correction_summary:
+            continue
+        if isinstance(item.get("identity"), str):
+            correction_summary["identity"] = item["identity"]
+        corrected_fields = correction.get("corrected_field_paths")
+        if isinstance(corrected_fields, list):
+            correction_summary["corrected_field_paths"] = [
+                _short_text(field, 128)
+                for field in corrected_fields[:4]
+                if isinstance(field, str)
+            ]
+            if len(corrected_fields) > 4:
+                correction_summary["corrected_field_paths_truncated"] = True
+        for field in (
+            "target_reference", "correction_evidence_reference",
+        ):
+            pointer = retain_pointer(correction.get(field))
+            if pointer is not None:
+                correction_summary[field] = pointer
+        pointer = retain_pointer(item.get("evidence_reference"))
+        if pointer is not None:
+            correction_summary["evidence_reference"] = pointer
+        if len(record_correction_summaries) < 4:
+            record_correction_summaries.append(correction_summary)
         rejection_reason = correction.get("rejection_reason")
         if not isinstance(rejection_reason, str) or not rejection_reason:
             continue
@@ -5244,6 +5277,15 @@ def _compact_campaign_evidence_priority_rows(
         result["correction_rejection_summaries"] = (
             correction_rejection_summaries
         )
+    if record_correction_summaries:
+        result["record_correction_summaries"] = record_correction_summaries
+        if len(record_correction_summaries) < sum(
+            isinstance(item, dict)
+            and isinstance(item.get("record_correction"), dict)
+            and bool(item["record_correction"].get("status"))
+            for item in observations
+        ):
+            result["record_correction_summaries_truncated"] = True
     result["campaign_evidence_summary_only"] = True
     source = result.get("source")
     if isinstance(source, dict):
@@ -5259,6 +5301,8 @@ def _compact_campaign_evidence_priority_rows(
             "observation_records_verified",
             "observation_records_unavailable",
             "observation_records_skipped_by_page_budget",
+            "record_correction_count", "record_corrections_applied_count",
+            "record_corrections_unverified_count",
             "observation_reference_diagnostic_count",
             "improvement_relations_unverified_count",
             "source_pointer_content_integrity_verified_count",
