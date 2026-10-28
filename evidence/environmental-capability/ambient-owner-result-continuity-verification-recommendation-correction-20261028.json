@@ -1,0 +1,84 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "captured_at": "2026-10-28T16:11:51Z",
+  "measurement_basis": "live-eci-conflict-readback-and-append-only-pressure-definition-correction",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_8e25623d0d331bdb",
+    "campaign_evidence_count_before_recording": 166,
+    "implementation_commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:1b886bad1878"
+    ]
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "identity": "ev_environment_ambient_owner_result_continuity_verification_recommendation_correction_20261028",
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI pressure-definition correction projection",
+    "request": {
+      "operation": "reconcile_pressure_actionable_recommendation",
+      "target_observation_identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+      "corrected_field_paths": [
+        "pressure_hypothesis.actionable_recommendation"
+      ],
+      "observed_projection_identity": "eci_6a63056fcb1af023",
+      "observed_conflict_fields": [
+        "recommendation"
+      ]
+    },
+    "outcome": {
+      "status": "correction-recorded",
+      "replacement_value": "Carry the bounded scheduler result classification and its explicit verification limit into retained execution history, then expose it through the existing exact owner/execution correlation.",
+      "reason": "Make the supporting record use the exact actionable recommendation from the independently verified occurrence defining this pressure."
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "18674be7801c9d57e722d304c6a635cb20c758c9",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-verification-20261028.json",
+      "sha256": "d989f7fcdedfcff87bfc6d9d48587b9e671d1478c8f57ca3d59aeb72602ce1cd"
+    },
+    "corrected_field_paths": [
+      "pressure_hypothesis.actionable_recommendation"
+    ],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "Carry the bounded scheduler result classification and its explicit verification limit into retained execution history, then expose it through the existing exact owner/execution correlation."
+    },
+    "reason": "The current ECI projection reports conflicting recommendation definitions for one pressure identity. Reconcile this supporting record to the exact recommendation in its integrity-verified occurrence record."
+  },
+  "supporting_sources": [
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "18674be7801c9d57e722d304c6a635cb20c758c9",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-verification-20261028.json",
+      "sha256": "d989f7fcdedfcff87bfc6d9d48587b9e671d1478c8f57ca3d59aeb72602ce1cd"
+    },
+    {
+      "kind": "campaign-evidence-reference",
+      "identity": "ev_environment_ambient_owner_result_continuity_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "18674be7801c9d57e722d304c6a635cb20c758c9",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-pressure-20261028.json",
+      "sha256": "f07b9b455ca190218fcf72c6c725c0f06439f8b31ed2ffeb524dde9cbd7882d9"
+    }
+  ],
+  "measurement_limits": [
+    "The correction changes only the effective recommendation text in the ECI view; the original content-addressed observation remains inspectable.",
+    "The independently verified occurrence provides the canonical recommendation but does not establish recurrence, service correctness, fulfillment, or reduced agent intervention."
+  ]
+}
