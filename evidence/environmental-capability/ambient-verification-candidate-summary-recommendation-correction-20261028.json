@@ -1,0 +1,54 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_verification_candidate_summary_recommendation_correction_20261028",
+  "captured_at": "2026-10-28T17:39:26Z",
+  "measurement_basis": "append-only-correction-matching-the-integrity-verified-pressure-occurrence",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "f358adcf82f7a2b921be87ecb9990b107166582e"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "target_observation_identity": "ev_environment_verification_candidate_summary_improvement_20261028",
+      "target_hypothesis_identity": "ph_environment_verification_candidate_root_omission",
+      "corrected_field": "pressure_hypothesis.actionable_recommendation"
+    },
+    "outcome": {
+      "correction_reason": "The improvement record repeated the same pressure identity with a different recommendation. Align its wording to the integrity-verified occurrence so ECI can aggregate one consistent hypothesis definition.",
+      "provider_behavior_or_agent_burden_changed": false
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_verification_candidate_summary_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "a4531f13ad838eec76a5461fa6d3ad8579c3d787",
+      "path": "evidence/environmental-capability/ambient-verification-candidate-summary-improvement-20261028.json",
+      "sha256": "5344b6109fe0d75c71fc28d461debebb4d7c9f0d1e38916b8adceb5de020a56d"
+    },
+    "corrected_field_paths": [
+      "pressure_hypothesis.actionable_recommendation"
+    ],
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "Include these verified candidate occurrences in the root bounded candidate summary, group them by repository and unmeasurable reason, and preserve exact source provenance and uncertainty through response compaction."
+    },
+    "reason": "Match the recommendation to the same-campaign integrity-verified occurrence definition; preserve the original record and pointer."
+  },
+  "not_measured": [
+    "whether the projection gap caused agent intervention",
+    "service fulfillment or correctness",
+    "recurrence across sessions"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
