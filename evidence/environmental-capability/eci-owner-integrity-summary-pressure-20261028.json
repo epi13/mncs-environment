@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_integrity_summary_pressure_20261028",
+  "captured_at": "2026-10-28T14:01:38Z",
+  "measurement_basis": "baseline-source-inspection-and-same-session-live-ECI-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d10d00b82a2c3c44",
+    "campaign_evidence_count_before_recording": 142,
+    "implementation_commit": "28fcd537add7d208c9674982116a74af348c8209",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9f8450b9c3a2"
+    ]
+  },
+  "observation": {
+    "kind": "environmental-service-result-integrity-visibility-pressure",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "baseline_commit": "59c62919f278a39cb067e8f1894e1a188e8fbaaf",
+      "baseline_source": {
+        "repository": "mncs-environment",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "e45f217fd766fcba273a6f02b17c218634c0dc4a49926ce90102c989f3477f4d",
+        "owner_summary_schema": "mncs.environment.owner-pass-decision-summary/2"
+      },
+      "baseline_projection": {
+        "identity": "eci_55613eaea5556bd9",
+        "content_digest": "207324a411abd18792cde13b20df925d",
+        "projection_status": "partial",
+        "response_byte_count": 190759,
+        "response_truncated": true,
+        "detail_status": "evidence-priority-response-budget",
+        "owner_source_observation_count": 7,
+        "owner_rows_returned": 7,
+        "owner_detail_rows_returned": 1,
+        "owner_detail_integrity_status": "content-integrity-verified",
+        "aggregate_integrity_summary_present": false,
+        "per_owner_integrity_summary_present": false,
+        "readback_artifact_status": "temporary-session-readback; not persisted before this pressure record"
+      },
+      "prior_persisted_readback": {
+        "identity": "ev_environment_ambient_service_result_traceability_readback_20261028",
+        "repository": "mncs-environment",
+        "path": "evidence/environmental-capability/ambient-service-result-traceability-readback-20261028.json",
+        "commit": "59c62919f278a39cb067e8f1894e1a188e8fbaaf",
+        "sha256": "fbcf745fafb9c2e9fb436784edef1ac089294ac8673eb6a035ce55a04a955128"
+      }
+    },
+    "outcome": {
+      "interpretation": "The compact response preserved exact result references but lost the relation between each owner and its integrity state, and dropped the already-computed aggregate integrity coverage. This is an observability gap; it does not imply that the underlying Store results were unverified or incorrect.",
+      "scope": "one selected-session Environment owner-pass trace under evidence-priority response compaction"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_result_integrity_visibility_20261028",
+    "title": "Evidence-priority ECI omits owner-result content-integrity coverage",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The previous live evidence-priority projection retained exact result references for seven owners but omitted both the aggregate owner-result integrity coverage and per-owner integrity statuses; only the retained doctor detail row showed content-integrity-verified.",
+    "actionable_recommendation": "Preserve bounded aggregate owner-result integrity coverage and per-owner source-content-integrity status counts in the evidence-priority ECI view, while keeping these checks distinct from service correctness and fulfillment."
+  },
+  "supporting_sources": [
+    {
+      "kind": "baseline-implementation",
+      "repository": "mncs-environment",
+      "commit": "59c62919f278a39cb067e8f1894e1a188e8fbaaf",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "e45f217fd766fcba273a6f02b17c218634c0dc4a49926ce90102c989f3477f4d"
+    },
+    {
+      "kind": "prior-traceability-readback",
+      "identity": "ev_environment_ambient_service_result_traceability_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-service-result-traceability-readback-20261028.json",
+      "commit": "59c62919f278a39cb067e8f1894e1a188e8fbaaf",
+      "sha256": "fbcf745fafb9c2e9fb436784edef1ac089294ac8673eb6a035ce55a04a955128"
+    }
+  ],
+  "measurement_limits": [
+    "The baseline projection was generated during this session and was not persisted as a separate artifact before this pressure record.",
+    "The omitted integrity state did not establish service failure, incorrect data, agent receipt, or agent burden.",
+    "The finding covers one selected session and one bounded response path."
+  ]
+}

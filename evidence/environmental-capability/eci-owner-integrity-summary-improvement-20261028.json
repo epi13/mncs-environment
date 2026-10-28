@@ -1,0 +1,99 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_integrity_summary_improvement_20261028",
+  "captured_at": "2026-10-28T14:01:38Z",
+  "measurement_basis": "source-linked-integrity-visibility-pressure-implementation-verification-and-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d10d00b82a2c3c44",
+    "campaign_evidence_count_before_recording": 142,
+    "implementation_commit": "28fcd537add7d208c9674982116a74af348c8209",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9f8450b9c3a2"
+    ]
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment capability-intelligence service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_owner_result_integrity_visibility_20261028",
+      "verification_observation_identity": "ev_environment_eci_owner_integrity_summary_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_owner_integrity_summary_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-blob-sha256-verified",
+      "verification_status": "capability-intelligence-module-passed",
+      "readback_status": "seven-owner-integrity-and-result-links-visible",
+      "integrity_elapsed_seconds": 0.055025,
+      "effectiveness_assessment": "per-owner-content-integrity-discoverability-verified; service-correctness-and-agent-burden-not-assessed",
+      "interpretation_limit": "The change preserves existing content-integrity evidence in compact ECI output and makes its per-owner relation inspectable. It does not establish that the services were correct, useful, or needed."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_result_integrity_visibility_20261028",
+    "title": "Evidence-priority ECI omits owner-result content-integrity coverage",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The previous live evidence-priority projection retained exact result references for seven owners but omitted both the aggregate owner-result integrity coverage and per-owner integrity statuses; only the retained doctor detail row showed content-integrity-verified.",
+    "actionable_recommendation": "Preserve bounded aggregate owner-result integrity coverage and per-owner source-content-integrity status counts in the evidence-priority ECI view, while keeping these checks distinct from service correctness and fulfillment."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_owner_integrity_summary_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_owner_result_integrity_visibility_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_owner_result_integrity_summary_28fcd53",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "28fcd537add7d208c9674982116a74af348c8209",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "22246aa98162c90d438efa40246574f1f36472f45b9aaf49f457aa0dff00b721"
+    },
+    "verification_observation_identity": "ev_environment_eci_owner_integrity_summary_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_owner_integrity_summary_readback_20261028",
+    "basis": "The capability-intelligence test module passes, and a live selected-session ECI response displays complete per-owner integrity status counts and aggregate coverage for all seven returned results within a measured 55 ms integrity read pass.",
+    "effectiveness_assessment": "per-owner-integrity-discoverability-verified; service-quality-and-agent-burden-not-assessed",
+    "not_measured": [
+      "Whether agents needed or received any of the seven owner-pass services.",
+      "Whether the per-owner integrity states changed an agent decision or avoided manual retrieval.",
+      "Correctness and usefulness of the service results.",
+      "Cross-session recurrence and subsequent outcomes."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_eci_owner_integrity_summary_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-integrity-summary-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_eci_owner_integrity_summary_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-integrity-summary-verification-20261028.json"
+    },
+    {
+      "kind": "subsequent-live-readback",
+      "identity": "ev_environment_eci_owner_integrity_summary_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-owner-integrity-summary-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "This change preserves and exposes verification evidence; it does not increase the integrity read budget or claim lower cost.",
+    "Agent receipt, service fulfillment, correctness, and intervention burden remain unmeasured.",
+    "The full repository verification suite was not run."
+  ]
+}

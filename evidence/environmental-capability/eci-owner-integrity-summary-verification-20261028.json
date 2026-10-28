@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_integrity_summary_verification_20261028",
+  "captured_at": "2026-10-28T14:01:38Z",
+  "measurement_basis": "capability-intelligence-module-regression-suite-and-source-integrity-checks",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d10d00b82a2c3c44",
+    "campaign_evidence_count_before_recording": 142,
+    "implementation_commit": "28fcd537add7d208c9674982116a74af348c8209",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9f8450b9c3a2"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-result-integrity-summary-regression-verification",
+    "source_interface": "MNCS Environment pytest and Python compileall",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_capability_intelligence.py",
+        "python -m compileall -q mncs_env tests/test_capability_intelligence.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "192 passed in 8.35s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "Evidence-priority ECI retains bounded aggregate owner-result integrity coverage.",
+        "Version 3 owner summaries preserve per-owner source content-integrity status counts alongside exact result pointers.",
+        "Version 1 and version 2 owner summaries remain readable.",
+        "The strict compact-response budget and linked campaign evidence regressions pass."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_owner_result_integrity_summary_28fcd53",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "28fcd537add7d208c9674982116a74af348c8209",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "22246aa98162c90d438efa40246574f1f36472f45b9aaf49f457aa0dff00b721"
+      },
+      "regression_test_reference": {
+        "identity": "mncs_environment_capability_intelligence_tests_28fcd53",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "28fcd537add7d208c9674982116a74af348c8209",
+        "path": "tests/test_capability_intelligence.py",
+        "sha256": "a938dfc9ad7e3d144215487cb257b9c40b2804ad2b671e97945dc7fde1fe8d1a"
+      },
+      "scope_limit": "The full capability-intelligence test module passed; the full repository suite was not rerun."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_result_integrity_visibility_20261028",
+    "title": "Evidence-priority ECI omits owner-result content-integrity coverage",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The previous live evidence-priority projection retained exact result references for seven owners but omitted both the aggregate owner-result integrity coverage and per-owner integrity statuses; only the retained doctor detail row showed content-integrity-verified.",
+    "actionable_recommendation": "Preserve bounded aggregate owner-result integrity coverage and per-owner source-content-integrity status counts in the evidence-priority ECI view, while keeping these checks distinct from service correctness and fulfillment."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_owner_result_integrity_summary_28fcd53",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "28fcd537add7d208c9674982116a74af348c8209",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "22246aa98162c90d438efa40246574f1f36472f45b9aaf49f457aa0dff00b721"
+    },
+    {
+      "identity": "mncs_environment_capability_intelligence_tests_28fcd53",
+      "kind": "regression-test-source",
+      "repository": "mncs-environment",
+      "commit": "28fcd537add7d208c9674982116a74af348c8209",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "a938dfc9ad7e3d144215487cb257b9c40b2804ad2b671e97945dc7fde1fe8d1a"
+    }
+  ],
+  "measurement_limits": [
+    "Tests verify the summary and response-budget behavior, not service correctness, usefulness, or fulfillment.",
+    "Avoided agent intervention, receipt, and cross-session recurrence remain unmeasured."
+  ]
+}

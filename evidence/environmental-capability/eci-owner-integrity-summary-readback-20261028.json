@@ -1,0 +1,253 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_owner_integrity_summary_readback_20261028",
+  "captured_at": "2026-10-28T14:01:38Z",
+  "measurement_basis": "post-change-live-selected-session-ECI-service-accountability-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_d10d00b82a2c3c44",
+    "campaign_evidence_count_before_recording": 142,
+    "implementation_commit": "28fcd537add7d208c9674982116a74af348c8209",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:9f8450b9c3a2"
+    ]
+  },
+  "observation": {
+    "kind": "live-selected-session-owner-result-integrity-summary-readback",
+    "source_interface": "MNCS Environment environmental-capability projection",
+    "request": {
+      "command": "./scripts/mncs-env projections ses_9db7b7c6f04e4d19 --consumer mncs-environment-capability-campaign --consumer-kind agent --interpret environmental-capability --evidence-offset 138 --evidence-limit 4 --history-pages 1 --session-event-limit 32",
+      "projection_identity": "eci_b61b07dfacfae9fe",
+      "projection_content_digest": "c8dbde4981f6b138113dd74b5d41cb8a",
+      "readback_timestamp_status": "observed during this session; source projection does not record a readback timestamp"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "response_byte_count": 192615,
+      "response_truncated": true,
+      "activity_detail_status": "evidence-priority-response-budget",
+      "owner_summary_schema": "mncs.environment.owner-pass-decision-summary/3",
+      "owner_summary_status": "complete",
+      "owner_source_observation_count": 7,
+      "owner_source_observations_omitted_count": 0,
+      "owners_returned": 7,
+      "owner_rows": [
+        {
+          "owner_pass": "doctor",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "b2aae1dc516f412b953deadf6b9bc157bd58672c2dccdabf1767261b13dc788e",
+              "service_execution_id": "ase_3ba486dffa807faf37926c7b315e5117",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:doctor:f2947b6a3ad8ea777bcebd4a4141a755d8c1760a19944b00a85a9af9df42f42b"
+            }
+          ]
+        },
+        {
+          "owner_pass": "semantics",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "73375e3133b9ef951b480101bc2aae2e581ef062d3f896a7592fb69a4855c41e",
+              "service_execution_id": "ase_883542da5a83d3a96282a8b728ddb300",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:semantics:4ef6dc651292c8e8b5df7100a01d5d7798d13fc6e33ca5156be9cb735aa29f98"
+            }
+          ]
+        },
+        {
+          "owner_pass": "actions",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "5c4bc54a9d7425df1c0a956d9e2001798eb25a0d68ef2aa8327984a6c3c15eb1",
+              "service_execution_id": "ase_f0f60bafdca6de05a812df9d8a400b05",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:actions:9cf576fe853b130a49aaf9e55c4319001d6efa542a2de43074ea811ca976373f"
+            }
+          ]
+        },
+        {
+          "owner_pass": "verification",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb",
+              "service_execution_id": "ase_f05f2b3f21254456d00e86a5a2777cd5",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921"
+            }
+          ]
+        },
+        {
+          "owner_pass": "diagnostics",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "7c0c64bd4b2be68724c35564b24e7cb9b1b9d11b2396203a390528192b12f7b6",
+              "service_execution_id": "ase_370f800c1fcb92b5f7e04795314d5645",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:diagnostics:4f487b3cefdb35abaefe539c77041b98fa32ef69e34eae58de70aae53fadf7bb"
+            }
+          ]
+        },
+        {
+          "owner_pass": "family",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "9164cdcc3596da4ecec2c2d210a9f824dcaffd912a4f1ff4c96a82149174bd25",
+              "service_execution_id": "ase_61ac765fd1bb98d08be788d691d7c5b7",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:family:4e4e16012b06977739f09b2be5ada39df71eb0ef73b8632d300ab37b9f7ed9b8"
+            }
+          ]
+        },
+        {
+          "owner_pass": "projections",
+          "result_status_counts": {
+            "result-recorded": 1
+          },
+          "outcome_status_counts": {
+            "no-failure-reported": 1
+          },
+          "verification_status_counts": {
+            "not-established": 1
+          },
+          "source_content_integrity_status_counts": {
+            "content-integrity-verified": 1
+          },
+          "exact_reference_count": 1,
+          "references": [
+            {
+              "result_identity": "e0d7e9618cfc154470cab449ec3ecf8b51266a0520dee454d17028649fcb2baf",
+              "service_execution_id": "ase_a690c81f2f804b4e23de1db17ca695a1",
+              "source_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:projections:e2c1a81ef2de3def467d1c7f255125aa1a9c74425ae1c3f819da1dd700a10328"
+            }
+          ]
+        }
+      ],
+      "aggregate_owner_result_content_integrity": {
+        "content_integrity_not_checked_count": 0,
+        "content_integrity_unverified_count": 0,
+        "content_integrity_verified_count": 7,
+        "coverage_status": "complete",
+        "integrity_elapsed_seconds": 0.055025,
+        "interpretation_limit": "Checks the owner-result digest and result identity only; it does not establish service correctness, usefulness, receipt, or need fulfillment.",
+        "limit": 8,
+        "read_time_budget_seconds": 1.0,
+        "result_records_omitted": 0,
+        "scope": "selected-session-owner-result-store-content",
+        "status_counts": {
+          "content-integrity-verified": 7
+        },
+        "store_result_record_count": 7
+      },
+      "ambient_fulfillment_status": "not-measured",
+      "agent_intervention_burden_status": "not-measured",
+      "interpretation": "The bounded ECI view now connects each returned owner to its integrity status and exact result pointer. All seven returned Store results passed the digest and result-identity check in this selected trace; this does not establish correctness, usefulness, service fulfillment, or agent receipt."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_owner_result_integrity_visibility_20261028",
+    "title": "Evidence-priority ECI omits owner-result content-integrity coverage",
+    "category": "environmental-observability",
+    "subsystem": "MNCS Environment service-accountability response compaction",
+    "owner": "mncs-environment",
+    "basis": "The previous live evidence-priority projection retained exact result references for seven owners but omitted both the aggregate owner-result integrity coverage and per-owner integrity statuses; only the retained doctor detail row showed content-integrity-verified.",
+    "actionable_recommendation": "Preserve bounded aggregate owner-result integrity coverage and per-owner source-content-integrity status counts in the evidence-priority ECI view, while keeping these checks distinct from service correctness and fulfillment."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_owner_result_integrity_summary_28fcd53",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "28fcd537add7d208c9674982116a74af348c8209",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "22246aa98162c90d438efa40246574f1f36472f45b9aaf49f457aa0dff00b721"
+    }
+  ],
+  "measurement_limits": [
+    "The overall ECI response is partial and response-truncated, while the selected owner trace has complete coverage of seven observations and seven result records.",
+    "Content-integrity checks compare Store record digest and linked result identity; they are not independent verification of service behavior.",
+    "Service opportunity, ambient fulfillment, agent receipt, intervention burden, and later recurrence remain unmeasured."
+  ]
+}
