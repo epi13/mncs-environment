@@ -45,7 +45,8 @@
     "title": "ECI response compaction omits bounded session-event page parameters",
     "category": "environmental-observability",
     "subsystem": "MNCS Environment capability-intelligence response compaction",
-    "owner": "mncs-environment"
+    "owner": "mncs-environment",
+    "actionable_recommendation": "Preserve the requested event window limit, explicit page cursor, and next cursor through ordinary and response-budget compaction while keeping response and event reads bounded."
   },
   "supporting_sources": [
     {
