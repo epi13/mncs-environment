@@ -1,0 +1,70 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_pointer_correction_budget_verification_correction_20261028",
+  "captured_at": "2026-10-28T07:28:36Z",
+  "measurement_basis": "append-only-correction-of-verification-supporting-source-digests",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "source_interface": "MNCS Environment append-only evidence correction",
+    "request": {
+      "target_observation_identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+      "corrected_field_paths": ["supporting_sources"],
+      "cause": "The implementation SHA-256 in the evidence record was copied with one extra zero; the repository blob digest is independently recomputed and verified."
+    },
+    "outcome": {
+      "status": "append-only-source-reference-correction-recorded",
+      "correct_implementation_sha256": "0d6ab209bd08e69f5bea386612e7e3bf73936521a7a569792abde4973c3cbd19",
+      "test_sha256_preserved": "e22554cf70d95cfcb6bc831ea25d6aacb7e66b462f35c6fb514e9a8306120b62",
+      "original_verification_claim": "2 passed, 174 deselected",
+      "verification_result_changed": false
+    }
+  },
+  "record_correction": {
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "identity": "ev_environment_eci_pointer_correction_budget_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "969c8a60b50e2187f4cce9ea4069affaf7da8a8b",
+      "path": "evidence/environmental-capability/eci-pointer-correction-budget-verification-20261028.json",
+      "sha256": "a2f1bc6e5b52e05895a097be245722eb752963b0249dc38759f3c9b5a4c5bc8b"
+    },
+    "corrected_field_paths": ["supporting_sources"],
+    "replacement_values": {
+      "supporting_sources": [
+        {
+          "kind": "source-code-implementation",
+          "identity": "mncs_environment_pointer_correction_evidence_priority_8570526",
+          "repository": "mncs-environment",
+          "commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7",
+          "path": "mncs_env/capability_intelligence.py",
+          "sha256": "0d6ab209bd08e69f5bea386612e7e3bf73936521a7a569792abde4973c3cbd19"
+        },
+        {
+          "kind": "regression-test",
+          "identity": "mncs_environment_pointer_correction_budget_test_8570526",
+          "repository": "mncs-environment",
+          "commit": "85705267449bc3a7520ee0a764dafb0e6a62ebb7",
+          "path": "tests/test_capability_intelligence.py",
+          "sha256": "e22554cf70d95cfcb6bc831ea25d6aacb7e66b462f35c6fb514e9a8306120b62"
+        }
+      ]
+    },
+    "reason": "Correct the copied implementation digest to the exact SHA-256 of the source blob at the recorded commit. Preserve the original record and its test result unchanged. The embedded outcome copy is not used as an authoritative source pointer."
+  },
+  "measurement_limits": [
+    "The correction changes only integrity-addressed supporting sources; it does not rerun tests or alter their result.",
+    "The original observation outcome retains its copied implementation-reference text; the corrected supporting_sources are the independently verified source pointers."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
