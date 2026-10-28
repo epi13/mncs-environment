@@ -31,6 +31,14 @@ MAX_OWNER_EXECUTION_HISTORY = 16
 OWNER_EXECUTION_HISTORY_SCHEMA = (
     "mncs.environment.owner-execution-history/1"
 )
+OWNER_RESULT_STATUSES = {
+    "result-recorded", "runner-returned-none", "result-missing",
+    "invalid-result-shape",
+}
+OWNER_RESULT_REFERENCE_STATUSES = {
+    "store-record", "session-artifact", "trace-not-persisted",
+    "not-recorded", "identity-mismatch", "invalid-reference",
+}
 MAX_TRACE_TRIGGER_KINDS = 8
 MAX_TRACE_TRIGGER_SUBJECT_IDENTITIES = 8
 MAX_TRACE_RESULT_FIELDS = 16
@@ -588,6 +596,50 @@ def project_owner_execution_history(value) -> dict:
                 or execution_id in seen_execution_ids):
             invalid_count += 1
             continue
+        result_observation_status = raw.get(
+            "owner_result_observation_status", "unknown",
+        )
+        if result_observation_status not in {
+            "recorded", "not-recorded-on-trace",
+            "not-recorded-in-results", "unknown",
+        }:
+            invalid_count += 1
+            continue
+        owner_result_status = raw.get("owner_result_status")
+        if result_observation_status == "recorded":
+            if owner_result_status not in OWNER_RESULT_STATUSES:
+                invalid_count += 1
+                continue
+        elif owner_result_status is not None:
+            invalid_count += 1
+            continue
+        owner_result_verification_status = raw.get(
+            "owner_result_verification_status", "unknown",
+        )
+        if owner_result_verification_status not in {
+            "not-established", "unknown",
+        }:
+            invalid_count += 1
+            continue
+        owner_result_identity = raw.get("owner_result_identity")
+        if (owner_result_identity is not None
+                and (not isinstance(owner_result_identity, str)
+                     or re.fullmatch(r"[0-9a-f]{64}", owner_result_identity)
+                     is None)):
+            invalid_count += 1
+            continue
+        owner_result_reference_status = raw.get(
+            "owner_result_reference_status", "unknown",
+        )
+        if (owner_result_reference_status != "unknown"
+                and owner_result_reference_status
+                not in OWNER_RESULT_REFERENCE_STATUSES):
+            invalid_count += 1
+            continue
+        owner_result_reused = raw.get("owner_result_reused")
+        if owner_result_reused is not None and type(owner_result_reused) is not bool:
+            invalid_count += 1
+            continue
         resource_status = raw.get("process_resource_usage_status")
         if resource_status not in {
             "measured", "partial", "unavailable", "not-recorded-on-trace",
@@ -627,8 +679,19 @@ def project_owner_execution_history(value) -> dict:
             "trace_sequence": sequence,
             "owner_outcome_status": outcome,
             "verification_status": verification,
+            "owner_result_observation_status": result_observation_status,
+            "owner_result_verification_status": (
+                owner_result_verification_status
+            ),
+            "owner_result_reference_status": owner_result_reference_status,
             "process_resource_usage_status": resource_status,
         }
+        if owner_result_status is not None:
+            row["owner_result_status"] = owner_result_status
+        if owner_result_identity is not None:
+            row["owner_result_identity"] = owner_result_identity
+        if type(owner_result_reused) is bool:
+            row["owner_result_reused"] = owner_result_reused
         if type(elapsed) in (int, float):
             row["run_elapsed_seconds"] = round(float(elapsed), 3)
         if process_usage is not None:
@@ -673,6 +736,23 @@ def _append_owner_execution_history(
         for row in raw_scheduled if isinstance(row, dict)
         and isinstance(row.get("service_execution_id"), str)
     } if isinstance(raw_scheduled, list) else {}
+    owner_result_projection = (
+        projected_trace.get("owner_pass_results")
+        if isinstance(projected_trace, dict) else None
+    )
+    owner_result_rows = (
+        owner_result_projection.get("results", [])
+        if isinstance(owner_result_projection, dict) else []
+    )
+    owner_result_rows = (
+        owner_result_rows if isinstance(owner_result_rows, list) else []
+    )
+    owner_results_by_execution = {
+        (row.get("owner"), row.get("service_execution_id")): row
+        for row in owner_result_rows if isinstance(row, dict)
+        and isinstance(row.get("owner"), str)
+        and isinstance(row.get("service_execution_id"), str)
+    }
     seen_current = set()
     invalid_current = 0
     for projected in projected_rows:
@@ -704,6 +784,30 @@ def _append_owner_execution_history(
             ),
             "process_resource_usage_status": resource_status,
         }
+        owner_result = owner_results_by_execution.get((owner, execution_id))
+        if isinstance(owner_result, dict):
+            row["owner_result_observation_status"] = "recorded"
+            row["owner_result_status"] = owner_result["result_status"]
+            row["owner_result_verification_status"] = owner_result.get(
+                "verification_status", "unknown",
+            )
+            row["owner_result_reference_status"] = owner_result.get(
+                "source_reference_status", "not-recorded",
+            )
+            result_identity = owner_result.get("result_identity")
+            if isinstance(result_identity, str):
+                row["owner_result_identity"] = result_identity
+            result_reused = owner_result.get("result_reused")
+            if type(result_reused) is bool:
+                row["owner_result_reused"] = result_reused
+        else:
+            row["owner_result_observation_status"] = (
+                "not-recorded-in-results"
+                if isinstance(owner_result_projection, dict)
+                else "not-recorded-on-trace"
+            )
+            row["owner_result_verification_status"] = "unknown"
+            row["owner_result_reference_status"] = "unknown"
         elapsed = projected.get("run_elapsed_seconds")
         if type(elapsed) in (int, float):
             row["run_elapsed_seconds"] = elapsed

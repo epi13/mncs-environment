@@ -9278,6 +9278,7 @@ def test_environment_service_execution_surfaces_family_availability_reason() -> 
 def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path) -> None:
     session, _ = _session(tmp_path, [])
     execution_id = "ase_" + "d" * 32
+    owner_result_identity = "a" * 64
     process_resource_usage = _measured_owner_resource_usage()
     owner_context = {
         "schema_version": "mncs.environment.ambient-owner-pass-context/1",
@@ -9303,6 +9304,19 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
         }],
         "skipped": [],
         "owner_failures": [],
+        "owner_pass_results": [{
+            "owner": "verification",
+            "service_execution_id": execution_id,
+            "result_status": "result-recorded",
+            "verification_status": "not-established",
+            "result_identity": owner_result_identity,
+            "source_reference_status": "store-record",
+            "source_reference": (
+                f"mncs-store:{session.session_id}:incremental-coherence:"
+                f"verification:{owner_result_identity}"
+            ),
+            "result_reused": False,
+        }],
     }, "owner_execution_history": {
         "schema_version": (
             capability_intelligence.coherence_module
@@ -9318,6 +9332,12 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
             "trace_sequence": 3,
             "owner_outcome_status": "no-failure-reported",
             "verification_status": "not-established",
+            "owner_result_observation_status": "recorded",
+            "owner_result_status": "result-recorded",
+            "owner_result_verification_status": "not-established",
+            "owner_result_reference_status": "store-record",
+            "owner_result_identity": owner_result_identity,
+            "owner_result_reused": False,
             "run_elapsed_seconds": 0.1,
             "process_resource_usage_status": "measured",
             "process_resource_usage": process_resource_usage,
@@ -9388,6 +9408,15 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert group["latest_trace_process_resource_usage"] == (
         process_resource_usage
     )
+    assert group["latest_trace_owner_result_observation_status"] == "recorded"
+    assert group["latest_trace_owner_result_status"] == "result-recorded"
+    assert group["latest_trace_owner_result_identity"] == owner_result_identity
+    assert group[
+        "latest_trace_owner_result_reference_status"
+    ] == "store-record"
+    assert group[
+        "latest_trace_owner_result_verification_status"
+    ] == "not-established"
     assert group["invocation_count"] == 1
     assert group["completion_count"] == 1
     assert group["outcome_status_counts"] == {"ok": 1}
@@ -9399,6 +9428,7 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     compact = capability_intelligence.project(session, max_result_bytes=8_000)
     assert compact["source"]["response_truncated"] is True
     compact_activity = compact["session_activity"]["ambient_owner_pass_activity"]
+    assert "execution_groups" in compact_activity, compact_activity
     assert compact_activity["execution_groups"][0]["latest_trace_relation"] == (
         "exact-latest-trace-match"
     )
@@ -9417,6 +9447,12 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
         "schema_version"
     ]
     assert "pid" not in compact_usage
+    assert compact_activity["execution_groups"][0][
+        "latest_trace_owner_result_status"
+    ] == "result-recorded"
+    assert compact_activity["execution_groups"][0][
+        "latest_trace_owner_result_verification_status"
+    ] == "not-established"
     assert compact["source"]["session_ambient_owner_pass_activity_digest"]
 
     partial_usage = deepcopy(process_resource_usage)
@@ -9464,6 +9500,21 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert retained_group["retained_trace_process_resource_usage"] == (
         process_resource_usage
     )
+    assert retained_group[
+        "retained_trace_owner_result_observation_status"
+    ] == "recorded"
+    assert retained_group[
+        "retained_trace_owner_result_status"
+    ] == "result-recorded"
+    assert retained_group[
+        "retained_trace_owner_result_identity"
+    ] == owner_result_identity
+    assert retained_group[
+        "retained_trace_owner_result_reference_status"
+    ] == "store-record"
+    assert retained_group[
+        "retained_trace_owner_result_verification_status"
+    ] == "not-established"
     history_source = retained_projection["session_activity"][
         "ambient_service_execution"
     ]["source"]
@@ -9484,6 +9535,12 @@ def test_ambient_owner_pass_invocations_correlate_to_latest_trace(tmp_path: Path
     assert compact_retained[
         "retained_trace_process_resource_usage"
     ]["io_bytes"]["write_bytes"] == 256
+    assert compact_retained[
+        "retained_trace_owner_result_status"
+    ] == "result-recorded"
+    assert compact_retained[
+        "retained_trace_owner_result_verification_status"
+    ] == "not-established"
 
 
 def test_ambient_owner_pass_mismatched_completion_context_is_not_joined(

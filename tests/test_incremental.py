@@ -102,19 +102,56 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
         }
 
     def trace_rows(start, count):
+        scheduled = [{
+            "owner": "projections",
+            "pass": "projections",
+            "service_execution_id": f"ase_{index:032x}",
+            "run_elapsed_seconds": 0.1,
+            "process_resource_usage": resource_usage(index),
+        } for index in range(start, start + count)]
         return {
             "mode": "targeted_update",
             "trace_persistence_status": "session-snapshot",
-            "scheduled": [{
-                "owner": "projections",
-                "pass": "projections",
-                "service_execution_id": f"ase_{index:032x}",
-                "run_elapsed_seconds": 0.1,
-                "process_resource_usage": resource_usage(index),
-            } for index in range(start, start + count)],
+            "scheduled": scheduled,
             "skipped": [],
             "owner_failures": [],
+            "owner_pass_results": [{
+                "owner": "projections",
+                "service_execution_id": row["service_execution_id"],
+                "result_status": "result-recorded",
+                "verification_status": "not-established",
+                "result_identity": f"{index:064x}",
+                "source_reference_status": "store-record",
+                "source_reference": (
+                    "mncs-store:ses_incremental_fixture:incremental-coherence:"
+                    f"projections:{index:064x}"
+                ),
+                "result_reused": False,
+            } for index, row in zip(
+                range(start, start + count), scheduled, strict=True,
+            )],
         }
+
+    legacy_history = {
+        "schema_version": coherence.OWNER_EXECUTION_HISTORY_SCHEMA,
+        "coverage_status": "bounded-since-enabled",
+        "limit": coherence.MAX_OWNER_EXECUTION_HISTORY,
+        "trace_sequence": 1,
+        "omitted_count": 0,
+        "rows": [{
+            "owner": "projections",
+            "service_execution_id": "ase_" + "f" * 32,
+            "trace_sequence": 1,
+            "owner_outcome_status": "no-failure-reported",
+            "verification_status": "not-established",
+            "process_resource_usage_status": "not-recorded-on-trace",
+        }],
+    }
+    legacy_projection = coherence.project_owner_execution_history(legacy_history)
+    assert legacy_projection["rows"][0][
+        "owner_result_observation_status"
+    ] == "unknown"
+    assert "owner_result_status" not in legacy_projection["rows"][0]
 
     first = coherence._append_owner_execution_history(
         None, trace_rows(0, 16), trace_sequence=1,
@@ -128,6 +165,19 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
     assert first_projection["rows"][0]["process_resource_usage"][
         "cpu_user_ticks"
     ] == 0
+    assert first_projection["rows"][0]["owner_result_observation_status"] == (
+        "recorded"
+    )
+    assert first_projection["rows"][0]["owner_result_status"] == (
+        "result-recorded"
+    )
+    assert first_projection["rows"][0]["owner_result_identity"] == f"{0:064x}"
+    assert first_projection["rows"][0][
+        "owner_result_reference_status"
+    ] == "store-record"
+    assert first_projection["rows"][0][
+        "owner_result_verification_status"
+    ] == "not-established"
 
     second = coherence._append_owner_execution_history(
         first, trace_rows(16, 2), trace_sequence=2,
@@ -144,6 +194,28 @@ def test_owner_execution_history_is_bounded_and_preserves_exact_resource_rows():
     assert second_projection["rows"][-1]["service_execution_id"] == (
         f"ase_{17:032x}"
     )
+
+    older_trace = trace_rows(18, 1)
+    older_trace.pop("owner_pass_results")
+    third = coherence._append_owner_execution_history(
+        second, older_trace, trace_sequence=3,
+        session_id="ses_incremental_fixture",
+    )
+    third_projection = coherence.project_owner_execution_history(third)
+    assert third_projection["rows"][-1][
+        "owner_result_observation_status"
+    ] == "not-recorded-on-trace"
+
+    missing_result = trace_rows(19, 1)
+    missing_result["owner_pass_results"] = []
+    fourth = coherence._append_owner_execution_history(
+        third, missing_result, trace_sequence=4,
+        session_id="ses_incremental_fixture",
+    )
+    fourth_projection = coherence.project_owner_execution_history(fourth)
+    assert fourth_projection["rows"][-1][
+        "owner_result_observation_status"
+    ] == "not-recorded-in-results"
 
 
 def test_warm_tick_has_zero_processes_and_writes(participant):

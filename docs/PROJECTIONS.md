@@ -1580,10 +1580,21 @@ across persisted scheduler passes. Their coverage is marked
 this field was introduced is not reconstructed. A scoped invocation whose ID
 has left `last_trace` can still relate to an exact retained row through
 `retained_trace_relation`, `retained_trace_sequence`, and the corresponding
-retained outcome and resource fields. `latest_trace_relation` continues to
-describe only the latest trace. This history improves continuity within one
-session but does not provide cross-session recurrence or prove that a service
-was needed or fulfilled an agent need.
+retained outcome and resource fields. Retained rows also preserve the exact
+scheduler result classification, content identity, source-reference status,
+reuse flag, and explicit `not-established` verification status when those
+fields were present on the trace. The ECI view exposes these as
+`retained_trace_owner_result_*`; exact latest rows use
+`latest_trace_owner_result_*`. Tight response budgets retain the result
+observation, classification, and verification labels; they may omit the full
+content identity and reference status to preserve the correlated execution
+group. A result classification describes the returned owner result envelope,
+not correctness or service fulfillment. Missing result coverage and
+unavailable historical values remain distinct from a recorded result.
+`latest_trace_relation` continues to describe only the latest trace.
+This history improves continuity within one session but does not provide
+cross-session recurrence or prove that a service was needed or fulfilled an
+agent need.
 
 `session_activity.retirement_activity` relates the selected session's
 `environment.retirement.requested`, `environment.retirement.target-completed`,
