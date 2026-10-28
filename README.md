@@ -39,6 +39,9 @@ The selected Forge must publish its resident descriptors. Provider effects
 still require the session's applicable rights and fresh scope eligibility;
 isolated selected non-main linked worktree effects do not require a persistent
 claim, while shared main and whole-tree Doctor remediation remain claim-gated.
+Retirement requires writable rights and an exact branch, registered-worktree,
+or metadata-prune operation; its adapter checks reachability, checkout state,
+and applicable live claim conflicts.
 Environment-mediated provider writes to one checkout are serialized by a
 kernel-scoped lock for the invocation and exposed with release evidence;
 separate worktrees can progress independently.
@@ -142,7 +145,7 @@ A stable binding from a session to a capability provided by another MNCS service
 
 ### AuthorityContext
 
-The explicit limits under which the session operates: readable and writable resources, executable capabilities, protected work, actions that always require escalation, actions that require a current scoped claim, and provenance expectations. `merge` and `publish` require writable repository rights and an exact observed or explicit operation scope; they do not require a persistent claim. A repository target resolves through the selected checkout, a unique matching workspace root, or—when neither is projected—the registered checkout containing the session's `.mncs` definition. Each destination is freshly inspected; explicit scopes retain their named branch constraint. Overlapping claims remain coordination evidence, while Git enforces its native concurrent reference update checks. Claims still protect ordinary shared-worktree mutation and scoped retirement; `delete` remains escalation-gated. An isolated campaign may select a different registered checkout only when it is anchored to the selected checkout's same Git common directory and repository identity.
+The explicit limits under which the session operates: readable and writable resources, executable capabilities, protected work, actions that always require escalation, actions that require a current scoped claim, and provenance expectations. `merge` and `publish` require writable repository rights and an exact observed or explicit operation scope; they do not require a persistent claim. A repository target resolves through the selected checkout, a unique matching workspace root, or—when neither is projected—the registered checkout containing the session's `.mncs` definition. Each destination is freshly inspected; explicit scopes retain their named branch constraint. Overlapping claims remain coordination evidence, while Git enforces its native concurrent reference update checks. Claims still protect ordinary shared-worktree mutation; exact retirement is admitted by writable rights and checked by the retirement adapter. `delete` remains escalation-gated. An isolated campaign may select a different registered checkout only when it is anchored to the selected checkout's same Git common directory and repository identity.
 
 ### Event / Trigger
 
@@ -197,7 +200,7 @@ state, not prose. The hardening campaign added:
   observational; normal scoped acquisition still revalidates and the summary
   neither mutates a claim nor asserts that an arbitrary host process stopped.
 - ownership/acquisition authority with tri-state enforcement (`mncs_env/authority.py`);
-- verified local branch/worktree retirement gated by the session's exact live claim; general delete authority remains separate;
+- verified local branch/worktree retirement gated by writable rights and exact-target adapter checks; general delete authority remains separate;
 - rights/provenance gate over `mncs-rights-provenance` (`mncs_env/rights.py`);
 - bounded first-use Rights & Provenance context from an explicit Environment
   binding, with digest-based revalidation and `rights.context.changed` events;

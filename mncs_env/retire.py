@@ -617,7 +617,7 @@ def _assess_registered_worktree(
         holders = sorted({str(item.get("consumer_id", "?")) for item in blockers})
         return {"retireable": False,
                 "reason": f"live claims by other sessions: {', '.join(holders)}"}
-    return {"retireable": True, "reason": "clean and unclaimed"}
+    return {"retireable": True, "reason": "clean and free of conflicting live claims"}
 
 
 def retire_branch(repo: Path, branch: str, *, canonical: str = DEFAULT_CANONICAL_REF,

@@ -63,7 +63,7 @@ PROPOSAL_ONLY_AUTHORIZATION_BASIS = "isolated-proposal-scope"
 # recovery evidence; they are not a persistent privilege required to integrate
 # an explicitly scoped change into a writable repository.
 ESCALATION_ACTIONS = ("delete",)
-CLAIM_REQUIRED_ACTIONS = ("delegate", "retire")
+CLAIM_REQUIRED_ACTIONS = ("delegate",)
 CLAIM_CONFLICT_SCHEMA = "mncs.environment.authority-claim-conflict/1"
 _EVIDENCE_IDENTIFIER = re.compile(r"[A-Za-z0-9:._-]{1,160}")
 MAX_INTEGRATION_COORDINATION_OVERLAPS = 8
@@ -563,6 +563,11 @@ def evaluate(
     integration_coordination_overlaps: list[dict[str, Any]] = []
     integration_coordination_overlap_count = 0
     for other in others:
+        if action == "retire":
+            # The retirement adapter owns Git target safety and its applicable
+            # live-claim conflict contract. Do not duplicate those checks as a
+            # generic authority-level overlap defer.
+            continue
         if not conflict_checked:
             continue
         other_scope = other.get("scope") or {"kind": "repository"}
@@ -765,29 +770,58 @@ def evaluate(
             ),
         }
     if action == "retire":
-        # Local Git retirement is narrower than general deletion: the
-        # retirement adapter must first prove that the exact branch or
-        # checkout is safe to remove. It still requires a current claim
-        # covering that scope and declared write intent for the repository.
+        # Local Git retirement is narrower than general deletion. The adapter
+        # proves target safety and checks applicable claim conflicts before it
+        # mutates; a persistent claim is not itself evidence that a target is
+        # safe to remove.
         if repo not in context.get("writable", []):
             return {"verdict": "deny",
                     "reason": f"{repo} is outside this session's writable authority"}
-        owned = any(_covers(h.get("scope") or {}, requested or {}) for h in own)
-        if owned:
-            return {"verdict": "allow",
-                    "decision_domain": "eligibility",
-                    "authorization_basis": "session-writable-scope",
-                    "coordination_status": "scoped-mutation-lease-held",
-                    "persistent_authority_required": False,
-                    "reason": f"{target} retirement by scoped claim"}
-        return {"verdict": "defer",
-                "required_coordination": "scoped-mutation-lease",
+        exact_branch_scope = (
+            isinstance(requested, dict)
+            and requested.get("kind") == "repository"
+            and isinstance(requested.get("branch"), str)
+            and bool(requested.get("branch"))
+        )
+        exact_worktree_scope = (
+            isinstance(requested, dict)
+            and requested.get("kind") == "worktree"
+            and isinstance(requested.get("checkout"), str)
+            and bool(requested.get("checkout"))
+        )
+        exact_prune_operation = (
+            isinstance(scope, dict)
+            and scope.get("kind") == "repository"
+            and scope.get("operation") == "prune"
+        )
+        if scope is None or not (
+            exact_branch_scope or exact_worktree_scope or exact_prune_operation
+        ):
+            return {
+                "verdict": "defer",
                 "decision_domain": "coordination",
-                "authorization_basis": "session-writable-scope",
-                "coordination_status": "exact-scope-lease-required",
+                "required_coordination": "operation-scope",
+                "coordination_status": "exact-operation-scope-required",
                 "persistent_authority_required": False,
-                "next_step": "acquire-exact-scope-lease",
-                "reason": f"{target} retirement requires a current claim covering the requested scope"}
+                "next_step": "select-an-exact-retirement-target",
+                "reason": (
+                    f"{target} retirement needs an exact branch or registered-worktree target"
+                ),
+            }
+        return {
+            "verdict": "allow",
+            "decision_domain": "eligibility",
+            "authorization_basis": "writable-repository-rights",
+            "eligibility_basis": "exact-retirement-target-and-adapter-safety-checks",
+            "coordination_status": "target-conflicts-checked-by-retirement-adapter",
+            "persistent_claim_required": False,
+            "persistent_authority_required": False,
+            "operation_executed": False,
+            "reason": (
+                f"{target} is eligible for exact target and concurrency checks "
+                "by the retirement adapter"
+            ),
+        }
     if action in MUTATING_ACTIONS:
         facts = (repo_facts or {}).get(repo, {})
         owned = any(

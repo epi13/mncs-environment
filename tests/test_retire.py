@@ -330,7 +330,7 @@ class RetireTests(unittest.TestCase):
         self.assertIn("git refused", result["reason"])
         self.assertEqual(retire_module.local_branches(self.repo)["feature/cas"], new_head)
 
-    def test_cli_requires_retirement_authority_before_branch_mutation(self):
+    def test_cli_stops_when_policy_denies_before_branch_mutation(self):
         class Session:
             def __init__(self):
                 self.calls = []
@@ -370,12 +370,22 @@ class RetireTests(unittest.TestCase):
         self.assertEqual(result, 3)
         self.assertEqual(session.calls, [{
             "action": "retire", "target": self.name,
-            "scope": {"kind": "repository"},
+            "scope": {"kind": "repository", "branch": "feature/x"},
         }])
         retire_branch.assert_not_called()
         self.assertIn('"mutation_performed": false', error.getvalue())
 
-    def test_cli_reports_retirement_lease_deferral_as_coordination(self):
+    def test_prune_spec_is_an_exact_operation_scope(self):
+        args = argparse.Namespace(prune=True, branch=[], worktree=[])
+        specs = cli_module._retirement_specs(args, self.repo)
+        self.assertEqual(len(specs), 1)
+        self.assertEqual(specs[0]["kind"], "prune")
+        self.assertEqual(
+            specs[0]["scope"],
+            {"kind": "repository", "operation": "prune"},
+        )
+
+    def test_cli_reports_missing_retirement_target_as_coordination(self):
         class Session:
             def __init__(self):
                 self.calls = []
@@ -387,12 +397,12 @@ class RetireTests(unittest.TestCase):
                 return {
                     "verdict": "defer",
                     "decision_domain": "coordination",
-                    "required_coordination": "scoped-mutation-lease",
-                    "coordination_status": "exact-scope-lease-required",
+                    "required_coordination": "operation-scope",
+                    "coordination_status": "exact-operation-scope-required",
                     "persistent_authority_required": False,
-                    "next_step": "acquire-exact-scope-lease",
+                    "next_step": "select-an-exact-retirement-target",
                     "operation_executed": False,
-                    "reason": "branch retirement needs an exact scoped lease",
+                    "reason": "branch retirement needs an exact target",
                 }
 
             def request_event(self, *_args):
@@ -432,14 +442,14 @@ class RetireTests(unittest.TestCase):
         self.assertEqual(diagnostics["verdict"], "defer")
         self.assertEqual(diagnostics["decision_domain"], "coordination")
         self.assertEqual(
-            diagnostics["required_coordination"], "scoped-mutation-lease",
+            diagnostics["required_coordination"], "operation-scope",
         )
         self.assertEqual(
-            diagnostics["coordination_status"], "exact-scope-lease-required",
+            diagnostics["coordination_status"], "exact-operation-scope-required",
         )
         self.assertFalse(diagnostics["persistent_authority_required"])
         self.assertEqual(
-            diagnostics["next_step"], "acquire-exact-scope-lease",
+            diagnostics["next_step"], "select-an-exact-retirement-target",
         )
         self.assertFalse(diagnostics["mutation_performed"])
 

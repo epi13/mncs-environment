@@ -484,7 +484,9 @@ extending the same session's claim. This is a coordination defer, not a request
 for approval or a transfer. A repository-wide claim remains visible as
 coordination context but does not reserve every proposal branch; claims naming
 the same checkout, overlapping paths, or the same attached branch still
-block. Retiring a checkout remains claim-gated. Each accepted proposal
+block. Retirement requires writable repository rights and an exact target;
+the retirement adapter checks target state and applicable live claim
+conflicts. Each accepted proposal
 preflight is recorded as `authority.proposal-eligible`; when an absolute target
 or selected proposal checkout is freshly inspected, the event also records
 bounded checkout identity, branch, HEAD, and working-tree status at preflight.
@@ -785,6 +787,11 @@ It reuses the normal retirement checks, includes current claim holders, and
 reports missing or out-of-scope checkout paths without pruning them. Inventory
 is read-only; deletion still requires individually selected targets and a
 separate retirement invocation.
+Local retirement requires writable repository rights and an exact branch,
+registered-worktree, or metadata-prune operation. A persistent claim is not
+required; the retirement adapter verifies target safety and applies its
+existing live-claim conflict checks before removing a worktree or local
+branch. Prune only removes metadata for worktree directories already missing.
 
 When the authenticated Control bridge runs retirement from its owner namespace,
 it supplies the exact protected-project-to-host-project path mapping. Environment

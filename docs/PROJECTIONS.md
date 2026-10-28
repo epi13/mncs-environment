@@ -603,7 +603,14 @@ retire a checkout retain the conflict. Ref-changing execution and integration
 still require their operation-specific eligibility checks and Git-native
 concurrency handling. Missing checkout identity remains conservative.
 Main-checkout mutations retain the existing clean-state or exact-claim checks,
-and checkout retirement remains claim-gated.
+while local retirement requires writable repository rights and an exact branch,
+registered-worktree, or metadata-prune operation. Retirement does not require
+a persistent claim: its adapter checks merge reachability, checkout
+cleanliness and identity, registered-worktree state, and applicable live claim
+conflicts before using Git-native conditional ref updates, worktree removal,
+or removal of records for missing worktree directories. The authority result
+only admits those checks; it does not establish that a target is safe or that
+retirement executed.
 The bounded `session_activity.proposal_eligibility` projection exposes
 validated `authority.proposal-eligible` records, their objective references,
 observed worktree scope, whether repository write scope was present at the

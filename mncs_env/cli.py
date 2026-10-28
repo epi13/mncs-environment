@@ -1787,9 +1787,9 @@ def _retirement_specs(args: argparse.Namespace, repo: Path) -> list[dict[str, An
     specs: list[dict[str, Any]] = []
     if args.prune:
         specs.append({"kind": "prune", "target": str(repo),
-                      "scope": {"kind": "repository"}})
+                      "scope": {"kind": "repository", "operation": "prune"}})
     specs.extend({"kind": "branch", "target": branch,
-                  "scope": {"kind": "repository"}}
+                  "scope": {"kind": "repository", "branch": branch}}
                  for branch in args.branch or [])
     for raw_path in args.worktree or []:
         path = Path(raw_path)
@@ -2887,7 +2887,10 @@ def build_parser() -> argparse.ArgumentParser:
     artifact_read.set_defaults(func=cmd_artifact_read)
 
     retire = sub.add_parser("retire", help="retire merged branches and spent worktrees")
-    retire.add_argument("session", help="session id (claim context; own claims do not block)")
+    retire.add_argument(
+        "session",
+        help="session id (writable authority and conflict context; own claims do not block)",
+    )
     retire.add_argument("--repository", required=True,
                         help="repository name (under the session workspace) or absolute path")
     retire.add_argument("--branch", action="append", default=[],

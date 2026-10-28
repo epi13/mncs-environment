@@ -16,7 +16,7 @@ def _context() -> dict:
         "protected_repositories": [],
         "claim_holders": {},
         "escalation_required": ["delete"],
-        "claim_required_actions": ["delegate", "retire"],
+        "claim_required_actions": ["delegate"],
     }
 
 
@@ -70,7 +70,7 @@ def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None
             "exact-observed-scope-and-repository-native-concurrency"
         )
 
-    for action in ("retire", "write"):
+    for action in ("write",):
         decision = authority.evaluate(
             context,
             action=action,
@@ -98,7 +98,70 @@ def test_scoped_delivery_uses_writable_rights_without_persistent_claim() -> None
     )
     assert unscoped["verdict"] == "defer"
     assert unscoped["required_coordination"] == "operation-scope"
+
+    prune = authority.evaluate(
+        context,
+        action="retire",
+        target="mncs-environment",
+        session_id="ses_campaign",
+        claims={},
+        scope={"kind": "repository", "operation": "prune"},
+    )
+    assert prune["verdict"] == "allow"
+    assert prune["persistent_claim_required"] is False
+
+    unknown_operation = authority.evaluate(
+        context,
+        action="retire",
+        target="mncs-environment",
+        session_id="ses_campaign",
+        claims={},
+        scope={"kind": "repository", "operation": "delete-all"},
+    )
+    assert unknown_operation["verdict"] == "defer"
     assert "required_authorization" not in unscoped
+
+
+def test_retirement_uses_exact_target_and_writable_rights_without_claim() -> None:
+    context = _context()
+    branch_scope = {"kind": "repository", "branch": "campaign/merged"}
+    decision = authority.evaluate(
+        context,
+        action="retire",
+        target="mncs-environment",
+        session_id="ses_campaign",
+        claims={},
+        scope=branch_scope,
+    )
+    assert decision["verdict"] == "allow"
+    assert decision["decision_domain"] == "eligibility"
+    assert decision["authorization_basis"] == "writable-repository-rights"
+    assert decision["eligibility_basis"] == (
+        "exact-retirement-target-and-adapter-safety-checks"
+    )
+    assert decision["persistent_claim_required"] is False
+    assert decision["persistent_authority_required"] is False
+    assert decision["operation_executed"] is False
+
+    unscoped = authority.evaluate(
+        context,
+        action="retire",
+        target="mncs-environment",
+        session_id="ses_campaign",
+        claims={},
+    )
+    assert unscoped["verdict"] == "defer"
+    assert unscoped["required_coordination"] == "operation-scope"
+
+    read_only = authority.evaluate(
+        {**context, "writable": []},
+        action="retire",
+        target="mncs-environment",
+        session_id="ses_campaign",
+        claims={},
+        scope=branch_scope,
+    )
+    assert read_only["verdict"] == "deny"
 
 
 def test_unassigned_agent_can_propose_only_in_an_observed_non_main_worktree() -> None:

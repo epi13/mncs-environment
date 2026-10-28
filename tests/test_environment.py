@@ -1612,53 +1612,48 @@ class AuthorityTests(unittest.TestCase):
                                      target="x", session_id="ses_x")
         self.assertEqual(verdict["verdict"], "deny")
 
-    def test_retire_requires_a_current_claim(self) -> None:
-        unclaimed = authority.evaluate(
+    def test_retire_requires_target_scope_and_write_intent_not_a_claim(self) -> None:
+        unscoped = authority.evaluate(
             context_for(), action="retire", target="mncs-atlas",
             session_id="ses_mine", repo_facts=CLEAN_FACTS,
         )
-        self.assertEqual(unclaimed["verdict"], "defer")
+        self.assertEqual(unscoped["verdict"], "defer")
         self.assertEqual(
-            unclaimed["required_coordination"], "scoped-mutation-lease",
+            unscoped["required_coordination"], "operation-scope",
         )
-        self.assertNotIn("required_authorization", unclaimed)
+        self.assertNotIn("required_authorization", unscoped)
 
-        owned = authority.evaluate(
+        branch_scope = {"kind": "repository", "branch": "feature/merged"}
+        eligible = authority.evaluate(
             context_for(), action="retire", target="mncs-atlas",
-            session_id="ses_mine",
-            claims={"mncs-atlas": "ses_mine"},
-            repo_facts=DIRTY_FACTS,
+            session_id="ses_mine", claims={},
+            repo_facts=DIRTY_FACTS, scope=branch_scope,
         )
-        self.assertEqual(owned["verdict"], "allow")
+        self.assertEqual(eligible["verdict"], "allow")
+        self.assertFalse(eligible["persistent_claim_required"])
+        self.assertFalse(eligible["operation_executed"])
 
-    def test_retire_claim_must_cover_exact_worktree(self) -> None:
+        read_only = authority.evaluate(
+            {**context_for(), "writable": []},
+            action="retire", target="mncs-atlas", session_id="ses_mine",
+            claims={}, repo_facts=DIRTY_FACTS, scope=branch_scope,
+        )
+        self.assertEqual(read_only["verdict"], "deny")
+
+    def test_retire_uses_exact_worktree_scope_without_persistent_claim(self) -> None:
         target = "/workspace/mncs-atlas/.worktrees/target"
-        other = "/workspace/mncs-atlas/.worktrees/other"
         scope = {"kind": "worktree", "checkout": target, "branch": "feature/x"}
-        held_elsewhere = {
-            "mncs-atlas": [{
-                "session_id": "ses_mine",
-                "scope": {"kind": "worktree", "checkout": other,
-                          "branch": "feature/x"},
-            }],
-        }
-        denied = authority.evaluate(
+        eligible = authority.evaluate(
             context_for(), action="retire", target="mncs-atlas",
-            session_id="ses_mine", claims=held_elsewhere, scope=scope,
+            session_id="ses_mine", claims={}, scope=scope,
         )
-        self.assertEqual(denied["verdict"], "defer")
-        self.assertNotIn("required_authorization", denied)
-
-        exact = {
-            "mncs-atlas": [{"session_id": "ses_mine", "scope": scope}],
-        }
-        allowed = authority.evaluate(
-            context_for(), action="retire", target="mncs-atlas",
-            session_id="ses_mine", claims=exact, scope=scope,
+        self.assertEqual(eligible["verdict"], "allow")
+        self.assertEqual(
+            eligible["coordination_status"],
+            "target-conflicts-checked-by-retirement-adapter",
         )
-        self.assertEqual(allowed["verdict"], "allow")
 
-    def test_retire_defers_competing_claim_and_preserves_delete_escalation(self) -> None:
+    def test_retirement_claim_conflicts_are_adapter_scoped_and_delete_escalates(self) -> None:
         scope = {"kind": "worktree", "checkout": "/repo/.worktrees/x"}
         competing = authority.evaluate(
             context_for(), action="retire", target="mncs-atlas",
@@ -1667,7 +1662,11 @@ class AuthorityTests(unittest.TestCase):
                 "session_id": "ses_other", "scope": {**scope, "repository": "mncs-atlas"},
             }]},
         )
-        self.assertEqual(competing["verdict"], "defer")
+        self.assertEqual(competing["verdict"], "allow")
+        self.assertEqual(
+            competing["coordination_status"],
+            "target-conflicts-checked-by-retirement-adapter",
+        )
 
         delete_context = context_for(denied=[], escalation_required=["delete"])
         delete = authority.evaluate(
@@ -6425,7 +6424,7 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(authority_context["escalation_required"], [])
             self.assertEqual(
                 authority_context["claim_required_actions"],
-                ["delegate", "retire"],
+                ["delegate"],
             )
 
     def test_merge_and_publish_use_the_selected_worktree_as_operation_scope(self) -> None:
