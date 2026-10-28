@@ -3305,6 +3305,10 @@ def _compact_service_accountability_overview(
         "declared_service_count", "projected_service_count",
         "available_service_capability_binding_count",
         "exact_binding_use_observed_count", "capability_name_use_observed_count",
+        "explicit_session_invoke_observation_status",
+        "explicit_session_invoke_coverage_status",
+        "explicit_session_invoke_capability_count",
+        "explicit_session_invoke_count",
         "eligible_service_opportunity_count", "ambient_fulfillment_status",
         "agent_intervention_burden_status", "agent_receipt_status",
         "outcome_quality_status", "readiness_probe_opportunity_count",
@@ -23338,6 +23342,13 @@ def _service_ambient_owner_pass_observation(
             "status": "probe-capability-not-recorded",
             "scope": "selected-session-event-window",
             "event_window_status": event_window_status,
+            "explicit_session_invoke_activity": {
+                "status": "capability-not-recorded",
+                "invocation_count": None,
+                "completion_count": None,
+                "agent_attribution_status": "not-established",
+                "agent_intervention_burden_status": "not-measured",
+            },
             "scoped_invocation_count": 0,
             "scoped_completion_count": 0,
             "unclassified_invocation_count": 0,
@@ -23357,6 +23368,13 @@ def _service_ambient_owner_pass_observation(
             "status": "session-activity-unavailable",
             "scope": "selected-session-event-window",
             "event_window_status": "not-available",
+            "explicit_session_invoke_activity": {
+                "status": "activity-unavailable",
+                "invocation_count": None,
+                "completion_count": None,
+                "agent_attribution_status": "not-established",
+                "agent_intervention_burden_status": "not-measured",
+            },
             "scoped_invocation_count": 0,
             "scoped_completion_count": 0,
             "unclassified_invocation_count": 0,
@@ -23700,6 +23718,135 @@ def _service_ambient_owner_pass_observation(
             "These capability calls have no valid owner-pass context. The explicit request-surface marker identifies the mncs-env invoke CLI path when both events agree, but does not identify the actor or establish that ambient service work was due, that this was manual fallback, or that the service failed."
         ),
     }
+    explicit_session_invoke_rows = [
+        row for row in unclassified_rows
+        if row.get("request_surface") == (
+            invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE
+        ) and row.get("request_surface_relation_status")
+        == "matched-explicit-session-invoke"
+    ]
+    explicit_session_invocations = sum(
+        row.get("invocation_count", 0)
+        for row in explicit_session_invoke_rows
+        if type(row.get("invocation_count")) is int
+        and row["invocation_count"] >= 0
+    )
+    explicit_session_completions = sum(
+        row.get("completion_count", 0)
+        for row in explicit_session_invoke_rows
+        if type(row.get("completion_count")) is int
+        and row["completion_count"] >= 0
+    )
+    explicit_session_event_references: list[dict[str, Any]] = []
+    explicit_session_event_identities: set[str] = set()
+    explicit_session_references_truncated = False
+    for row in explicit_session_invoke_rows:
+        references = row.get("supporting_events")
+        if not isinstance(references, list):
+            continue
+        explicit_session_references_truncated = (
+            explicit_session_references_truncated
+            or row.get("supporting_events_truncated") is True
+        )
+        for reference in references:
+            if (not isinstance(reference, dict)
+                    or not isinstance(reference.get("identity"), str)
+                    or type(reference.get("sequence")) is not int
+                    or not isinstance(reference.get("type"), str)
+                    or reference["identity"] in explicit_session_event_identities):
+                continue
+            explicit_session_event_identities.add(reference["identity"])
+            if len(explicit_session_event_references) < MAX_CAPABILITY_SUPPORTING_EVENTS:
+                explicit_session_event_references.append({
+                    key: reference[key]
+                    for key in ("identity", "sequence", "type")
+                })
+            else:
+                explicit_session_references_truncated = True
+    if explicit_session_invoke_rows:
+        explicit_session_invoke_status = "explicit-session-invoke-observed"
+    elif projected_activity_incomplete:
+        explicit_session_invoke_status = "not-established-activity-incomplete"
+    elif event_window_status == "not-available":
+        explicit_session_invoke_status = "activity-window-unavailable"
+    elif event_window_status == "complete-session-history":
+        explicit_session_invoke_status = (
+            "not-observed-in-complete-session-history"
+        )
+    else:
+        explicit_session_invoke_status = (
+            "not-observed-in-selected-event-window"
+        )
+    projected_explicit_session_rows = [
+        row for row in unclassified_probe_calls
+        if row.get("request_surface") == (
+            invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE
+        ) and row.get("request_surface_relation_status")
+        == "matched-explicit-session-invoke"
+    ]
+    explicit_session_binding_statuses = {
+        row["binding_attribution_status"]
+        for row in projected_explicit_session_rows
+        if isinstance(row.get("binding_attribution_status"), str)
+    }
+    explicit_session_references_truncated = (
+        explicit_session_references_truncated
+        or len(projected_explicit_session_rows) < len(explicit_session_invoke_rows)
+    )
+    if not explicit_session_invoke_rows:
+        explicit_session_binding_status = "not-applicable-no-invocation-observed"
+    elif (len(projected_explicit_session_rows) == len(explicit_session_invoke_rows)
+          and len(explicit_session_binding_statuses) == 1):
+        explicit_session_binding_status = next(iter(
+            explicit_session_binding_statuses,
+        ))
+    elif explicit_session_binding_statuses:
+        explicit_session_binding_status = "partial-per-invocation-attribution"
+    else:
+        explicit_session_binding_status = "call-attribution-details-omitted"
+    if explicit_session_invoke_rows and scoped_rows:
+        ambient_co_observation_status = (
+            "same-capability-session-invoke-and-owner-pass-use-co-observed"
+        )
+    elif explicit_session_invoke_rows:
+        ambient_co_observation_status = (
+            "no-same-capability-owner-pass-call-observed-in-selected-window"
+        )
+    else:
+        ambient_co_observation_status = (
+            "not-applicable-no-explicit-session-invoke-observed"
+        )
+    explicit_session_invoke_activity = {
+        "status": explicit_session_invoke_status,
+        "invocation_count": explicit_session_invocations,
+        "completion_event_count": explicit_session_completions,
+        "ambient_co_observation_status": ambient_co_observation_status,
+        "agent_attribution_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+    }
+    if explicit_session_invoke_rows:
+        explicit_session_invoke_activity.update({
+            "request_surface": (
+                invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE
+            ),
+            "coverage_status": (
+                "partial-bounded-activity-projection"
+                if projected_activity_incomplete else
+                "complete-session-history"
+                if event_window_status == "complete-session-history" else
+                "selected-session-event-window"
+                if event_window_status != "not-available" else "unavailable"
+            ),
+            "binding_attribution_status": explicit_session_binding_status,
+            "supporting_events": explicit_session_event_references,
+            "supporting_events_truncated": explicit_session_references_truncated,
+        })
+    scoped_invocations = sum(
+        row["row"].get("invocation_count", 0)
+        for row in scoped_rows
+        if type(row["row"].get("invocation_count")) is int
+        and row["row"]["invocation_count"] >= 0
+    )
     if any(item["exact_binding"] for item in scoped_rows):
         status = "exact-current-probe-binding-invocation-observed"
         binding_attribution = "exact-current-session-binding"
@@ -23730,17 +23877,14 @@ def _service_ambient_owner_pass_observation(
             "exact-declared-probe-capability-name"
         ),
         "binding_attribution_status": binding_attribution,
-        "scoped_invocation_count": sum(
-            row["row"].get("invocation_count", 0)
-            for row in scoped_rows
-            if type(row["row"].get("invocation_count")) is int
-        ),
+        "scoped_invocation_count": scoped_invocations,
         "scoped_completion_count": sum(
             row["row"].get("completion_count", 0)
             for row in scoped_rows
             if type(row["row"].get("completion_count")) is int
         ),
         "unclassified_invocation_count": unclassified_invocation_count,
+        "explicit_session_invoke_activity": explicit_session_invoke_activity,
         "invalid_context_invocation_count": invalid_context_invocation_count,
         "owner_pass_executions": owner_pass_executions[:4],
         "owner_pass_executions_omitted_count": max(
@@ -24782,6 +24926,62 @@ def _session_service_accountability(
     declared_service_count = readiness_summary.get("declared_service_count")
     if type(declared_service_count) is not int or declared_service_count < 0:
         declared_service_count = len(raw_services)
+    explicit_session_invocations_by_capability: dict[str, int] = {}
+    explicit_session_activity_incomplete = False
+    for service in services:
+        capability = service.get("capability")
+        activity = service.get("ambient_owner_pass_activity")
+        direct_activity = (
+            activity.get("explicit_session_invoke_activity")
+            if isinstance(activity, dict) else None
+        )
+        if not isinstance(direct_activity, dict):
+            explicit_session_activity_incomplete = True
+            continue
+        if (direct_activity.get("status") in {
+            "not-established-activity-incomplete", "activity-window-unavailable",
+            "activity-unavailable", "capability-not-recorded",
+        } or direct_activity.get("coverage_status")
+                == "partial-bounded-activity-projection"):
+            explicit_session_activity_incomplete = True
+        if (direct_activity.get("status")
+                != "explicit-session-invoke-observed"
+                or not isinstance(capability, str)):
+            continue
+        count = direct_activity.get("invocation_count", 0)
+        if type(count) is not int or count < 0:
+            count = 0
+        # The same capability can back multiple readiness declarations; count
+        # its event-group total once in the summary.
+        explicit_session_invocations_by_capability[capability] = max(
+            count,
+            explicit_session_invocations_by_capability.get(capability, 0),
+        )
+    explicit_session_invoke_count = sum(
+        explicit_session_invocations_by_capability.values()
+    )
+    if explicit_session_invocations_by_capability:
+        explicit_session_invoke_status = "observed"
+    elif explicit_session_activity_incomplete:
+        explicit_session_invoke_status = "partial"
+    elif ambient_event_window_status == "not-available":
+        explicit_session_invoke_status = "not-measured"
+    elif event_window_complete and len(services) == declared_service_count:
+        explicit_session_invoke_status = (
+            "no-explicit-session-invocation-observed-in-complete-history"
+        )
+    else:
+        explicit_session_invoke_status = (
+            "not-observed-in-selected-session-event-window"
+        )
+    explicit_session_invoke_coverage = (
+        "not-available" if ambient_event_window_status == "not-available"
+        else "complete-session-history"
+        if (event_window_complete and len(services) == declared_service_count
+            and not explicit_session_activity_incomplete)
+        else "partial-session-history-projection"
+        if event_window_complete else "selected-session-event-window"
+    )
     summary = {
         "declared_service_count": declared_service_count,
         "projected_service_count": len(services),
@@ -24791,6 +24991,16 @@ def _session_service_accountability(
         "available_service_capability_binding_count": available_binding_count,
         "exact_binding_use_observed_count": exact_binding_use_count,
         "capability_name_use_observed_count": capability_name_use_count,
+        "explicit_session_invoke_observation_status": (
+            explicit_session_invoke_status
+        ),
+        "explicit_session_invoke_coverage_status": (
+            explicit_session_invoke_coverage
+        ),
+        "explicit_session_invoke_capability_count": len(
+            explicit_session_invocations_by_capability,
+        ),
+        "explicit_session_invoke_count": explicit_session_invoke_count,
         "ambient_probe_use_relation_status_counts": dict(sorted(
             ambient_probe_use_relation_counts.items(),
         )),

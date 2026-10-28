@@ -5765,6 +5765,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert ambient_probe_activity["event_window_status"] == (
         "complete-session-history"
     )
+    assert ambient_probe_activity["explicit_session_invoke_activity"][
+        "status"
+    ] == "not-observed-in-complete-session-history"
     assert ambient_probe_activity["scoped_invocation_count"] == 1
     assert ambient_probe_activity["scoped_completion_count"] == 1
     assert ambient_probe_activity["owner_pass_executions"] == [{
@@ -5891,6 +5894,65 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert unclassified_probe["activity_groups"][0][
         "request_surface_relation_status"
     ] == "matched-explicit-session-invoke"
+    explicit_invoke = unclassified_activity[
+        "explicit_session_invoke_activity"
+    ]
+    assert explicit_invoke["status"] == "explicit-session-invoke-observed"
+    assert explicit_invoke["request_surface"] == "mncs-env-invoke-cli"
+    assert explicit_invoke["invocation_count"] == 1
+    assert explicit_invoke["completion_event_count"] == 1
+    assert explicit_invoke["binding_attribution_status"] == (
+        "exact-current-session-binding"
+    )
+    assert explicit_invoke["supporting_events"] == [
+        {
+            "identity": "evt_service_readiness_invoked",
+            "sequence": 1,
+            "type": "capability.invoked",
+        },
+        {
+            "identity": "evt_service_readiness_completed",
+            "sequence": 2,
+            "type": "invocation.completed",
+        },
+    ]
+    assert explicit_invoke["ambient_co_observation_status"] == (
+        "no-same-capability-owner-pass-call-observed-in-selected-window"
+    )
+    assert explicit_invoke["agent_attribution_status"] == "not-established"
+    assert explicit_invoke["agent_intervention_burden_status"] == "not-measured"
+    service_summary = unclassified_result["session_activity"][
+        "service_accountability"
+    ]["summary"]
+    assert service_summary[
+        "explicit_session_invoke_observation_status"
+    ] == "observed"
+    assert service_summary["explicit_session_invoke_capability_count"] == 1
+    assert service_summary["explicit_session_invoke_count"] == 1
+    compact_accountability = (
+        capability_intelligence._compact_service_accountability_overview(
+            unclassified_result["session_activity"]["service_accountability"],
+            unclassified_result["session_activity"]["ambient_service_execution"],
+        )
+    )
+    assert compact_accountability["summary"][
+        "explicit_session_invoke_capability_count"
+    ] == 1
+    assert compact_accountability["summary"][
+        "explicit_session_invoke_count"
+    ] == 1
+    compact_unclassified_result = capability_intelligence.project(
+        session, max_result_bytes=8_000,
+    )
+    compact_unclassified_summary = compact_unclassified_result[
+        "session_activity"
+    ]["service_accountability"]["summary"]
+    assert compact_unclassified_summary[
+        "explicit_session_invoke_observation_status"
+    ] == "observed"
+    assert compact_unclassified_summary[
+        "explicit_session_invoke_capability_count"
+    ] == 1
     assert unclassified_probe["activity_groups"][0][
         "completion_context_status_counts"
     ] == {"not-recorded": 1}

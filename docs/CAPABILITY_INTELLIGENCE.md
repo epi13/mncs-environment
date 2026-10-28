@@ -84,6 +84,18 @@ opportunity, service failure, or reduced intervention. Its digest participates
 in the service-accountability projection identity, including when response-
 budget compaction retains only its summary.
 
+For each declared probe, the per-service view also isolates exact
+`mncs-env invoke` events for that capability and relates them to same-
+capability owner-pass calls in the selected event window. Its compact summary
+counts distinct declared capabilities with explicit invocations, so duplicate
+service declarations do not inflate the total. This is recorded-use evidence,
+not a manual-intervention metric: the marker identifies the CLI path, not the
+actor or whether ambient work was due. Co-observed ambient calls do not prove
+causality or fulfillment. Missing calls remain window-scoped, and partial
+activity remains explicit. Agent need, receipt, and intervention burden stay
+unestablished or unmeasured; no opportunity denominator or effectiveness score
+is inferred.
+
 The compact `owner_decision_summary` groups returned owner-pass observations
 by decision and includes observed result, scheduler-outcome, and verification
 status counts when those fields were recorded. Its source-observation counts
