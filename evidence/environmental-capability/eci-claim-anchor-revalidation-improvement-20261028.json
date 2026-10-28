@@ -1,0 +1,95 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_claim_anchor_improvement_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "committed-claim-revalidation-change-linked-to-targeted-cli-regression-verification",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment session claim acquisition",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_claim_selected_checkout_anchor",
+      "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae",
+      "verification_observation_identity": "ev_environment_eci_claim_anchor_verification_20261028",
+      "subsequent_observation_identity": null
+    },
+    "outcome": {
+      "implementation_change": "Claim preparation now refreshes the selected checkout when an explicit target names another registered worktree, because the selected checkout also anchors repository identity. The requested worktree is still checked independently against its exact live branch and checkout identity; unsupported scope kinds remain ineligible.",
+      "effectiveness_assessment": "targeted-stale-anchor-regression-verified; production burden reduction and recurrence not assessed",
+      "interpretation_limit": "The change removes the reproduced stale-anchor early return. It does not change rights or conflict policy and does not establish that other claim failures should be accepted."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_claim_selected_checkout_anchor",
+    "title": "An explicit worktree claim can be rejected by stale selected-checkout metadata",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment claim acquisition and checkout revalidation",
+    "owner": "mncs-environment",
+    "basis": "The regression test creates a stale selected checkout snapshot and invokes the real claims CLI for a distinct registered worktree with an exact branch precondition; the claim now succeeds after anchor refresh.",
+    "actionable_recommendation": "Observe future exact worktree claims to determine whether stale selected-anchor rejection recurs and whether this targeted refresh removes the manual revalidation step.",
+    "recurrence": "not established across sessions",
+    "not_measured": [
+      "future production claim behavior",
+      "agent intervention or waiting reduction",
+      "other authorization or conflict rejection causes"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_claim_selected_checkout_anchor_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_claim_selected_checkout_anchor",
+    "implementation_reference": {
+      "identity": "mncs_environment_claim_anchor_refresh_5c8a482",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae",
+      "path": "mncs_env/sessions.py",
+      "sha256": "b92813abba11bdf33a0a9b3aab236c2add1015026407bc06fe83c22cef8803e5"
+    },
+    "verification_observation_identity": "ev_environment_eci_claim_anchor_verification_20261028",
+    "subsequent_observation_identity": null,
+    "basis": "A focused CLI regression verifies the stale selected anchor is refreshed to the observed main checkout, the explicit target branch is preserved, the exact claim is held, and session revalidation is recorded.",
+    "effectiveness_assessment": "specific-regression-behavior-verified; post-change production outcome not observed",
+    "not_measured": [
+      "reduced recovery steps in later production workflows",
+      "claim friction frequency or cross-repository recurrence",
+      "effect on unrelated claim failure classes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_claim_anchor_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-claim-anchor-revalidation-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_claim_anchor_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-claim-anchor-revalidation-verification-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_claim_anchor_readback_20261028",
+      "kind": "claim-event-recovery-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-claim-anchor-revalidation-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The test verifies one exact linked-worktree claim flow; it is not a general authorization policy change.",
+    "The recovery readback predates this implementation and is not a post-change effectiveness observation."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

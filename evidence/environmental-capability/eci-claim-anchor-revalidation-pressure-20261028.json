@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_claim_anchor_pressure_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "authentic-session-claim-rejection-event-plus-checkout-validation-source-trace-and-focused-reproduction",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_base_commit": "82b9c25f5b82e6b40bf63e3cb0cd181d7e5dd215"
+  },
+  "observation": {
+    "kind": "stale-selected-checkout-anchor-claim-rejection",
+    "source_interface": "MNCS Environment claims CLI and session event log",
+    "request": {
+      "session_event_identity": "evt_cfa1e1cc28f7f6f3",
+      "event_sequence": 235,
+      "event_type": "lease.acquisition-rejected",
+      "action": "acquire",
+      "repository": "mncs-environment",
+      "scope_kind": "worktree",
+      "explicit_branch_precondition": true
+    },
+    "outcome": {
+      "claim_published": false,
+      "failure_category": "checkout-validation",
+      "failure_code": "working-checkout-unavailable",
+      "entry_snapshot_selected_branch": "campaign/verification-executor-kind-context-20261028",
+      "entry_snapshot_selected_head": "07eb2c62f0b360eefc99560188e613f2110c28d8",
+      "observed_selected_checkout_branch": "main",
+      "observed_selected_checkout_head": "82b9c25f5b82e6b40bf63e3cb0cd181d7e5dd215",
+      "agent_intervention": "The session checkout was resumed with --revalidate; the subsequent exact worktree claim succeeded after the selected checkout anchor was refreshed.",
+      "source_level_cause": "When the explicit claim target was a different linked worktree, the pre-claim refresh returned early instead of refreshing the selected checkout used as the repository-identity anchor. The stale selected branch/head then caused checkout validation to reject the request before the exact target could be checked.",
+      "causal_status": "reproduced-in-focused-regression-test-and-confirmed-by-source-path; one production incident"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_claim_selected_checkout_anchor",
+    "title": "An explicit worktree claim can be rejected by stale selected-checkout metadata",
+    "category": "coordination-and-continuity",
+    "subsystem": "MNCS Environment claim acquisition and checkout revalidation",
+    "owner": "mncs-environment",
+    "basis": "The authentic rejection event records a checkout-validation failure with an explicit branch precondition. Session revalidation refreshed the selected checkout and the subsequent claim succeeded; source inspection and a targeted CLI regression identify the stale selected checkout as the failed anchor when the requested target differs.",
+    "actionable_recommendation": "Refresh the selected repository-identity anchor before validating an explicit linked-worktree target, while retaining exact live target branch and checkout checks.",
+    "recurrence": "one production incident; recurrence not established",
+    "not_measured": [
+      "total recovery time or tool-call cost",
+      "frequency across sessions or repositories",
+      "whether other claim failure codes share the same cause",
+      "agent intervention reduction after the implementation"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "authentic-session-event",
+      "identity": "evt_cfa1e1cc28f7f6f3",
+      "sequence": 235,
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "baseline-claim-implementation",
+      "repository": "mncs-environment",
+      "commit": "82b9c25f5b82e6b40bf63e3cb0cd181d7e5dd215",
+      "path": "mncs_env/sessions.py"
+    }
+  ],
+  "measurement_limits": [
+    "The event does not preserve free-text checkout paths; path-level cause was established by reading the current session snapshot and source code.",
+    "The manual revalidation and subsequent successful claim preceded the code change, so they demonstrate a recovery path rather than post-change burden reduction.",
+    "This incident is not evidence that all work-claim authorization is defective."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

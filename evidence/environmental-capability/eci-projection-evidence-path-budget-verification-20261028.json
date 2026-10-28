@@ -1,0 +1,55 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_projection_path_budget_verification_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "focused-regression-tests-compileall-and-diff-integrity-check",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+  },
+  "observation": {
+    "kind": "implementation-verification-observation",
+    "source_interface": "MNCS Environment focused pytest and Python compileall",
+    "request": {
+      "commands": [
+        "PYTHONPATH=. python3 -m pytest -q tests/test_capability_intelligence.py",
+        "PYTHONPATH=. python3 -m pytest -q tests/test_environment.py -k 'claim_to_other_worktree_refreshes_stale_selected_anchor or claim_can_target_another_registered_worktree_within_authorized_repo or claim_acquisition_revalidates_same_checkout_branch_and_head_drift'",
+        "python3 -m compileall -q mncs_env tests/test_capability_intelligence.py tests/test_environment.py",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "capability_intelligence_tests": "173 passed",
+      "claim_regression_tests": "3 passed, 281 deselected",
+      "compileall": "passed",
+      "diff_check": "passed",
+      "verification_status": "focused-verification-passed",
+      "interpretation_limit": "No full repository suite was run in this slice. Unit verification does not independently establish long-term agent burden reduction or correctness beyond covered cases."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-commit",
+      "repository": "mncs-environment",
+      "commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+    },
+    {
+      "kind": "regression-tests",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "d1fd707a5f443fbc2c86c25de046c86c867c590143bb488889943b1e8264ec13"
+    }
+  ],
+  "measurement_limits": [
+    "The tests exercise synthetic fixtures and a temporary Git checkout for deterministic regression coverage; the separate ECI readback supplies the authentic operational observation.",
+    "No full repository suite, stress test, or cross-session test was run."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_projection_path_budget_pressure_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "paired-live-main-and-campaign-branch-eci-readbacks-of-one-authentic-session-and-evidence-page",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_base_commit": "82b9c25f5b82e6b40bf63e3cb0cd181d7e5dd215"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-evidence-path-compaction-pressure",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "baseline_projection_identity": "eci_a9be0bd79b7dcde7",
+      "repository_branch": "main",
+      "campaign_state_checkpoint_id": "chk_2b8f0fdbf3550d2a",
+      "campaign_evidence_count": 27,
+      "history_pages": 1,
+      "evidence_offset": 22,
+      "evidence_limit": 4
+    },
+    "outcome": {
+      "observation_records_considered": 4,
+      "observation_records_verified": 4,
+      "source_observation_count": 4,
+      "source_pressure_hypothesis_count": 1,
+      "source_improvement_relation_count": 1,
+      "returned_observations": 0,
+      "returned_pressure_hypotheses": 0,
+      "returned_improvement_relations": 0,
+      "observation_records_compacted_out_count": 4,
+      "source_response_byte_count": 158069,
+      "source_response_truncated": true,
+      "final_response_bytes": 63869,
+      "observed_limitation": "At the normal 72 KiB response budget, compaction removed every observation, hypothesis, and improvement row from a page whose four source records had all been integrity-verified. The resulting projection exposed the counts but not the linked path needed to inspect the evidence.",
+      "causal_status": "confirmed-for-projection-response-compaction; agent impact not measured"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_projection_path_budget",
+    "title": "Normal-size ECI compaction can remove every row in an available evidence path",
+    "category": "environmental-observation-and-projection",
+    "subsystem": "MNCS Environment ECI campaign evidence compaction",
+    "owner": "mncs-environment",
+    "basis": "The live main projection considered and integrity-verified four selected campaign observations, including one pressure hypothesis and one improvement relation, but compacted all corresponding rows out of its bounded response.",
+    "actionable_recommendation": "When it fits the declared output budget, preserve one complete occurrence-to-hypothesis-to-improvement path with its exact verification and follow-up references, while disclosing secondary omissions and retaining bounded session context.",
+    "recurrence": "one selected session and one evidence page; recurrence across sessions not established",
+    "not_measured": [
+      "agent receipt or use of the omitted evidence",
+      "agent intervention burden or productivity impact",
+      "recurrence across agents, sessions, or evidence pages",
+      "whether the missing rows caused any prior implementation delay"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "main-baseline-live-projection",
+      "projection_identity": "eci_a9be0bd79b7dcde7",
+      "repository": "mncs-environment",
+      "commit": "82b9c25f5b82e6b40bf63e3cb0cd181d7e5dd215",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "selected-campaign-evidence-page",
+      "checkpoint_id": "chk_2b8f0fdbf3550d2a",
+      "offset": 22,
+      "limit": 4,
+      "verified_record_count": 4
+    }
+  ],
+  "measurement_limits": [
+    "The projection identities are readback identities for one active session and are not stable service identifiers.",
+    "The 158069-byte value is the source response byte count; the 63869-byte value is the final CLI JSON response size.",
+    "The source response truncation flag describes bounded source detail and does not establish loss of the four selected evidence records.",
+    "No agent receipt, fallback action, or intervention cost was measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

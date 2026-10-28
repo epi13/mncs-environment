@@ -1,0 +1,91 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_projection_path_budget_readback_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "paired-live-eci-projection-readback-of-identical-session-evidence-page-before-and-after-implementation",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+  },
+  "observation": {
+    "kind": "environmental-capability-projection-live-readback",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "history_pages": 1,
+      "evidence_offset": 22,
+      "evidence_limit": 4,
+      "baseline_projection_identity": "eci_a9be0bd79b7dcde7",
+      "candidate_projection_identity": "eci_743053a778c39278"
+    },
+    "outcome": {
+      "baseline": {
+        "branch": "main",
+        "source_records_considered": 4,
+        "source_records_verified": 4,
+        "source_response_byte_count": 158069,
+        "final_response_bytes": 63869,
+        "observation_records_compacted_out_count": 4,
+        "returned_observation_count": 0,
+        "returned_pressure_hypothesis_count": 0,
+        "returned_improvement_relation_count": 0
+      },
+      "candidate": {
+        "branch": "campaign/eci-projection-path-budget-20261028",
+        "source_records_considered": 4,
+        "source_records_verified": 4,
+        "source_response_byte_count": 158069,
+        "final_response_bytes": 24530,
+        "observation_records_compacted_out_count": 3,
+        "detail_status": "evidence-priority-response-budget",
+        "returned_observation_identities": [
+          "ev_environment_ambient_owner_result_integrity_pressure_20261028"
+        ],
+        "returned_pressure_hypothesis_identities": [
+          "ph_environment_ambient_owner_result_content_integrity"
+        ],
+        "returned_improvement_relation_identities": [
+          "im_environment_ambient_owner_result_integrity_20261028"
+        ],
+        "linked_relation_effectiveness_assessment": "not-assessed",
+        "linked_verification_and_follow_up_references": "present"
+      },
+      "result": "The candidate returned one complete occurrence, hypothesis, and improvement path with exact verification and follow-up references under the same 72 KiB response bound. Three secondary observation rows remain omitted and the output marks the evidence-priority budget mode.",
+      "effectiveness_assessment": "projection-path-discoverability-behavior-verified-for-this-page; agent use, service fulfillment, and burden reduction not established"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "baseline-live-projection",
+      "projection_identity": "eci_a9be0bd79b7dcde7",
+      "repository": "mncs-environment",
+      "commit": "82b9c25f5b82e6b40bf63e3cb0cd181d7e5dd215"
+    },
+    {
+      "kind": "candidate-live-projection",
+      "projection_identity": "eci_743053a778c39278",
+      "repository": "mncs-environment",
+      "commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+    },
+    {
+      "kind": "focused-verification",
+      "identity": "ev_environment_eci_projection_path_budget_verification_20261028",
+      "path": "evidence/environmental-capability/eci-projection-evidence-path-budget-verification-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The compared reads cover one active session and one evidence page; they do not establish behavior across agents or workloads.",
+    "Source response byte count is unchanged; this change improves which evidence survives final response compaction, not source acquisition cost.",
+    "The linked improvement's own effectiveness remains not assessed; the readback verifies discoverability of the relation, not success of the linked environmental change.",
+    "No agent receipt, intervention burden, or downstream action was observed."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

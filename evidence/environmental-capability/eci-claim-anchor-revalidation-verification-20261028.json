@@ -1,0 +1,57 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_claim_anchor_verification_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "focused-claim-cli-regression-and-related-existing-claim-tests",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+  },
+  "observation": {
+    "kind": "claim-revalidation-regression-verification",
+    "source_interface": "MNCS Environment pytest claim tests",
+    "request": {
+      "test_file": "tests/test_environment.py",
+      "selected_tests": [
+        "claim_to_other_worktree_refreshes_stale_selected_anchor",
+        "claim_can_target_another_registered_worktree_within_authorized_repo",
+        "claim_acquisition_revalidates_same_checkout_branch_and_head_drift"
+      ]
+    },
+    "outcome": {
+      "result": "3 passed, 281 deselected",
+      "verified_behavior": [
+        "An explicit claim to a different registered worktree refreshes a stale selected repository-identity anchor.",
+        "The target checkout and its exact branch are validated independently.",
+        "The acquired claim and session revalidation event are recorded."
+      ],
+      "verification_status": "focused-regression-passed",
+      "interpretation_limit": "The temporary-checkout CLI regression establishes this state transition under the test fixture; no post-change live claim attempt was made in the active campaign session."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-commit",
+      "repository": "mncs-environment",
+      "commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+    },
+    {
+      "kind": "claim-regression-tests",
+      "path": "tests/test_environment.py",
+      "sha256": "8bc9edeb080ba484de09feba7c1bf5aaf50c6cef98a3267039c96793722c99cd"
+    }
+  ],
+  "measurement_limits": [
+    "No full Environment test suite or unrelated authorization branch was exercised.",
+    "No post-change production claim attempt or reduced recovery cost was observed."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

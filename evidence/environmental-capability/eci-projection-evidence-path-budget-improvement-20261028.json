@@ -1,0 +1,96 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_projection_path_budget_improvement_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "committed-implementation-linked-to-focused-verification-and-paired-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI environmental-capability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_eci_projection_path_budget",
+      "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae",
+      "verification_observation_identity": "ev_environment_eci_projection_path_budget_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_eci_projection_path_budget_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "The existing compactor now considers the evidence-priority path at every supported response budget of at least 7 KiB, including the normal 72 KiB limit. If a complete linked path fits, it retains the newest observation, its pressure hypothesis, the related improvement, and exact verification/follow-up references while reducing session activity to the bounded evidence-priority overview. Compact source context preserves page and observation accounting fields.",
+      "effectiveness_assessment": "complete-linked-path-visible-in-paired-live-readback; agent discovery, service fulfillment, and burden reduction not assessed",
+      "interpretation_limit": "The implementation changes projection discoverability for the measured page. It does not establish that an agent received or acted on the evidence, that the underlying improvement was effective, or that agent work was reduced."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_eci_projection_path_budget",
+    "title": "Normal-size ECI compaction can remove every row in an available evidence path",
+    "category": "environmental-observation-and-projection",
+    "subsystem": "MNCS Environment ECI campaign evidence compaction",
+    "owner": "mncs-environment",
+    "basis": "The paired readback shows the same four verified source records and page selection, while the candidate projection returns one complete linked path within its output bound.",
+    "actionable_recommendation": "Observe subsequent pages and sessions to determine whether preserving a complete path supports agent investigation without making response budgets or omissions opaque.",
+    "recurrence": "not established across sessions",
+    "not_measured": [
+      "agent receipt or use of the preserved path",
+      "agent intervention burden or productivity impact",
+      "recurrence across sessions or agents"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_eci_projection_path_budget_20261028",
+    "addresses_hypothesis_identity": "ph_environment_eci_projection_path_budget",
+    "implementation_reference": {
+      "identity": "mncs_environment_eci_path_budget_5c8a482",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "66eb4938cff37d4d797072f479d789ced8e4fd17e0a45cb6aa6eac36bac568b5"
+    },
+    "verification_observation_identity": "ev_environment_eci_projection_path_budget_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_eci_projection_path_budget_readback_20261028",
+    "basis": "Focused tests cover the normal and intermediate response budgets, exact linkage and source accounting; paired live reads use the same selected session, evidence page, and page limit.",
+    "effectiveness_assessment": "projection-path-preservation-verified; service fulfillment and agent burden effect not established",
+    "not_measured": [
+      "agent intervention burden or productivity",
+      "whether another agent can more quickly identify or act on the path",
+      "generalization to other sessions, pages, or workloads"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_eci_projection_path_budget_pressure_20261028",
+      "kind": "environmental-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-projection-evidence-path-budget-pressure-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_projection_path_budget_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-projection-evidence-path-budget-verification-20261028.json"
+    },
+    {
+      "identity": "ev_environment_eci_projection_path_budget_readback_20261028",
+      "kind": "live-capability-readback",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/eci-projection-evidence-path-budget-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The paired comparison establishes projection output behavior for one selected session and page, not broader ambient fulfillment.",
+    "Three other source observation rows remain compacted from the candidate response; omission visibility remains part of the result.",
+    "No long-run response latency, memory cost, agent receipt, or burden change was measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

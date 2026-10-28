@@ -1,0 +1,55 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_claim_anchor_readback_20261028",
+  "captured_at": "2026-10-28T03:53:25Z",
+  "measurement_basis": "authentic-session-rejection-event-and-pre-change-recovery-sequence",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "5c8a4820aee5c48a5e026fbd3ded2e6ed57b37ae"
+  },
+  "observation": {
+    "kind": "claim-event-recovery-readback",
+    "source_interface": "MNCS Environment session event and checkout revalidation state",
+    "request": {
+      "session_event_identity": "evt_cfa1e1cc28f7f6f3",
+      "event_sequence": 235,
+      "event_type": "lease.acquisition-rejected"
+    },
+    "outcome": {
+      "rejection_preserved": true,
+      "rejection_published_as_claim": false,
+      "revalidation_command": "mncs-env resume ses_9db7b7c6f04e4d19 --workspace /home/epi13/Documents/Projects --revalidate --context",
+      "revalidation_result": "Selected checkout refreshed from stale campaign branch and HEAD to the observed main checkout and HEAD.",
+      "subsequent_claim_result": "The exact worktree claim succeeded after manual session revalidation.",
+      "relationship_to_implementation": "This is the authentic pre-change recovery sequence that motivated the regression. It is not evidence of a post-change production claim outcome.",
+      "effectiveness_assessment": "recovery-sequence-observed; post-change effect not assessed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "evt_cfa1e1cc28f7f6f3",
+      "kind": "authentic-session-event",
+      "sequence": 235,
+      "session_id": "ses_9db7b7c6f04e4d19"
+    },
+    {
+      "kind": "focused-post-change-regression",
+      "identity": "ev_environment_eci_claim_anchor_verification_20261028",
+      "path": "evidence/environmental-capability/eci-claim-anchor-revalidation-verification-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The event records the claim failure category and code; source inspection and the checkout snapshot supplied the selected-anchor cause.",
+    "The recovery sequence occurred before the implementation commit and does not demonstrate that a later live operation is faster or succeeds without intervention.",
+    "No total elapsed recovery time, tool-call count, or cross-session recurrence was measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
