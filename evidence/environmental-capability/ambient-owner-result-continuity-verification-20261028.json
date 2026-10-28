@@ -1,0 +1,116 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+  "captured_at": "2026-10-28T16:05:16Z",
+  "measurement_basis": "bounded-owner-result-history-regression-and-repository-verification",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_96533fdd4ef1b6cb",
+    "campaign_evidence_count_before_recording": 162,
+    "implementation_commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:761e7dded0ac"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-result-continuity-implementation-verification",
+    "source_interface": "MNCS Environment pytest, compileall, Git integrity checks, and vertical proof",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_resources.py tests/test_incremental.py tests/test_capability_intelligence.py",
+        "python -m pytest tests/ -q",
+        "python -m compileall -q mncs_env tests",
+        "git diff --check",
+        "python3 scripts/vertical_proof.py"
+      ]
+    },
+    "outcome": {
+      "targeted_test_result": "227 passed, 21 skipped in 7.84s",
+      "repository_test_result": "1221 passed, 46 skipped in 952.89s",
+      "vertical_proof_status": "passed",
+      "compileall_status": "passed",
+      "git_diff_check_status": "passed",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "Exact owner and service execution identity joins scheduler results to scheduled execution rows before persistence.",
+        "The bounded history retains result classification, result content identity, source-reference status, reuse state, and explicit not-established verification status without retaining the source pointer.",
+        "A trace without a result section, a result section without an exact row, and a legacy history row without new fields remain distinct observations.",
+        "The existing projection exposes latest and retained result fields while latest_trace_relation remains latest-only; compact output preserves result classification and verification labels under the tested response budgets.",
+        "The existing vertical proof resolves and enters the environment, invokes a provider, enforces a protected write boundary, checkpoints, resumes, and hands off a session."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_owner_result_continuity_8358969",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+        "path": "mncs_env/coherence.py",
+        "sha256": "4d93805b2277c107ab98f1314e989c6dcea82ee6a3fee58c753e23166e871ffc"
+      },
+      "projection_reference": {
+        "identity": "mncs_environment_owner_result_projection_8358969",
+        "kind": "source-code-projection",
+        "repository": "mncs-environment",
+        "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "334b5aad4e8ab794e441b959994a5ca910e7caa180a03d4129a49cd0bd2fb45a"
+      },
+      "history_regression_test_reference": {
+        "identity": "mncs_environment_owner_result_history_tests_8358969",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+        "path": "tests/test_incremental.py",
+        "sha256": "30b666cb7c2f8a66d829f23c281aa0b13c060046679ade370520cc834539fd7b"
+      },
+      "projection_regression_test_reference": {
+        "identity": "mncs_environment_owner_result_projection_tests_8358969",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+        "path": "tests/test_capability_intelligence.py",
+        "sha256": "78f00e8c983e42ffb2e3ced1c009ff6ee5cd3e2c796847a71123df78fc5d49cd"
+      },
+      "documentation_reference": {
+        "identity": "mncs_environment_owner_result_continuity_docs_8358969",
+        "kind": "projection-documentation",
+        "repository": "mncs-environment",
+        "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+        "path": "docs/PROJECTIONS.md",
+        "sha256": "62dec7a883be9019070cf622c725b68e82eb00ebabda40247a2f6d13ce3df336"
+      }
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_continuity_20261028",
+    "title": "Owner-result evidence is lost when the scheduler trace is replaced",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment incremental owner-pass results, retained execution history, and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "Regression tests demonstrate exact retention and projection of scheduler result status while preserving the distinction between result content integrity and service verification.",
+    "actionable_recommendation": "Observe the same relationships after ordinary persisted owner activity; do not force an expensive owner pass solely to populate favorable evidence."
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_owner_result_continuity_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-pressure-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "Test fixtures establish the behavior of the exact correlation path but do not establish a live retained-result match in the selected session.",
+    "A recorded scheduler result and its content digest are not independent verification of service correctness or fulfillment.",
+    "The vertical proof validates the session workflow and protected write boundary, not production service-need detection."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_continuity_pressure_20261028",
+  "captured_at": "2026-10-28T16:05:16Z",
+  "measurement_basis": "live-session-campaign-state-and-exact-owner-result-correlation-review",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_96533fdd4ef1b6cb",
+    "campaign_evidence_count_before_recording": 162,
+    "implementation_commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:761e7dded0ac"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-result-retention-gap",
+    "source_interface": "MNCS Environment campaign-state capability-intelligence projection",
+    "request": {
+      "session_snapshot_sequence": 1095,
+      "current_trace_owner_result_count": 7,
+      "current_trace_owner_result_status_counts": {
+        "result-recorded": 7
+      },
+      "current_trace_store_reference_count": 7,
+      "current_trace_content_integrity_verified_count": 7,
+      "current_trace_service_verification_status": "not-established",
+      "scoped_invocation_count": 14,
+      "execution_group_count": 2,
+      "latest_trace_relations": [
+        "not-in-latest-trace",
+        "not-in-latest-trace"
+      ],
+      "retained_result_correlation_status": "not-observed"
+    },
+    "outcome": {
+      "interpretation": "The selected-session projection has seven current scheduler result records with verified content identity, while service verification remains not-established. Its 14 scoped invocations refer to two older execution identities outside the latest trace, and the bounded retained rows did not yet expose their scheduler result classifications.",
+      "scope": "This is an observed trace-continuity limitation. Content integrity verifies result identity and digest only; neither it nor a recorded scheduler result establishes service correctness, agent receipt, need fulfillment, or reduced intervention."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_continuity_20261028",
+    "title": "Owner-result evidence is lost when the scheduler trace is replaced",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment incremental owner-pass results, retained execution history, and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "A live selected-session projection contained seven result-recorded owner results with content-integrity-verified source records and verification_status=not-established. Older scoped invocation events remained outside the latest trace without retained result classification.",
+    "actionable_recommendation": "Carry the bounded scheduler result classification and its explicit verification limit into retained execution history, then expose it through the existing exact owner/execution correlation."
+  },
+  "supporting_sources": [
+    {
+      "kind": "selected-session-projection-readback",
+      "identity": "ev_environment_ambient_owner_result_continuity_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The selected session snapshot predates population of the retained owner-result fields, so it does not demonstrate a live retained-result match.",
+    "A scheduler result record and verified content identity do not establish service correctness, usefulness, receipt, need fulfillment, or reduced agent intervention.",
+    "The two older invocation groups are observed activity; their absence from the latest trace alone does not prove a service failure."
+  ]
+}

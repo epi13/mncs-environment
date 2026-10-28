@@ -1,0 +1,85 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_continuity_readback_20261028",
+  "captured_at": "2026-10-28T16:05:16Z",
+  "measurement_basis": "bounded-selected-session-owner-result-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_96533fdd4ef1b6cb",
+    "campaign_evidence_count_before_recording": 162,
+    "implementation_commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:761e7dded0ac"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-result-continuity-projection-readback",
+    "source_interface": "MNCS Environment campaign-state capability-intelligence projection",
+    "request": {
+      "campaign_state_checkpoint_id": "chk_96533fdd4ef1b6cb",
+      "campaign_evidence_count": 162,
+      "session_snapshot_sequence": 1095,
+      "current_trace_owner_result_record_count": 7,
+      "current_trace_result_status_counts": {
+        "result-recorded": 7
+      },
+      "current_trace_source_reference_status_counts": {
+        "store-record": 7
+      },
+      "current_trace_content_integrity_verified_count": 7,
+      "current_trace_service_verification_status": "not-established",
+      "scoped_invocation_count": 14,
+      "execution_group_count": 2,
+      "latest_trace_relations": [
+        "not-in-latest-trace",
+        "not-in-latest-trace"
+      ],
+      "retained_result_correlation_status": "not-observed"
+    },
+    "outcome": {
+      "fixture_projection": "Regression fixtures join scheduler result evidence to exact owner and execution identities, expose the retained classification, and preserve the latest-only meaning of latest_trace_relation.",
+      "selected_session_projection": "The current trace exposes seven stored owner-result records whose result digests and identities pass content-integrity checks. The same session's 14 scoped invocation events refer to two older executions outside the latest trace; the selected snapshot does not yet expose a retained-result match for them.",
+      "interpretation": "The result continuity path is verified in deterministic projections. The live selected session shows rich current-trace evidence but predates retained-result collection for those older events; no live retained correlation has been inferred."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_continuity_20261028",
+    "title": "Owner-result evidence is lost when the scheduler trace is replaced",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment incremental owner-pass results, retained execution history, and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The bounded campaign-state read includes the actual owner-result rows and their integrity and verification limits, and shows that older scoped activity is still not joined to retained rows in the selected snapshot.",
+    "actionable_recommendation": "Let ordinary persisted owner work populate the new bounded history, then inspect an exact live retained-result match without running an extra costly owner pass for measurement."
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-verification-20261028.json"
+    },
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_owner_result_continuity_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-pressure-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The selected session snapshot currently contains the previous projection shape and does not demonstrate live retained-result correlation.",
+    "The bounded seven-row current trace does not reconstruct older result history by itself.",
+    "Content-integrity verification applies to result identity and digest; service correctness and agent need fulfillment remain not-established.",
+    "No service fulfillment, causal resource attribution, cross-session recurrence, or agent burden reduction is established."
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_result_continuity_improvement_20261028",
+  "captured_at": "2026-10-28T16:05:16Z",
+  "measurement_basis": "source-linked-result-continuity-implementation-regression-and-session-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_96533fdd4ef1b6cb",
+    "campaign_evidence_count_before_recording": 162,
+    "implementation_commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:761e7dded0ac"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-result-continuity-improvement-link",
+    "source_interface": "MNCS Environment coherence persistence and capability-intelligence projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_owner_result_continuity_20261028",
+      "verification_observation_identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_owner_result_continuity_readback_20261028"
+    },
+    "outcome": {
+      "implementation_reference_status": "source-commit-and-blob-verified",
+      "verification_status": "repository-suite-and-vertical-proof-passed",
+      "readback_status": "seven-live-current-results-observed; older-event-retained-correlation-pending",
+      "effectiveness_assessment": "Bounded retained owner rows now preserve exact scheduler result classifications and their content identity and reference status, while explicitly keeping result verification not-established. The existing ECI projection exposes exact latest and retained result context, with compact output preserving the classification under the tested response budget. Regression behavior is verified; a live retained-result match and any agent-intervention effect remain unobserved.",
+      "interpretation_limit": "The change improves continuity and inspectability of scheduler result evidence. It does not establish service fulfillment, independent correctness, or reduced agent burden."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_result_continuity_20261028",
+    "title": "Owner-result evidence is lost when the scheduler trace is replaced",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment incremental owner-pass results, retained execution history, and capability-intelligence projection",
+    "owner": "mncs-environment",
+    "basis": "The verified implementation extends the existing bounded owner history and ECI correlation rather than creating a separate result registry or telemetry store.",
+    "actionable_recommendation": "After normal persisted owner activity, inspect retained result rows and use subsequent observed correlations to evaluate whether continuity further improves service accountability."
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_owner_result_continuity_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_owner_result_continuity_20261028",
+    "implementation_reference": {
+      "identity": "mncs_environment_owner_result_continuity_8358969",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+      "path": "mncs_env/coherence.py",
+      "sha256": "4d93805b2277c107ab98f1314e989c6dcea82ee6a3fee58c753e23166e871ffc"
+    },
+    "projection_reference": {
+      "identity": "mncs_environment_owner_result_projection_8358969",
+      "kind": "source-code-projection",
+      "repository": "mncs-environment",
+      "commit": "835896906e450f260bffa335a101ff7cf8b7a964",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "334b5aad4e8ab794e441b959994a5ca910e7caa180a03d4129a49cd0bd2fb45a"
+    },
+    "verification_observation_identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_owner_result_continuity_readback_20261028",
+    "basis": "Exact owner and execution identity joins carry the bounded scheduler result classification into the existing session projection. The validation path keeps content integrity, service verification, and fulfillment as separate evidence claims.",
+    "effectiveness_assessment": "bounded-retained-result-continuity-implemented-and-regression-verified; live-retained-result-correlation-pending; service-fulfillment-and-agent-intervention-effect-not-established",
+    "not_measured": [
+      "A normal persisted owner execution creating and exposing a retained result row in the selected campaign session.",
+      "An older scoped owner invocation matching an exact retained result in a live session projection.",
+      "Service correctness, agent receipt, or need fulfillment.",
+      "Reduced manual orchestration or agent intervention.",
+      "Cross-session recurrence and long-term effectiveness."
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "pressure-observation",
+      "identity": "ev_environment_ambient_owner_result_continuity_pressure_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-pressure-20261028.json"
+    },
+    {
+      "kind": "implementation-verification-observation",
+      "identity": "ev_environment_ambient_owner_result_continuity_verification_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-verification-20261028.json"
+    },
+    {
+      "kind": "projection-readback-observation",
+      "identity": "ev_environment_ambient_owner_result_continuity_readback_20261028",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-result-continuity-readback-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The current selected session has not yet produced a live retained-result match with the new history fields.",
+    "The existing current-trace content check is evidence of digest and identity integrity, not service correctness or fulfillment.",
+    "No agent-intervention reduction, performance improvement, or causal effect is inferred from the implementation alone."
+  ]
+}
