@@ -3027,6 +3027,180 @@ def test_captured_session_activity_reference_is_bounded_and_inspectable(
     assert source["content_integrity_status"] == "source-reference-invalid"
 
 
+def test_supporting_sources_verify_exact_session_store_records(
+    tmp_path: Path,
+) -> None:
+    session_id = "ses_projection_reader"
+    verification_record = {
+        "schema_version": "mncs.environment.verification/1",
+        "summary": {"obligations": 1, "executed": 1, "unsupported": 0},
+        "results": [{"obligation": "mncs-test.example", "outcome": "passed"}],
+    }
+    verification_reference = (
+        f"mncs-store:{session_id}:verification:"
+        + capability_intelligence.digest_hex(verification_record, length=64)
+    )
+    owner_block = {
+        "operation_status": "complete",
+        "evidence": verification_reference,
+    }
+    owner_record = {"block": owner_block}
+    owner_reference = (
+        f"mncs-store:{session_id}:incremental-coherence:verification:"
+        + capability_intelligence.digest_hex(owner_record, length=64)
+    )
+    report = _observation(
+        "ev_environment_session_store_sources", session_id,
+        "cmp_session_store_sources",
+    )
+    report["supporting_sources"] = [
+        {
+            "kind": "current-owner-result",
+            "session_id": session_id,
+            "reference": owner_reference,
+            "result_identity": capability_intelligence.digest_hex(
+                owner_block, length=64,
+            ),
+        },
+        {
+            "kind": "immutable-verification-evidence",
+            "session_id": session_id,
+            "reference": verification_reference,
+            "schema": "mncs.environment.verification/1",
+        },
+    ]
+    session, _state = _session(tmp_path / "valid", [report])
+
+    def read_record(_session, owner: str, reference: str) -> dict:
+        if owner == "incremental-coherence:verification":
+            assert reference == owner_reference
+            return owner_record
+        assert owner == "verification"
+        assert reference == verification_reference
+        return verification_record
+
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        side_effect=read_record,
+    ):
+        projection = capability_intelligence.project(session)
+
+    sources = projection["observations"][0]["supporting_sources"]
+    assert [source["status"] for source in sources] == [
+        "session-store-reference", "session-store-reference",
+    ]
+    assert [source["content_integrity_status"] for source in sources] == [
+        "content-integrity-verified", "content-integrity-verified",
+    ]
+    assert sources[0]["owner"] == "incremental-coherence:verification"
+    assert sources[0]["result_identity"] == capability_intelligence.digest_hex(
+        owner_block, length=64,
+    )
+    assert sources[1]["schema"] == "mncs.environment.verification/1"
+    assert projection["source"]["source_pointer_count"] == 2
+    assert projection["source"][
+        "source_pointer_content_integrity_verified_count"
+    ] == 2
+    assert projection["source"][
+        "source_pointer_content_integrity_not_verified_count"
+    ] == 0
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, 24_000,
+    )
+    compact_sources = compact["observations"][0]["supporting_sources"]
+    assert compact_sources[0]["reference"] == owner_reference
+    assert compact_sources[1]["reference"] == verification_reference
+    assert all("block" not in source and "record" not in source
+               for source in compact_sources)
+
+    tampered_report = _observation(
+        "ev_environment_session_store_source_tampered", session_id,
+        "cmp_session_store_sources",
+    )
+    tampered_report["supporting_sources"] = [report["supporting_sources"][1]]
+    tampered_session, _state = _session(
+        tmp_path / "tampered", [tampered_report],
+    )
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        return_value={**verification_record, "summary": {"obligations": 2}},
+    ):
+        tampered_projection = capability_intelligence.project(tampered_session)
+    assert tampered_projection["observations"][0]["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "sha256-mismatch"
+
+    wrong_schema_report = _observation(
+        "ev_environment_session_store_source_wrong_schema", session_id,
+        "cmp_session_store_sources",
+    )
+    wrong_schema_report["supporting_sources"] = [{
+        **report["supporting_sources"][1],
+        "schema": "mncs.environment.verification/2",
+    }]
+    wrong_schema_session, _state = _session(
+        tmp_path / "wrong-schema", [wrong_schema_report],
+    )
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        return_value=verification_record,
+    ):
+        wrong_schema_projection = capability_intelligence.project(
+            wrong_schema_session,
+        )
+    assert wrong_schema_projection["observations"][0]["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "source-schema-mismatch"
+
+    wrong_result_report = _observation(
+        "ev_environment_session_store_source_wrong_result", session_id,
+        "cmp_session_store_sources",
+    )
+    wrong_result_report["supporting_sources"] = [{
+        **report["supporting_sources"][0],
+        "result_identity": "0" * 64,
+    }]
+    wrong_result_session, _state = _session(
+        tmp_path / "wrong-result", [wrong_result_report],
+    )
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+        return_value=owner_record,
+    ):
+        wrong_result_projection = capability_intelligence.project(
+            wrong_result_session,
+        )
+    assert wrong_result_projection["observations"][0]["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "result-identity-mismatch"
+
+    foreign_report = _observation(
+        "ev_environment_session_store_source_foreign", session_id,
+        "cmp_session_store_sources",
+    )
+    foreign_reference = verification_reference.replace(
+        f"mncs-store:{session_id}:", "mncs-store:ses_another_session:", 1,
+    )
+    foreign_report["supporting_sources"] = [{
+        "kind": "immutable-verification-evidence",
+        "session_id": "ses_another_session",
+        "reference": foreign_reference,
+        "schema": "mncs.environment.verification/1",
+    }]
+    foreign_session, _state = _session(
+        tmp_path / "foreign", [foreign_report],
+    )
+    with patch(
+        "mncs_env.capability_intelligence.evidence_store.read",
+    ) as read_foreign:
+        foreign_projection = capability_intelligence.project(foreign_session)
+    read_foreign.assert_not_called()
+    assert foreign_projection["observations"][0]["supporting_sources"][0][
+        "content_integrity_status"
+    ] == "outside-selected-session"
+
+
 def test_pressure_contexts_merge_sparse_identity_and_keep_recorders_distinct(
     tmp_path: Path,
 ) -> None:

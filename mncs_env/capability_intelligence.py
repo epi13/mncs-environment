@@ -208,6 +208,10 @@ MAX_EVIDENCE_PRIORITY_RESULT_BYTES = 8 * 1024
 CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
 })
+SESSION_STORE_SOURCE_KINDS = frozenset({
+    "session-store-evidence", "current-owner-result",
+    "immutable-verification-evidence",
+})
 MAX_SESSION_EVENT_WINDOW = 256
 MAX_SESSION_DOCTOR_HISTORY = 8
 MAX_DOCTOR_GAP_EXAMPLES = 16
@@ -561,6 +565,67 @@ def _validate_source_pointer(source: Any) -> dict[str, str] | None:
     if pointer is not None and "identity" not in source:
         pointer.pop("identity", None)
     return pointer
+
+
+def _validate_session_store_source(source: Any) -> dict[str, str] | None:
+    """Validate one exact reference to evidence in the selected session Store."""
+    if (not isinstance(source, dict)
+            or source.get("kind") not in SESSION_STORE_SOURCE_KINDS):
+        return None
+    session_id = source.get("session_id")
+    reference = source.get("reference")
+    if (not isinstance(session_id, str)
+            or re.fullmatch(r"ses_[A-Za-z0-9_-]{1,128}", session_id) is None
+            or not isinstance(reference, str) or len(reference) > 512):
+        return None
+    prefix = f"mncs-store:{session_id}:"
+    if not reference.startswith(prefix):
+        return None
+    owner, separator, record_digest = reference[len(prefix):].rpartition(":")
+    if (not separator
+            or re.fullmatch(
+                r"[a-z][a-z0-9-]{0,63}(?::[a-z][a-z0-9-]{0,63})*",
+                owner,
+            ) is None
+            or re.fullmatch(r"[0-9a-f]{64}", record_digest) is None):
+        return None
+    declared_owner = source.get("owner")
+    if declared_owner is not None and declared_owner != owner:
+        return None
+    result: dict[str, str] = {
+        "kind": source["kind"],
+        "session_id": session_id,
+        "owner": owner,
+        "reference": reference,
+    }
+    identity = source.get("identity")
+    if isinstance(identity, str) and identity and len(identity) <= 160:
+        result["identity"] = identity
+    schema = source.get("schema")
+    if schema is not None:
+        if (not isinstance(schema, str) or len(schema) > 160
+                or re.fullmatch(r"mncs\.[a-z0-9_.-]+/[0-9]+", schema) is None):
+            return None
+        result["schema"] = schema
+    result_identity = source.get("result_identity")
+    if result_identity is not None:
+        if (not isinstance(result_identity, str)
+                or re.fullmatch(r"[0-9a-f]{64}", result_identity) is None):
+            return None
+        result["result_identity"] = result_identity
+    if (source["kind"] == "current-owner-result"
+            and "result_identity" not in result):
+        return None
+    return result
+
+
+def _session_store_source_key(
+    pointer: dict[str, str],
+) -> tuple[str, str, str, str]:
+    return (
+        "session-store", pointer["session_id"], pointer["owner"],
+        pointer["reference"],
+    )
 
 
 def _short_text(value: Any, limit: int = 192) -> str | None:
@@ -5384,9 +5449,13 @@ def _compact_projection(
                 compact_supporting_source["event_identities_truncated"] = (
                     len(event_identities) > 8
                 )
-            pointer = _validate_source_pointer(source)
-            if pointer is not None:
-                compact_supporting_source.update(pointer)
+            session_store_pointer = _validate_session_store_source(source)
+            if session_store_pointer is not None:
+                compact_supporting_source.update(session_store_pointer)
+            else:
+                pointer = _validate_source_pointer(source)
+                if pointer is not None:
+                    compact_supporting_source.update(pointer)
             compact_sources.append(compact_supporting_source)
         if compact_sources:
             compact_observation["supporting_sources"] = compact_sources
@@ -10005,6 +10074,18 @@ def _campaign_charter_context(
 def _source_status(source: Any, references: list[dict[str, Any]]) -> dict[str, Any]:
     if not isinstance(source, dict):
         return {"kind": "unknown", "status": "invalid-source-reference"}
+    session_store_pointer = _validate_session_store_source(source)
+    if session_store_pointer is not None:
+        return {
+            **session_store_pointer,
+            "registration_scope": "session-store-reference",
+            "status": "session-store-reference",
+        }
+    if source.get("kind") in SESSION_STORE_SOURCE_KINDS:
+        return {
+            "kind": source.get("kind"),
+            "status": "invalid-session-store-reference",
+        }
     summary = {
         key: source.get(key)
         for key in ("identity", "kind", "repository", "commit", "path", "sha256",
@@ -10415,6 +10496,56 @@ def _verify_source_pointer(
     source_payloads: dict[tuple[str, str, str, str], bytes] | None = None,
 ) -> None:
     """Verify accessible source blobs within the projection's shared read budget."""
+    session_store_pointer = _validate_session_store_source(source)
+    if session_store_pointer is not None:
+        key = _session_store_source_key(session_store_pointer)
+        if key in cache or key in attempted:
+            return
+        if len(attempted) >= MAX_SOURCE_POINTER_VERIFICATIONS:
+            cache[key] = "source-verification-limit-exhausted"
+            return
+        if time.monotonic() >= deadline:
+            cache[key] = "source-read-budget-exhausted"
+            return
+        attempted.add(key)
+        if session_store_pointer["session_id"] != getattr(
+                session, "session_id", None):
+            cache[key] = "outside-selected-session"
+            return
+        try:
+            record = evidence_store.read(
+                session, session_store_pointer["owner"],
+                session_store_pointer["reference"],
+            )
+        except StoreIntegrityFailure:
+            cache[key] = "source-integrity-failure"
+            return
+        except (AttributeError, KeyError, OSError, StoreUnavailable, TypeError,
+                ValueError):
+            cache[key] = "source-unavailable"
+            return
+        record_digest = session_store_pointer["reference"].rsplit(":", 1)[-1]
+        if (not isinstance(record, dict)
+                or digest_hex(record, length=64) != record_digest):
+            cache[key] = "sha256-mismatch"
+            return
+        schema = session_store_pointer.get("schema")
+        if (schema is not None
+                and record.get("schema_version") != schema):
+            cache[key] = "source-schema-mismatch"
+            return
+        result_identity = session_store_pointer.get("result_identity")
+        if result_identity is not None:
+            block = record.get("block")
+            if (not isinstance(block, dict)
+                    or digest_hex(block, length=64) != result_identity):
+                cache[key] = "result-identity-mismatch"
+                return
+        cache[key] = "content-integrity-verified"
+        return
+    if (isinstance(source, dict)
+            and source.get("kind") in SESSION_STORE_SOURCE_KINDS):
+        return
     pointer = _validate_source_pointer(source)
     if pointer is None:
         return
@@ -10510,6 +10641,11 @@ def _source_integrity_status(source: Any, cache: dict[tuple[str, str, str, str],
     if (isinstance(source, dict)
             and source.get("kind") in CAPTURED_OPERATION_RESULT_SOURCE_KINDS):
         return "captured-in-observation-record"
+    if isinstance(source, dict) and source.get("kind") in SESSION_STORE_SOURCE_KINDS:
+        pointer = _validate_session_store_source(source)
+        if pointer is None:
+            return "source-reference-invalid"
+        return cache.get(_session_store_source_key(pointer), "not-checked")
     if isinstance(source, dict) and source.get(
         "kind"
     ) == "authenticated-session-activity-projection":

@@ -926,6 +926,20 @@ evidence pages, `status` is
 only the bounded pages queried; it does not claim the pointer is absent from
 the rest of that campaign's history or from a separately declared source
 campaign. Content-integrity status is reported independently.
+
+For the three typed session Store source kinds
+`session-store-evidence`, `current-owner-result`, and
+`immutable-verification-evidence`, the projection reads the exact immutable
+reference only when it belongs to the selected session. The Store record's
+content digest must match the reference; a declared schema or owner-result
+identity must also match. These sources are reported as
+`session-store-reference` with a separate `content_integrity_status`. A
+reference for another session is reported as `outside-selected-session`
+without opening it. Reads share the projection's existing source-read count
+and time bounds. The projection retains the typed pointer and verification
+status, not a copy of the Store payload; this lets an agent inspect the
+provenance while leaving the Store authoritative.
+
 If a committed record's internal identity differs from its campaign evidence
 pointer, the record remains unavailable to pressure analysis and diagnostics
 report `observation-identity-mismatch` with both identities after content hash
