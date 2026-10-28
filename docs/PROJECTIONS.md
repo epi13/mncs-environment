@@ -886,6 +886,17 @@ left unverified by this preflight; it receives no inferred validity or added
 repository authority and remains subject to the projection's normal
 content-integrity and contract checks.
 
+Campaign-state records also retain the bounded outcome of the accepted
+checkpoint's observation preflight: `validated`, `not-evaluated` with a reason,
+or `not-applicable` when the checkpoint adds no matching observations.
+Campaign-state reads and the environmental-capability projection expose this
+result. A rejected checkpoint does not change campaign state, so this summary
+does not record failed preflight attempts; those remain visible only through
+their ordinary operation diagnostics where available. The summary describes
+whether candidate references in the accepted checkpoint were checked; it does
+not measure whether an environmental service was otherwise useful, whether an
+agent received the evidence, or whether burden was reduced.
+
 Campaign evidence and current session activity have independent availability.
 If the campaign ledger cannot be read but the session contains authenticated
 tool interactions, Control read observations, authority denials, or verified

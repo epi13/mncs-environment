@@ -36,6 +36,7 @@ from .sessions import (
     LifecycleError,
     is_campaign_charter_evidence_path,
     is_valid_context_response_summary,
+    normalize_campaign_observation_preflight,
 )
 from .store_backend import StoreIntegrityFailure, StoreUnavailable
 
@@ -5897,6 +5898,7 @@ def _compact_projection(
     compact_source = {
         key: source.get(key)
         for key in ("campaign_charter_status", "campaign_charter_reference_count",
+                    "campaign_observation_preflight",
                     "evidence_count", "evidence_page_truncated",
                     "evidence_page_offset", "evidence_page_limit",
                     "previous_evidence_offset", "next_evidence_offset",
@@ -26649,6 +26651,11 @@ def project(
         except (StoreIntegrityFailure, StoreUnavailable):
             campaign_state = None
     state = campaign_state if isinstance(campaign_state, dict) else {}
+    raw_observation_preflight = state.get("observation_preflight")
+    campaign_observation_preflight = (
+        normalize_campaign_observation_preflight(raw_observation_preflight)
+        if raw_observation_preflight is not None else None
+    )
     activity = _session_activity(
         session, snapshot,
         event_before_sequence=session_event_before_sequence,
@@ -28117,6 +28124,7 @@ def project(
         "identity": "eci_" + digest_hex({
             "session_id": session.session_id,
             "campaign_id": campaign.get("identity"),
+            "campaign_observation_preflight": campaign_observation_preflight,
             "work_intent_identity": intent.get("identity"),
             "workspace_alignment": workspace_alignment,
             "evidence": [item["identity"] for item in references],
@@ -28176,6 +28184,9 @@ def project(
         "subject": subject,
         "source": {
             "campaign_state_checkpoint_id": state.get("checkpoint_id"),
+            **({"campaign_observation_preflight": (
+                campaign_observation_preflight
+            )} if campaign_observation_preflight is not None else {}),
             **({
                 "campaign_charter_status": campaign_charter.get("status"),
                 "campaign_charter_reference_count": campaign_charter.get(

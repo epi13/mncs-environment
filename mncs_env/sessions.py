@@ -60,6 +60,9 @@ CHECKPOINT_SCHEMA = "mncs.environment.checkpoint/1"
 HANDOFF_SCHEMA = "mncs.environment.handoff/1"
 CAMPAIGN_CHARTER_EVIDENCE_PREFIX = "evidence/campaign-charters/"
 LEGACY_CAMPAIGN_CHARTER_EVIDENCE_PREFIX = "evidence/campaign-charter-"
+CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA = (
+    "mncs.environment.campaign-observation-preflight/1"
+)
 
 
 def is_campaign_charter_evidence_path(path: Any) -> bool:
@@ -675,7 +678,7 @@ def _append_campaign_evidence(
 
 def _preflight_campaign_observation_evidence(
     session: Any, references: list[dict[str, str]],
-) -> None:
+) -> dict[str, Any]:
     """Reject malformed Environment observations before publishing their refs.
 
     This preflight is deliberately limited to Environment observation records
@@ -693,19 +696,37 @@ def _preflight_campaign_observation_evidence(
         and reference.get("path", "").endswith(".json")
     ]
     if not candidates:
-        return
+        return normalize_campaign_observation_preflight({
+            "schema_version": CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+            "status": "not-applicable",
+            "reference_count": 0,
+            "validated_reference_count": 0,
+            "reason": "no-new-environment-observation-references",
+        })
 
     # Import lazily to keep the ordinary checkpoint path independent of ECI.
     from . import capability_intelligence as capability_intelligence_module
 
     root = capability_intelligence_module._workspace_root(session)
     if root is None:
-        return
+        return normalize_campaign_observation_preflight({
+            "schema_version": CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+            "status": "not-evaluated",
+            "reference_count": len(candidates),
+            "validated_reference_count": 0,
+            "reason": "workspace-root-unavailable",
+        })
     checkout = capability_intelligence_module._checkout(
         session, "mncs-environment", root,
     )
     if checkout is None:
-        return
+        return normalize_campaign_observation_preflight({
+            "schema_version": CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+            "status": "not-evaluated",
+            "reference_count": len(candidates),
+            "validated_reference_count": 0,
+            "reason": "environment-repository-checkout-not-selected",
+        })
 
     deadline = time.monotonic() + 5.0
     for reference in candidates:
@@ -759,6 +780,50 @@ def _preflight_campaign_observation_evidence(
                 "campaign observation preflight found an invalid append-only "
                 f"correction in {reference['identity']}"
             )
+    return normalize_campaign_observation_preflight({
+        "schema_version": CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+        "status": "validated",
+        "reference_count": len(candidates),
+        "validated_reference_count": len(candidates),
+        "reason": "selected-checkout-blob-and-observation-contract-verified",
+    })
+
+
+def normalize_campaign_observation_preflight(value: Any) -> dict[str, Any]:
+    """Validate bounded evidence of the campaign observation preflight result."""
+    if not isinstance(value, dict) or set(value) != {
+        "schema_version", "status", "reference_count",
+        "validated_reference_count", "reason",
+    }:
+        raise ValueError("campaign observation preflight has unsupported fields")
+    status = value.get("status")
+    reference_count = value.get("reference_count")
+    validated_count = value.get("validated_reference_count")
+    reason = value.get("reason")
+    if (value.get("schema_version") != CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA
+            or status not in {"validated", "not-evaluated", "not-applicable"}
+            or type(reference_count) is not int
+            or not 0 <= reference_count <= CAMPAIGN_EVIDENCE_MAX
+            or type(validated_count) is not int
+            or not 0 <= validated_count <= reference_count
+            or not isinstance(reason, str) or not reason or len(reason) > 160):
+        raise ValueError("campaign observation preflight is invalid")
+    if (status == "not-applicable"
+            and (reference_count != 0 or validated_count != 0)):
+        raise ValueError("not-applicable preflight must have no candidate references")
+    if (status == "not-evaluated"
+            and (reference_count == 0 or validated_count != 0)):
+        raise ValueError("not-evaluated preflight must retain unvalidated candidates")
+    if (status == "validated"
+            and (reference_count == 0 or validated_count != reference_count)):
+        raise ValueError("validated preflight must cover every candidate reference")
+    return {
+        "schema_version": CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+        "status": status,
+        "reference_count": reference_count,
+        "validated_reference_count": validated_count,
+        "reason": reason,
+    }
 
 
 def normalize_campaign_delivery(value: Any) -> dict[str, Any]:
@@ -912,6 +977,20 @@ def _validated_campaign_state_history(
             raise LifecycleError(f"campaign state checkpoint is invalid: {error}") from error
         if delivery != state.get("delivery"):
             raise LifecycleError("campaign state checkpoint is not canonically normalized")
+        raw_observation_preflight = state.get("observation_preflight")
+        if raw_observation_preflight is not None:
+            try:
+                observation_preflight = normalize_campaign_observation_preflight(
+                    raw_observation_preflight,
+                )
+            except ValueError as error:
+                raise LifecycleError(
+                    f"campaign observation preflight is invalid: {error}"
+                ) from error
+            if observation_preflight != raw_observation_preflight:
+                raise LifecycleError(
+                    "campaign observation preflight is not canonically normalized"
+                )
         provenance = state.get("recorded_by")
         if (not isinstance(provenance, dict)
                 or not isinstance(provenance.get("consumer_id"), str)
@@ -1019,6 +1098,7 @@ def _project_campaign_state(
         "evidence_count": len(evidence_history),
         "evidence_truncated": len(evidence_history) > CAMPAIGN_EVIDENCE_MAX,
         "delivery": state["delivery"],
+        "observation_preflight": state.get("observation_preflight"),
         "state_checkpoint_id": checkpoint["identity"],
         "state_recorded_at": state.get("recorded_at"),
         "state_provenance": state["recorded_by"],
@@ -9356,6 +9436,7 @@ class Session:
         campaign_evidence_delta_value: list[dict[str, str]] | None = None
         campaign_evidence_history_value: list[dict[str, str]] | None = None
         campaign_delivery_value: dict[str, Any] | None = None
+        campaign_observation_preflight_value: dict[str, Any] | None = None
         previous_campaign_state_digest: str | None = None
         if record is None and campaign_update_requested:
             campaign = dict(self.snapshot.get("campaign") or {})
@@ -9460,9 +9541,11 @@ class Session:
                     campaign_evidence_delta_value,
                     require_environmental_observation_sha256=True,
                 )
-            if campaign_evidence_delta_value:
-                _preflight_campaign_observation_evidence(
-                    self, campaign_evidence_delta_value,
+            if campaign_update_requested:
+                campaign_observation_preflight_value = (
+                    _preflight_campaign_observation_evidence(
+                        self, campaign_evidence_delta_value or [],
+                    )
                 )
             if normalized_delivery is not None:
                 campaign_delivery_value = normalized_delivery
@@ -9516,6 +9599,9 @@ class Session:
                         }
                     ),
                     "delivery": campaign_delivery_value,
+                    "observation_preflight": (
+                        campaign_observation_preflight_value
+                    ),
                     "recorded_at": created_at,
                     "recorded_by": {
                         "consumer_id": self.snapshot.get("consumer_id"),
@@ -9636,6 +9722,9 @@ class Session:
                 "next_evidence_offset": end if end < total else None,
                 "evidence_truncated": offset > 0 or end < total,
                 "delivery": state["delivery"],
+                **({"observation_preflight": state["observation_preflight"]}
+                   if isinstance(state.get("observation_preflight"), dict)
+                   else {}),
                 # This bounded identity index spans the complete validated
                 # evidence history so consumers can locate immutable campaign
                 # charter pointers after the ordinary page window moves on.

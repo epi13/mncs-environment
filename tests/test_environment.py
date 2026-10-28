@@ -10439,6 +10439,10 @@ class SessionTests(unittest.TestCase):
                 campaign_base_checkpoint="none",
                 campaign_evidence=[],
             )
+            self.assertEqual(
+                first["campaign_state"]["observation_preflight"]["status"],
+                "not-applicable",
+            )
             observation = {
                 "schema_version": capability_intelligence.OBSERVATION_SCHEMA,
                 "identity": "ev_environment_checkpoint_observation_preflight",
@@ -10493,6 +10497,12 @@ class SessionTests(unittest.TestCase):
                     campaign_base_checkpoint=first["identity"],
                     campaign_evidence_delta=[invalid_reference],
                 )
+            unchanged = session.campaign_state()
+            self.assertEqual(unchanged["checkpoint_id"], first["identity"])
+            self.assertEqual(unchanged["evidence_count"], 0)
+            self.assertEqual(
+                unchanged["observation_preflight"]["status"], "not-applicable",
+            )
 
             observation["recorder"] = {
                 "campaign_id": campaign_identity,
@@ -10508,6 +10518,66 @@ class SessionTests(unittest.TestCase):
             )
             self.assertEqual(
                 accepted["campaign_state"]["evidence_delta"], [valid_reference],
+            )
+            self.assertEqual(
+                accepted["campaign_state"]["observation_preflight"],
+                {
+                    "schema_version": sessions.CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+                    "status": "validated",
+                    "reference_count": 1,
+                    "validated_reference_count": 1,
+                    "reason": "selected-checkout-blob-and-observation-contract-verified",
+                },
+            )
+            self.assertEqual(
+                session.campaign_state()["observation_preflight"],
+                accepted["campaign_state"]["observation_preflight"],
+            )
+
+    def test_checkpoint_records_when_environment_observation_preflight_is_unavailable(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_dir = Path(directory)
+            session = make_session(state_dir)
+            campaign_identity = "cmp_checkpoint_observation_preflight_unselected"
+            session.snapshot["campaign"]["identity"] = campaign_identity
+            session.snapshot["selected_checkouts"] = {}
+            session._save()
+            first = session.checkpoint(
+                progress="initialize campaign without an Environment checkout",
+                request_id="req_checkpoint_observation_preflight_unselected_init",
+                campaign_base_checkpoint="none",
+                campaign_evidence=[],
+            )
+            reference = {
+                "identity": "ev_environment_preflight_unselected",
+                "repository": "mncs-environment",
+                "commit": "a" * 40,
+                "path": "evidence/environmental-capability/not-selected.json",
+                "sha256": "b" * 64,
+            }
+
+            accepted = session.checkpoint(
+                progress="record unselected observation without acquiring checkout scope",
+                request_id="req_checkpoint_observation_preflight_unselected_append",
+                campaign_base_checkpoint=first["identity"],
+                campaign_evidence_delta=[reference],
+            )
+
+            self.assertEqual(
+                accepted["campaign_state"]["observation_preflight"],
+                {
+                    "schema_version": sessions.CAMPAIGN_OBSERVATION_PREFLIGHT_SCHEMA,
+                    "status": "not-evaluated",
+                    "reference_count": 1,
+                    "validated_reference_count": 0,
+                    "reason": "environment-repository-checkout-not-selected",
+                },
+            )
+            self.assertEqual(
+                session.campaign_state()["observation_preflight"]["status"],
+                "not-evaluated",
             )
 
     def test_campaign_evidence_and_delivery_are_checkpointed_and_reconstructed(self) -> None:

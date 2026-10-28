@@ -17265,6 +17265,14 @@ def test_campaign_state_and_projection_interfaces_expose_the_derived_view(
 ) -> None:
     record = _observation("ev_environment_observation_one", "ses_compiler_one", "cmp_compiler")
     session, _state = _session(tmp_path, [record])
+    preflight = {
+        "schema_version": "mncs.environment.campaign-observation-preflight/1",
+        "status": "validated",
+        "reference_count": 1,
+        "validated_reference_count": 1,
+        "reason": "selected-checkout-blob-and-observation-contract-verified",
+    }
+    _state["observation_preflight"] = preflight
     session.close = lambda: None
     monkeypatch.setattr(cli, "_open", lambda _args: session)
 
@@ -17278,10 +17286,17 @@ def test_campaign_state_and_projection_interfaces_expose_the_derived_view(
     projection = projections.interpretation(
         session, None, "environmental-capability",
     )
+    compact_projection = capability_intelligence.project(
+        session, max_result_bytes=7000,
+    )
 
     assert status == 0
     assert campaign_state["environmental_capability"]["identity"] == projection["identity"]
     assert campaign_state["environmental_capability"]["observation_count"] == 1
+    assert campaign_state["observation_preflight"] == preflight
+    assert projection["source"]["campaign_observation_preflight"] == preflight
+    assert compact_projection["source"]["response_truncated"] is True
+    assert compact_projection["source"]["campaign_observation_preflight"] == preflight
 
 
 def test_campaign_state_projection_respects_capability_output_budget(
