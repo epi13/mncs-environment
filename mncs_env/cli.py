@@ -2703,11 +2703,12 @@ def build_parser() -> argparse.ArgumentParser:
     projections.add_argument('--repository')
     projections.add_argument(
         '--activity-section',
-        choices=("resources", "diagnostics", "verification"),
+        choices=("resources", "diagnostics", "verification", "services"),
         default=None,
         help=(
             "limit a session-activity projection to one existing evidence "
-            "family while retaining session context and source references"
+            "family while retaining session context and source references; "
+            "services selects readiness and owner-pass accountability"
         ),
     )
     projections.add_argument(

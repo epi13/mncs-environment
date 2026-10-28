@@ -5255,6 +5255,200 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     ] == metadata["sha256"]
 
 
+def test_focused_service_activity_keeps_accountability_and_exact_sources() -> None:
+    session = SimpleNamespace(
+        session_id="ses_service_projection",
+        snapshot={"snapshot_sequence": 12},
+    )
+    verification_relation = {
+        "schema_version": "mncs.environment.ambient-verification-readiness-link/1",
+        "status": "observed",
+        "scope": "selected-session-exact-verification-evidence-and-provider-readiness",
+        "summary": {"integrity_verified_candidate_count": 1, "exact_link_count": 1},
+        "links": [{
+            "repository": "mncs-test",
+            "obligation_identity": "mncs-test.native-application-build-vm",
+            "verification_evidence_reference": "mncs-store:ses_service_projection:verification:verified",
+            "owner_result_reference": "mncs-store:ses_service_projection:incremental-coherence:verification:verified",
+            "causal_status": "not-established",
+        }],
+        "causal_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+    }
+    accountability = {
+        "schema_version": "mncs.environment.service-accountability/1",
+        "status": "observed",
+        "scope": "selected-session-declared-readiness-services",
+        "source": {
+            "service_session_id": session.session_id,
+            "environment_id": "renv_service_projection",
+            "snapshot_sequence": 12,
+            "campaign_id": "cmp_service_projection",
+            "work_intent_id": "int_service_projection",
+            "service_declaration_status": "explicit-empty",
+        },
+        "summary": {
+            "declared_service_count": 0,
+            "projected_service_count": 0,
+            "eligible_service_opportunity_count": None,
+            "ambient_fulfillment_status": "not-established",
+            "agent_intervention_burden_status": "not-measured",
+            "agent_receipt_status": "not-established",
+            "ambient_verification_executor_readiness_relation": (
+                verification_relation
+            ),
+            "environment_service_execution": {
+                "status": "observed",
+                "scope": "environment-owner-pass-contract",
+                "source": {
+                    "kind": "session_activity.ambient_service_execution",
+                    "projection_digest": "sha256:ambient-pass-digest",
+                    "owner_pass_contract_reference": (
+                        "mncs-environment:.mncs/coherence-passes.json"
+                    ),
+                },
+                "summary": {
+                    "scheduled_pass_count": 1,
+                    "owner_pass_decision_count": 1,
+                    "owner_pass_decision_coverage": "complete",
+                    "owner_failure_count": 0,
+                    "ambient_fulfillment_status": "not-established",
+                    "agent_intervention_burden_status": "not-measured",
+                    "verification_status": "not-established",
+                    "verification_result_detail_count": 1,
+                    "verification_result_details_status": "complete",
+                    "verification_result_details_omitted_count": 0,
+                    "verification_result_details": [{
+                        "owner_pass": "verification",
+                        "service_execution_id": "ase_0123456789abcdef0123456789abcdef",
+                        "result_identity": "a" * 64,
+                        "result_status": "result-recorded",
+                        "operation_status": "complete",
+                        "source_reference_status": "store-record",
+                        "source_reference": "mncs-store:ses_service_projection:incremental-coherence:verification:owner",
+                        "verification_evidence": {
+                            "status": "recorded",
+                            "source_schema": "mncs.environment.verification/1",
+                            "source_integrity_status": "verified",
+                            "owner_result_content_integrity_status": "content-integrity-verified",
+                            "source_reference": "mncs-store:ses_service_projection:verification:evidence",
+                            "owner_result_reference": "mncs-store:ses_service_projection:incremental-coherence:verification:owner",
+                            "outcome_counts": {"excluded": 1},
+                            "unmeasurable_reason_counts": {"executor-not-native": 1},
+                            "summary": {"obligations": 1, "excluded": 1},
+                            "not_passed_obligations": [{
+                                "obligation": "mncs-test.native-application-build-vm",
+                                "repository": "mncs-test",
+                                "outcome": "excluded",
+                                "reason": "executor_not_runnable",
+                                "unmeasurable": "executor-not-native",
+                            }],
+                            "investigation_candidates": {
+                                "status": "observed",
+                                "candidates": [{
+                                    "identity": "candidate_1",
+                                    "action_hint": "private narrative omitted",
+                                }],
+                            },
+                        },
+                    }],
+                },
+            },
+        },
+        "services": [],
+        "services_omitted_count": 0,
+        "services_truncated": False,
+    }
+    activity = {
+        "status": "partial",
+        "context": {
+            "session_id": session.session_id,
+            "campaign_id": "cmp_service_projection",
+            "work_intent_id": "int_service_projection",
+            "environment_id": "renv_service_projection",
+        },
+        "source": {
+            "event_count": 4,
+            "event_window_limit": 4,
+            "event_page_before_sequence": 20,
+            "next_event_before_sequence": 16,
+            "event_window_truncated": True,
+            "ambient_service_execution_digest": "sha256:ambient-pass-digest",
+            "verification_activity_digest": "sha256:verification-digest",
+        },
+        "service_readiness": {
+            "status": "empty-declared-scope",
+            "source": {
+                "session_id": session.session_id,
+                "environment_id": "renv_service_projection",
+                "snapshot_sequence": 12,
+                "service_declaration_status": "explicit-empty",
+            },
+            "summary": {"probe_opportunity_count": 0},
+            "services": [],
+        },
+        "service_accountability": accountability,
+        "resource_samples": {"private_host_detail": "not included"},
+        "capability_delivery": {"unrelated_binding_detail": "not included"},
+        "measurement_limits": [
+            "The source is bounded to the selected session evidence window.",
+        ],
+    }
+
+    with patch.object(
+        capability_intelligence, "_session_activity", return_value=activity,
+    ):
+        projection = capability_intelligence.project_session_activity(
+            session,
+            event_limit=4,
+            activity_section="services",
+            max_result_bytes=10_000,
+        )
+
+    focused = projection["session_activity"]
+    service_summary = focused["service_accountability"]["summary"]
+    relation = service_summary[
+        "ambient_verification_executor_readiness_relation"
+    ]
+    assert projection["activity_section"] == "services"
+    assert projection["subject"]["work_intent_id"] == "int_service_projection"
+    assert focused["source"]["ambient_service_execution_digest"] == (
+        "sha256:ambient-pass-digest"
+    )
+    assert focused["service_readiness"]["source"]["snapshot_sequence"] == 12
+    assert service_summary["eligible_service_opportunity_count"] is None
+    assert service_summary["agent_intervention_burden_status"] == "not-measured"
+    assert service_summary["environment_service_execution"]["source"][
+        "projection_digest"
+    ] == "sha256:ambient-pass-digest"
+    verification_detail = service_summary["environment_service_execution"][
+        "summary"
+    ]["verification_result_details"][0]
+    verification_evidence = verification_detail["verification_evidence"]
+    assert verification_detail["detail_content_status"] == (
+        "bounded-source-summary"
+    )
+    assert verification_evidence["source_reference"] == (
+        "mncs-store:ses_service_projection:verification:evidence"
+    )
+    assert verification_evidence["not_passed_obligations"][0][
+        "obligation"
+    ] == "mncs-test.native-application-build-vm"
+    assert verification_evidence["investigation_candidate_summary"][
+        "candidate_detail_status"
+    ] == "omitted-from-focused-view"
+    assert "private narrative omitted" not in json.dumps(projection)
+    assert relation["links"][0]["verification_evidence_reference"] == (
+        "mncs-store:ses_service_projection:verification:verified"
+    )
+    assert relation["links"][0]["owner_result_reference"] == (
+        "mncs-store:ses_service_projection:incremental-coherence:verification:verified"
+    )
+    assert "resource_samples" not in focused
+    assert "capability_delivery" not in focused
+    assert capability_intelligence._projection_response_size(projection) <= 10_000
+
+
 def test_session_resource_sample_distinguishes_missing_and_failed_invocations(
     tmp_path: Path,
 ) -> None:

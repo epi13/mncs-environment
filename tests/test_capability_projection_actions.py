@@ -19,6 +19,7 @@ def test_context_exposes_bounded_historical_capability_projection() -> None:
     latest = actions["environmental_capability_projection"]["argv"]
     activity = actions["session_activity_projection"]["argv"]
     resources = actions["session_resource_samples_projection"]["argv"]
+    services = actions["session_service_accountability_projection"]["argv"]
     history = actions["environmental_capability_history_projection"]["argv"]
     prefix = [
         sys.executable,
@@ -38,6 +39,10 @@ def test_context_exposes_bounded_historical_capability_projection() -> None:
     assert resources == [
         *prefix, "projections", "ses_history_projection",
         "--interpret", "session-activity", "--activity-section", "resources",
+    ]
+    assert services == [
+        *prefix, "projections", "ses_history_projection",
+        "--interpret", "session-activity", "--activity-section", "services",
     ]
     assert history == [
         *prefix, "projections", "ses_history_projection",

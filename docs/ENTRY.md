@@ -378,6 +378,13 @@ activity detail to preserve campaign evidence within its response budget. Both
 actions read the same authenticated session records and do not create a
 separate telemetry store.
 
+For a focused view of declared service readiness, ambient owner-pass execution,
+and linked verification evidence, use
+`actions.session_service_accountability_projection.argv`. It keeps the same
+session and event-page context while omitting unrelated resource and binding
+details. Unknown service opportunities and unmeasured agent intervention
+burden remain explicit.
+
 ## Environmental capability intelligence
 
 The read-only `campaign-state-inspection/2` capability also includes an

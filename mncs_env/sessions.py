@@ -10721,6 +10721,13 @@ class Session:
                 "--activity-section", "resources",
             ],
         }
+        actions["session_service_accountability_projection"] = {
+            "argv": [
+                *prefix, "projections", self.session_id,
+                "--interpret", "session-activity",
+                "--activity-section", "services",
+            ],
+        }
         actions["environmental_capability_history_projection"] = {
             "argv": [
                 *prefix, "projections", self.session_id,

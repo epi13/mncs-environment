@@ -71,6 +71,14 @@ class EnvironmentalCapabilityProjectionCliTests(unittest.TestCase):
 
         self.assertEqual(call.kwargs["activity_section"], "resources")
 
+    def test_session_activity_accepts_service_accountability_section(self) -> None:
+        call = self._run_projection([
+            "projections", "ses_example", "--interpret", "session-activity",
+            "--activity-section", "services",
+        ])
+
+        self.assertEqual(call.kwargs["activity_section"], "services")
+
     def test_activity_section_is_restricted_to_session_activity(self) -> None:
         args = cli.build_parser().parse_args([
             "projections", "ses_example", "--interpret", "environmental-capability",

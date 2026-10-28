@@ -3528,6 +3528,219 @@ def _compact_service_accountability_overview(
     return result
 
 
+def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
+    """Keep service execution coverage and exact result sources in a focused view."""
+    if not isinstance(value, dict):
+        return None
+    source = value.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "kind", "projection_digest", "owner_pass_contract_reference",
+            "session_id", "environment_id", "snapshot_sequence",
+            "campaign_id", "work_intent_id",
+        )
+        if isinstance(source.get(key), str)
+        or (key == "snapshot_sequence"
+            and type(source.get(key)) is int and source[key] >= 0)
+    }
+    summary = value.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    summary_fields = (
+        "scheduler_mode", "owner_pass_observation_status",
+        "owner_pass_observation_count", "declared_owner_pass_count",
+        "owner_pass_decision_count", "owner_pass_decision_coverage",
+        "scheduled_pass_count", "skipped_pass_count",
+        "owner_failure_observation_status", "owner_failure_count",
+        "owner_pass_result_record_count", "verification_status",
+        "ambient_fulfillment_status", "agent_intervention_burden_status",
+        "result_reference_publication_status",
+        "result_reference_store_reference_reuse_count",
+        "result_reference_store_resolution_attempt_count",
+        "result_reference_store_resolution_success_count",
+        "result_reference_publication_elapsed_seconds",
+        "verification_result_detail_count",
+        "verification_result_details_status",
+        "verification_result_details_omitted_count",
+    )
+    compact_summary: dict[str, Any] = {}
+    for key in summary_fields:
+        item = summary.get(key)
+        if (isinstance(item, str) or type(item) is bool
+                or (type(item) is int and item >= 0)
+                or (type(item) is float and math.isfinite(item)
+                    and 0 <= item <= 86400)):
+            compact_summary[key] = item
+    for key in (
+        "owner_pass_outcome_disposition_counts",
+        "owner_pass_outcome_reason_counts",
+        "owner_pass_service_availability_counts",
+        "owner_pass_service_availability_reason_counts",
+        "owner_pass_result_status_counts",
+        "scheduled_pass_verification_status_counts",
+    ):
+        counts = summary.get(key)
+        if isinstance(counts, dict):
+            compact_summary[key] = {
+                _short_text(name, 80): count
+                for name, count in list(counts.items())[:12]
+                if isinstance(name, str) and type(count) is int and count >= 0
+            }
+    integrity = _compact_owner_result_content_integrity(
+        summary.get("owner_result_content_integrity"),
+    )
+    if integrity is not None:
+        compact_summary["owner_result_content_integrity"] = integrity
+
+    observations = summary.get("owner_pass_observations")
+    if isinstance(observations, dict):
+        compact_observations = {
+            key: observations[key]
+            for key in (
+                "status", "count", "limit", "omitted_count",
+                "decision_coverage",
+            )
+            if isinstance(observations.get(key), str)
+            or (type(observations.get(key)) is int
+                and observations[key] >= 0)
+        }
+        decision_summary = _compact_owner_pass_decision_summary(observations)
+        if decision_summary is not None:
+            compact_observations["owner_decision_summary"] = decision_summary
+        raw_items = observations.get("items")
+        raw_items = raw_items if isinstance(raw_items, list) else []
+        compact_items = []
+        for row in raw_items[:8]:
+            if not isinstance(row, dict):
+                continue
+            compact_row = {
+                key: _short_text(row[key], 256)
+                for key in (
+                    "owner_pass", "service_execution_id", "decision",
+                    "scheduler_disposition_code", "outcome_status",
+                    "result_status", "result_identity",
+                    "source_reference_status", "source_reference",
+                    "source_content_integrity_status", "verification_status",
+                )
+                if isinstance(row.get(key), str)
+            }
+            if compact_row:
+                compact_items.append(compact_row)
+        compact_observations["items"] = compact_items
+        compact_observations["items_omitted_by_focused_view"] = max(
+            0, len(raw_items) - len(compact_items),
+        )
+        compact_summary["owner_pass_observations"] = compact_observations
+
+    details = summary.get("verification_result_details")
+    details = details if isinstance(details, list) else []
+    compact_details = []
+    for row in details[:4]:
+        if not isinstance(row, dict):
+            continue
+        compact_row = {
+            key: _short_text(row[key], 256)
+            for key in (
+                "owner_pass", "service_execution_id", "result_identity",
+                "result_status", "operation_status", "source_reference_status",
+                "source_reference",
+            )
+            if isinstance(row.get(key), str)
+        }
+        evidence = row.get("verification_evidence")
+        if isinstance(evidence, dict):
+            compact_evidence = {
+                key: _short_text(evidence[key], 160)
+                for key in (
+                    "status", "source_schema", "source_integrity_status",
+                    "owner_result_content_integrity_status", "source_reference",
+                    "owner_result_reference",
+                )
+                if isinstance(evidence.get(key), str)
+            }
+            for key in (
+                "outcome_counts", "reason_counts", "unmeasurable_reason_counts",
+            ):
+                counts = evidence.get(key)
+                if isinstance(counts, dict):
+                    compact_evidence[key] = {
+                        _short_text(name, 80): count
+                        for name, count in list(counts.items())[:12]
+                        if isinstance(name, str)
+                        and type(count) is int and count >= 0
+                    }
+            evidence_summary = evidence.get("summary")
+            if isinstance(evidence_summary, dict):
+                compact_evidence["summary"] = {
+                    key: evidence_summary[key]
+                    for key in (
+                        "obligations", "executed", "passed", "failed",
+                        "excluded", "unsupported", "blockers", "unknown",
+                    )
+                    if type(evidence_summary.get(key)) is int
+                    and evidence_summary[key] >= 0
+                }
+            raw_obligations = evidence.get("not_passed_obligations")
+            raw_obligations = (
+                raw_obligations if isinstance(raw_obligations, list) else []
+            )
+            compact_obligations = [
+                {
+                    key: _short_text(item[key], 160)
+                    for key in (
+                        "obligation", "repository", "outcome", "reason",
+                        "unmeasurable",
+                    )
+                    if isinstance(item.get(key), str)
+                }
+                for item in raw_obligations[:8]
+                if isinstance(item, dict)
+            ]
+            compact_evidence["not_passed_obligations"] = compact_obligations
+            compact_evidence["not_passed_obligations_omitted_count"] = max(
+                0,
+                (evidence.get("not_passed_obligations_omitted_count", 0)
+                 if type(evidence.get(
+                     "not_passed_obligations_omitted_count", 0,
+                 )) is int else 0)
+                + len(raw_obligations) - len(compact_obligations),
+            )
+            investigation = evidence.get("investigation_candidates")
+            if isinstance(investigation, dict):
+                raw_candidates = investigation.get("candidates")
+                raw_candidates = (
+                    raw_candidates if isinstance(raw_candidates, list) else []
+                )
+                compact_evidence["investigation_candidate_summary"] = {
+                    "status": investigation.get("status"),
+                    "candidate_records_returned": len(raw_candidates),
+                    "candidate_detail_status": "omitted-from-focused-view",
+                }
+            compact_row["verification_evidence"] = compact_evidence
+        compact_row["detail_content_status"] = "bounded-source-summary"
+        compact_details.append(compact_row)
+    if details:
+        compact_summary["verification_result_details"] = compact_details
+        compact_summary["verification_result_details_omitted_by_focused_view"] = (
+            max(0, len(details) - len(compact_details))
+        )
+
+    publication_usage = resources_module.compact_process_usage(
+        summary.get("result_reference_publication_process_resource_usage"),
+    )
+    if publication_usage is not None:
+        compact_summary["result_reference_publication_process_resource_usage"] = (
+            publication_usage
+        )
+    return {
+        "status": value.get("status"),
+        "scope": value.get("scope"),
+        "source": compact_source,
+        "summary": compact_summary,
+    }
+
+
 def _compact_ambient_service_execution_overview(
     value: Any,
 ) -> dict[str, Any] | None:
@@ -12132,6 +12345,7 @@ def _focus_session_activity(
             "event_page_has_older_records", "event_window_truncated",
             "event_window_sequence_start", "event_window_sequence_end",
             "resource_sample_identity_digest",
+            "ambient_service_execution_digest",
             "verification_activity_digest",
         )
         if key in source and (
@@ -12165,9 +12379,46 @@ def _focus_session_activity(
         )
         if verification_activity is not None:
             result["verification_activity"] = verification_activity
+    elif section == "services":
+        readiness = activity.get("service_readiness")
+        if isinstance(readiness, dict):
+            result["service_readiness"] = deepcopy(readiness)
+
+        accountability = activity.get("service_accountability")
+        if isinstance(accountability, dict):
+            compact_accountability = _compact_service_accountability_overview(
+                accountability,
+            )
+            if compact_accountability is not None:
+                accountability_summary = accountability.get("summary")
+                environment_execution = (
+                    accountability_summary.get("environment_service_execution")
+                    if isinstance(accountability_summary, dict) else None
+                )
+                if not isinstance(environment_execution, dict):
+                    ambient_execution = activity.get("ambient_service_execution")
+                    if isinstance(ambient_execution, dict):
+                        environment_execution = (
+                            _environment_service_execution_accountability(
+                                ambient_execution,
+                                include_owner_pass_observations=True,
+                            )
+                        )
+                compact_execution = _compact_focused_service_execution(
+                    environment_execution,
+                )
+                if compact_execution is not None:
+                    compact_summary = compact_accountability.get("summary")
+                    if isinstance(compact_summary, dict):
+                        compact_summary["environment_service_execution"] = (
+                            compact_execution
+                        )
+                result["service_accountability"] = compact_accountability
+
     else:
         raise ValueError(
-            "session activity section must be resources, diagnostics, or verification"
+            "session activity section must be resources, diagnostics, "
+            "verification, or services"
         )
     measurement_limits = activity.get("measurement_limits")
     if isinstance(measurement_limits, list):
@@ -12211,10 +12462,11 @@ def project_session_activity(
     if (activity_section is not None
             and (not isinstance(activity_section, str)
                  or activity_section not in (
-                     "resources", "diagnostics", "verification",
+                     "resources", "diagnostics", "verification", "services",
                  ))):
         raise ValueError(
-            "session activity section must be resources, diagnostics, or verification"
+            "session activity section must be resources, diagnostics, "
+            "verification, or services"
         )
     if (type(doctor_gap_limit) is not int
             or not 0 <= doctor_gap_limit <= MAX_DOCTOR_GAP_EXAMPLES):
