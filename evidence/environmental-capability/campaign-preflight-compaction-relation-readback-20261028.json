@@ -1,0 +1,102 @@
+{
+  "captured_at": "2026-10-28T09:40:57Z",
+  "identity": "ev_environment_campaign_preflight_compaction_relation_readback_20261028",
+  "measurement_basis": "live-ECI-relation-readback-after-evidence-priority-compaction-fix",
+  "measurement_limits": [
+    "This is one campaign-session response and does not establish cross-session recurrence or ambient fulfillment.",
+    "The ECI response is partial and truncated; the compact source summary and improvement relation remain visible while only one observation row is returned.",
+    "Effectiveness remains unassessed, and intervention burden and agent receipt are not measured."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-improvement-relation-readback",
+    "outcome": {
+      "campaign_observation_preflight": {
+        "reason": "selected-checkout-blob-and-observation-contract-verified",
+        "reference_count": 4,
+        "status": "validated",
+        "validated_reference_count": 4
+      },
+      "effectiveness_assessment": "not-assessed",
+      "improvement_relation_identity": "im_environment_campaign_preflight_compaction_20261028",
+      "interpretation": "The bounded preflight result survived the production evidence-priority compact view, and ECI independently verified the linked verification and subsequent readback records.",
+      "observation_records_unavailable": 0,
+      "observation_records_verified": 12,
+      "pressure_definition_status": "consistent",
+      "projection_status": "partial",
+      "record_corrections_applied_count": 1,
+      "record_corrections_unverified_count": 0,
+      "recurrence_status": "not-established",
+      "response_truncated": true,
+      "returned_observation_identities": [
+        "ev_environment_campaign_preflight_compaction_pressure_20261028"
+      ],
+      "subsequent_record_status": "record-integrity-verified-in-projection",
+      "verification_record_status": "record-integrity-verified-in-projection"
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_ccb9786c42f7a67e",
+      "command": "python scripts/mncs-env projections ses_9db7b7c6f04e4d19 --interpret environmental-capability --evidence-limit 12 --session-event-limit 64",
+      "implementation_commit": "e3e0aaaacbae9044ea438285bf643a1706ee4723",
+      "projection_identity": "eci_4bad904d22cca928"
+    },
+    "source_interface": "mncs-env projections --interpret environmental-capability"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Retain the bounded campaign observation preflight result in evidence-priority response compaction and verify it through the real ECI route.",
+    "basis": "The live compact projection retains the accepted checkpoint outcome and integrity-verified improvement relation after the response-priority source allowlist was corrected.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_projection_compaction_loss_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment ECI evidence-priority response compaction",
+    "title": "ECI evidence-priority compaction dropped campaign preflight outcome"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "6537b4d50faa5e44b0a4bea1ee077d0db6749dd4",
+      "identity": "ev_environment_campaign_preflight_compaction_pressure_20261028",
+      "kind": "pressure-observation",
+      "path": "evidence/environmental-capability/campaign-preflight-compaction-pressure-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "8d34dea58fa7530e9b2b55b18190197b53add3d220c00a127426ea173f442af8"
+    },
+    {
+      "commit": "6537b4d50faa5e44b0a4bea1ee077d0db6749dd4",
+      "identity": "ev_environment_campaign_preflight_compaction_verification_20261028",
+      "kind": "verification-observation",
+      "path": "evidence/environmental-capability/campaign-preflight-compaction-verification-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "840bc2a71e8a3cd78e6fe9af48a944f4a74260d201b6cde7342c3587a3ac96d1"
+    },
+    {
+      "commit": "6537b4d50faa5e44b0a4bea1ee077d0db6749dd4",
+      "identity": "ev_environment_campaign_preflight_compaction_readback_20261028",
+      "kind": "subsequent-observation",
+      "path": "evidence/environmental-capability/campaign-preflight-compaction-readback-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "3c9217b4752538d896cd1537d5949d0fc95a1c64057a93a43b4fb24488207670"
+    },
+    {
+      "commit": "6537b4d50faa5e44b0a4bea1ee077d0db6749dd4",
+      "identity": "ev_environment_campaign_preflight_compaction_improvement_20261028",
+      "kind": "improvement-observation",
+      "path": "evidence/environmental-capability/campaign-preflight-compaction-improvement-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "a8fb9c68ec64237fc4174740912fb942ee79adcf44beddf2b58c63e87d3bf5a5"
+    }
+  ]
+}
