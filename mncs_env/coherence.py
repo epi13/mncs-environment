@@ -47,6 +47,32 @@ OWNER_RESULT_REFERENCE_STATUSES = {
 MAX_TRACE_TRIGGER_KINDS = 8
 MAX_TRACE_TRIGGER_SUBJECT_IDENTITIES = 8
 MAX_TRACE_RESULT_FIELDS = 16
+SCHEDULER_INPUT_CHAIN_SCHEMA = (
+    "mncs.environment.scheduler-input-chain/1"
+)
+SCHEDULER_INPUT_REASON_CODES = frozenset({
+    "repository-observation-incomplete",
+    "store-replay-reset",
+    "store-replay-unavailable",
+    "semantic-replay-unavailable",
+    "prior-scheduler-state-unstable",
+    "prior-scheduler-state-unavailable",
+    "scheduler-policy-identity-changed",
+    "scheduler-policy-identity-unavailable",
+    "owner-result-reference-unavailable",
+    "native-coherence-provider-unavailable",
+    "scheduler-route-evaluation-failed",
+    "route-selected-reconciliation-without-observed-issue",
+})
+SCHEDULER_ROUTE_FAILURE_STAGES = frozenset({
+    "file-event-classification", "owner-event-routing", "native-route-batch",
+})
+SCHEDULER_DISPOSITIONS = {
+    0: "current",
+    1: "affected",
+    2: "bounded-reconciliation",
+    3: "bootstrap",
+}
 OWNER_PASS_OUTCOME_SCHEMA = "mncs.environment.ambient-owner-pass-outcome/1"
 OWNER_PASS_QUIET_REASONS = frozenset({
     "disabled-by-definition",
@@ -186,6 +212,9 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
         disposition = nonnegative(item.get("disposition"))
         if disposition is not None:
             row["scheduler_disposition_code"] = disposition
+            scheduler_disposition = SCHEDULER_DISPOSITIONS.get(disposition)
+            if scheduler_disposition is not None:
+                row["scheduler_disposition"] = scheduler_disposition
         wave = nonnegative(item.get("wave"))
         if wave is not None:
             row["wave"] = wave
@@ -357,6 +386,41 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
             "Trace persistence distinguishes the current entry response from the session snapshot; snapshot retention does not establish service fulfillment or independent verification.",
         ],
     }
+    raw_input_chain = value.get("scheduler_input_chain")
+    if (isinstance(raw_input_chain, dict)
+            and raw_input_chain.get("schema_version")
+            == SCHEDULER_INPUT_CHAIN_SCHEMA):
+        raw_reasons = raw_input_chain.get("reason_codes")
+        raw_reasons = raw_reasons if isinstance(raw_reasons, list) else []
+        reason_codes = []
+        for reason in raw_reasons[:len(SCHEDULER_INPUT_REASON_CODES)]:
+            if (isinstance(reason, str)
+                    and reason in SCHEDULER_INPUT_REASON_CODES
+                    and reason not in reason_codes):
+                reason_codes.append(reason)
+        omitted_reasons = raw_input_chain.get("reason_codes_omitted_count", 0)
+        if type(omitted_reasons) is not int or omitted_reasons < 0:
+            omitted_reasons = 0
+        omitted_reasons = max(
+            omitted_reasons, len(raw_reasons) - len(reason_codes),
+        )
+        chain_status = raw_input_chain.get("status")
+        if chain_status not in {
+                "inputs-established", "reconciliation-required",
+                "route-unavailable",
+        }:
+            chain_status = "invalid"
+        input_chain = {
+            "schema_version": SCHEDULER_INPUT_CHAIN_SCHEMA,
+            "status": chain_status,
+            "reason_codes": reason_codes,
+            "reason_code_count": len(reason_codes) + omitted_reasons,
+            "reason_codes_omitted_count": omitted_reasons,
+        }
+        failure_stage = raw_input_chain.get("route_failure_stage")
+        if failure_stage in SCHEDULER_ROUTE_FAILURE_STAGES:
+            input_chain["route_failure_stage"] = failure_stage
+        result["scheduler_input_chain"] = input_chain
     raw_pending_events = value.get("pending_events")
     if isinstance(raw_pending_events, list):
         pending_rows = raw_pending_events[:MAX_TRACE_PENDING_EVENT_ROWS]
@@ -1872,6 +1936,66 @@ def _owner_result_failed(value) -> bool:
     }
 
 
+def _scheduler_input_chain(
+    *, observation_known: bool | None, store_known: bool | None,
+    store_reset: dict | None, semantic_known: bool | None,
+    previous: dict, policy: str, results_known: bool | None,
+    route_status: str,
+    route_failure_stage: str | None = None, scheduler_codes=(),
+) -> dict:
+    """Record bounded facts that explain a conservative scheduler decision."""
+    reasons = []
+    if observation_known is False:
+        reasons.append("repository-observation-incomplete")
+    if store_reset is not None:
+        reasons.append("store-replay-reset")
+    elif store_known is False:
+        reasons.append("store-replay-unavailable")
+    if semantic_known is False:
+        reasons.append("semantic-replay-unavailable")
+    if previous:
+        prior_stability = previous.get("stable")
+        if prior_stability is False:
+            reasons.append("prior-scheduler-state-unstable")
+        elif prior_stability is not True:
+            reasons.append("prior-scheduler-state-unavailable")
+        if previous.get("policy_identity") != policy:
+            reasons.append(
+                "scheduler-policy-identity-changed"
+                if isinstance(previous.get("policy_identity"), str)
+                else "scheduler-policy-identity-unavailable"
+            )
+    if results_known is False:
+        reasons.append("owner-result-reference-unavailable")
+    if route_status == "provider-unavailable":
+        reasons.append("native-coherence-provider-unavailable")
+    elif route_status == "failed":
+        reasons.append("scheduler-route-evaluation-failed")
+    if (route_status == "returned" and any(code == 2 for code in scheduler_codes)
+            and not reasons):
+        reasons.append(
+            "route-selected-reconciliation-without-observed-issue",
+        )
+    reasons = list(dict.fromkeys(reasons))
+    if route_status in {"failed", "provider-unavailable"}:
+        status = "route-unavailable"
+    elif reasons:
+        status = "reconciliation-required"
+    else:
+        status = "inputs-established"
+    result = {
+        "schema_version": SCHEDULER_INPUT_CHAIN_SCHEMA,
+        "status": status,
+        "reason_codes": reasons[:len(SCHEDULER_INPUT_REASON_CODES)],
+        "reason_codes_omitted_count": max(
+            0, len(reasons) - len(SCHEDULER_INPUT_REASON_CODES),
+        ),
+    }
+    if route_failure_stage in SCHEDULER_ROUTE_FAILURE_STAGES:
+        result["route_failure_stage"] = route_failure_stage
+    return result
+
+
 def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
          now_ms: int | None = None) -> tuple[dict, dict]:
     scheduler_started = time.monotonic()
@@ -1908,6 +2032,12 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             "mode": "recovery_scan",
             "trace_persistence_status": "entry-response-only",
             "reason": "native coherence provider unavailable",
+            "scheduler_input_chain": _scheduler_input_chain(
+                observation_known=None, store_known=None,
+                store_reset=None, semantic_known=None, previous={},
+                policy="", results_known=None,
+                route_status="provider-unavailable",
+            ),
             "scheduled": scheduled,
             "skipped": [],
             "owner_failures": owner_failures,
@@ -1926,7 +2056,9 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     if previous.get("schema_version") != SCHEMA:
         previous = {}
     acknowledged_store_cursor = previous.get("store_cursor")
-    observed, events, known, metrics = _observe(session, previous)
+    observed, events, observation_known, metrics = _observe(
+        session, previous,
+    )
     store_events, cursor, store_known = _store_events(session, previous, definition)
     store_reset = next((item for item in store_events
                         if item.get("kind") == "store.reconcile_required"), None)
@@ -1943,7 +2075,11 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
             != prior_semantic_cursors.get(str(event.get("stream")))
     }
     events.extend(semantic_events)
-    known = known and semantic_known and store_known and store_reset is None and (not previous or previous.get("stable") is True)
+    known = (
+        observation_known and semantic_known and store_known
+        and store_reset is None
+        and (not previous or previous.get("stable") is True)
+    )
     policy, policy_artifacts = _policy_identity(session, previous.get("policy_artifacts", {}))
     if previous and previous.get("policy_identity") != policy:
         known = False
@@ -1965,8 +2101,11 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     rows = []
     routed_events = {name: [] for name in names}
     masks = {name: 0 for name in names}
+    route_failure_stage = None
     try:
+        route_failure_stage = "file-event-classification"
         events = _file_events(session, events)
+        route_failure_stage = "owner-event-routing"
         routed_events = _pass_events(session, events, spec, definition)
         masks = {
             name: _event_mask(owner_events, spec)
@@ -1980,6 +2119,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         if request == previous.get("current_request") and known:
             codes, receipt = previous["current_codes"], previous.get("policy_receipt", {})
         else:
+            route_failure_stage = "native-route-batch"
             codes, receipt = _native(session, "route_batch", rows)
         if store_reset is not None:
             # A Store cursor overflow has no safe selective interpretation.
@@ -1990,6 +2130,23 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
         codes, receipt = [2] * len(names), {}
         report["mode"] = "bounded_reconciliation"
         known = False
+        route_status = "failed"
+    else:
+        route_status = "returned"
+    report["scheduler_input_chain"] = _scheduler_input_chain(
+        observation_known=observation_known,
+        store_known=store_known,
+        store_reset=store_reset,
+        semantic_known=semantic_known,
+        previous=previous,
+        policy=policy,
+        results_known=results_known,
+        route_status=route_status,
+        route_failure_stage=(
+            route_failure_stage if route_status == "failed" else None
+        ),
+        scheduler_codes=codes,
+    )
     if any(code == 2 for code in codes):
         report["mode"] = "bounded_reconciliation"
     scheduled = set()

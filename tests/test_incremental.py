@@ -623,6 +623,55 @@ def test_project_trace_summarizes_pending_events_with_explicit_coverage():
     assert invalid["pending_event_observation"]["status"] == "invalid"
 
 
+def test_project_trace_explains_bounded_reconciliation_without_raw_errors():
+    projected = coherence.project_trace({
+        "mode": "bounded_reconciliation",
+        "scheduled": [{
+            "owner": "doctor",
+            "disposition": 2,
+            "service_execution_id": "ase_" + "a" * 32,
+            "inputs": [],
+            "subjects": [],
+            "subject_count": 0,
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "scheduler_input_chain": {
+            "schema_version": coherence.SCHEDULER_INPUT_CHAIN_SCHEMA,
+            "status": "reconciliation-required",
+            "reason_codes": [
+                "owner-result-reference-unavailable",
+                "/private/store/path",
+                "owner-result-reference-unavailable",
+            ],
+            "reason_codes_omitted_count": 0,
+        },
+    })
+
+    assert projected["scheduled_passes"][0]["scheduler_disposition"] == (
+        "bounded-reconciliation"
+    )
+    assert projected["scheduler_input_chain"] == {
+        "schema_version": coherence.SCHEDULER_INPUT_CHAIN_SCHEMA,
+        "status": "reconciliation-required",
+        "reason_codes": ["owner-result-reference-unavailable"],
+        "reason_code_count": 3,
+        "reason_codes_omitted_count": 2,
+    }
+    assert "/private/store/path" not in json.dumps(projected)
+
+
+def test_old_scheduler_trace_does_not_gain_reconstructed_input_causes():
+    projected = coherence.project_trace({
+        "mode": "bounded_reconciliation",
+        "scheduled": [],
+        "skipped": [],
+        "owner_failures": [],
+    })
+
+    assert "scheduler_input_chain" not in projected
+
+
 def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference(
     tmp_path,
 ):
@@ -1133,6 +1182,12 @@ def test_corrupt_cached_result_cannot_authorize_reuse(participant):
     Path(ref['artifact']).write_text('{"block":{"summary":{"current":999}}}')
     _, trace = coherence.tick(participant, {}, owned)
     assert len(trace['scheduled']) == 7
+    assert trace["scheduler_input_chain"]["status"] == (
+        "reconciliation-required"
+    )
+    assert trace["scheduler_input_chain"]["reason_codes"] == [
+        "owner-result-reference-unavailable",
+    ]
     _, quiet = coherence.tick(participant, {}, owned)
     assert quiet['scheduled'] == []
 
@@ -1437,6 +1492,13 @@ def test_store_replay_report_survives_route_and_postpass_observation_failure(
         "reconciliation_incomplete_or_store_advanced"
     )
     assert trace["mode"] == "bounded_reconciliation"
+    assert trace["scheduler_input_chain"]["status"] == "route-unavailable"
+    assert trace["scheduler_input_chain"]["reason_codes"] == [
+        "store-replay-reset", "scheduler-route-evaluation-failed",
+    ]
+    assert trace["scheduler_input_chain"]["route_failure_stage"] == (
+        "file-event-classification"
+    )
     persisted_history = coherence.project_owner_execution_history(
         participant.snapshot["coherence"]["owner_execution_history"],
     )

@@ -3414,6 +3414,13 @@ def _compact_service_accountability_overview(
             or (key == "owner_failure_count" and key in execution_summary
                 and execution_summary.get(key) is None)
         }
+        compact_scheduler_input_chain = _compact_scheduler_input_chain(
+            execution_summary.get("scheduler_input_chain"),
+        )
+        if compact_scheduler_input_chain is not None:
+            compact_environment_summary["scheduler_input_chain"] = (
+                compact_scheduler_input_chain
+            )
         publication_elapsed = execution_summary.get(
             "result_reference_publication_elapsed_seconds",
         )
@@ -3540,6 +3547,43 @@ def _compact_service_accountability_overview(
     return result
 
 
+def _compact_scheduler_input_chain(value: Any) -> dict[str, Any] | None:
+    if (not isinstance(value, dict)
+            or value.get("schema_version")
+            != coherence_module.SCHEDULER_INPUT_CHAIN_SCHEMA
+            or value.get("status") not in {
+                "inputs-established", "reconciliation-required",
+                "route-unavailable", "invalid",
+            }):
+        return None
+    raw_reasons = value.get("reason_codes")
+    raw_reasons = raw_reasons if isinstance(raw_reasons, list) else []
+    reasons = [
+        reason for reason in raw_reasons[:12]
+        if isinstance(reason, str)
+        and reason in coherence_module.SCHEDULER_INPUT_REASON_CODES
+    ]
+    omitted = value.get("reason_codes_omitted_count", 0)
+    if type(omitted) is not int or omitted < 0:
+        omitted = 0
+    reason_count = value.get("reason_code_count")
+    if type(reason_count) is not int or reason_count < 0:
+        reason_count = len(reasons) + omitted
+    result = {
+        "schema_version": coherence_module.SCHEDULER_INPUT_CHAIN_SCHEMA,
+        "status": value["status"],
+        "reason_codes": reasons,
+        "reason_code_count": max(reason_count, len(reasons) + omitted),
+        "reason_codes_omitted_count": max(
+            omitted, reason_count - len(reasons),
+        ),
+    }
+    stage = value.get("route_failure_stage")
+    if stage in coherence_module.SCHEDULER_ROUTE_FAILURE_STAGES:
+        result["route_failure_stage"] = stage
+    return result
+
+
 def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
     """Keep service execution coverage and exact result sources in a focused view."""
     if not isinstance(value, dict):
@@ -3585,6 +3629,11 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
                 or (type(item) is float and math.isfinite(item)
                     and 0 <= item <= 86400)):
             compact_summary[key] = item
+    input_chain = _compact_scheduler_input_chain(
+        summary.get("scheduler_input_chain"),
+    )
+    if input_chain is not None:
+        compact_summary["scheduler_input_chain"] = input_chain
     for key in (
         "owner_pass_outcome_disposition_counts",
         "owner_pass_outcome_reason_counts",
@@ -3645,6 +3694,7 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
                 key: _short_text(row[key], 256)
                 for key in (
                     "owner_pass", "service_execution_id", "decision",
+                    "scheduler_disposition",
                     "trigger_observation_status", "outcome_status",
                     "result_status", "result_identity",
                     "source_reference_status", "source_reference",
@@ -3872,6 +3922,7 @@ def _compact_ambient_service_execution_overview(
             key: execution[key]
             for key in (
                 "scope", "mode", "decision_record_status",
+                "scheduler_input_chain",
                 "scheduled_pass_count", "skipped_pass_count",
                 "declared_owner_pass_count", "owner_pass_decision_count",
                 "owner_pass_decision_coverage",
@@ -3883,6 +3934,11 @@ def _compact_ambient_service_execution_overview(
                 "result_reference_store_resolution_success_count",
             ) if key in execution
         }
+        input_chain = _compact_scheduler_input_chain(
+            execution.get("scheduler_input_chain"),
+        )
+        if input_chain is not None:
+            compact_execution["scheduler_input_chain"] = input_chain
         owner_results = execution.get("owner_pass_results")
         if isinstance(owner_results, dict):
             compact_results = {
@@ -23965,6 +24021,11 @@ def _environment_service_execution_accountability(
         scheduler_mode = execution.get("mode")
         if isinstance(scheduler_mode, str):
             summary["scheduler_mode"] = scheduler_mode
+        scheduler_input_chain = _compact_scheduler_input_chain(
+            execution.get("scheduler_input_chain"),
+        )
+        if scheduler_input_chain is not None:
+            summary["scheduler_input_chain"] = scheduler_input_chain
         publication_status = execution.get(
             "result_reference_publication_status",
         )
@@ -24270,6 +24331,11 @@ def _environment_service_execution_accountability(
             disposition = item.get("scheduler_disposition_code")
             if type(disposition) is int and disposition >= 0:
                 row["scheduler_disposition_code"] = disposition
+                scheduler_disposition = (
+                    coherence_module.SCHEDULER_DISPOSITIONS.get(disposition)
+                )
+                if scheduler_disposition is not None:
+                    row["scheduler_disposition"] = scheduler_disposition
             wave = item.get("wave")
             if type(wave) is int and wave >= 0:
                 row["wave"] = wave

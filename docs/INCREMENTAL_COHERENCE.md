@@ -14,6 +14,18 @@ scope, existing revisit wait/event codes, and a boundary deadline observation.
 The native result distinguishes current, affected, bounded reconciliation and
 bootstrap. Unknown chains never authorize reuse.
 
+The bounded trace now labels each recognized native disposition (`current`,
+`affected`, `bounded-reconciliation`, or `bootstrap`) and records a small
+`scheduler_input_chain` summary. It names only the observed conditions
+that kept the previous decision chain from being reused: repository
+observation, Store replay, semantic replay, prior scheduler stability, policy
+identity, and owner-result references. A router invocation failure also records
+its bounded stage without copying exception text. This makes conservative
+reconciliation diagnosable while keeping paths and raw failures out of the
+trace. Older traces have no such field and remain unclassified; missing causes
+are not reconstructed. These facts explain scheduler decisions, not agent need
+or service fulfillment.
+
 The seven owners retain their existing authority: Doctor, Semantics, Actions,
 Test verification, Debug diagnostics, family collaboration and projections.
 A changed provider observation, semantic state, external evidence or verification

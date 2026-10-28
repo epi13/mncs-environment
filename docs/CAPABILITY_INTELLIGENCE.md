@@ -124,9 +124,15 @@ recorded results. The sibling
 `session_activity.ambient_service_execution` contains the bounded per-pass
 source. Each scheduled row can relate trigger kinds, raw scheduler disposition
 and wave, execution identity, elapsed time, recorded outcome, and safe result
-reference; skipped rows preserve the scheduler's bounded reason. The
-disposition remains a code from the router's contract, not an interpreted
-service verdict. These are Environment scheduling records, not an
+reference; skipped rows preserve the scheduler's bounded reason. The ECI
+labels native dispositions as current, affected, bounded reconciliation, or
+bootstrap while retaining the numeric contract code. The trace also exposes
+`scheduler_input_chain` with bounded reason codes when observed inputs were
+incomplete or routing was unavailable. These codes explain why the scheduler
+could not safely reuse its last decision; they do not identify an agent need,
+a cause outside the recorded input checks, or a service verdict. Traces created
+before this observation existed remain unclassified. These are Environment
+scheduling records, not an
 agent-opportunity denominator or proof of fulfillment, correctness, or reduced
 intervention. When the final ECI summary must drop the sibling activity
 projection, the service-accountability view restores bounded unscoped-call

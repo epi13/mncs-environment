@@ -6717,6 +6717,80 @@ def test_focused_service_execution_preserves_trigger_context_and_cost() -> None:
     assert "timer_or_lifecycle_due" not in missing
 
 
+def test_focused_service_execution_explains_reconciliation_basis() -> None:
+    execution = {
+        "status": "observed",
+        "source": {
+            "owner_pass_decision_coverage": "complete",
+            "scheduler_state_stability_status": "unstable",
+        },
+        "execution": {
+            "mode": "bounded_reconciliation",
+            "decision_record_status": "recorded",
+            "owner_pass_decision_coverage": "complete",
+            "declared_owner_pass_count": 1,
+            "scheduled_passes": [{
+                "owner": "doctor",
+                "service_execution_id": "ase_" + "d" * 32,
+                "scheduler_disposition_code": 2,
+                "trigger_kinds": [],
+                "timer_or_lifecycle_due": False,
+            }],
+            "skipped_passes": [],
+            "owner_failures": [],
+            "owner_pass_results": {"status": "recorded", "results": []},
+            "scheduler_input_chain": {
+                "schema_version": capability_intelligence.coherence_module.SCHEDULER_INPUT_CHAIN_SCHEMA,
+                "status": "reconciliation-required",
+                "reason_codes": ["owner-result-reference-unavailable"],
+                "reason_code_count": 1,
+                "reason_codes_omitted_count": 0,
+            },
+        },
+    }
+
+    observed = capability_intelligence._environment_service_execution_accountability(
+        execution, include_owner_pass_observations=True,
+    )
+    focused = capability_intelligence._compact_focused_service_execution(
+        observed,
+    )
+
+    assert focused["summary"]["scheduler_input_chain"] == {
+        "schema_version": capability_intelligence.coherence_module.SCHEDULER_INPUT_CHAIN_SCHEMA,
+        "status": "reconciliation-required",
+        "reason_codes": ["owner-result-reference-unavailable"],
+        "reason_code_count": 1,
+        "reason_codes_omitted_count": 0,
+    }
+    owner = focused["summary"]["owner_pass_observations"]["items"][0]
+    assert owner["scheduler_disposition"] == "bounded-reconciliation"
+    assert owner["scheduler_disposition_code"] == 2
+    assert owner["trigger_kinds"] == []
+    assert owner["timer_or_lifecycle_due"] is False
+
+
+def test_old_scheduler_execution_stays_unclassified_in_service_view() -> None:
+    old_execution = {
+        "status": "observed",
+        "source": {"scheduler_state_stability_status": "unstable"},
+        "execution": {
+            "mode": "bounded_reconciliation",
+            "scheduled_passes": [],
+            "skipped_passes": [],
+        },
+    }
+
+    observed = capability_intelligence._environment_service_execution_accountability(
+        old_execution,
+    )
+    focused = capability_intelligence._compact_focused_service_execution(
+        observed,
+    )
+
+    assert "scheduler_input_chain" not in focused["summary"]
+
+
 def test_session_service_execution_preserves_snapshot_stability_context() -> None:
     session = SimpleNamespace(session_id="ses_scheduler_instability")
     snapshot = {
