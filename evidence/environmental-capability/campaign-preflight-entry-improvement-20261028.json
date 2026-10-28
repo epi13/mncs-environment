@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-28T09:46:45Z",
+  "identity": "ev_environment_campaign_preflight_entry_improvement_20261028",
+  "improvement_relation": {
+    "addresses_hypothesis_identity": "ph_environment_campaign_preflight_entry_visibility_20261028",
+    "basis": "The existing entry context now carries the bounded observation preflight result from campaign state. Two focused tests and a live same-checkpoint readback confirm the field is available without a separate campaign-state query; no agent burden reduction is claimed.",
+    "identity": "im_environment_campaign_preflight_entry_20261028",
+    "implementation_reference": {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_3f09b7d",
+      "kind": "implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "c421bc5180f9ddd12b145c70672d9502911da096b2833357fc7ec6644d4269e1"
+    },
+    "not_measured": [
+      "agent receipt and use of the field across other sessions",
+      "agent time or tool-call burden reduction",
+      "cross-session recurrence and effectiveness",
+      "ambient service fulfillment outside campaign entry context"
+    ],
+    "subsequent_observation_identity": "ev_environment_campaign_preflight_entry_readback_20261028",
+    "verification_observation_identity": "ev_environment_campaign_preflight_entry_verification_20261028"
+  },
+  "measurement_basis": "verified-entry-context-integration-and-live-readback",
+  "measurement_limits": [
+    "The relation establishes a verified context projection change and a same-session readback, not broader adoption or universal delivery.",
+    "Agent receipt, intervention-burden reduction, and cross-session effectiveness are not measured."
+  ],
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "outcome": {
+      "effectiveness_assessment": "not-assessed",
+      "implementation_change": "Expose the accepted checkpoint summary through continuation_observations and Session.context when a validated summary is present.",
+      "implementation_scope": "Bounded campaign observation preflight outcome in entry continuation context.",
+      "interpretation_limit": "Discoverability is verified in one session; agent receipt and burden reduction are unknown.",
+      "verified_change": "Focused context regressions pass, and the live entry context exposes validated for the same checkpoint previously omitted."
+    },
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_campaign_preflight_entry_visibility_20261028",
+      "implementation_commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "subsequent_observation_identity": "ev_environment_campaign_preflight_entry_readback_20261028",
+      "verification_observation_identity": "ev_environment_campaign_preflight_entry_verification_20261028"
+    },
+    "source_interface": "MNCS Environment entry continuation context"
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_3f09b7d",
+      "kind": "implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "c421bc5180f9ddd12b145c70672d9502911da096b2833357fc7ec6644d4269e1"
+    },
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_test_3f09b7d",
+      "kind": "verification-source",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "1ca9a5ba70a2c52ece62b9da84e995117ddcc5fb8bf85ed66b89cfa7fc0d02da"
+    },
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_docs_3f09b7d",
+      "kind": "documentation-source",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "2f4528db6af6ec43ebbe26eb945eeeebfe8eb37efb55cf93ad4566542a999045"
+    }
+  ]
+}

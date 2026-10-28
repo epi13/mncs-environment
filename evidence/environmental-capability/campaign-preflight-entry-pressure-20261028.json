@@ -1,0 +1,61 @@
+{
+  "captured_at": "2026-10-28T09:46:45Z",
+  "identity": "ev_environment_campaign_preflight_entry_pressure_20261028",
+  "measurement_basis": "same-session-campaign-state-ECI-and-entry-context-readbacks",
+  "measurement_limits": [
+    "One campaign session exposed the omission; cross-session recurrence is not established.",
+    "The readbacks do not measure agent time, tool calls, or intervention burden.",
+    "The context capsule is an entry summary and does not replace detailed campaign-state or ECI queries."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-entry-context-gap",
+    "outcome": {
+      "ECI_preflight_status": "validated",
+      "campaign_state_preflight_status": "validated",
+      "campaign_state_reference_count": 1,
+      "entry_context_preflight_field": "not-present",
+      "interpretation": "The accepted checkpoint outcome was available through campaign-state and ECI, but the existing entry continuation omitted it."
+    },
+    "request": {
+      "ECI_projection_identity": "eci_23ef074e3bd7014e",
+      "campaign_state_checkpoint_id": "chk_32a218b055b7adce",
+      "operation": "compare accepted preflight status across state, ECI, and entry context"
+    },
+    "source_interface": "MNCS Environment campaign state, ECI, and entry context"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Expose the bounded accepted-checkpoint observation preflight result in the existing entry and continuation contexts.",
+    "basis": "The same current campaign state exposed its preflight outcome through campaign-state and ECI while the live entry-context capsule omitted that field.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_entry_visibility_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment entry context and campaign continuity",
+    "title": "Entry continuation omitted accepted campaign preflight status"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "campaign_id": "cmp_c2d1ef45b03f9f1c",
+      "campaign_state_checkpoint_id": "chk_32a218b055b7adce",
+      "identity": "eci_23ef074e3bd7014e",
+      "kind": "same-checkpoint-ECI-readback",
+      "preflight_status": "validated",
+      "repository": "mncs-environment",
+      "session_id": "ses_9db7b7c6f04e4d19"
+    }
+  ]
+}

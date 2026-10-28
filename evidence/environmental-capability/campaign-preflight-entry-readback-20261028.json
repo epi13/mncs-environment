@@ -1,0 +1,72 @@
+{
+  "captured_at": "2026-10-28T09:46:45Z",
+  "identity": "ev_environment_campaign_preflight_entry_readback_20261028",
+  "measurement_basis": "live-entry-context-after-integration",
+  "measurement_limits": [
+    "One selected session and campaign were read.",
+    "The result confirms discoverability in this context, not use or burden reduction across agents.",
+    "The bounded entry capsule still points agents to campaign-state and ECI for detailed evidence."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-entry-context-readback",
+    "outcome": {
+      "campaign_id": "cmp_c2d1ef45b03f9f1c",
+      "evidence_count": 114,
+      "observation_preflight": {
+        "reason": "selected-checkout-blob-and-observation-contract-verified",
+        "reference_count": 1,
+        "status": "validated",
+        "validated_reference_count": 1
+      },
+      "preflight_field_present_in_continuation": true
+    },
+    "request": {
+      "campaign_state_checkpoint_id": "chk_32a218b055b7adce",
+      "command": "python scripts/mncs-env context ses_9db7b7c6f04e4d19",
+      "implementation_commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5"
+    },
+    "source_interface": "mncs-env context"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Expose the bounded accepted-checkpoint observation preflight result in the existing entry and continuation contexts.",
+    "basis": "The post-change entry capsule now exposes the exact bounded outcome from the same persisted campaign checkpoint.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_entry_visibility_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment entry context and campaign continuity",
+    "title": "Entry continuation omitted accepted campaign preflight status"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_3f09b7d",
+      "kind": "implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "c421bc5180f9ddd12b145c70672d9502911da096b2833357fc7ec6644d4269e1"
+    },
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_test_3f09b7d",
+      "kind": "verification-source",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "1ca9a5ba70a2c52ece62b9da84e995117ddcc5fb8bf85ed66b89cfa7fc0d02da"
+    }
+  ]
+}

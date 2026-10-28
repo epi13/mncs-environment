@@ -1,0 +1,82 @@
+{
+  "captured_at": "2026-10-28T09:46:45Z",
+  "identity": "ev_environment_campaign_preflight_entry_verification_20261028",
+  "measurement_basis": "focused-entry-context-regression-and-live-context-readback",
+  "measurement_limits": [
+    "Two focused Environment tests passed; this was not the full repository suite.",
+    "The verification establishes field availability in the selected campaign context, not that every agent receives or uses it.",
+    "No intervention-burden reduction or service fulfillment ratio is measured."
+  ],
+  "observation": {
+    "kind": "campaign-preflight-entry-context-verification",
+    "outcome": {
+      "compileall": "passed",
+      "focused_test_count": 2,
+      "git_diff_check": "passed",
+      "ruff_select_up031": "passed",
+      "status": "passed",
+      "verified_properties": [
+        "The continuation_observations projection and Session.context expose the same bounded accepted-checkpoint result.",
+        "Validated and not-applicable outcomes remain distinct in entry context.",
+        "The live context readback reports validated for the current checkpoint without changing campaign state."
+      ]
+    },
+    "request": {
+      "compile_check": "python -m compileall -q mncs_env/sessions.py",
+      "implementation_commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "lint_check": "ruff check --select UP031 --output-format concise mncs_env/sessions.py tests/test_environment.py",
+      "test_command": "pytest -q tests/test_environment.py -k 'checkpoint_preflights_selected_environment_observation_contract or campaign_evidence_and_delivery_are_checkpointed_and_reconstructed'"
+    },
+    "source_interface": "MNCS Environment focused pytest and context CLI"
+  },
+  "pressure_hypothesis": {
+    "actionable_recommendation": "Expose the bounded accepted-checkpoint observation preflight result in the existing entry and continuation contexts.",
+    "basis": "Focused regression and live context readback verify the bounded result is now available in the existing entry context.",
+    "category": "ambient-service-accountability",
+    "identity": "ph_environment_campaign_preflight_entry_visibility_20261028",
+    "owner": "mncs-environment",
+    "subsystem": "MNCS Environment entry context and campaign continuity",
+    "title": "Entry continuation omitted accepted campaign preflight status"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_3f09b7d",
+      "kind": "implementation-source",
+      "path": "mncs_env/sessions.py",
+      "repository": "mncs-environment",
+      "sha256": "c421bc5180f9ddd12b145c70672d9502911da096b2833357fc7ec6644d4269e1"
+    },
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_test_3f09b7d",
+      "kind": "verification-source",
+      "path": "tests/test_environment.py",
+      "repository": "mncs-environment",
+      "sha256": "1ca9a5ba70a2c52ece62b9da84e995117ddcc5fb8bf85ed66b89cfa7fc0d02da"
+    },
+    {
+      "commit": "3f09b7d21a471e9f5886d540313d7a995dff47f5",
+      "identity": "src_environment_campaign_preflight_entry_docs_3f09b7d",
+      "kind": "documentation-source",
+      "path": "docs/PROJECTIONS.md",
+      "repository": "mncs-environment",
+      "sha256": "2f4528db6af6ec43ebbe26eb945eeeebfe8eb37efb55cf93ad4566542a999045"
+    }
+  ]
+}
