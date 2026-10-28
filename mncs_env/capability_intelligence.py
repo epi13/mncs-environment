@@ -3399,6 +3399,9 @@ def _compact_service_accountability_overview(
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
                 "result_reference_publication_status",
+                "result_reference_store_reference_reuse_count",
+                "result_reference_store_resolution_attempt_count",
+                "result_reference_store_resolution_success_count",
             )
             if isinstance(execution_summary.get(key), str)
             or (type(execution_summary.get(key)) is int
@@ -3561,6 +3564,9 @@ def _compact_ambient_service_execution_overview(
                 "owner_failure_observation_status", "owner_failure_count",
                 "ambient_fulfillment", "agent_need_opportunity_denominator",
                 "trace_persistence_status",
+                "result_reference_store_reference_reuse_count",
+                "result_reference_store_resolution_attempt_count",
+                "result_reference_store_resolution_success_count",
             ) if key in execution
         }
         owner_results = execution.get("owner_pass_results")
@@ -23172,6 +23178,14 @@ def _environment_service_execution_accountability(
             summary["result_reference_publication_process_resource_usage"] = (
                 publication_resource_usage
             )
+        for key in (
+            "result_reference_store_reference_reuse_count",
+            "result_reference_store_resolution_attempt_count",
+            "result_reference_store_resolution_success_count",
+        ):
+            count = execution.get(key)
+            if type(count) is int and 0 <= count <= 10**9:
+                summary[key] = count
         for key in (
             "declared_owner_pass_count", "owner_pass_decision_count",
             "owner_pass_decision_coverage", "scheduled_pass_count",

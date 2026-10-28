@@ -52,6 +52,14 @@ def cacheable(session, owner: str, reference: Any) -> bool:
         return False
 
 
+def reference_for_record(session, owner: str, record: dict[str, Any]) -> str:
+    """Return the deterministic reference for immutable Store evidence."""
+    identity = (
+        f"{session.session_id}:{owner}:{digest_hex(record, length=64)}"
+    )
+    return STORE_REFERENCE_PREFIX + identity
+
+
 def publish(session, owner: str, record: dict[str, Any]) -> str | None:
     """Publish immutable owner evidence, or return None for file sessions.
 
@@ -63,8 +71,8 @@ def publish(session, owner: str, record: dict[str, Any]) -> str | None:
     if methods is None:
         return None
     put, get = methods
-    identity = (f"{session.session_id}:{owner}:{digest_hex(record, length=64)}"
-                ).encode()
+    reference = reference_for_record(session, owner, record)
+    identity = reference[len(STORE_REFERENCE_PREFIX):].encode()
     existing = get(STORE_EVIDENCE_SCHEMA, identity)
     if existing is None:
         try:
@@ -78,7 +86,7 @@ def publish(session, owner: str, record: dict[str, Any]) -> str | None:
     elif existing != record:
         raise StoreIntegrityFailure(
             "Environment evidence identity resolved to different Store content")
-    return STORE_REFERENCE_PREFIX + identity.decode("utf-8")
+    return reference
 
 
 def read(session, owner: str, reference: str) -> dict[str, Any]:

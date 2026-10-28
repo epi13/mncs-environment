@@ -6966,6 +6966,9 @@ def test_owner_pass_projection_correlates_bounded_process_resource_evidence() ->
         "result_reference_publication_process_resource_usage": (
             publication_usage
         ),
+        "result_reference_store_reference_reuse_count": 3,
+        "result_reference_store_resolution_attempt_count": 2,
+        "result_reference_store_resolution_success_count": 2,
     }
     ambient_execution = {
         "status": "recorded",
@@ -6988,6 +6991,15 @@ def test_owner_pass_projection_correlates_bounded_process_resource_evidence() ->
     assert view["summary"][
         "result_reference_publication_process_resource_usage"
     ] == publication_usage
+    assert view["summary"][
+        "result_reference_store_reference_reuse_count"
+    ] == 3
+    assert view["summary"][
+        "result_reference_store_resolution_attempt_count"
+    ] == 2
+    assert view["summary"][
+        "result_reference_store_resolution_success_count"
+    ] == 2
     compact = capability_intelligence._compact_service_accountability_overview(
         {
             "schema_version": "mncs.environment.service-accountability/1",
@@ -7009,6 +7021,27 @@ def test_owner_pass_projection_correlates_bounded_process_resource_evidence() ->
     assert compact_summary[
         "result_reference_publication_process_resource_usage"
     ] == publication_usage
+    assert compact_summary[
+        "result_reference_store_reference_reuse_count"
+    ] == 3
+    assert compact_summary[
+        "result_reference_store_resolution_attempt_count"
+    ] == 2
+    assert compact_summary[
+        "result_reference_store_resolution_success_count"
+    ] == 2
+    compact_execution = capability_intelligence._compact_ambient_service_execution_overview(
+        ambient_execution,
+    )
+    assert compact_execution["execution"][
+        "result_reference_store_reference_reuse_count"
+    ] == 3
+    assert compact_execution["execution"][
+        "result_reference_store_resolution_attempt_count"
+    ] == 2
+    assert compact_execution["execution"][
+        "result_reference_store_resolution_success_count"
+    ] == 2
     observations = view["owner_pass_observations"]
     assert [item["process_resource_usage"] for item in observations["items"]] == [
         usage, usage,

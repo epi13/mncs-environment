@@ -129,8 +129,15 @@ as incomplete and leaves Store and semantic replay cursors at their previous
 values, so a later tick reconciles the work. ECI preserves the publication
 status and cost while keeping owner-result pointers absent or partial; it does
 not treat the saved scheduler observations as result verification or service
-fulfillment. Process counters cover Environment's scheduler process and do not
-include the Store service or other child processes.
+fulfillment. When prior immutable result pointers were successfully read and
+identity-checked, unchanged content-addressed references are reused without a
+second Store resolution. `result_reference_store_reference_reuse_count`,
+`result_reference_store_resolution_attempt_count`, and
+`result_reference_store_resolution_success_count` expose these bounded
+operation counts. They do not estimate bytes or time saved, and the attempt
+count is partial if publication is interrupted. Process counters cover
+Environment's scheduler process and do not include the Store service or other
+child processes.
 
 Quiet adapters now record bounded outcome reason codes, including disabled
 scope and completed no-work cases, while entry continues to omit the quiet

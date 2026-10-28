@@ -777,6 +777,105 @@ def test_owner_pass_result_store_reference_is_session_and_owner_bound(tmp_path):
     )
 
 
+def test_verified_store_result_reference_is_reused_without_a_second_lookup(
+    tmp_path,
+):
+    class CountingStore:
+        backend = "store"
+
+        def __init__(self):
+            self.records = {}
+            self.get_count = 0
+            self.put_count = 0
+
+        def get_record_strict(self, schema, address):
+            self.get_count += 1
+            return self.records.get((schema, address))
+
+        def put_record(self, schema, address, record):
+            self.put_count += 1
+            self.records[(schema, address)] = record
+
+    store = CountingStore()
+    session = SimpleNamespace(
+        session_id="ses_incremental_fixture",
+        state_dir=tmp_path,
+        store=store,
+    )
+    original = {"summary": {"checked": 3}, "operation_status": "complete"}
+    previous = coherence._result_refs(session, {"verification": original})
+    assert store.get_count == 1
+    assert store.put_count == 1
+
+    loaded, known = coherence._load_results(session, previous)
+    assert known is True
+    assert loaded == {"verification": original}
+    assert store.get_count == 2
+
+    activity = {}
+    reused = coherence._result_refs(
+        session, loaded,
+        verified_previous_references=previous,
+        publication_activity=activity,
+    )
+    assert reused == previous
+    assert store.get_count == 2
+    assert store.put_count == 1
+    assert activity == {
+        "result_reference_store_reference_reuse_count": 1,
+    }
+
+    changed = {"summary": {"checked": 4}, "operation_status": "complete"}
+    activity = {}
+    published = coherence._result_refs(
+        session, {"verification": changed},
+        verified_previous_references=previous,
+        publication_activity=activity,
+    )
+    assert published["verification"]["identity"] != previous[
+        "verification"
+    ]["identity"]
+    assert store.get_count == 3
+    assert store.put_count == 2
+    assert activity == {
+        "result_reference_store_resolution_attempt_count": 1,
+        "result_reference_store_resolution_success_count": 1,
+    }
+
+    activity = {}
+    invalid_previous = {
+        "verification": {
+            "identity": published["verification"]["identity"],
+            "reference": "mncs-store:other-session:incremental-coherence:verification:"
+            + "0" * 64,
+        },
+    }
+    canonical = coherence._result_refs(
+        session, {"verification": changed},
+        verified_previous_references=invalid_previous,
+        publication_activity=activity,
+    )
+    assert canonical == published
+    assert store.get_count == 4
+    assert store.put_count == 2
+    assert activity == {
+        "result_reference_store_resolution_attempt_count": 1,
+        "result_reference_store_resolution_success_count": 1,
+    }
+
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "scheduled": [],
+        "skipped": [],
+        "result_reference_store_reference_reuse_count": 1,
+        "result_reference_store_resolution_attempt_count": 0,
+        "result_reference_store_resolution_success_count": 0,
+    })
+    assert projected["result_reference_store_reference_reuse_count"] == 1
+    assert projected["result_reference_store_resolution_attempt_count"] == 0
+    assert projected["result_reference_store_resolution_success_count"] == 0
+
+
 def test_project_trace_preserves_missing_and_reported_owner_outcomes():
     scheduled = [{
         "pass": "verification",
@@ -904,7 +1003,7 @@ def test_later_owner_wave_records_its_derived_trigger(tmp_path, monkeypatch):
     monkeypatch.setattr(coherence, '_load_results', lambda *_args: ({
         name: {'summary': {}, 'reused': True} for name in names
     }, True))
-    monkeypatch.setattr(coherence, '_result_refs', lambda *_args: {})
+    monkeypatch.setattr(coherence, '_result_refs', lambda *_args, **_kwargs: {})
     monkeypatch.setattr(family, 'scheduler_deadlines', lambda _session: [])
 
     route_call = {'count': 0}

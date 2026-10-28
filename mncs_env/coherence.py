@@ -573,6 +573,14 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
         result["result_reference_publication_process_resource_usage"] = (
             publication_usage
         )
+    for key in (
+        "result_reference_store_reference_reuse_count",
+        "result_reference_store_resolution_attempt_count",
+        "result_reference_store_resolution_success_count",
+    ):
+        count = nonnegative(value.get(key))
+        if count is not None:
+            result[key] = count
     if publication_status in {"interrupted", "failed"}:
         result["measurement_limits"].append(
             "Owner passes returned, but immutable result-reference publication did not complete. This snapshot preserves scheduler and process-resource evidence where its save succeeded; owner result pointers may be missing and replay cursors remain at their prior values.",
@@ -1453,13 +1461,51 @@ def _domain_signature(value):
     return digest_hex(material(value))
 
 
-def _result_refs(session, results):
+def _result_refs(
+    session, results, *, verified_previous_references=None,
+    publication_activity=None,
+):
+    """Resolve durable result pointers, reusing already verified Store refs.
+
+    ``verified_previous_references`` must come from ``_load_results`` with a
+    complete successful read. The content-derived reference remains safe to
+    reuse because immutable Store records cannot change under that identity.
+    """
     refs = {}
+    verified_previous_references = (
+        verified_previous_references
+        if isinstance(verified_previous_references, dict) else {}
+    )
     for name, block in results.items():
         identity = digest_hex(block, length=64)
         owner = f"incremental-coherence:{name}"
         if hasattr(getattr(session, "store", None), "backend"):
-            reference = evidence_store.publish(session, owner, {"block": block})
+            record = {"block": block}
+            previous = verified_previous_references.get(name)
+            expected_reference = evidence_store.reference_for_record(
+                session, owner, record,
+            )
+            if (isinstance(previous, dict)
+                    and previous.get("identity") == identity
+                    and previous.get("reference") == expected_reference):
+                refs[name] = {
+                    "identity": identity,
+                    "reference": expected_reference,
+                }
+                if isinstance(publication_activity, dict):
+                    publication_activity[
+                        "result_reference_store_reference_reuse_count"
+                    ] = publication_activity.get(
+                        "result_reference_store_reference_reuse_count", 0,
+                    ) + 1
+                continue
+            if isinstance(publication_activity, dict):
+                publication_activity[
+                    "result_reference_store_resolution_attempt_count"
+                ] = publication_activity.get(
+                    "result_reference_store_resolution_attempt_count", 0,
+                ) + 1
+            reference = evidence_store.publish(session, owner, record)
             if reference is None:
                 from .store_backend import StoreUnavailable
 
@@ -1468,6 +1514,12 @@ def _result_refs(session, results):
                     code="provider-operation-unsupported",
                 )
             refs[name] = {"identity": identity, "reference": reference}
+            if isinstance(publication_activity, dict):
+                publication_activity[
+                    "result_reference_store_resolution_success_count"
+                ] = publication_activity.get(
+                    "result_reference_store_resolution_success_count", 0,
+                ) + 1
             continue
         path = session.state_dir / "sessions" / session.session_id / "coherence-results" / (identity + ".json")
         try:
@@ -2043,9 +2095,21 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
     if persist_trace:
         publication_started = time.monotonic()
         publication_resource_before = resources.process_usage_sample(os.getpid())
+        publication_activity = {
+            "result_reference_store_reference_reuse_count": 0,
+            "result_reference_store_resolution_attempt_count": 0,
+            "result_reference_store_resolution_success_count": 0,
+        }
         try:
-            result_refs = _result_refs(session, results)
+            result_refs = _result_refs(
+                session, results,
+                verified_previous_references=(
+                    previous.get("result_refs") if results_known else None
+                ),
+                publication_activity=publication_activity,
+            )
         except (KeyboardInterrupt, Exception) as publication_error:
+            report.update(publication_activity)
             publication_elapsed = round(
                 time.monotonic() - publication_started, 3,
             )
@@ -2073,6 +2137,7 @@ def tick(session, definition: dict, runners: dict, *, fresh: bool = False,
                 status=report["result_reference_publication_status"],
             )
             raise
+        report.update(publication_activity)
         publication_elapsed = round(time.monotonic() - publication_started, 3)
         publication_resource_after = resources.process_usage_sample(os.getpid())
         report["result_reference_publication_status"] = "complete"
