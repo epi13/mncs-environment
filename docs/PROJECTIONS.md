@@ -1193,11 +1193,20 @@ returned and omitted counts make that loss explicit. A missing binding is
 distinguished from an incomplete inventory scan. This is an identity-based
 integration context only: an available executor does not establish readiness,
 intended use, an eligible opportunity, or fulfillment. When the integrity-
-verified source records per-obligation outcome and reason codes, the relation
-preserves them with separate `recorded` or `not-recorded` status for each
-field. These are the verifier's recorded classifications; they do not by
-themselves establish an environmental defect, explain its cause, or show that
-the bound provider was selected or could have run.
+verified source records the per-obligation outcome, reason, and declared
+executor kind, the relation preserves them with separate `recorded` or
+`not-recorded` status for each field. The kind comes from the verifier's
+accepted obligation declaration; it describes the intended execution contract
+but does not prove that a corresponding runner is available or runnable.
+`binding_expectation_status` marks a binding as expected only for the declared
+`external_integration` kind, matching Environment's provider-binding rule;
+other recorded kinds are marked as not expecting this provider binding, and
+older records remain unknown. This makes binding absence interpretable without
+turning it into a failure claim.
+These source classifications do not by themselves establish an environmental
+defect, explain its cause, or show that the bound provider was selected or
+could have run. Older records without the kind remain `not-recorded` rather
+than being reconstructed from current manifests.
 
 `session_activity.service_accountability` connects each declared service's
 probe capability to the current session binding inventory and its recorded

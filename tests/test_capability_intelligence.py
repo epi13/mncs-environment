@@ -5703,6 +5703,8 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
                 "repository": "mncs-test",
                 "obligation_identity": "mncs-test.native-provider.execution",
                 "unmeasurable_reason": "suite-undeclared",
+                "verification_executor_kind": "external_integration",
+                "verification_executor_kind_status": "recorded",
                 "verification_outcome": "excluded",
                 "verification_outcome_status": "recorded",
                 "verification_reason": "executor_not_runnable",
@@ -5736,6 +5738,9 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     assert obligation_relation["binding_relation_status"] == (
         "exact-provider-obligation-binding"
     )
+    assert obligation_relation["binding_expectation_status"] == (
+        "expected-for-external-integration"
+    )
     assert obligation_relation["binding_details_selected"] is True
     assert obligation_relation["binding"]["availability_status"] == "available"
     assert obligation_relation["binding"]["availability_verification"] == "substrate"
@@ -5744,6 +5749,10 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     assert obligation_relation["verification_outcome_status"] == "recorded"
     assert obligation_relation["verification_reason"] == "executor_not_runnable"
     assert obligation_relation["verification_reason_status"] == "recorded"
+    assert obligation_relation["verification_executor_kind"] == (
+        "external_integration"
+    )
+    assert obligation_relation["verification_executor_kind_status"] == "recorded"
     assert obligation_relation["ambient_fulfillment_status"] == "not-established"
     assert obligation_relation["agent_intervention_burden_status"] == "not-measured"
     assert verification_context["obligations"][1][
@@ -5782,6 +5791,40 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
         "obligations"
     ][0]["binding_relation_status"] == (
         "not-observed-in-incomplete-binding-snapshot"
+    )
+    assert incomplete_delivery["verification_executor_context"][
+        "obligations"
+    ][0]["verification_executor_kind_status"] == "not-recorded"
+    assert incomplete_delivery["verification_executor_context"][
+        "obligations"
+    ][0]["binding_expectation_status"] == "executor-kind-not-recorded"
+
+    native_delivery = capability_intelligence._capability_delivery_view(
+        {"bindings": []}, [], [], [], event_window_truncated=False,
+        event_page_scoped=False, invocation_summaries_omitted=0,
+        verification_executor_obligations=[{
+            "repository": "mncs-test",
+            "obligation_identity": "mncs-test.native-provider.execution",
+            "unmeasurable_reason": "suite-undeclared",
+            "capability_identity": verification_capability,
+            "verification_executor_kind": "native_first_class_test",
+            "verification_executor_kind_status": "recorded",
+            "verification_evidence_reference": (
+                "mncs-store:ses_probe:verification:" + "a" * 64
+            ),
+            "owner_result_reference": (
+                "mncs-store:ses_probe:owner-result:" + "b" * 64
+            ),
+        }],
+    )
+    native_relation = native_delivery["verification_executor_context"][
+        "obligations"
+    ][0]
+    assert native_relation["binding_relation_status"] == (
+        "not-present-in-current-binding-snapshot"
+    )
+    assert native_relation["binding_expectation_status"] == (
+        "not-expected-for-declared-executor-kind"
     )
 
     absent_delivery = capability_intelligence._capability_delivery_view(
@@ -7006,6 +7049,7 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "results": [{
             "obligation": "mncs-test.native-provider.execution",
             "repository": "mncs-test",
+            "executor_kind": "external_integration",
             "outcome": "excluded",
             "reason": "executor_not_runnable",
             "unmeasurable": "suite-undeclared",
@@ -7100,6 +7144,7 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     ] == [{
         "obligation": "mncs-test.native-provider.execution",
         "repository": "mncs-test",
+        "executor_kind": "external_integration",
         "outcome": "excluded",
         "reason": "executor_not_runnable",
         "unmeasurable": "suite-undeclared",
@@ -7125,6 +7170,8 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "verification_outcome_status": "recorded",
         "verification_reason": "executor_not_runnable",
         "verification_reason_status": "recorded",
+        "verification_executor_kind": "external_integration",
+        "verification_executor_kind_status": "recorded",
         "verification_evidence_reference": verification_reference,
         "owner_result_reference": owner_reference,
     }]
@@ -7162,10 +7209,19 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         verification_reference
     )
     assert compact_obligation["owner_result_reference"] == owner_reference
+    assert compact_obligation["binding_expectation_status"] == (
+        "expected-for-external-integration"
+    )
     assert compact_obligation["verification_outcome"] == "excluded"
     assert compact_obligation["verification_reason"] == "executor_not_runnable"
     assert compact_obligation["verification_outcome_status"] == "recorded"
     assert compact_obligation["verification_reason_status"] == "recorded"
+    assert compact_obligation["verification_executor_kind"] == (
+        "external_integration"
+    )
+    assert compact_obligation["verification_executor_kind_status"] == (
+        "recorded"
+    )
     assert compact_obligation["binding"]["binding_id"] == (
         "cap_native_provider_execution"
     )
@@ -7188,6 +7244,8 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "obligation_repository_examples": [{
             "repository": "mncs-test",
             "obligation": "mncs-test.native-provider.execution",
+            "verification_executor_kind": "external_integration",
+            "verification_executor_kind_status": "recorded",
             "verification_outcome": "excluded",
             "verification_outcome_status": "recorded",
             "verification_reason": "executor_not_runnable",

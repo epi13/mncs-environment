@@ -3044,6 +3044,7 @@ def _compact_ambient_verification_evidence(
                 ("outcome", r"[a-z][a-z0-9_-]{0,79}"),
                 ("reason", r"[a-z][a-z0-9_-]{0,79}"),
                 ("unmeasurable", r"[a-z][a-z0-9-]{0,79}"),
+                ("executor_kind", r"[a-z][a-z0-9_]{0,63}"),
             ):
                 item = issue.get(key)
                 if isinstance(item, str) and re.fullmatch(pattern, item):
@@ -3098,7 +3099,7 @@ def _compact_ambient_verification_evidence(
                     "repository": repository,
                     "obligation": obligation,
                 }
-                for source_key in ("outcome", "reason"):
+                for source_key in ("outcome", "reason", "executor_kind"):
                     value = issue.get(source_key)
                     output_key = f"verification_{source_key}"
                     if isinstance(value, str):
@@ -3258,7 +3259,7 @@ def _verification_executor_obligation_candidates(
                 if (len(capability) > 256 or capability in seen):
                     continue
                 verification_details: dict[str, Any] = {}
-                for field in ("outcome", "reason"):
+                for field in ("outcome", "reason", "executor_kind"):
                     detail_key = f"verification_{field}"
                     status_key = f"{detail_key}_status"
                     detail = example.get(detail_key)
@@ -6359,7 +6360,19 @@ def _compact_projection(
                 "agent_receipt_status": "not-established",
                 "agent_intervention_burden_status": "not-measured",
             }
-            for field in ("outcome", "reason"):
+            binding_expectation = relation.get(
+                "binding_expectation_status",
+            )
+            compact_relation["binding_expectation_status"] = (
+                binding_expectation
+                if binding_expectation in {
+                    "expected-for-external-integration",
+                    "not-expected-for-declared-executor-kind",
+                    "executor-kind-not-recorded",
+                }
+                else "executor-kind-not-recorded"
+            )
+            for field in ("outcome", "reason", "executor_kind"):
                 detail_key = f"verification_{field}"
                 status_key = f"{detail_key}_status"
                 detail = relation.get(detail_key)
@@ -15206,7 +15219,7 @@ def _capability_delivery_view(
         reason = item.get("unmeasurable_reason")
         example_status = item.get("obligation_example_status", "not-recorded")
         verification_details: dict[str, Any] = {}
-        for field in ("outcome", "reason"):
+        for field in ("outcome", "reason", "executor_kind"):
             detail_key = f"verification_{field}"
             status_key = f"{detail_key}_status"
             detail = item.get(detail_key)
@@ -15398,6 +15411,15 @@ def _capability_delivery_view(
             relation_status = "not-present-in-current-binding-snapshot"
         else:
             relation_status = "not-observed-in-incomplete-binding-snapshot"
+        executor_kind = candidate.get("verification_executor_kind")
+        if candidate.get("verification_executor_kind_status") != "recorded":
+            binding_expectation_status = "executor-kind-not-recorded"
+        elif executor_kind == "external_integration":
+            binding_expectation_status = "expected-for-external-integration"
+        else:
+            binding_expectation_status = (
+                "not-expected-for-declared-executor-kind"
+            )
         relation: dict[str, Any] = {
             "repository": candidate["repository"],
             "obligation_identity": candidate["obligation_identity"],
@@ -15410,11 +15432,14 @@ def _capability_delivery_view(
                 for key in (
                     "verification_outcome", "verification_outcome_status",
                     "verification_reason", "verification_reason_status",
+                    "verification_executor_kind",
+                    "verification_executor_kind_status",
                 )
                 if key in candidate
             },
             "capability_identity": capability,
             "binding_relation_status": relation_status,
+            "binding_expectation_status": binding_expectation_status,
             "matching_binding_count": len(provider_matches),
             "verification_evidence_reference": (
                 candidate["verification_evidence_reference"]
@@ -21622,10 +21647,14 @@ def _ambient_verification_result_evidence(
         for key, value in (
             ("outcome", outcome), ("reason", reason),
             ("unmeasurable", unmeasurable),
+            ("executor_kind", item.get("executor_kind")),
         ):
             pattern = (
                 r"[a-z][a-z0-9_-]{0,79}" if key == "reason"
-                else r"[a-z][a-z0-9-]{0,79}"
+                else (
+                    r"[a-z][a-z0-9_]{0,63}" if key == "executor_kind"
+                    else r"[a-z][a-z0-9-]{0,79}"
+                )
             )
             if isinstance(value, str) and re.fullmatch(pattern, value):
                 issue[key] = value

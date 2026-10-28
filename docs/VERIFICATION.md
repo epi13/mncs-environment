@@ -108,6 +108,11 @@ Each executed record carries the provider `classification`
 infrastructure `failure_class`, so a broken suite, a broken toolchain,
 and an unrunnable environment read differently. Missing providers
 surface as `coherence-unavailable` / escalation, never as PASS.
+Full evidence rows also retain the accepted obligation's declared
+`executor.kind`. This identifies its declared execution contract; it does not
+prove that a corresponding runner is available or runnable. Older evidence
+without this field remains incomplete rather than being reconstructed from a
+current obligation manifest.
 
 ## For providers: exposing verification
 

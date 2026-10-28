@@ -306,6 +306,9 @@ class AmbientPassTests(VerificationFixture):
         self.assertEqual(row["verdict"], "PASS")
         self.assertTrue(row["evidence"]["evidence_id"])
         self.assertEqual(row["inventory_test_identities"], ["t-case-1"])
+        evidence = verification_module.read_evidence(self.session)["evidence"]
+        self.assertEqual(evidence["results"][0]["executor_kind"],
+                         "native_first_class_test")
 
     def test_quiet_reentry_reuses_epoch(self):
         first = verification_module.ambient_pass(self.session)
@@ -342,6 +345,14 @@ class AmbientPassTests(VerificationFixture):
         self.assertEqual(outcome["summary"]["unsupported"], 1)
         self.assertEqual(outcome["summary"]["executed"], 1)
         self.assertEqual(len(self.session.executions), 1)
+        evidence = verification_module.read_evidence(self.session)["evidence"]
+        result_by_identity = {
+            result["obligation"]: result for result in evidence["results"]
+        }
+        self.assertEqual(
+            result_by_identity["fixture.host-suite"]["executor_kind"],
+            "external_integration",
+        )
 
     def test_failed_suite_surfaces_delta(self):
         self.session.execution_mode = "fail"
