@@ -1,0 +1,104 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_coverage_improvement_20261028",
+  "captured_at": "2026-10-28T01:01:30Z",
+  "measurement_basis": "implementation-regression-and-subsequent-authentic-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_c0ff77573ccb0c47"
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_verification_unsupported_coverage_visibility",
+      "implementation_commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1",
+      "verification_observation_identity": "ev_environment_ambient_verification_coverage_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_verification_coverage_live_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "For recorded verification owner results, ECI now verifies the owner Store object and linked verification evidence identity, projects bounded outcome and reason counts plus non-passing obligation details, and carries those details through service-accountability and response-budget projections. Detail completeness and omissions are explicit; overall verification remains not-established when obligations are unsupported.",
+      "verified_change": "Three focused regressions pass, including linked-source integrity mismatch handling and the four-result display cap. The full repository suite passes 1,184 tests with 46 skipped; the vertical proof passes. A live ECI readback exposes the authentic 8 unsupported obligations and their exact reasons with verified source integrity.",
+      "effectiveness_assessment": "diagnostic-discoverability-improved; agent-burden-effect-not-measured",
+      "interpretation_limit": "The projection reduces the number of separate ECI views needed to inspect a recorded verification outcome. It does not establish that an agent used the detail, that unsupported obligations are resolved, that Environment caused their underlying conditions, or that subsequent service fulfillment improved."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_unsupported_coverage_visibility",
+    "title": "Completed ambient verification can hide exact unsupported obligation causes",
+    "category": "environment-service-accountability-and-verification-coverage",
+    "subsystem": "MNCS Environment ECI verification owner-result projection",
+    "owner": "mncs-environment",
+    "basis": "The selected immutable verification record contains real unsupported obligations and integrity-verifiable reasons. Before this implementation, ECI exposed exact verification detail only through failure evidence, not for the completed result with unsupported obligations.",
+    "actionable_recommendation": "Keep exact, bounded verification evidence attached to the service-accountability projection, with explicit source integrity, completeness, and omission state.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "agent receipt or interpretation of the new detail",
+      "agent intervention-burden reduction",
+      "long-term persistence or resolution of unsupported obligations",
+      "effectiveness for other environmental services"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_verification_coverage_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_verification_unsupported_coverage_visibility",
+    "implementation_reference": {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_ambient_verification_coverage_9319b77",
+      "repository": "mncs-environment",
+      "commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "87b72879e68695265e47dc5c4f8dc1c727317eb29bb7aa4761fbcaa7cc608d22"
+    },
+    "verification_observation_identity": "ev_environment_ambient_verification_coverage_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_verification_coverage_live_readback_20261028",
+    "basis": "Regression tests verify exact Store linkage, source identity failure handling, bounded coverage details, compact response retention, and omission counts. The live Environment projection then exposes the current recorded coverage and its immutable references. This verifies projection behavior, not a causal reduction in agent work.",
+    "not_measured": [
+      "agent intervention burden or productivity",
+      "whether unsupported test obligations have since become runnable",
+      "whether future agents discover or act on the exposed causes",
+      "causal attribution between the projection change and verification outcomes"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_verification_coverage_tests_9319b77",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "798bb4a620b246b3bc49353b5fe5146e3c995aebf72d22fd867b2c37acb45bc2"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_coverage_pressure_20261028",
+      "kind": "pressure-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_coverage_live_readback_20261028",
+      "kind": "subsequent-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_coverage_verification_20261028",
+      "kind": "verification-observation",
+      "repository": "mncs-environment"
+    }
+  ],
+  "measurement_limits": [
+    "The 46 skipped repository tests remain unverified for their environment-specific conditions.",
+    "The live ECI projection is partial and compacted.",
+    "Agent receipt and burden reduction remain unknown.",
+    "Unsupported test obligation causes may require fixes in the owning verification, test, or compiler systems."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

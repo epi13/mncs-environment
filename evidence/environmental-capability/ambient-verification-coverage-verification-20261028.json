@@ -1,0 +1,76 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_coverage_verification_20261028",
+  "captured_at": "2026-10-28T01:01:30Z",
+  "measurement_basis": "targeted-regressions-full-repository-suite-and-vertical-proof",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1"
+  },
+  "observation": {
+    "kind": "environmental-implementation-verification",
+    "source_interface": "MNCS Environment repository verification",
+    "request": {
+      "focused_tests": [
+        "tests/test_entry.py::test_capability_observation_definition_includes_ambient_verification_provider",
+        "tests/test_capability_intelligence.py::test_ambient_verification_failure_surfaces_verified_reason_under_budget",
+        "tests/test_capability_intelligence.py::test_ambient_service_execution_is_projected_with_session_context_and_limits"
+      ],
+      "repository_suite_command": "python3 -m pytest tests/ -q",
+      "vertical_proof_command": "python3 scripts/vertical_proof.py"
+    },
+    "outcome": {
+      "focused_tests": "3 passed",
+      "repository_suite": {
+        "passed": 1184,
+        "skipped": 46,
+        "failed": 0,
+        "elapsed_seconds": 929.63
+      },
+      "vertical_proof": {
+        "status": "pass",
+        "verified_steps": 8,
+        "cross_process_resume": "passed",
+        "protected_write_boundary": "denied-as-expected"
+      },
+      "diff_check": "passed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_verification_coverage_9319b77",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "87b72879e68695265e47dc5c4f8dc1c727317eb29bb7aa4761fbcaa7cc608d22"
+    },
+    {
+      "identity": "mncs_environment_ambient_verification_coverage_tests_9319b77",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "798bb4a620b246b3bc49353b5fe5146e3c995aebf72d22fd867b2c37acb45bc2"
+    },
+    {
+      "kind": "repository-vertical-proof",
+      "repository": "mncs-environment",
+      "script": "scripts/vertical_proof.py",
+      "status": "pass"
+    }
+  ],
+  "measurement_limits": [
+    "The full suite reports 46 environment-dependent skipped tests.",
+    "The vertical proof validates the repository integration path but does not measure agent intervention burden."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

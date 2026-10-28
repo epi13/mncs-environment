@@ -1,0 +1,137 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_coverage_live_readback_20261028",
+  "captured_at": "2026-10-28T01:01:30Z",
+  "measurement_basis": "bounded-live-MNCS-Environment-campaign-state-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "9319b77dba802213a2f648922b0d4b8a0b2f09e1"
+  },
+  "observation": {
+    "kind": "ambient-verification-coverage-live-readback",
+    "source_interface": "./scripts/mncs-env campaign-state ses_9db7b7c6f04e4d19",
+    "request": {
+      "projection_identity": "eci_8f5e68e72834e347",
+      "snapshot_sequence": 89,
+      "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "ambient_trace_status": "recorded",
+      "owner_pass_decision_coverage": "complete",
+      "verification_result_details_status": "complete",
+      "verification_result_detail_count": 1,
+      "verification_result_details_omitted_count": 0,
+      "source_integrity_status": "verified",
+      "verification_status": "not-established",
+      "verification_summary": {
+        "obligations": 10,
+        "executed": 2,
+        "unsupported": 8,
+        "failed": 0,
+        "blockers": 0
+      },
+      "outcome_counts": {
+        "excluded": 8,
+        "passed": 2
+      },
+      "reason_counts": {
+        "executor_not_runnable": 8,
+        "no_evidence": 2
+      },
+      "unmeasurable_reason_counts": {
+        "executor-not-native": 7,
+        "suite-undeclared": 1
+      },
+      "not_passed_obligations": [
+        {
+          "obligation": "mncs-commons.family-projection.conformance",
+          "repository": "mncs-commons",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        },
+        {
+          "obligation": "mncs-commons.obligation-contract.native-laws",
+          "repository": "mncs-commons",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        },
+        {
+          "obligation": "mncs-commons.obligation-plan.transport",
+          "repository": "mncs-commons",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        },
+        {
+          "obligation": "mncs-commons.pressure-view-generation.atomicity",
+          "repository": "mncs-commons",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        },
+        {
+          "obligation": "mncs-commons.substrate-topology.reconcile",
+          "repository": "mncs-commons",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        },
+        {
+          "obligation": "mncs-test.native-application-build-vm",
+          "repository": "mncs-test",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        },
+        {
+          "obligation": "mncs-test.native-provider.execution",
+          "repository": "mncs-test",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "suite-undeclared"
+        },
+        {
+          "obligation": "mncs-test.obligation-evidence-reuse",
+          "repository": "mncs-test",
+          "outcome": "excluded",
+          "reason": "executor_not_runnable",
+          "unmeasurable": "executor-not-native"
+        }
+      ],
+      "interpretation_limit": "The projection makes authentic reasons and their exact source references discoverable. It does not establish that Environment caused unsupported outcomes, that a capability gap is the only cause, or that an agent used the information."
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1",
+      "source_integrity_status": "verified"
+    }
+  ],
+  "measurement_limits": [
+    "The ECI response is partial and summary-truncated; this observation records only the bounded verification detail required to inspect this result.",
+    "The overall verification status remains not-established because eight obligations are unsupported.",
+    "The session event window is complete for the recorded selected history, but no agent receipt or intervention burden is measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_coverage_pressure_20261028",
+  "captured_at": "2026-10-28T01:01:30Z",
+  "measurement_basis": "source-review-correlated-with-authentic-immutable-verification-result",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_c0ff77573ccb0c47",
+    "implementation_base_commit": "faa57dd98a3d947a85e339323a7d46c6b4c3dc61"
+  },
+  "observation": {
+    "kind": "environment-service-coverage-pressure",
+    "source_interface": "MNCS Environment ECI service-accountability projection",
+    "request": {
+      "owner_result_reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "verification_evidence_reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "verification_summary": {
+        "obligations": 10,
+        "executed": 2,
+        "unsupported": 8,
+        "failed": 0,
+        "blockers": 0
+      },
+      "unmeasurable_reason_counts": {
+        "executor-not-native": 7,
+        "suite-undeclared": 1
+      }
+    },
+    "outcome": {
+      "observed_limitation": "At the implementation base, ECI attached verification detail to failed verification owner results, so a completed owner pass with unsupported obligations exposed aggregate counts without the exact unsupported obligation and reason context in service-accountability.",
+      "interpretation": "This is an evidence-discoverability limitation in the Environment projection. The recorded executor and suite reasons do not establish that Environment caused the underlying unsupported obligations.",
+      "causal_status": "not-established"
+    }
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_unsupported_coverage_visibility",
+    "title": "Completed ambient verification can hide exact unsupported obligation causes",
+    "category": "environment-service-accountability-and-verification-coverage",
+    "subsystem": "MNCS Environment ECI verification owner-result projection",
+    "owner": "mncs-environment",
+    "basis": "The current immutable verification record is integrity-addressed and reports eight unsupported obligations, including seven executor-not-native and one suite-undeclared. The pre-change ECI path only attached detailed verification evidence when the owner result reported failure, leaving a completed but incomplete verification outcome without those causes in the service-accountability summary.",
+    "actionable_recommendation": "Expose bounded exact verification coverage and unsupported-obligation causes through the existing ECI service-accountability projection, retaining source-integrity and omission status and leaving overall verification unestablished when coverage is incomplete.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether an agent previously needed or manually reconstructed these causes",
+      "agent operations or time spent on verification diagnosis",
+      "whether the unsupported executor or suite conditions are environmental defects",
+      "recurrence across sessions or repositories"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:verification:5111d033bbaeca073283816ccf162a8ca42cd278434f8b026b6e1ecfde2fca3c",
+      "schema": "mncs.environment.verification/1",
+      "source_integrity_status": "verified"
+    }
+  ],
+  "measurement_limits": [
+    "The current verification run is one session observation and does not establish recurrence.",
+    "No agent receipt, manual fallback, or intervention burden was measured.",
+    "Unsupported executor and suite declarations may belong to other services or repositories; this observation does not assign their cause to Environment."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
