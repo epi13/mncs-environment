@@ -11674,6 +11674,8 @@ def test_retirement_activity_joins_eligibility_to_bounded_operation_receipts(
     )["session_activity"]
     compact_retirement = compact_activity["retirement_activity"]
     assert compact_retirement["operations"]
+    assert len(compact_retirement["operations"]) == 2
+    assert compact_retirement.get("operations_omitted_count", 0) == 0
     assert compact_retirement["operations"][0]["completion_event"]
     assert private_checkout not in json.dumps(compact_activity)
 

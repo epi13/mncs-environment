@@ -4463,7 +4463,7 @@ def _compact_session_activity_budget_overview(
             and isinstance(source_activity, dict)):
         retirement_activity = source_activity.get("retirement_activity")
     compact_retirement_activity = _compact_session_retirement_activity(
-        retirement_activity, operation_limit=1, target_limit=1,
+        retirement_activity, operation_limit=2, target_limit=1,
     )
     if compact_retirement_activity is not None:
         result["retirement_activity"] = compact_retirement_activity
@@ -5082,7 +5082,7 @@ def _compact_session_activity_evidence_priority_overview(
             if isinstance(lookup, dict):
                 result["source"][key] = lookup
     retirement_activity = _compact_session_retirement_activity(
-        activity.get("retirement_activity"), operation_limit=1, target_limit=1,
+        activity.get("retirement_activity"), operation_limit=2, target_limit=1,
     )
     if retirement_activity is not None:
         result["retirement_activity"] = retirement_activity
