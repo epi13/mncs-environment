@@ -6976,6 +6976,56 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "reason": "executor_not_runnable",
         "unmeasurable": "suite-undeclared",
     }]
+    candidate_view = verification_row["verification_evidence"][
+        "investigation_candidates"
+    ]
+    assert candidate_view["status"] == "observed"
+    assert candidate_view["scope"] == (
+        "selected-session-recorded-ambient-verification-result"
+    )
+    assert candidate_view["candidate_count"] == 1
+    assert candidate_view["candidates"] == [{
+        "kind": "unmeasurable-verification-obligations",
+        "interpretation": "investigation-candidate",
+        "unmeasurable_reason": "suite-undeclared",
+        "affected_obligation_count": 1,
+        "repository_examples": ["mncs-test"],
+        "repository_example_status": "complete",
+        "obligation_examples": ["mncs-test.native-provider.execution"],
+        "obligation_example_status": "complete",
+        "source_integrity_status": "verified",
+        "source_reference": verification_reference,
+        "owner_result_content_integrity_status": (
+            "content-integrity-verified"
+        ),
+        "owner_result_reference": owner_reference,
+        "causal_status": "not-established",
+        "environmental_defect_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "cross_session_recurrence_status": "not-established",
+        "action_hint": (
+            "Inspect the obligation and owning provider contract to "
+            "determine whether this is an unserved verification "
+            "requirement, a missing integration, or an intentional "
+            "exclusion; this record alone does not establish an "
+            "environmental defect."
+        ),
+    }]
+    unverified_evidence = (
+        capability_intelligence._compact_ambient_verification_evidence({
+            "status": "recorded",
+            "source_integrity_status": "not-verified",
+            "source_reference": verification_reference,
+            "unmeasurable_reason_counts": {"suite-undeclared": 1},
+            "not_passed_obligations": [{
+                "obligation": "mncs-test.native-provider.execution",
+                "repository": "mncs-test",
+                "unmeasurable": "suite-undeclared",
+            }],
+        })
+    )
+    assert unverified_evidence is not None
+    assert "investigation_candidates" not in unverified_evidence
     assert verification_row["failure_evidence"] == {
         "status": "recorded",
         "reason_code": "coherence-unavailable",
@@ -7014,6 +7064,9 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert verification_detail["verification_evidence"][
         "unmeasurable_reason_counts"
     ] == {"suite-undeclared": 1}
+    assert verification_detail["verification_evidence"][
+        "investigation_candidates"
+    ] == candidate_view
     many_results = json.loads(json.dumps(activity))
     many_verification_results = []
     for index in range(5):
@@ -7051,6 +7104,9 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert compact_summary["verification_result_details"][0][
         "verification_evidence"
     ]["not_passed_obligations"][0]["unmeasurable"] == "suite-undeclared"
+    assert compact_summary["verification_result_details"][0][
+        "verification_evidence"
+    ]["investigation_candidates"] == candidate_view
     response_budget_activity = {
         "status": "partial",
         "service_accountability": accountability,
@@ -7077,6 +7133,9 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert budget_verification["verification_evidence"][
         "unmeasurable_reason_counts"
     ] == {"suite-undeclared": 1}
+    assert budget_verification["verification_evidence"][
+        "investigation_candidates"
+    ] == candidate_view
     pass_items = compact_accountability["summary"][
         "environment_service_execution"
     ]["summary"]["owner_pass_observations"]["items"]

@@ -1216,7 +1216,19 @@ result record was omitted or a check could not run. Foreign-session references
 are not read. Content integrity establishes that the referenced owner-result
 record matches its digest and result identity; it does not establish service
 correctness, usefulness, agent receipt, or fulfillment. `verification_status`
-and ambient fulfillment remain separate and unchanged. When readiness services
+and ambient fulfillment remain separate and unchanged. Integrity-verified
+ambient verification evidence also exposes bounded
+`investigation_candidates` grouped by recorded unmeasurable reason, with the
+affected obligation and repository examples plus the exact evidence
+and owner-result references. Candidates are emitted only when both the
+verification record and its linked owner result have verified content
+integrity. These are investigation candidates only: the projection marks
+causality, environmental defect status, agent burden, and cross-session
+recurrence as unestablished or unmeasured. An exclusion is not reported as a
+verification failure or an environmental defect, and unverified evidence does
+not produce candidates.
+
+When readiness services
 are declared, their accountability view remains scoped to those declarations
 and the owner-pass trace remains available separately. Owner-pass decision
 coverage is coverage of the scheduler's declared decisions only; it does not

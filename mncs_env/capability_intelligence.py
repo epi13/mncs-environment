@@ -3025,8 +3025,8 @@ def _compact_ambient_verification_evidence(
             and type(count) is int and 0 <= count <= 10**9
         }
     issues = value.get("not_passed_obligations")
+    compact_issues: list[dict[str, str]] = []
     if isinstance(issues, list):
-        compact_issues = []
         for issue in issues[:MAX_AMBIENT_VERIFICATION_ISSUES]:
             if not isinstance(issue, dict):
                 continue
@@ -3053,6 +3053,87 @@ def _compact_ambient_verification_evidence(
     omitted = value.get("not_passed_obligations_omitted_count")
     if type(omitted) is int and omitted >= 0:
         result["not_passed_obligations_omitted_count"] = omitted
+
+    unmeasurable_counts = result.get("unmeasurable_reason_counts")
+    evidence_reference = result.get("source_reference")
+    issue_omissions = result.get("not_passed_obligations_omitted_count", 0)
+    if (
+        result.get("status") == "recorded"
+        and result.get("source_integrity_status") == "verified"
+        and result.get("owner_result_content_integrity_status")
+        == "content-integrity-verified"
+        and isinstance(result.get("owner_result_reference"), str)
+        and isinstance(evidence_reference, str)
+        and isinstance(unmeasurable_counts, dict)
+    ):
+        candidates = []
+        for reason, count in list(unmeasurable_counts.items())[:8]:
+            if (
+                not isinstance(reason, str)
+                or re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", reason) is None
+                or type(count) is not int
+                or count <= 0
+            ):
+                continue
+            examples = [
+                issue for issue in compact_issues
+                if issue.get("unmeasurable") == reason
+            ]
+            repositories = sorted({
+                issue["repository"] for issue in examples
+                if isinstance(issue.get("repository"), str)
+            })
+            detail_complete = (
+                issue_omissions == 0 and len(examples) == count
+            )
+            candidates.append({
+                "kind": "unmeasurable-verification-obligations",
+                "interpretation": "investigation-candidate",
+                "unmeasurable_reason": reason,
+                "affected_obligation_count": count,
+                "repository_examples": repositories,
+                "repository_example_status": (
+                    "complete" if detail_complete
+                    else "partial" if repositories else "not-present"
+                ),
+                "obligation_examples": [
+                    issue["obligation"] for issue in examples
+                    if isinstance(issue.get("obligation"), str)
+                ],
+                "obligation_example_status": (
+                    "complete" if detail_complete
+                    else "partial" if examples else "not-present"
+                ),
+                "source_integrity_status": "verified",
+                "source_reference": evidence_reference,
+                "owner_result_content_integrity_status": (
+                    "content-integrity-verified"
+                ),
+                "owner_result_reference": result["owner_result_reference"],
+                "causal_status": "not-established",
+                "environmental_defect_status": "not-established",
+                "agent_intervention_burden_status": "not-measured",
+                "cross_session_recurrence_status": "not-established",
+                "action_hint": (
+                    "Inspect the obligation and owning provider contract to "
+                    "determine whether this is an unserved verification "
+                    "requirement, a missing integration, or an intentional "
+                    "exclusion; this record alone does not establish an "
+                    "environmental defect."
+                ),
+            })
+        if candidates:
+            result["investigation_candidates"] = {
+                "status": "observed",
+                "scope": "selected-session-recorded-ambient-verification-result",
+                "candidate_count": len(candidates),
+                "candidates": candidates,
+                "measurement_limits": [
+                    "Candidates summarize integrity-verified unmeasurable reasons in one recorded verification result; they are not verified environmental defects or service failures.",
+                    "Repository and obligation examples follow the bounded not-passed detail and may be incomplete when source examples were omitted.",
+                    "Agent intervention burden and recurrence across sessions remain unmeasured.",
+                ],
+            }
     return result
 
 
@@ -21093,6 +21174,14 @@ def _ambient_verification_result_evidence(
             "source_schema": "mncs.environment.verification/1",
             "source_integrity_status": "verified",
         }
+    compact_verification = _compact_ambient_verification_evidence(result)
+    if (isinstance(compact_verification, dict)
+            and isinstance(
+                compact_verification.get("investigation_candidates"), dict,
+            )):
+        result["investigation_candidates"] = compact_verification[
+            "investigation_candidates"
+        ]
     return result
 
 
