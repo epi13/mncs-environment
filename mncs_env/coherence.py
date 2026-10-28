@@ -650,6 +650,14 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
                         break
                 if summary:
                     row["summary"] = summary
+            if owner == "semantics":
+                from .semantics import project_semantic_observation
+
+                semantic_observation = project_semantic_observation(
+                    item.get("semantic_observation"),
+                )
+                if semantic_observation is not None:
+                    row["semantic_observation"] = semantic_observation
             availability_status = item.get("service_availability_status")
             availability_reason = item.get(
                 "service_availability_reason_code",
@@ -1854,6 +1862,14 @@ def _owner_pass_results(session, scheduled: list[dict], results: dict,
             if availability_code is not None:
                 row["service_availability_status"] = "unavailable"
                 row["service_availability_reason_code"] = availability_code
+        if owner == "semantics":
+            from .semantics import project_semantic_observation
+
+            semantic_observation = project_semantic_observation(
+                block.get("semantic_observation"),
+            )
+            if semantic_observation is not None:
+                row["semantic_observation"] = semantic_observation
         outcome = _validated_owner_pass_outcome(block)
         if outcome is not None:
             row.update({

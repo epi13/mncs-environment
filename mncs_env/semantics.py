@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 from . import readiness as readiness_module
 from .identity import digest_hex
@@ -46,6 +48,14 @@ MAX_HISTORY = 8
 # Bump when the acknowledgement rules or persisted cursor meaning changes.
 # Older saved cursors are reconciled against a complete capsule before reuse.
 SEMANTIC_CONSUMER_PROTOCOL = "mncs.environment.semantic-consumer/2"
+
+SEMANTIC_OBSERVATION_SCHEMA = (
+    "mncs.environment.semantic-change-observation/1"
+)
+MAX_SEMANTIC_OBSERVATION_WORKSPACES = 2
+MAX_SEMANTIC_OBSERVATION_EVENTS_PER_WORKSPACE = 2
+MAX_SEMANTIC_OBSERVATION_IDENTITIES = 4
+MAX_SEMANTIC_OBSERVATION_IDENTITY_LENGTH = 128
 
 
 def utcnow() -> str:
@@ -162,6 +172,317 @@ def _fingerprint(stream: str, provider_observed: dict[str, Any]) -> str:
         "diagnostics_warning": provider_observed.get("diagnostics_warning"),
         "obligations_fail": provider_observed.get("obligations_fail"),
         "obligations_unknown": provider_observed.get("obligations_unknown"),
+    })
+
+
+def _safe_semantic_identity(value: Any) -> str | None:
+    if (not isinstance(value, str) or not value
+            or len(value) > MAX_SEMANTIC_OBSERVATION_IDENTITY_LENGTH
+            or any(ord(char) < 32 or ord(char) == 127 for char in value)):
+        return None
+    return value
+
+
+def _safe_nonnegative(value: Any) -> int | None:
+    return value if type(value) is int and 0 <= value <= 10**9 else None
+
+
+def _workspace_relative_path(workspace: Any, uri: Any) -> str | None:
+    """Expose a source locator only when its file URI is inside the workspace."""
+    if not isinstance(workspace, str) or not isinstance(uri, str):
+        return None
+    try:
+        parsed = urlsplit(uri)
+        if (parsed.scheme != "file" or parsed.netloc not in {"", "localhost"}
+                or parsed.query or parsed.fragment):
+            return None
+        root = Path(workspace).resolve(strict=False)
+        source = Path(unquote(parsed.path)).resolve(strict=False)
+        relative = source.relative_to(root)
+    except (OSError, ValueError, TypeError):
+        return None
+    text = relative.as_posix()
+    if (not text or text == "." or len(text) > 512
+            or any(ord(char) < 32 or ord(char) == 127 for char in text)):
+        return None
+    return text
+
+
+def _compact_identity_group(
+    value: Any, *, changes: bool = False,
+) -> dict[str, Any]:
+    prior_omitted = 0
+    declared_count = None
+    if isinstance(value, dict):
+        raw = value.get("items")
+        declared_count = _safe_nonnegative(value.get("count"))
+        prior_omitted = _safe_nonnegative(value.get("omitted_count")) or 0
+    else:
+        raw = value
+    raw = raw if isinstance(raw, list) else []
+    items: list[dict[str, str] | str] = []
+    # Provider contracts already bound these groups. Keep the outer projection
+    # defensive as well so malformed or stale snapshots cannot turn a focused
+    # response into an unbounded scan.
+    for item in raw[:MAX_SEMANTIC_OBSERVATION_IDENTITIES * 2]:
+        if changes:
+            if not isinstance(item, dict):
+                continue
+            identity = _safe_semantic_identity(item.get("identity"))
+            change = item.get("change")
+            if identity is None or change not in {"added", "removed", "changed"}:
+                continue
+            projected: dict[str, str] | str = {
+                "identity": identity,
+                "change": change,
+            }
+        else:
+            identity = _safe_semantic_identity(item)
+            if identity is None:
+                continue
+            projected = identity
+        if projected in items:
+            continue
+        if len(items) < MAX_SEMANTIC_OBSERVATION_IDENTITIES:
+            items.append(projected)
+    declared_count = max(declared_count or 0, len(raw))
+    return {
+        "count": declared_count,
+        "omitted_count": max(
+            prior_omitted, declared_count - len(items),
+        ),
+        "items": items,
+    }
+
+
+def _safe_relative_path(value: Any) -> str | None:
+    if (not isinstance(value, str) or not value or len(value) > 512
+            or "\\" in value
+            or any(ord(char) < 32 or ord(char) == 127 for char in value)):
+        return None
+    path = Path(value)
+    if (path.is_absolute() or path.as_posix() == "."
+            or any(part in {"", ".", ".."} for part in path.parts)):
+        return None
+    return path.as_posix()
+
+
+def _compact_semantic_event(event: Any, workspace: Any) -> dict[str, Any] | None:
+    if not isinstance(event, dict):
+        return None
+    cursor = _safe_nonnegative(event.get("cursor"))
+    generation = _safe_nonnegative(
+        event.get("current_generation", event.get("generation")),
+    )
+    if cursor is None or generation is None:
+        return None
+    current = event.get("current")
+    current = current if isinstance(current, dict) else {}
+    source_input = event.get("source")
+    source_input = source_input if isinstance(source_input, dict) else {}
+    source: dict[str, Any] = {"path_status": "not-resolved-in-workspace"}
+    relative_path = _safe_relative_path(source_input.get("relative_path"))
+    if relative_path is None:
+        relative_path = _workspace_relative_path(workspace, current.get("uri"))
+    if relative_path is not None:
+        source["relative_path"] = relative_path
+        source["path_status"] = "resolved-in-workspace"
+    elif source_input.get("path_status") == "not-resolved-in-workspace":
+        source["path_status"] = "not-resolved-in-workspace"
+    raw_subjects = event.get("semantic_subjects")
+    if isinstance(raw_subjects, dict):
+        semantic_subjects = _compact_identity_group(raw_subjects, changes=True)
+        declared = _safe_nonnegative(raw_subjects.get("count"))
+        if declared is not None:
+            semantic_subjects["count"] = declared
+        semantic_subjects["omitted_count"] = max(
+            semantic_subjects["omitted_count"],
+            _safe_nonnegative(raw_subjects.get("omitted_count")) or 0,
+        )
+    else:
+        semantic_subjects = _compact_identity_group(
+            raw_subjects, changes=True,
+        )
+
+    def delta_group(raw: Any) -> dict[str, Any]:
+        raw = raw if isinstance(raw, dict) else {}
+        added = _compact_identity_group(raw.get("added"))
+        resolved = _compact_identity_group(raw.get("resolved"))
+        status_changed = _compact_identity_group(raw.get("status_changed"))
+        return {
+            "complete": raw.get("complete") if type(raw.get("complete")) is bool else None,
+            "added": added,
+            "resolved": resolved,
+            "status_changed": status_changed,
+        }
+
+    diagnostics = event.get("diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    obligations = event.get("obligations")
+    obligations = obligations if isinstance(obligations, dict) else {}
+    result: dict[str, Any] = {
+        "cursor": cursor,
+        "generation": generation,
+        "source": source,
+        "affected_document_count": (
+            len(event.get("affected_documents"))
+            if isinstance(event.get("affected_documents"), list) else 0
+        ),
+        "semantic_subjects": semantic_subjects,
+        "diagnostics": {
+            "added": _compact_identity_group(diagnostics.get("added")),
+            "resolved": _compact_identity_group(diagnostics.get("resolved")),
+        },
+        "obligations": delta_group(obligations),
+        "impact_complete": (
+            event.get("impact_complete")
+            if type(event.get("impact_complete")) is bool else None
+        ),
+        "reconciled": (
+            event.get("reconciled")
+            if type(event.get("reconciled")) is bool else None
+        ),
+        "removed": (
+            event.get("removed") if type(event.get("removed")) is bool else None
+        ),
+    }
+    impact_identity = _safe_semantic_identity(event.get("impact_identity"))
+    if impact_identity is not None:
+        result["impact_identity"] = impact_identity
+    return result
+
+
+def project_semantic_observation(value: Any) -> dict[str, Any] | None:
+    """Return bounded event evidence with workspace and cursor provenance.
+
+    The projection deliberately excludes source bodies and the provider's
+    impact graph. It preserves compiler-owned identities and delta facts so an
+    agent can follow up through the bound Language Service when useful.
+    """
+    if (not isinstance(value, dict)
+            or value.get("schema_version") != SEMANTIC_OBSERVATION_SCHEMA
+            or value.get("status") != "observed"):
+        return None
+    raw_workspaces = value.get("workspaces")
+    if not isinstance(raw_workspaces, list):
+        return None
+    projected_workspaces: list[dict[str, Any]] = []
+    declared_workspace_count = _safe_nonnegative(
+        value.get("workspace_count"),
+    )
+    if declared_workspace_count is None:
+        declared_workspace_count = len(raw_workspaces)
+    declared_workspace_count = max(declared_workspace_count, len(raw_workspaces))
+    declared_workspace_omitted = _safe_nonnegative(
+        value.get("workspaces_omitted_count"),
+    ) or 0
+    for workspace_row in raw_workspaces[:MAX_SEMANTIC_OBSERVATION_WORKSPACES]:
+        if not isinstance(workspace_row, dict):
+            continue
+        service = _safe_semantic_identity(workspace_row.get("service"))
+        stream = _safe_semantic_identity(workspace_row.get("stream_identity"))
+        cursor_after = _safe_nonnegative(workspace_row.get("cursor_after"))
+        cursor_through = _safe_nonnegative(workspace_row.get("cursor_through"))
+        high_water = _safe_nonnegative(workspace_row.get("provider_high_water"))
+        if (service is None or stream is None or cursor_after is None
+                or cursor_through is None or high_water is None
+                or cursor_through < cursor_after or high_water < cursor_through):
+            continue
+        raw_events = workspace_row.get("events")
+        raw_events = raw_events if isinstance(raw_events, list) else []
+        declared_event_count = _safe_nonnegative(
+            workspace_row.get("event_count"),
+        )
+        if declared_event_count is None:
+            declared_event_count = len(raw_events)
+        declared_event_count = max(declared_event_count, len(raw_events))
+        events: list[dict[str, Any]] = []
+        for event in raw_events[:MAX_SEMANTIC_OBSERVATION_EVENTS_PER_WORKSPACE]:
+            compact = _compact_semantic_event(
+                event, workspace_row.get("workspace_root"),
+            )
+            if compact is not None:
+                events.append(compact)
+        omitted = max(
+            _safe_nonnegative(workspace_row.get("events_omitted_count")) or 0,
+            declared_event_count - len(events),
+        )
+        projected_workspaces.append({
+            "service": service,
+            "stream_identity": stream,
+            "cursor_after": cursor_after,
+            "cursor_through": cursor_through,
+            "provider_high_water": high_water,
+            "pending_event_count": high_water - cursor_through,
+            "event_count": declared_event_count,
+            "events_omitted_count": omitted,
+            "events": events,
+        })
+    workspace_omitted = max(
+        declared_workspace_omitted,
+        declared_workspace_count - len(projected_workspaces),
+        len(raw_workspaces) - len(projected_workspaces),
+    )
+    event_count = max(
+        _safe_nonnegative(value.get("event_count")) or 0,
+        sum(row["event_count"] for row in projected_workspaces),
+    )
+    returned_event_count = sum(len(row["events"]) for row in projected_workspaces)
+    event_omitted_count = max(
+        _safe_nonnegative(value.get("events_omitted_count")) or 0,
+        event_count - returned_event_count,
+        sum(row["events_omitted_count"] for row in projected_workspaces),
+    )
+    pending_event_count = max(
+        _safe_nonnegative(value.get("pending_event_count")) or 0,
+        sum(row["pending_event_count"] for row in projected_workspaces),
+    )
+    return {
+        "schema_version": SEMANTIC_OBSERVATION_SCHEMA,
+        "status": "observed",
+        "scope": "selected-language-service-event-pages",
+        "coverage_status": (
+            "partial-selected-pages"
+            if workspace_omitted or event_omitted_count
+            else "selected-pages-with-pending-events"
+            if pending_event_count else "complete-selected-pages"
+        ),
+        "workspace_count": declared_workspace_count,
+        "workspace_observation_count": len(projected_workspaces),
+        "workspaces_omitted_count": workspace_omitted,
+        "event_count": event_count,
+        "returned_event_count": returned_event_count,
+        "events_omitted_count": event_omitted_count,
+        "pending_event_count": pending_event_count,
+        "workspaces": projected_workspaces,
+        "interpretation_limit": (
+            "Compiler-owned semantic deltas are selected-session observations; "
+            "they do not establish an agent request, correctness verdict, or "
+            "that every workspace event is represented when a page is partial."
+        ),
+    }
+
+
+def _semantic_observation_for_window(
+    service: str, workspace: str, stream: str, after: int,
+    events: list[dict[str, Any]], page_cursor: int, high_water: int,
+) -> dict[str, Any] | None:
+    if not events:
+        return None
+    return project_semantic_observation({
+        "schema_version": SEMANTIC_OBSERVATION_SCHEMA,
+        "status": "observed",
+        "workspace_count": 1,
+        "workspaces": [{
+            "service": service,
+            "workspace_root": workspace,
+            "stream_identity": stream,
+            "cursor_after": after,
+            "cursor_through": page_cursor,
+            "provider_high_water": high_water,
+            "event_count": len(events),
+            "events": events,
+        }],
     })
 
 
@@ -386,6 +707,11 @@ def _evaluate_one(session, service: dict[str, Any], observations: dict[str, dict
             record["baseline"] = "complete-retained-stream"
             record["counts"] = _poll_deltas({"events": events})
             record["replay_high_water"] = high_water
+            semantic_observation = _semantic_observation_for_window(
+                identity, workspace, stream, 0, events, page_cursor, high_water,
+            )
+            if semantic_observation is not None:
+                record["semantic_observation"] = semantic_observation
             durable[workspace] = {
                 "stream": stream,
                 "cursor": page_cursor,
@@ -516,6 +842,12 @@ def _evaluate_one(session, service: dict[str, Any], observations: dict[str, dict
     else:
         record["outcome"] = "changed"
         record["counts"] = _poll_deltas({"events": events})
+        semantic_observation = _semantic_observation_for_window(
+            identity, workspace, stream, int(saved.get("cursor") or 0),
+            events, page_cursor, high_water,
+        )
+        if semantic_observation is not None:
+            record["semantic_observation"] = semantic_observation
     durable[workspace] = {
         "stream": stream,
         # A full page can have more events waiting. Acknowledge only the
@@ -566,8 +898,14 @@ def ambient_pass(session, *, mode: str = "ambient") -> dict[str, Any]:
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
         operation_status = ("retry" if summary.get("degraded", 0)
                             or summary.get("unknown", 0) else "complete")
-        return {"summary": summary, "reused": True, "evidence": None,
-                "operation_status": operation_status}
+        result = {"summary": summary, "reused": True, "evidence": None,
+                  "operation_status": operation_status}
+        semantic_observation = project_semantic_observation(
+            stored.get("semantic_observation"),
+        )
+        if semantic_observation is not None:
+            result["semantic_observation"] = semantic_observation
+        return result
     records: list[dict[str, Any]] = []
     for service in services[:MAX_SEMANTIC_WORKSPACES]:
         records.append(_evaluate_one(session, service, observations, durable))
@@ -596,18 +934,67 @@ def ambient_pass(session, *, mode: str = "ambient") -> dict[str, Any]:
     if len(services) > MAX_SEMANTIC_WORKSPACES:
         summary["truncated"] = len(services) - MAX_SEMANTIC_WORKSPACES
     summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
+    raw_workspace_observations = [
+        record["semantic_observation"]["workspaces"][0]
+        for record in records
+        if isinstance(record.get("semantic_observation"), dict)
+        and isinstance(record["semantic_observation"].get("workspaces"), list)
+        and record["semantic_observation"]["workspaces"]
+    ]
+    observation_sources = [
+        record["semantic_observation"]
+        for record in records
+        if isinstance(record.get("semantic_observation"), dict)
+    ]
+    semantic_observation = project_semantic_observation({
+        "schema_version": SEMANTIC_OBSERVATION_SCHEMA,
+        "status": "observed",
+        "workspace_count": sum(
+            row.get("workspace_count", 0) for row in observation_sources
+            if type(row.get("workspace_count")) is int
+            and row.get("workspace_count") >= 0
+        ),
+        "workspaces_omitted_count": sum(
+            row.get("workspaces_omitted_count", 0)
+            for row in observation_sources
+            if type(row.get("workspaces_omitted_count")) is int
+            and row.get("workspaces_omitted_count") >= 0
+        ),
+        "event_count": sum(
+            row.get("event_count", 0) for row in observation_sources
+            if type(row.get("event_count")) is int
+            and row.get("event_count") >= 0
+        ),
+        "events_omitted_count": sum(
+            row.get("events_omitted_count", 0) for row in observation_sources
+            if type(row.get("events_omitted_count")) is int
+            and row.get("events_omitted_count") >= 0
+        ),
+        "pending_event_count": sum(
+            row.get("pending_event_count", 0) for row in observation_sources
+            if type(row.get("pending_event_count")) is int
+            and row.get("pending_event_count") >= 0
+        ),
+        "workspaces": raw_workspace_observations,
+    }) if raw_workspace_observations else None
     # Degraded or unknown passes never cache their epoch: a transient
     # provider state must re-validate on the next pass.
     if mode == "ambient" and summary["degraded"] == 0 and summary["unknown"] == 0:
-        session.snapshot["semantics"] = {
+        semantic_state = {
             "epoch": epoch, "summary": dict(summary),
             "workspaces": durable, "observed_at": utcnow(),
         }
+        if semantic_observation is not None:
+            semantic_state["semantic_observation"] = semantic_observation
+        session.snapshot["semantics"] = semantic_state
     else:
-        session.snapshot["semantics"] = {
+        semantic_state = {
             "summary": dict(summary), "workspaces": durable,
             "observed_at": utcnow(),
         }
+        if semantic_observation is not None:
+            semantic_state["semantic_observation"] = semantic_observation
+        session.snapshot["semantics"] = semantic_state
     history = list(session.snapshot.get("semantics_history") or [])
     history.append({"at": utcnow(), "mode": mode, "summary": dict(summary)})
     session.snapshot["semantics_history"] = history[-MAX_HISTORY:]
@@ -619,5 +1006,8 @@ def ambient_pass(session, *, mode: str = "ambient") -> dict[str, Any]:
         summary["persisted"] = True
     operation_status = ("retry" if summary["degraded"] or summary["unknown"]
                         else "complete")
-    return {"summary": summary, "reused": False, "evidence": None,
-            "operation_status": operation_status}
+    result = {"summary": summary, "reused": False, "evidence": None,
+              "operation_status": operation_status}
+    if semantic_observation is not None:
+        result["semantic_observation"] = semantic_observation
+    return result

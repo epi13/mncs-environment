@@ -390,9 +390,13 @@ def _ambient_semantics(session, definition: dict) -> dict | None:
         return incremental.quiet_owner_pass_result(
             "no-declared-semantic-contracts",
         )
-    return {"summary": outcome["summary"], "reused": outcome["reused"],
-            "evidence": outcome.get("evidence"),
-            "operation_status": outcome.get("operation_status", "complete")}
+    result = {"summary": outcome["summary"], "reused": outcome["reused"],
+              "evidence": outcome.get("evidence"),
+              "operation_status": outcome.get("operation_status", "complete")}
+    semantic_observation = outcome.get("semantic_observation")
+    if isinstance(semantic_observation, dict):
+        result["semantic_observation"] = semantic_observation
+    return result
 
 
 def _close_store(store) -> None:

@@ -66,11 +66,21 @@ so transient provider states re-validate on the next pass.
 ## Agent surface
 
 - Declared and quiet: `{"current": N, ...}` with zero subprocesses.
-- Changed: bounded delta counts from the resumed event window.
+- Changed: bounded delta counts plus compiler-owned subject identities,
+  diagnostic and obligation changes, source-relative locations, and the
+  exact stream/cursor window. Detail is limited to two workspaces, two
+  events per workspace, and four identities per event group; omitted
+  counts and pending cursors are preserved.
 - Adopted/reset: bounded capsule counts plus durable baseline.
 - Degraded: named reason; recovery belongs to Doctor.
 - Undeclared: no block. Normal entry pays effectively zero
   semantic context.
+
+The semantic-change observation is also retained with the exact `semantics`
+owner execution in the session service-accountability projection. That
+projection relates it to the selected session and work intent and preserves
+its result reference. It remains an observation of provider-reported changes,
+not a test verdict, agent request, or measure of intervention burden.
 
 Deep state (diagnostics, graph, obligations, capabilities, debug
 bindings) stays resident behind the provider `semantic-query`

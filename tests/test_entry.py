@@ -133,6 +133,30 @@ def test_quiet_ambient_adapters_record_reasons_without_agent_blocks(monkeypatch)
     assert "ambient_owner_pass_outcome" not in family_result
 
 
+def test_semantic_entry_adapter_exposes_bounded_service_observation(monkeypatch):
+    semantic_observation = {
+        "schema_version": "mncs.environment.semantic-change-observation/1",
+        "status": "observed",
+        "scope": "selected-language-service-event-pages",
+        "coverage_status": "complete-selected-pages",
+        "workspaces": [],
+    }
+    monkeypatch.setattr(
+        entry.semantics,
+        "ambient_pass",
+        lambda *_args, **_kwargs: {
+            "summary": {"declared": 1, "changed": 1},
+            "reused": False,
+            "semantic_observation": semantic_observation,
+        },
+    )
+
+    result = entry._ambient_semantics(object(), {})
+
+    assert result["semantic_observation"] == semantic_observation
+    assert result["summary"] == {"declared": 1, "changed": 1}
+
+
 class EntryContractTests(unittest.TestCase):
     def test_project_definition_symlink_is_rejected(self):
         alias = self.project / ".mncs" / "environment-alias.json"

@@ -159,27 +159,31 @@ constant. The wrong level in either direction is a bug.
 - Status: composed through bindings. No dedicated campaign planned;
   revisit in the Sol cohesion pass if resident scheduling converges.
 
-### Language Service — A0, next campaign
+### Language Service — A2 reactive coherence, integrated
 
 - Owns: semantic perception (symbols, dependencies, impacts,
   obligations, source and debug bindings).
-- Trigger today: explicit MCP and client queries only.
+- Trigger: Environment entry and selected resident-workspace semantic
+  changes; Doctor owns resident health and recovery, while the semantics
+  pass resumes provider event cursors.
 - Identity: compiler-owned declaration, span, and operation
   identities; `debug_source_binding` already exists.
-- Evidence: resident workspace events, semantic snapshots.
-- Agent surface today: full client responses on demand.
+- Evidence: resident workspace events, semantic snapshots, and bounded
+  semantic-change observations linked to the scheduled Environment pass.
+- Agent surface: entry exposes changed source-relative locations,
+  compiler-owned subject identities, diagnostic and obligation deltas,
+  and exact stream/cursor context. ECI preserves those observations with
+  the owner execution and session objective; deep state remains queryable
+  through Language Service.
 - Mutation: none; read-only semantic index.
 - Explicit-only: workspace subscription scope, index rebuilds.
-- Status: no environment provider contract yet
-  (`family-semantic-contracts-v1.json` absent), so the environment
-  cannot bind it. A resident workspace event service exists but is
-  not environment-integrated.
-- Target: A3 semantic coherence. The dedicated campaign should make
-  source rereading and impact reconstruction disappear behind
-  resident snapshots the environment already trusts.
-- Why next: every later campaign (Actions routing, Memory capsules,
-  Debug enrichment, RAVEL planning) consumes semantic identities.
-  Bind the producer before the consumers.
+- Status: integrated for definitions that declare the resident
+  Language Service. The Environment does not duplicate compiler
+  semantics or inline source bodies and impact graphs. Observation lists
+  are bounded; omitted event details and pending cursors remain explicit.
+- Remaining pressure: selected workspaces without a resident-service
+  declaration remain outside ambient observation, and semantic deltas do
+  not establish correctness or reduced agent intervention.
 
 ### Actions — A2 reactive external-evidence orchestration (landed)
 

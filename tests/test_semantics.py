@@ -221,6 +221,116 @@ class AmbientSemanticsTests(unittest.TestCase):
         self.assertEqual(durable["stream"], "mnls-stream-1")
         self.assertEqual(durable["cursor"], 7)
 
+    def test_changed_semantic_events_are_bounded_and_remain_queryable(self) -> None:
+        session = FakeSession()
+        session.declare(declared_service())
+        saved_observed = observation(cursor=7)
+        observed = observation(cursor=10, generation=15)
+        session.observe(observed)
+        session.bind(semantics_module.POLL_CAPABILITY)
+        session.bind(semantics_module.CAPSULE_CAPABILITY)
+        session.snapshot["semantics"] = {
+            "workspaces": {
+                WORKSPACE: {
+                    "stream": "mnls-stream-1",
+                    "cursor": 7,
+                    "generation": 12,
+                    "fingerprint": semantics_module._fingerprint(
+                        "mnls-stream-1", saved_observed["provider_observed"],
+                    ),
+                    "consumer_protocol": (
+                        semantics_module.SEMANTIC_CONSUMER_PROTOCOL
+                    ),
+                    "observed_at": semantics_module.utcnow(),
+                },
+            },
+        }
+
+        def event(cursor: int, uri: str, subject: str) -> dict:
+            return {
+                "cursor": cursor,
+                "current_generation": 12 + cursor - 7,
+                # Provider source identities can encode absolute paths; the
+                # agent projection must use only workspace-relative locators.
+                "current": {"uri": uri, "identity": uri},
+                "affected_documents": [{"uri": uri}],
+                "semantic_subjects": [{
+                    "identity": subject,
+                    "change": "changed",
+                    "before_fingerprint": "a" * 64,
+                    "after_fingerprint": "b" * 64,
+                }],
+                "diagnostics": {
+                    "added": ["MNP016"],
+                    "resolved": ["MNP004"],
+                },
+                "obligations": {
+                    "added": [],
+                    "resolved": [],
+                    "status_changed": ["mncs:test:main"],
+                    "complete": True,
+                },
+                "impact_identity": "c" * 64,
+                "impact_complete": True,
+                "impact": {"nodes": ["large graph omitted"]},
+                "reconciled": False,
+                "removed": False,
+            }
+
+        session.poll_document = poll_document(
+            cursor=10,
+            after=7,
+            events=[
+                event(8, Path(WORKSPACE, "src", "main.mncs").as_uri(),
+                      "mncs:function:main"),
+                event(9, "file:///tmp/outside/private.mncs",
+                      "mncs:function:outside"),
+                event(10, Path(WORKSPACE, "src", "last.mncs").as_uri(),
+                      "mncs:function:last"),
+            ],
+        )
+
+        outcome = semantics_module.ambient_pass(session)
+        observation_result = outcome["semantic_observation"]
+        self.assertEqual(outcome["summary"]["changed"], 1)
+        self.assertEqual(observation_result["schema_version"],
+                         semantics_module.SEMANTIC_OBSERVATION_SCHEMA)
+        self.assertEqual(observation_result["coverage_status"],
+                         "partial-selected-pages")
+        self.assertEqual(observation_result["event_count"], 3)
+        self.assertEqual(observation_result["returned_event_count"], 2)
+        self.assertEqual(observation_result["events_omitted_count"], 1)
+        workspace = observation_result["workspaces"][0]
+        self.assertEqual(workspace["service"], SERVICE_ID)
+        self.assertEqual(workspace["stream_identity"], "mnls-stream-1")
+        self.assertEqual(workspace["cursor_after"], 7)
+        self.assertEqual(workspace["cursor_through"], 10)
+        first, outside = workspace["events"]
+        self.assertEqual(first["source"]["relative_path"], "src/main.mncs")
+        self.assertNotIn("identity", first["source"])
+        self.assertEqual(first["semantic_subjects"]["items"], [{
+            "identity": "mncs:function:main",
+            "change": "changed",
+        }])
+        self.assertEqual(first["diagnostics"]["added"]["items"], ["MNP016"])
+        self.assertEqual(first["obligations"]["status_changed"]["items"], [
+            "mncs:test:main",
+        ])
+        self.assertEqual(outside["source"]["path_status"],
+                         "not-resolved-in-workspace")
+        self.assertNotIn("relative_path", outside["source"])
+        self.assertNotIn("impact", first)
+        self.assertNotIn("file:///tmp/outside", str(observation_result))
+        self.assertNotIn("file://", str(observation_result))
+        self.assertEqual(
+            session.snapshot["semantics"]["semantic_observation"],
+            observation_result,
+        )
+
+        reused = semantics_module.ambient_pass(session)
+        self.assertTrue(reused["reused"])
+        self.assertEqual(reused["semantic_observation"], observation_result)
+
     def test_first_contact_capsule_fallback_requires_complete_retained_history(self) -> None:
         session = FakeSession()
         session.declare(declared_service())

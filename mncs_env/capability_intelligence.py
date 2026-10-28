@@ -30,6 +30,7 @@ from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
 from . import resources as resources_module
+from . import semantics as semantics_module
 from . import workspace as workspace_module
 from .capabilities import MAX_OUTPUT_LIMIT_BYTES, normalize_provider_evidence_path
 from .identity import digest_hex
@@ -3311,7 +3312,11 @@ def _compact_service_accountability_overview(
         "explicit_session_invoke_count",
         "eligible_service_opportunity_count", "ambient_fulfillment_status",
         "agent_intervention_burden_status", "agent_receipt_status",
-        "outcome_quality_status", "readiness_probe_opportunity_count",
+        "outcome_quality_status", "semantic_observation_status",
+        "semantic_observation_workspace_count",
+        "semantic_observation_event_count",
+        "semantic_observation_events_omitted_count",
+        "readiness_probe_opportunity_count",
         "owner_pass_observation_status", "owner_pass_observation_count",
         "owner_pass_outcome_disposition_counts",
         "owner_pass_outcome_reason_counts",
@@ -3403,6 +3408,10 @@ def _compact_service_accountability_overview(
                 "verification_result_details_omitted_count",
                 "ambient_fulfillment_status",
                 "agent_intervention_burden_status", "verification_status",
+                "semantic_observation_status",
+                "semantic_observation_workspace_count",
+                "semantic_observation_event_count",
+                "semantic_observation_events_omitted_count",
                 "result_reference_publication_status",
                 "result_reference_store_reference_reuse_count",
                 "result_reference_store_resolution_attempt_count",
@@ -3587,6 +3596,10 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
         "verification_result_detail_count",
         "verification_result_details_status",
         "verification_result_details_omitted_count",
+        "semantic_observation_status",
+        "semantic_observation_workspace_count",
+        "semantic_observation_event_count",
+        "semantic_observation_events_omitted_count",
     )
     compact_summary: dict[str, Any] = {}
     for key in summary_fields:
@@ -3698,6 +3711,14 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
             )
             if process_usage is not None:
                 compact_row["process_resource_usage"] = process_usage
+            if row.get("owner_pass") == "semantics":
+                semantic_observation = (
+                    semantics_module.project_semantic_observation(
+                        row.get("semantic_observation"),
+                    )
+                )
+                if semantic_observation is not None:
+                    compact_row["semantic_observation"] = semantic_observation
             if compact_row:
                 compact_items.append(compact_row)
         compact_observations["items"] = compact_items
@@ -24419,6 +24440,33 @@ def _environment_service_execution_accountability(
                         and (type(value) in (int, float, bool))
                         and (type(value) is bool or 0 <= value <= 86400)
                     }
+                semantic_observation = (
+                    semantics_module.project_semantic_observation(
+                        result.get("semantic_observation"),
+                    ) if owner == "semantics" else None
+                )
+                if semantic_observation is not None:
+                    row["semantic_observation"] = semantic_observation
+                    summary.setdefault(
+                        "semantic_observation_status", "recorded",
+                    )
+                    summary["semantic_observation_workspace_count"] = (
+                        summary.get("semantic_observation_workspace_count", 0)
+                        +
+                        semantic_observation["workspace_observation_count"]
+                    )
+                    summary["semantic_observation_event_count"] = (
+                        summary.get("semantic_observation_event_count", 0)
+                        +
+                        semantic_observation["event_count"]
+                    )
+                    summary["semantic_observation_events_omitted_count"] = (
+                        summary.get(
+                            "semantic_observation_events_omitted_count", 0,
+                        )
+                        +
+                        semantic_observation["events_omitted_count"]
+                    )
             elif owner_results:
                 row["result_status"] = "not-recorded-for-execution"
             else:

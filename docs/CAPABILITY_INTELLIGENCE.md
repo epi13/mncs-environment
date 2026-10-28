@@ -103,6 +103,15 @@ show whether the grouped rows cover the complete recorded window. These are
 status counts, not proof that an owner fulfilled an agent need: a recorded
 result or a `no-failure-reported` outcome is not independent verification.
 
+When the `semantics` owner pass consumes a Language Service event page, its
+result can also carry a bounded `semantic_observation` on the exact scheduled
+row. That view retains source-relative paths, stream and cursor range,
+compiler-owned subject identities, and diagnostic or obligation deltas while
+omitting source bodies and impact graphs. The result reference, session
+objective, and Environment execution context remain inspectable together.
+Partial event details and unconsumed cursors are explicit; these changes do
+not establish verification or reduced agent intervention.
+
 When readiness services are explicitly empty or no readiness declaration is
 recorded, the session records an Environment owner-pass execution, and the
 selected activity has no owner-pass-scoped calls, the same

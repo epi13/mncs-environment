@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from mncs_env import coherence, family, observations, workspace
+from mncs_env import semantics
 from mncs_env.session_store import open_store
 
 MNCS_WORKSPACE_ROOT = Path(workspace.verify_registered_checkout(
@@ -760,6 +761,82 @@ def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference
     assert str(tmp_path) not in json.dumps(projected)
     assert "private-test-detail" not in json.dumps(projected)
     assert "not exposed" not in json.dumps(projected)
+
+
+def test_semantic_owner_result_retains_bounded_event_evidence(tmp_path):
+    session_id = "ses_incremental_semantics_fixture"
+    execution_id = "ase_" + "e" * 32
+    observation = semantics.project_semantic_observation({
+        "schema_version": semantics.SEMANTIC_OBSERVATION_SCHEMA,
+        "status": "observed",
+        "workspace_count": 1,
+        "workspaces": [{
+            "service": "mncs-language-service:fixture-docs",
+            "workspace_root": "/tmp/semantic-workspace",
+            "stream_identity": "mnls-stream-1",
+            "cursor_after": 4,
+            "cursor_through": 5,
+            "provider_high_water": 5,
+            "event_count": 1,
+            "events": [{
+                "cursor": 5,
+                "current_generation": 9,
+                "current": {
+                    "uri": "file:///tmp/semantic-workspace/src/main.mncs",
+                    "identity": "source:9",
+                },
+                "semantic_subjects": [{
+                    "identity": "mncs:function:main",
+                    "change": "changed",
+                }],
+                "diagnostics": {"added": ["MNP016"], "resolved": []},
+                "obligations": {
+                    "added": [], "resolved": [],
+                    "status_changed": ["mncs:test:main"], "complete": True,
+                },
+                "impact_identity": "f" * 64,
+                "impact_complete": True,
+                "impact": {"private_graph": "not projected"},
+            }],
+        }],
+    })
+    assert observation is not None
+    block = {
+        "operation_status": "complete",
+        "summary": {"changed": 1, "semantic_events": 1},
+        "semantic_observation": observation,
+    }
+    scheduled = [{
+        "owner": "semantics",
+        "service_execution_id": execution_id,
+        "owner_reused": False,
+    }]
+    rows = coherence._owner_pass_results(
+        SimpleNamespace(session_id=session_id, state_dir=tmp_path),
+        scheduled,
+        {"semantics": block},
+        None,
+        persisted=False,
+    )
+    projected = coherence.project_trace({
+        "mode": "targeted_update",
+        "trace_persistence_status": "entry-response-only",
+        "scheduled": [{
+            **scheduled[0], "disposition": 1,
+            "trigger_kinds": ["semantic.changed"],
+        }],
+        "skipped": [],
+        "owner_failures": [],
+        "owner_pass_results": rows,
+    }, session_id=session_id)
+
+    assert projected is not None
+    result = projected["owner_pass_results"]["results"][0]
+    assert result["service_execution_id"] == execution_id
+    assert result["semantic_observation"] == observation
+    serialized = json.dumps(projected)
+    assert "/tmp/semantic-workspace" not in serialized
+    assert "private_graph" not in serialized
 
 
 def test_family_vocabulary_availability_is_projected_as_allowlisted_reason():

@@ -6717,6 +6717,123 @@ def test_focused_service_execution_preserves_trigger_context_and_cost() -> None:
     assert "timer_or_lifecycle_due" not in missing
 
 
+def test_semantic_service_evidence_reaches_session_accountability_projection():
+    semantic_observation = capability_intelligence.semantics_module.project_semantic_observation({
+        "schema_version": (
+            capability_intelligence.semantics_module.SEMANTIC_OBSERVATION_SCHEMA
+        ),
+        "status": "observed",
+        "workspace_count": 1,
+        "workspaces": [{
+            "service": "mncs-language-service:fixture-docs",
+            "workspace_root": "/tmp/semantic-workspace",
+            "stream_identity": "mnls-stream-4",
+            "cursor_after": 10,
+            "cursor_through": 11,
+            "provider_high_water": 11,
+            "event_count": 1,
+            "events": [{
+                "cursor": 11,
+                "current_generation": 18,
+                "current": {
+                    "uri": "file:///tmp/semantic-workspace/src/main.mncs",
+                    "identity": "source:18",
+                },
+                "semantic_subjects": [{
+                    "identity": "mncs:function:main",
+                    "change": "changed",
+                }],
+                "diagnostics": {"added": ["MNP016"], "resolved": []},
+                "obligations": {
+                    "added": [], "resolved": [],
+                    "status_changed": ["mncs:test:main"], "complete": True,
+                },
+                "impact_identity": "1" * 64,
+                "impact_complete": True,
+                "impact": {"nodes": ["not projected"]},
+            }],
+        }],
+    })
+    assert semantic_observation is not None
+    execution_id = "ase_" + "f" * 32
+    execution = {
+        "status": "observed",
+        "source": {"owner_pass_decision_coverage": "complete"},
+        "execution": {
+            "mode": "targeted_update",
+            "owner_pass_decision_coverage": "complete",
+            "scheduled_passes": [{
+                "owner": "semantics",
+                "service_execution_id": execution_id,
+                "verification_status": "not-established",
+                "trigger_kinds": ["semantic.changed"],
+            }],
+            "skipped_passes": [],
+            "owner_failures": [],
+            "owner_pass_results": {
+                "status": "recorded",
+                "results": [{
+                    "owner": "semantics",
+                    "service_execution_id": execution_id,
+                    "result_status": "result-recorded",
+                    "summary": {"changed": 1, "semantic_events": 1},
+                    "semantic_observation": semantic_observation,
+                }],
+            },
+        },
+    }
+
+    environment_view = (
+        capability_intelligence._environment_service_execution_accountability(
+            execution, include_owner_pass_observations=True,
+        )
+    )
+    owner_row = environment_view["owner_pass_observations"]["items"][0]
+    assert owner_row["owner_pass"] == "semantics"
+    assert owner_row["service_execution_id"] == execution_id
+    assert owner_row["semantic_observation"] == semantic_observation
+    assert environment_view["summary"]["semantic_observation_status"] == (
+        "recorded"
+    )
+    assert environment_view["summary"]["semantic_observation_workspace_count"] == 1
+    assert environment_view["summary"]["semantic_observation_event_count"] == 1
+
+    readiness = {
+        "services": [],
+        "source": {"service_declaration_status": "explicit-empty"},
+        "summary": {},
+    }
+    accountability = capability_intelligence._session_service_accountability(
+        readiness,
+        None,
+        {
+            "campaign": {"identity": "cmp_semantic_fixture"},
+            "intent": {"identity": "wi_semantic_fixture"},
+        },
+        ambient_service_execution=execution,
+    )
+    assert accountability["source"]["campaign_id"] == "cmp_semantic_fixture"
+    assert accountability["source"]["work_intent_id"] == "wi_semantic_fixture"
+
+    focused = capability_intelligence._compact_focused_service_execution(
+        environment_view,
+    )
+    assert focused["summary"]["semantic_observation_event_count"] == 1
+    assert focused["summary"]["owner_pass_observations"]["items"][0][
+        "semantic_observation"
+    ] == semantic_observation
+    compact = capability_intelligence._compact_service_accountability_overview(
+        accountability, execution,
+    )
+    compact_execution = compact["summary"]["environment_service_execution"]
+    assert compact_execution["summary"]["semantic_observation_status"] == (
+        "recorded"
+    )
+    assert compact_execution["summary"]["owner_pass_observations"]["items"][0][
+        "semantic_observation"
+    ] == semantic_observation
+
+
 def test_focused_service_execution_explains_reconciliation_basis() -> None:
     execution = {
         "status": "observed",
