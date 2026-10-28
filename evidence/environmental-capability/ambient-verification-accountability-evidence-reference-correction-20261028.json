@@ -1,0 +1,75 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_accountability_evidence_reference_correction_20261028",
+  "captured_at": "2026-10-28T00:32:48Z",
+  "measurement_basis": "campaign-ledger-source-pointer-integrity-readback-and-append-only-correction",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id": "chk_2fb4d92117c404c1",
+    "campaign_evidence_count_before_recording": 4
+  },
+  "observation": {
+    "kind": "campaign-evidence-source-pointer-correction",
+    "source_interface": "MNCS Environment ECI campaign-evidence observation resolver",
+    "request": {
+      "affected_record_identities": [
+        "ev_environment_ambient_verification_accountability_pressure_20261028",
+        "ev_environment_ambient_verification_accountability_verification_20261028",
+        "ev_environment_ambient_verification_accountability_live_readback_20261028",
+        "ev_environment_ambient_verification_accountability_improvement_20261028"
+      ],
+      "recorded_commit": "b6e36bc4363b3df80862fd10a585fd9ab540ce81",
+      "resolved_commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b"
+    },
+    "outcome": {
+      "recorded_references_status": "commit-path-unavailable",
+      "corrected_commit_path_status": "verified",
+      "corrected_blob_sha256_status": "verified-for-all-four-records",
+      "correction_policy": "append-only-new-observation; prior campaign references remain unchanged",
+      "campaign_projection_status_after_correction": "not-yet-read-back"
+    }
+  },
+  "corrected_evidence_references": [
+    {
+      "identity": "ev_environment_ambient_verification_accountability_pressure_20261028",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-pressure-20261028.json",
+      "sha256": "0998d85fa7f273b681898c51cca1cbeedf91ba3f49d23cf7f6ee099c524143c8"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_verification_20261028",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-verification-20261028.json",
+      "sha256": "af2549e2a129e8e46555150cb49d781eb5f75b6a96c925457c9bd2dfd2d4315b"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_live_readback_20261028",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-live-readback-20261028.json",
+      "sha256": "da8fdc432419c862628ece5f0ae3c6d7eab80d135a9ab0208512cbe09b224912"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_improvement_20261028",
+      "repository": "mncs-environment",
+      "commit": "b6e36bc2e66a3e82ecb99d5ee3313fa1402c5b1b",
+      "path": "evidence/environmental-capability/ambient-verification-accountability-improvement-20261028.json",
+      "sha256": "a385a1bccb471a75d095abe81dd891440c3b32d04969fa4b4f25ad3f2ea81bab"
+    }
+  ],
+  "measurement_limits": [
+    "The first four immutable campaign references are not rewritten; the correction is a new record and must be read with those references to reconstruct the corrected source map.",
+    "A projection readback after appending this correction is still required to establish that the campaign evidence resolver verifies the new record and its supporting source pointers."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
