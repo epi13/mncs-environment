@@ -3371,6 +3371,7 @@ def _compact_service_accountability_overview(
             key: execution_source[key]
             for key in (
                 "kind", "projection_digest", "owner_pass_contract_reference",
+                "scheduler_state_stability_status",
             )
             if isinstance(execution_source.get(key), str)
             or (key == "snapshot_sequence"
@@ -3431,6 +3432,13 @@ def _compact_service_accountability_overview(
                 execution_summary,
             )
         )
+        pending_event_observation = _compact_pending_event_observation(
+            execution_summary.get("pending_event_observation"),
+        )
+        if pending_event_observation is not None:
+            compact_environment_summary["pending_event_observation"] = (
+                pending_event_observation
+            )
         failure_details = _compact_environment_owner_failure_details(
             execution_summary.get("owner_failure_details"),
         )
@@ -3540,6 +3548,7 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
             "kind", "projection_digest", "owner_pass_contract_reference",
             "session_id", "environment_id", "snapshot_sequence",
             "campaign_id", "work_intent_id",
+            "scheduler_state_stability_status",
         )
         if isinstance(source.get(key), str)
         or (key == "snapshot_sequence"
@@ -3587,13 +3596,27 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
                 for name, count in list(counts.items())[:12]
                 if isinstance(name, str) and type(count) is int and count >= 0
             }
+    pending_event_observation = _compact_pending_event_observation(
+        summary.get("pending_event_observation"),
+    )
+    if pending_event_observation is not None:
+        compact_summary["pending_event_observation"] = (
+            pending_event_observation
+        )
     integrity = _compact_owner_result_content_integrity(
         summary.get("owner_result_content_integrity"),
     )
     if integrity is not None:
         compact_summary["owner_result_content_integrity"] = integrity
 
-    observations = summary.get("owner_pass_observations")
+    # `_environment_service_execution_accountability` publishes the bounded
+    # observation block beside its summary. The general accountability
+    # projection folds it into the summary, while this focused view receives
+    # the helper result directly. Accept both shapes so the narrow projection
+    # does not discard recorded trigger and subject context.
+    observations = value.get("owner_pass_observations")
+    if not isinstance(observations, dict):
+        observations = summary.get("owner_pass_observations")
     if isinstance(observations, dict):
         compact_observations = {
             key: observations[key]
@@ -3618,13 +3641,42 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
                 key: _short_text(row[key], 256)
                 for key in (
                     "owner_pass", "service_execution_id", "decision",
-                    "scheduler_disposition_code", "outcome_status",
+                    "trigger_observation_status", "outcome_status",
                     "result_status", "result_identity",
                     "source_reference_status", "source_reference",
                     "source_content_integrity_status", "verification_status",
+                    "semantic_subject_identity_status",
                 )
                 if isinstance(row.get(key), str)
             }
+            for key in (
+                "scheduler_disposition_code", "wave",
+                "semantic_subject_identity_count",
+                "semantic_subject_identity_omitted_count",
+            ):
+                count = row.get(key)
+                if type(count) is int and count >= 0:
+                    compact_row[key] = count
+            timer_due = row.get("timer_or_lifecycle_due")
+            if type(timer_due) is bool:
+                compact_row["timer_or_lifecycle_due"] = timer_due
+            for key in ("trigger_kinds", "semantic_subject_identities"):
+                values = row.get(key)
+                if isinstance(values, list):
+                    compact_row[key] = [
+                        _short_text(item, 160)
+                        for item in values[:8]
+                        if isinstance(item, str) and item
+                    ]
+            elapsed = row.get("run_elapsed_seconds")
+            if (type(elapsed) in (int, float) and math.isfinite(elapsed)
+                    and 0 <= elapsed <= 86400):
+                compact_row["run_elapsed_seconds"] = round(float(elapsed), 3)
+            process_usage = resources_module.compact_process_usage(
+                row.get("process_resource_usage"),
+            )
+            if process_usage is not None:
+                compact_row["process_resource_usage"] = process_usage
             if compact_row:
                 compact_items.append(compact_row)
         compact_observations["items"] = compact_items
@@ -3739,6 +3791,51 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
         "source": compact_source,
         "summary": compact_summary,
     }
+
+
+def _compact_pending_event_observation(value: Any) -> dict[str, Any] | None:
+    """Keep the bounded pending-event summary without event payloads."""
+    if not isinstance(value, dict):
+        return None
+    allowed_statuses = {"recorded", "partial", "invalid", "not-recorded"}
+    allowed_coverage = {
+        "complete-selected-trace", "possibly-truncated-at-trace-limit",
+        "not-recorded", "invalid",
+    }
+    status = value.get("status")
+    scope = value.get("scope")
+    coverage = value.get("coverage_status")
+    if (not isinstance(status, str) or status not in allowed_statuses
+            or scope != "selected-trace-pending-events"
+            or not isinstance(coverage, str)
+            or coverage not in allowed_coverage):
+        return None
+    result = {
+        "status": status,
+        "scope": scope,
+        "coverage_status": coverage,
+        "causal_status": "not-established",
+    }
+    for key in (
+        "record_count", "returned_count", "omitted_count",
+        "invalid_record_count", "unclassified_event_kind_count",
+        "kind_count_omitted", "repository_count_omitted",
+    ):
+        count = value.get(key)
+        if type(count) is int and count >= 0:
+            result[key] = count
+    for key in ("kind_counts", "repository_counts"):
+        counts = value.get(key)
+        if not isinstance(counts, dict):
+            continue
+        result[key] = {
+            _short_text(name, 120): count
+            for name, count in list(counts.items())[:12]
+            if isinstance(name, str)
+            and re.fullmatch(r"[A-Za-z0-9_.:-]{1,120}", name) is not None
+            and type(count) is int and count >= 0
+        }
+    return result
 
 
 def _compact_ambient_service_execution_overview(
@@ -23684,10 +23781,18 @@ def _environment_service_execution_accountability(
     source = source if isinstance(source, dict) else {}
     execution = ambient_service_execution.get("execution")
     execution = execution if isinstance(execution, dict) else None
+    raw_stability_status = source.get("scheduler_state_stability_status")
     execution_source = {
         "kind": "session_activity.ambient_service_execution",
         "projection_digest": digest_hex(ambient_service_execution),
         "owner_pass_contract_reference": "mncs-environment:.mncs/coherence-passes.json",
+        "scheduler_state_stability_status": (
+            raw_stability_status
+            if isinstance(raw_stability_status, str)
+            and raw_stability_status in {
+                "stable", "unstable", "invalid", "not-recorded",
+            } else "not-recorded"
+        ),
     }
     summary: dict[str, Any] = {
         "owner_pass_decision_coverage": source.get(
@@ -23756,6 +23861,11 @@ def _environment_service_execution_accountability(
                 or (key == "owner_failure_count" and execution[key] is None)
             ):
                 summary[key] = execution[key]
+        pending_event_observation = _compact_pending_event_observation(
+            execution.get("pending_event_observation"),
+        )
+        if pending_event_observation is not None:
+            summary["pending_event_observation"] = pending_event_observation
 
         owner_results = execution.get("owner_pass_results")
         owner_results = owner_results if isinstance(owner_results, dict) else {}
@@ -26352,6 +26462,14 @@ def _session_ambient_service_execution(
             "invalid_record_count"
         ],
     }
+    scheduler_stable = coherence.get("stable")
+    scheduler_state_source = {
+        "scheduler_state_stability_status": (
+            "stable" if scheduler_stable is True else
+            "unstable" if scheduler_stable is False else
+            "invalid" if "stable" in coherence else "not-recorded"
+        ),
+    }
     if not isinstance(raw_trace, dict):
         has_trace_slot = (
             "coherence" in snapshot and not isinstance(raw_coherence, dict)
@@ -26371,6 +26489,7 @@ def _session_ambient_service_execution(
                     and snapshot["snapshot_sequence"] >= 0 else None
                 ),
                 "trace_status": "missing-or-invalid",
+                **scheduler_state_source,
                 **owner_history_source,
             },
             "execution": None,
@@ -26584,6 +26703,7 @@ def _session_ambient_service_execution(
             execution.get("decision_record_status", "partial")
             if isinstance(execution, dict) else "invalid"
         ),
+        **scheduler_state_source,
         "owner_pass_decision_coverage": (
             execution.get("owner_pass_decision_coverage", "unavailable")
             if isinstance(execution, dict) else "unavailable"

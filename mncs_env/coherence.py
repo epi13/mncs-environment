@@ -27,6 +27,7 @@ SCHEMA = "mncs.environment.incremental-coherence/1"
 INPUTS_PATH = Path(__file__).resolve().parents[1] / ".mncs/coherence-passes.json"
 MAX_WAVES = 3
 MAX_TRACE_OWNER_ROWS = 16
+MAX_TRACE_PENDING_EVENT_ROWS = 32
 MAX_OWNER_EXECUTION_HISTORY = 16
 OWNER_EXECUTION_HISTORY_SCHEMA = (
     "mncs.environment.owner-execution-history/2"
@@ -356,6 +357,74 @@ def project_trace(value: dict, *, session_id: str | None = None) -> dict | None:
             "Trace persistence distinguishes the current entry response from the session snapshot; snapshot retention does not establish service fulfillment or independent verification.",
         ],
     }
+    raw_pending_events = value.get("pending_events")
+    if isinstance(raw_pending_events, list):
+        pending_rows = raw_pending_events[:MAX_TRACE_PENDING_EVENT_ROWS]
+        pending_kind_counts: dict[str, int] = {}
+        pending_repository_counts: dict[str, int] = {}
+        unclassified_kind_count = 0
+        invalid_record_count = 0
+        for item in pending_rows:
+            if not isinstance(item, dict):
+                invalid_record_count += 1
+                continue
+            kind = safe_identity(item.get("kind"))
+            if kind is not None and kind in declared_facts:
+                pending_kind_counts[kind] = pending_kind_counts.get(kind, 0) + 1
+            else:
+                unclassified_kind_count += 1
+            repository = safe_identity(item.get("repository"))
+            if (repository is not None
+                    and ("/" in repository or "\\" in repository)):
+                repository = None
+            if repository is not None:
+                pending_repository_counts[repository] = (
+                    pending_repository_counts.get(repository, 0) + 1
+                )
+        pending_omitted_count = max(
+            0, len(raw_pending_events) - len(pending_rows),
+        )
+        pending_coverage = (
+            "possibly-truncated-at-trace-limit"
+            if len(raw_pending_events) >= MAX_TRACE_PENDING_EVENT_ROWS
+            else "complete-selected-trace"
+        )
+        result["pending_event_observation"] = {
+            "status": (
+                "partial" if invalid_record_count or pending_omitted_count
+                else "recorded"
+            ),
+            "scope": "selected-trace-pending-events",
+            "causal_status": "not-established",
+            "coverage_status": pending_coverage,
+            "record_count": len(raw_pending_events),
+            "returned_count": len(pending_rows),
+            "omitted_count": pending_omitted_count,
+            "invalid_record_count": invalid_record_count,
+            "unclassified_event_kind_count": unclassified_kind_count,
+            "kind_counts": dict(sorted(pending_kind_counts.items())[:12]),
+            "kind_count_omitted": max(0, len(pending_kind_counts) - 12),
+            "repository_counts": dict(
+                sorted(pending_repository_counts.items())[:12]
+            ),
+            "repository_count_omitted": max(
+                0, len(pending_repository_counts) - 12,
+            ),
+        }
+    elif "pending_events" in value:
+        result["pending_event_observation"] = {
+            "status": "invalid",
+            "scope": "selected-trace-pending-events",
+            "causal_status": "not-established",
+            "coverage_status": "invalid",
+        }
+    else:
+        result["pending_event_observation"] = {
+            "status": "not-recorded",
+            "scope": "selected-trace-pending-events",
+            "causal_status": "not-established",
+            "coverage_status": "not-recorded",
+        }
     raw_owner_results = value.get("owner_pass_results")
     if isinstance(raw_owner_results, list):
         scheduled_execution_ids = {

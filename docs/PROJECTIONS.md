@@ -499,12 +499,20 @@ integrity-checked verification relation, the focused view keeps the exact
 verification and owner-result Store references. Opportunity, fulfillment,
 agent receipt, and intervention-burden fields keep their recorded unknown or
 unmeasured states; scheduler coverage does not substitute for agent need or
-service fulfillment. It also exposes the existing session activity candidate
-summary by source, with occurrence counts kept separate from unique causes and
-environmental defect status. Owner-pass details are reduced to bounded result
-references and verification obligation outcomes; the focused view marks the
-omitted candidate narratives so agents can read the referenced evidence when
-more detail is needed.
+service fulfillment. Bounded owner-pass observations retain recorded trigger
+kinds, semantic subject identities, timer/lifecycle state, execution duration,
+and scheduler-process resource deltas. An explicitly empty trigger or subject
+list is distinct from missing observation data. These records explain the
+scheduler context and cost; they do not establish agent need, service
+correctness, or reduced intervention burden. The view also reports the
+snapshot's scheduler-stability state and bounded kind/repository counts for
+pending scheduler events. These co-observations do not establish which pass
+an event caused. The section also exposes the existing session activity
+candidate summary by source, with occurrence counts kept separate from unique
+causes and environmental defect status. Owner-pass details are reduced to
+bounded result references and verification obligation outcomes; the focused
+view marks the omitted candidate narratives so agents can read the referenced
+evidence when more detail is needed.
 
 Session activity keeps authenticated Control read observations distinct from
 Environment-bound capability invocations. If valid Control reads are present

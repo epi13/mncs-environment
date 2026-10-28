@@ -583,6 +583,46 @@ def test_project_trace_exposes_bounded_owner_decisions_without_claiming_fulfillm
     assert "private/project/source.mncs" not in json.dumps(projected)
 
 
+def test_project_trace_summarizes_pending_events_with_explicit_coverage():
+    private_path = "/home/private/project"
+    projected = coherence.project_trace({
+        "mode": "bounded_reconciliation",
+        "pending_events": [
+            {"kind": "claim.changed", "repository": "mncs-commons"},
+            {"kind": "claim.changed", "repository": "mncs-commons"},
+            {"kind": "unknown.changed", "repository": private_path},
+            private_path,
+        ],
+        "scheduled": [],
+        "skipped": [],
+        "owner_failures": [],
+    })
+
+    pending = projected["pending_event_observation"]
+    assert pending["status"] == "partial"
+    assert pending["scope"] == "selected-trace-pending-events"
+    assert pending["coverage_status"] == "complete-selected-trace"
+    assert pending["record_count"] == 4
+    assert pending["returned_count"] == 4
+    assert pending["omitted_count"] == 0
+    assert pending["invalid_record_count"] == 1
+    assert pending["unclassified_event_kind_count"] == 1
+    assert pending["kind_counts"] == {"claim.changed": 2}
+    assert pending["repository_counts"] == {"mncs-commons": 2}
+    assert pending["causal_status"] == "not-established"
+    assert private_path not in json.dumps(projected)
+
+    missing = coherence.project_trace({
+        "scheduled": [], "skipped": [], "owner_failures": [],
+    })
+    assert missing["pending_event_observation"]["status"] == "not-recorded"
+    invalid = coherence.project_trace({
+        "pending_events": "not-a-list",
+        "scheduled": [], "skipped": [], "owner_failures": [],
+    })
+    assert invalid["pending_event_observation"]["status"] == "invalid"
+
+
 def test_owner_pass_results_link_scheduled_execution_to_bounded_result_reference(
     tmp_path,
 ):

@@ -6537,6 +6537,128 @@ def test_service_accountability_rolls_up_scheduler_verification_status() -> None
     ] == summary["scheduled_pass_verification_status_counts_by_owner"]
 
 
+def test_focused_service_execution_preserves_trigger_context_and_cost() -> None:
+    execution = {
+        "status": "observed",
+        "source": {
+            "owner_pass_decision_coverage": "complete",
+            "scheduler_state_stability_status": "unstable",
+        },
+        "execution": {
+            "mode": "targeted_update",
+            "decision_record_status": "recorded",
+            "owner_pass_decision_coverage": "complete",
+            "pending_event_observation": {
+                "status": "recorded",
+                "scope": "selected-trace-pending-events",
+                "causal_status": "not-established",
+                "coverage_status": "complete-selected-trace",
+                "record_count": 2,
+                "returned_count": 2,
+                "omitted_count": 0,
+                "invalid_record_count": 0,
+                "unclassified_event_kind_count": 0,
+                "kind_counts": {"claim.changed": 2},
+                "repository_counts": {"mncs-commons": 2},
+            },
+            "scheduled_passes": [{
+                "owner": "projections",
+                "service_execution_id": "ase_" + "a" * 32,
+                "scheduler_disposition_code": 1,
+                "wave": 0,
+                "trigger_kinds": ["source.changed", "projection.changed"],
+                "semantic_subject_identity_status": "complete",
+                "semantic_subject_identity_count": 1,
+                "semantic_subject_identity_omitted_count": 0,
+                "semantic_subject_identities": ["mncs:module:lexer"],
+                "timer_or_lifecycle_due": False,
+                "run_elapsed_seconds": 1.25,
+                "process_resource_usage": _measured_owner_resource_usage(),
+            }, {
+                "owner": "verification",
+                "service_execution_id": "ase_" + "b" * 32,
+                "trigger_kinds": [],
+                "semantic_subject_identity_status": "complete",
+                "semantic_subject_identity_count": 0,
+                "semantic_subject_identity_omitted_count": 0,
+                "semantic_subject_identities": [],
+                "timer_or_lifecycle_due": False,
+            }, {
+                "owner": "diagnostics",
+                "service_execution_id": "ase_" + "c" * 32,
+            }],
+            "skipped_passes": [],
+            "owner_failures": [],
+            "owner_pass_results": {"status": "recorded", "results": []},
+        },
+    }
+
+    observed = capability_intelligence._environment_service_execution_accountability(
+        execution, include_owner_pass_observations=True,
+    )
+    focused = capability_intelligence._compact_focused_service_execution(observed)
+    observations = focused["summary"]["owner_pass_observations"]
+    assert focused["source"]["scheduler_state_stability_status"] == "unstable"
+    pending = focused["summary"]["pending_event_observation"]
+    assert pending["record_count"] == 2
+    assert pending["kind_counts"] == {"claim.changed": 2}
+    assert pending["repository_counts"] == {"mncs-commons": 2}
+    assert pending["causal_status"] == "not-established"
+    assert observations["status"] == "recorded"
+    assert observations["count"] == 3
+    triggered, empty, missing = observations["items"]
+    assert triggered["trigger_observation_status"] == "recorded"
+    assert triggered["trigger_kinds"] == [
+        "source.changed", "projection.changed",
+    ]
+    assert triggered["semantic_subject_identity_status"] == "complete"
+    assert triggered["semantic_subject_identity_count"] == 1
+    assert triggered["semantic_subject_identities"] == ["mncs:module:lexer"]
+    assert triggered["timer_or_lifecycle_due"] is False
+    assert triggered["scheduler_disposition_code"] == 1
+    assert triggered["run_elapsed_seconds"] == 1.25
+    assert triggered["process_resource_usage"]["status"] == "measured"
+    assert empty["trigger_observation_status"] == "recorded"
+    assert empty["trigger_kinds"] == []
+    assert empty["semantic_subject_identity_count"] == 0
+    assert empty["semantic_subject_identities"] == []
+    assert empty["timer_or_lifecycle_due"] is False
+    assert missing["trigger_observation_status"] == "not-recorded"
+    assert "trigger_kinds" not in missing
+    assert "timer_or_lifecycle_due" not in missing
+
+
+def test_session_service_execution_preserves_snapshot_stability_context() -> None:
+    session = SimpleNamespace(session_id="ses_scheduler_instability")
+    snapshot = {
+        "environment_id": "renv_scheduler_instability",
+        "snapshot_sequence": 9,
+        "coherence": {
+            "stable": False,
+            "last_trace": {
+                "mode": "bounded_reconciliation",
+                "pending_events": [{
+                    "kind": "claim.changed",
+                    "repository": "mncs-commons",
+                }],
+                "scheduled": [],
+                "skipped": [],
+                "owner_failures": [],
+            },
+        },
+    }
+
+    projected = capability_intelligence._session_ambient_service_execution(
+        session, snapshot,
+    )
+    assert projected["source"]["scheduler_state_stability_status"] == (
+        "unstable"
+    )
+    assert projected["execution"]["pending_event_observation"][
+        "kind_counts"
+    ] == {"claim.changed": 1}
+
+
 def test_projection_enforces_tight_budget_for_session_service_history(
     tmp_path: Path,
 ) -> None:
