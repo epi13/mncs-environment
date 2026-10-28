@@ -1,0 +1,89 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_accountability_live_readback_20261028",
+  "captured_at": "2026-10-28T00:29:45Z",
+  "measurement_basis": "bounded-post-commit-environmental-capability-projection-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee"
+  },
+  "observation": {
+    "kind": "ambient-verification-accountability-live-readback",
+    "source_interface": "./scripts/mncs-env projections --interpret environmental-capability",
+    "request": {
+      "historical_session_id": "ses_c7628be9292eab08",
+      "historical_projection_identity": "eci_34d7e9708fe79771",
+      "current_session_id": "ses_9db7b7c6f04e4d19",
+      "current_projection_identity": "eci_49a469983bbd328d",
+      "implementation_commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee"
+    },
+    "outcome": {
+      "projection_status": "partial",
+      "selected_session_event_windows_truncated": true,
+      "historical_failure_summary": {
+        "owner_failure_observation_status": "complete",
+        "owner_failure_count": 1,
+        "owner_failure_details_status": "complete",
+        "owner": "verification",
+        "operation_status": "retry",
+        "reason_code": "coherence-unavailable",
+        "source_integrity_status": "verified",
+        "source_reference": "mncs-store:ses_c7628be9292eab08:verification:c26b319b5b18e2bc13602b3640146e0c9e303be8d8c93534f4e021fda6c8e6b6"
+      },
+      "current_verification": {
+        "provider": "mncs-test",
+        "capability": "mncs.test-verification-coherence/1",
+        "binding_id": "cap_436af10f7755214e",
+        "operation_status": "complete",
+        "owner_failure_observation_status": "complete",
+        "owner_failure_count": 0,
+        "owner_failure_details_status": "complete",
+        "obligations": 10,
+        "executed": 2,
+        "unsupported": 8,
+        "failed": 0,
+        "blockers": 0,
+        "verification_status": "not-established"
+      },
+      "interpretation": "The exact historical verification failure is now inspectable in the bounded service-accountability summary. The current session has an exact Test provider binding and ran two obligations, while eight remain unsupported; complete verification is not established.",
+      "causal_assessment": "not-established"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "historical-owner-result",
+      "session_id": "ses_c7628be9292eab08",
+      "reference": "mncs-store:ses_c7628be9292eab08:incremental-coherence:verification:5ee66e651850e3ac8375f02a5794d1cbb86b2ff0ac46b380d506d630fa7e7d42",
+      "result_identity": "719bdacf0067504538424353f42d252988427580f9264321fbb8ed35805f02a0"
+    },
+    {
+      "kind": "current-owner-result",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "reference": "mncs-store:ses_9db7b7c6f04e4d19:incremental-coherence:verification:fe481fde90acce7e0b2204cd759dfdaa5aa33fd08cab91a0984b5a0374836921",
+      "result_identity": "de3511d85cdc6c4b0e5e03528e9e046630edd90e0bc2a83614ee4e046d6a4ddb"
+    },
+    {
+      "kind": "current-provider-binding",
+      "session_id": "ses_9db7b7c6f04e4d19",
+      "provider": "mncs-test",
+      "capability": "mncs.test-verification-coherence/1",
+      "binding_id": "cap_436af10f7755214e"
+    }
+  ],
+  "measurement_limits": [
+    "Both projection responses are partial and their selected event windows are truncated.",
+    "The displayed historical capability-binding details were truncated; the older session's provider availability is unknown.",
+    "The newer run's eight unsupported obligations mean full verification remains not-established.",
+    "The session workloads differ, so the live readback does not establish that the profile change caused the changed verification outcome.",
+    "Agent receipt, intervention burden, and long-term service effectiveness are not measured."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

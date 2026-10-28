@@ -1,0 +1,83 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_accountability_pressure_20261028",
+  "captured_at": "2026-10-28T00:29:45Z",
+  "measurement_basis": "authenticated-historical-owner-result-and-pre-change-source-inspection",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id": "chk_5ec1063f47748545",
+    "campaign_evidence_count_before_recording": 0
+  },
+  "observation": {
+    "kind": "ambient-service-failure-context-visibility-pressure",
+    "source_interface": "MNCS Environment ECI service-accountability projection",
+    "request": {
+      "historical_session_id": "ses_c7628be9292eab08",
+      "historical_implementation_commit": "256980e",
+      "owner_pass": "verification",
+      "operation_status": "retry",
+      "owner_result_identity": "719bdacf0067504538424353f42d252988427580f9264321fbb8ed35805f02a0",
+      "owner_result_reference": "mncs-store:ses_c7628be9292eab08:incremental-coherence:verification:5ee66e651850e3ac8375f02a5794d1cbb86b2ff0ac46b380d506d630fa7e7d42",
+      "verification_evidence_reference": "mncs-store:ses_c7628be9292eab08:verification:c26b319b5b18e2bc13602b3640146e0c9e303be8d8c93534f4e021fda6c8e6b6"
+    },
+    "outcome": {
+      "owner_failure_observation_status": "complete",
+      "owner_failure_count": 1,
+      "recorded_reason_code": "coherence-unavailable",
+      "source_integrity_status": "verified",
+      "pre_change_accountability_summary_detail": "not-retained",
+      "pre_change_projection_identity": "not-retained"
+    }
+  },
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_failure_detail_visibility",
+    "title": "Exact ambient verification failure evidence is not retained in compact service accountability",
+    "category": "environment-service-accountability-and-diagnostics",
+    "subsystem": "MNCS Environment ECI owner-pass service-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "A selected historical session has one recorded verification retry whose immutable evidence identifies coherence-unavailable. At the pre-change revision, the service-accountability summary exposed aggregate failure counts but no bounded exact failure detail. The detailed sibling ambient-service trace contained the result reference, requiring agents to correlate separate views.",
+    "actionable_recommendation": "Carry a small allowlisted set of exact owner failure details and linked verification reason evidence into the compact environment service-accountability summary, with explicit completeness and source-integrity status.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether an agent needed or inspected the historical reason",
+      "agent time or operations spent correlating the sibling views",
+      "recurrence across sessions",
+      "service fulfillment, agent receipt, or intervention-burden reduction"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "kind": "immutable-owner-result",
+      "session_id": "ses_c7628be9292eab08",
+      "reference": "mncs-store:ses_c7628be9292eab08:incremental-coherence:verification:5ee66e651850e3ac8375f02a5794d1cbb86b2ff0ac46b380d506d630fa7e7d42",
+      "result_identity": "719bdacf0067504538424353f42d252988427580f9264321fbb8ed35805f02a0"
+    },
+    {
+      "kind": "immutable-verification-evidence",
+      "session_id": "ses_c7628be9292eab08",
+      "reference": "mncs-store:ses_c7628be9292eab08:verification:c26b319b5b18e2bc13602b3640146e0c9e303be8d8c93534f4e021fda6c8e6b6",
+      "schema_version": "mncs.environment.verification/1",
+      "integrity_status": "verified"
+    },
+    {
+      "kind": "pre-change-source",
+      "repository": "mncs-environment",
+      "commit": "256980e",
+      "path": "mncs_env/capability_intelligence.py"
+    }
+  ],
+  "measurement_limits": [
+    "The pre-change projection payload and identity were not retained as an evidence artifact; the baseline gap is bounded by the earlier session readback and source inspection.",
+    "An empty displayed binding subset from the historical projection is not evidence that no Test binding existed because the binding details were truncated.",
+    "The recorded failure reason does not establish root cause, agent receipt, or that the Environment service caused the failure."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

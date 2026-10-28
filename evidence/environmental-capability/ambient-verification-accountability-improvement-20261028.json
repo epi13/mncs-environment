@@ -1,0 +1,109 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_accountability_improvement_20261028",
+  "captured_at": "2026-10-28T00:29:45Z",
+  "measurement_basis": "committed-projection-implementation-focused-verification-and-subsequent-live-readback",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_5ec1063f47748545",
+    "campaign_evidence_count_before_recording": 0
+  },
+  "observation": {
+    "kind": "environmental-improvement-link-record",
+    "source_interface": "MNCS Environment ECI service-accountability projection",
+    "request": {
+      "addresses_hypothesis_identity": "ph_environment_ambient_verification_failure_detail_visibility",
+      "implementation_commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee",
+      "verification_observation_identity": "ev_environment_ambient_verification_accountability_verification_20261028",
+      "subsequent_observation_identity": "ev_environment_ambient_verification_accountability_live_readback_20261028"
+    },
+    "outcome": {
+      "implementation_change": "The selected entry profile now declares the mncs-test verification-coherence provider. ECI resolves exact verification evidence only for a failed verification owner pass, verifies the owner-result identity and immutable Store sources, and carries a bounded allowlisted failure detail into environment_service_execution.summary through response compaction.",
+      "verified_change": "Three focused tests pass. The live readback preserves the historical coherence-unavailable reason and verified source integrity in the service-accountability summary. A current provider-bound run executes two obligations with zero failures and blockers, while eight are unsupported and verification remains not-established.",
+      "effectiveness_assessment": "partial-observability-improvement; agent-burden-effectiveness-not-assessed",
+      "interpretation_limit": "The relationship is easier to inspect and the current provider executed available obligations. Different session workloads and unsupported obligations prevent a causal or complete-fulfillment claim."
+    }
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_verification_failure_detail_visibility",
+    "title": "Exact ambient verification failure evidence is not retained in compact service accountability",
+    "category": "environment-service-accountability-and-diagnostics",
+    "subsystem": "MNCS Environment ECI owner-pass service-accountability projection",
+    "owner": "mncs-environment",
+    "basis": "A selected historical session has one recorded verification retry whose immutable evidence identifies coherence-unavailable. At the pre-change revision, the service-accountability summary exposed aggregate failure counts but no bounded exact failure detail. The detailed sibling ambient-service trace contained the result reference, requiring agents to correlate separate views.",
+    "actionable_recommendation": "Carry a small allowlisted set of exact owner failure details and linked verification reason evidence into the compact environment service-accountability summary, with explicit completeness and source-integrity status.",
+    "recurrence": "not-established",
+    "not_measured": [
+      "whether an agent needed or inspected the historical reason",
+      "agent time or operations spent correlating the sibling views",
+      "recurrence across sessions",
+      "service fulfillment, agent receipt, or intervention-burden reduction"
+    ]
+  },
+  "improvement_relation": {
+    "identity": "im_environment_ambient_verification_accountability_20261028",
+    "addresses_hypothesis_identity": "ph_environment_ambient_verification_failure_detail_visibility",
+    "implementation_reference": {
+      "kind": "source-code-implementation",
+      "identity": "mncs_environment_ambient_verification_accountability_2602781",
+      "repository": "mncs-environment",
+      "commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "016a3b7f43b82fe7a14432e4b7078ff91c5d35fa34b1bb5d61e6f81b59438b2d"
+    },
+    "verification_observation_identity": "ev_environment_ambient_verification_accountability_verification_20261028",
+    "subsequent_observation_identity": "ev_environment_ambient_verification_accountability_live_readback_20261028",
+    "basis": "The focused regression proves exact Store-object identity and reference checks, source-integrity handling, compact summary retention, and explicit mismatch behavior. The live readback demonstrates the historical reason is available in the accountability projection and a current test-provider result is correlated to its session. No agent-burden or long-term service-effectiveness claim is made.",
+    "not_measured": [
+      "agent receipt or use of the failure detail",
+      "agent intervention-burden reduction",
+      "verification capability coverage for the eight unsupported obligations",
+      "causal attribution of the current outcome to the profile change",
+      "effectiveness across other service domains or later sessions"
+    ]
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_verification_accountability_2602781",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "016a3b7f43b82fe7a14432e4b7078ff91c5d35fa34b1bb5d61e6f81b59438b2d"
+    },
+    {
+      "identity": "mncs_environment_ambient_verification_accountability_test_2602781",
+      "kind": "committed-regression-test",
+      "repository": "mncs-environment",
+      "commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "8d1e42613159a58f2dbd93094564fde81f3f25bd4fae35e0eda4db44dcd27c90"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_pressure_20261028",
+      "kind": "pressure-observation",
+      "repository": "mncs-environment"
+    },
+    {
+      "identity": "ev_environment_ambient_verification_accountability_live_readback_20261028",
+      "kind": "subsequent-observation",
+      "repository": "mncs-environment"
+    }
+  ],
+  "measurement_limits": [
+    "The full test suite was not run.",
+    "Both live ECI projections remain partial, and the selected event windows are truncated.",
+    "The older session's provider binding state remains unknown because its binding details were omitted by the projection response budget.",
+    "Effectiveness beyond making the recorded failure context discoverable has not been assessed."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_verification_accountability_verification_20261028",
+  "captured_at": "2026-10-28T00:29:45Z",
+  "measurement_basis": "focused-regression-suite-and-python-compilation",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee"
+  },
+  "observation": {
+    "kind": "ambient-verification-accountability-regression-verification",
+    "source_interface": "MNCS Environment focused pytest suite and projection helpers",
+    "request": {
+      "command": "python3 -m pytest -q tests/test_entry.py::test_capability_observation_definition_includes_ambient_verification_provider tests/test_capability_intelligence.py::test_ambient_verification_failure_surfaces_verified_reason_under_budget tests/test_capability_intelligence.py::test_ambient_service_execution_is_projected_with_session_context_and_limits",
+      "compile_command": "python3 -m compileall -q mncs_env tests/test_entry.py tests/test_capability_intelligence.py",
+      "diff_check": "git diff --check"
+    },
+    "outcome": {
+      "targeted_tests_passed": 3,
+      "targeted_tests_failed": 0,
+      "python_compilation_status": "passed",
+      "diff_check_status": "passed",
+      "exact_owner_result_correlation": "verified-session-owner-result-identity-and-linked-evidence-reference",
+      "integrity_mismatch_behavior": "reason-withheld-and-mismatch-status-preserved",
+      "compact_accountability_reason_retention": "passed",
+      "verification_status": "passed"
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "identity": "mncs_environment_ambient_verification_accountability_2602781",
+      "repository": "mncs-environment",
+      "commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "016a3b7f43b82fe7a14432e4b7078ff91c5d35fa34b1bb5d61e6f81b59438b2d"
+    },
+    {
+      "kind": "regression-test",
+      "identity": "mncs_environment_ambient_verification_accountability_test_2602781",
+      "repository": "mncs-environment",
+      "commit": "2602781cc6d805c6733987f02d3d8aa38ced1cee",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "8d1e42613159a58f2dbd93094564fde81f3f25bd4fae35e0eda4db44dcd27c90"
+    }
+  ],
+  "not_measured": [
+    "full test-suite status",
+    "agent intervention-burden reduction",
+    "cross-session recurrence or generalization beyond the verification owner",
+    "service correctness or agent receipt"
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
