@@ -116,6 +116,12 @@ refresh. An explicit `--branch` remains an exact precondition checked against
 the live registered checkout. If checkout identity changes or revalidation
 cannot establish a stable state, acquisition fails closed.
 
+The refresh also applies when a claim names another linked worktree. The
+session's selected checkout can anchor repository identity even when it is not
+the requested claim target, so stale branch or HEAD metadata there is refreshed
+before the independent target is verified. The explicit target branch remains
+an exact live precondition.
+
 Worktree claims preserve stable checkout and Git common-directory identities.
 Several claims held by the same session for one exact checkout can therefore
 compose that checkout once, while each claim continues to cover only its own

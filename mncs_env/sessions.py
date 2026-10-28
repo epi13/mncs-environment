@@ -6897,22 +6897,14 @@ class Session:
         except (OSError, ValueError, workspace_module.WorkspaceResolutionError):
             return
 
-        if scope is not None:
-            if scope.get("kind") == "worktree":
-                requested_path = scope.get("checkout")
-                if not isinstance(requested_path, str) or not requested_path:
-                    return
-                requested = Path(requested_path)
-                if not requested.is_absolute():
-                    requested = root / requested
-                try:
-                    requested = workspace_module.resolve_control_workspace_alias(requested)
-                except (OSError, ValueError, workspace_module.WorkspaceResolutionError):
-                    return
-                if requested != candidate:
-                    return
-            elif scope.get("kind") not in {"paths"}:
-                return
+        if scope is not None and scope.get("kind") not in {"worktree", "paths"}:
+            return
+
+        # The selected checkout is also used as the repository-identity
+        # anchor when an explicit claim names another linked worktree. Refresh
+        # that anchor even when the requested path differs; otherwise a stale
+        # entry-time branch or HEAD on the selected checkout can reject a
+        # correctly registered target before its own exact identity is checked.
 
         try:
             identity = workspace_module.verify_registered_checkout(

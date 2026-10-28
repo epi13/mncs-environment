@@ -204,7 +204,6 @@ MAX_CAMPAIGN_CHARTER_CANDIDATES = 4
 MAX_CAMPAIGN_CHARTER_OBJECTIVE_CHARS = 4096
 MAX_RESULT_BYTES = 72 * 1024
 MIN_EVIDENCE_PRIORITY_RESULT_BYTES = 7 * 1024
-MAX_EVIDENCE_PRIORITY_RESULT_BYTES = 8 * 1024
 CAPTURED_OPERATION_RESULT_SOURCE_KINDS = frozenset({
     "direct-operation-result", "direct-cli-projection-result",
 })
@@ -4462,11 +4461,16 @@ def _compact_campaign_evidence_priority_rows(
             "campaign_state_checkpoint_id", "recorded_at", "evidence_count",
             "evidence_page_truncated", "evidence_page_offset",
             "evidence_page_limit", "previous_evidence_offset",
-            "next_evidence_offset", "evidence_history_truncated",
+            "next_evidence_offset", "evidence_history_pages_requested",
+            "evidence_history_pages_read", "evidence_history_page_offsets",
+            "evidence_history_page_limits", "evidence_history_truncated",
             "evidence_history_checkpoint_consistent", "response_truncated",
-            "response_byte_count", "observation_records_verified",
+            "response_byte_count", "observation_records_considered",
+            "observation_records_verified",
             "observation_records_unavailable",
             "observation_records_skipped_by_page_budget",
+            "observation_reference_diagnostic_count",
+            "improvement_relations_unverified_count",
             "source_pointer_content_integrity_verified_count",
             "source_pointer_content_integrity_not_verified_count",
         }
@@ -8652,8 +8656,7 @@ def _compact_projection(
             # generic pointer-availability note redundant at the byte limit.
             result["measurement_limits"].pop(1)
             continue
-        if (MIN_EVIDENCE_PRIORITY_RESULT_BYTES <= max_result_bytes
-                <= MAX_EVIDENCE_PRIORITY_RESULT_BYTES
+        if (max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES
                 and not result.get("campaign_evidence_summary_only")
                 and result["observations"]
                 and result["pressure_hypotheses"]

@@ -2915,6 +2915,97 @@ class ClaimTests(unittest.TestCase):
                 )
             session.close()
 
+    def test_claim_to_other_worktree_refreshes_stale_selected_anchor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory) / "workspace"
+            repository_root = workspace_root / "mncs-compiler"
+            repository_root.mkdir(parents=True)
+            (repository_root / ".mncs").mkdir()
+            (repository_root / ".mncs" / "project.json").write_text(
+                json.dumps({"schema_version": "mncs.project/1",
+                            "repository": "mncs-compiler"}) + "\n",
+                encoding="utf-8",
+            )
+            (repository_root / "README.md").write_text(
+                "registered repository\n", encoding="utf-8",
+            )
+
+            def git(*args: str) -> None:
+                subprocess.run(
+                    ["git", "-C", str(repository_root), *args],
+                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True,
+                )
+
+            git("init", "-b", "main")
+            git("config", "user.name", "MNCS Environment Test")
+            git("config", "user.email", "environment-test@example.invalid")
+            git("add", ".mncs/project.json", "README.md")
+            git("commit", "-m", "Create registered test checkout")
+            initial_head = subprocess.check_output(
+                ["git", "-C", str(repository_root), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
+            target_checkout = repository_root / ".worktrees" / "campaign"
+            target_checkout.parent.mkdir(parents=True)
+            git("worktree", "add", "-q", "-b", "campaign/target",
+                str(target_checkout), "HEAD")
+
+            session = make_session(
+                Path(directory) / "state",
+                intent={"goal": "claim a valid linked worktree after main advances",
+                        "repositories": ["mncs-compiler"]},
+            )
+            session.snapshot["workspace"]["root"] = str(workspace_root)
+            selected = workspace.verify_registered_checkout(
+                repository_root,
+                repository="mncs-compiler",
+                workspace_root=workspace_root,
+            )
+            session.snapshot["selected_checkouts"] = {
+                "mncs-compiler": {
+                    **selected,
+                    "branch": "campaign/previous-entry",
+                    "head": "f" * 40,
+                    "source_ref": "observed-base-intent-checkout",
+                },
+            }
+            session.snapshot["workspace"]["selection"] = ["mncs-compiler"]
+            session._save()
+
+            try:
+                parsed = cli.build_parser().parse_args([
+                    "claims", session.session_id,
+                    "--acquire", "mncs-compiler",
+                    "--worktree", str(target_checkout),
+                    "--branch", "campaign/target",
+                    "--paths", "src/component.mncs",
+                    "--reason",
+                    "claim an exact linked worktree using a stale checkout anchor",
+                ])
+                parsed.state_dir = Path(directory) / "state"
+                parsed.persistence = "store"
+                claim_output = io.StringIO()
+                with redirect_stdout(claim_output):
+                    claim_status = cli.cmd_claims(parsed)
+                self.assertEqual(claim_status, 0, claim_output.getvalue())
+                claim = json.loads(claim_output.getvalue())
+                session._reload_snapshot()
+
+                self.assertEqual(claim["status"], "held")
+                self.assertEqual(claim["scope"]["checkout"], str(target_checkout))
+                self.assertEqual(claim["scope"]["branch"], "campaign/target")
+                refreshed = session.snapshot["selected_checkouts"]["mncs-compiler"]
+                self.assertEqual(refreshed["path"], str(repository_root))
+                self.assertEqual(refreshed["branch"], "main")
+                self.assertEqual(refreshed["head"], initial_head)
+                self.assertTrue(any(
+                    event.get("type") == "session.revalidated"
+                    for event in session._log()
+                ))
+            finally:
+                session.close()
+
     def test_claim_can_target_main_checkout_from_isolated_campaign_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             projects = Path(directory) / "projects"

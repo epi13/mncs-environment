@@ -5566,6 +5566,67 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     original_size = len(json.dumps(
         projection, ensure_ascii=False, sort_keys=True,
     ).encode())
+    considered_observation_records = projection["source"][
+        "observation_records_considered"
+    ]
+
+    normal_budget = capability_intelligence._compact_projection(
+        projection, original_size,
+        max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
+    )
+    normal_budget["content_digest"] = (
+        capability_intelligence._projection_content_digest(normal_budget)
+    )
+    assert len(json.dumps(
+        normal_budget, ensure_ascii=False, sort_keys=True,
+    ).encode()) <= capability_intelligence.MAX_RESULT_BYTES
+    assert normal_budget["source"]["observation_records_considered"] == (
+        considered_observation_records
+    )
+    evidence_budget = capability_intelligence._compact_projection(
+        projection, original_size, max_result_bytes=32 * 1024,
+    )
+    evidence_budget["content_digest"] = (
+        capability_intelligence._projection_content_digest(evidence_budget)
+    )
+    assert len(json.dumps(
+        evidence_budget, ensure_ascii=False, sort_keys=True,
+    ).encode()) <= 32 * 1024
+    assert evidence_budget["session_activity"]["detail_status"] == (
+        "evidence-priority-response-budget"
+    )
+    evidence_observation = evidence_budget["observations"][0]
+    evidence_hypothesis = evidence_budget["pressure_hypotheses"][0]
+    evidence_relation = evidence_budget["improvement_relations"][0]
+    assert evidence_observation["identity"] == latest_pressure["identity"]
+    assert evidence_observation["pressure_hypothesis"]["identity"] == (
+        evidence_hypothesis["identity"]
+    ) == evidence_relation["addresses_hypothesis_identity"] == (
+        "ph_budget_pressure_latest"
+    )
+    normal_observation = next(
+        item for item in normal_budget["observations"]
+        if item["identity"] == latest_pressure["identity"]
+    )
+    normal_hypothesis = next(
+        item for item in normal_budget["pressure_hypotheses"]
+        if item["identity"] == "ph_budget_pressure_latest"
+    )
+    normal_relation = next(
+        item for item in normal_budget["improvement_relations"]
+        if item["identity"] == "im_budget_pressure_latest"
+    )
+    assert normal_observation["pressure_hypothesis"]["identity"] == (
+        normal_hypothesis["identity"]
+    ) == normal_relation["addresses_hypothesis_identity"] == (
+        "ph_budget_pressure_latest"
+    )
+    assert normal_relation["verification_evidence_reference"]["identity"] == (
+        latest_verification["identity"]
+    )
+    assert normal_relation["subsequent_evidence_reference"]["identity"] == (
+        latest_followup["identity"]
+    )
 
     compact = capability_intelligence._compact_projection(
         projection, original_size, max_result_bytes=8_000,

@@ -1663,6 +1663,15 @@ activity details and expanded current-session histories. The native-consumer
 capability summary remains, and response-budget omission counts or markers
 identify details that were not returned.
 
+If compaction still exceeds the response bound and a complete occurrence,
+pressure-hypothesis, and improvement-relation path is available, the
+evidence-priority view keeps the newest linked path with its exact evidence
+pointers and reduces session activity to its bounded overview. This applies to
+the normal 72 KiB response limit as well as smaller supported budgets; it is
+not limited to an unusually tight output request. If no complete linked path
+is present or the compact path cannot fit, ordinary omission counts continue
+to disclose which observation rows were removed.
+
 Before dropping environmental observation summaries to meet this bound, the
 compactor can omit nested owner-audit source-detail entries one at a time.
 `source_audit_details_truncated` and
