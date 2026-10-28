@@ -2684,6 +2684,7 @@ def test_append_only_evidence_reference_correction_recovers_exact_record(
     assert correction_view["evidence_reference_correction"]["status"] == (
         "applied-to-exact-unavailable-target"
     )
+    recovered["session_activity"]["oversized_secondary_context"] = "x" * 100_000
     compact = capability_intelligence._compact_projection(
         recovered, 100_000, 24_000,
     )
@@ -2694,7 +2695,16 @@ def test_append_only_evidence_reference_correction_recovers_exact_record(
     assert compact_target["evidence_reference_correction"]["status"] == (
         "recovered-from-append-only-correction"
     )
+    compact_correction = next(
+        item for item in compact["observations"]
+        if item["identity"] == "ev_environment_pointer_correction"
+    )
+    assert compact_correction["evidence_reference_correction"]["status"] == (
+        "applied-to-exact-unavailable-target"
+    )
     assert compact["source"]["evidence_reference_corrections_applied_count"] == 1
+    assert "oversized_secondary_context" not in compact["session_activity"]
+    assert len(json.dumps(compact, ensure_ascii=False).encode()) <= 24_000
 
     mismatched = project_pointer_correction(
         tmp_path / "mismatched", corrupt_target_digest=True,

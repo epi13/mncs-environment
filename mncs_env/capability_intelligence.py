@@ -9403,6 +9403,26 @@ def _compact_projection(
                             <= max_result_bytes):
                         result = candidate
                         continue
+        has_applied_pointer_correction = any(
+            isinstance(item, dict)
+            and isinstance(item.get("evidence_reference_correction"), dict)
+            and item["evidence_reference_correction"].get("status")
+            == "applied-to-exact-unavailable-target"
+            for item in result["observations"]
+        )
+        if (has_applied_pointer_correction
+                and max_result_bytes >= MIN_EVIDENCE_PRIORITY_RESULT_BYTES):
+            candidate = deepcopy(result)
+            evidence_priority_activity = (
+                _compact_session_activity_evidence_priority_overview(
+                    candidate.get("session_activity"),
+                )
+            )
+            if evidence_priority_activity is not None:
+                candidate["session_activity"] = evidence_priority_activity
+                if _projection_response_size(candidate) <= max_result_bytes:
+                    result = candidate
+                    continue
         if result["observations"]:
             def observation_retention_priority(item: dict[str, Any]) -> int:
                 hypothesis = item.get("pressure_hypothesis")
@@ -9425,6 +9445,15 @@ def _compact_projection(
                         and correction.get("status")
                         == "completed-by-append-only-record"):
                     return 1
+                pointer_correction = item.get(
+                    "evidence_reference_correction",
+                )
+                if isinstance(pointer_correction, dict):
+                    status = pointer_correction.get("status")
+                    if status == "applied-to-exact-unavailable-target":
+                        return 5
+                    if status == "recovered-from-append-only-correction":
+                        return 4
                 return 0
 
             removable_index = min(

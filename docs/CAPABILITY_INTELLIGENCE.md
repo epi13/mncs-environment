@@ -275,6 +275,15 @@ After checkpointing this observation, the next ECI readback exposed an unavailab
 [`eci-retirement-operation-pointer-correction-20261028.json`](../evidence/environmental-capability/eci-retirement-operation-pointer-correction-20261028.json)
 preserves the source identity, path, and digest and corrects only the commit reference. This records a verified pointer-integrity recovery, not a change to the operation evidence or its outcome assessment.
 
+The first post-correction ECI response verified both records but compacted both
+observation rows out while keeping secondary session context. ECI now reduces
+that context to its bounded evidence-priority view when an exact pointer
+correction was applied, preserving the recovered source row and the correction
+row. The focused correction tests pass, and live readback
+`eci_20906bc7f42c7f70` exposes both rows with the corrected commit and
+unchanged digest. Its session activity summary records two completed
+retirement receipts; this does not measure agent intervention burden.
+
 The selected campaign evidence now records an existing MNCS Debug consumer of
 `mncs.std.process.v1`, its duplicate-library-root compile pressure, the resolver
 change at Debug commit `a036a0042bd0529ef8401b952eb921146e01590d`, and the exact
