@@ -807,6 +807,8 @@ def _compact_request_summary(request: Any) -> dict[str, Any] | None:
         "operation", "command", "projection_identity",
         "target_observation_identity", "target_content_sha256",
         "repository", "branch", "commit", "session_id", "work_intent_id",
+        "source_schema_version", "compiler_branch", "compiler_base_revision",
+        "language_lock_revision", "test_head",
     ):
         value = request.get(key)
         if isinstance(value, str) and value:
@@ -837,6 +839,8 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
         "effectiveness_assessment", "recurrence_status",
         "verification_record_status", "subsequent_record_status",
         "original_record_status",
+        "source_reported_verification_result", "resource_measurement_scope",
+        "session_activity_join_status",
         "projection_status", "observation_identity", "source_campaign_id",
         "source_session_id", "compiler_source_status",
         "source_registration_status", "registration_scope",
@@ -849,6 +853,24 @@ def _compact_outcome_context(outcome: Any) -> dict[str, Any] | None:
                 "claim_boundary", "analysis_limit", "interpretation_limit",
                 "implementation_change",
             } else 128)
+
+    stages = outcome.get("stage_summaries")
+    if isinstance(stages, list):
+        stage_counts: dict[str, int] = {}
+        for stage in stages:
+            if not isinstance(stage, dict):
+                continue
+            status = stage.get("cache_status")
+            if isinstance(status, str) and status:
+                status = status[:48]
+                stage_counts[status] = stage_counts.get(status, 0) + 1
+        result["stage_summary_count"] = len(stages)
+        if stage_counts:
+            result["derived_cache_status_counts"] = dict(
+                sorted(stage_counts.items())[:8],
+            )
+            if len(stage_counts) > 8:
+                result["derived_cache_status_counts_truncated"] = True
 
     compact_objects = {}
     section_hints = (
@@ -5440,7 +5462,7 @@ def _compact_campaign_evidence_priority_rows(
     )
     hypotheses = hypotheses if isinstance(hypotheses, list) else []
     relations = relations if isinstance(relations, list) else []
-    if not (observations and hypotheses and relations):
+    if not observations:
         return False
 
     relation = None
@@ -5480,14 +5502,10 @@ def _compact_campaign_evidence_priority_rows(
             observation = matching_observation
             hypothesis = matching_hypothesis
             break
-    if (relation is None or observation is None or hypothesis is None
-            or not isinstance(hypothesis_identity, str)):
-        return False
-
     def retain_pointer(value: Any) -> dict[str, Any] | None:
         if not isinstance(value, dict):
             return None
-        return {
+        pointer = {
             key: value[key]
             for key in (
                 "identity", "repository", "commit", "path", "sha256",
@@ -5495,6 +5513,69 @@ def _compact_campaign_evidence_priority_rows(
             )
             if isinstance(value.get(key), str)
         }
+        return pointer if isinstance(pointer.get("identity"), str) else None
+
+    if (relation is None or observation is None or hypothesis is None
+            or not isinstance(hypothesis_identity, str)):
+        # Keep the one selected standalone record when it is the only campaign
+        # evidence and no pressure relationship has been established. Broader
+        # histories remain under the normal tail and occurrence retention rules.
+        if hypotheses or relations or len(observations) != 1:
+            return False
+        # A verified observation can still be useful before it supports a
+        # pressure hypothesis or completed improvement path. Keep its source
+        # pointer, declared source-session context, and compact measurements
+        # instead of dropping the only selected campaign evidence row.
+        selected = next(
+            (item for item in reversed(observations)
+             if isinstance(item, dict)
+             and retain_pointer(item.get("evidence_reference")) is not None),
+            None,
+        )
+        if selected is None:
+            return False
+        source_details = selected.get("observation")
+        source_details = source_details if isinstance(source_details, dict) else {}
+        compact_details = {
+            key: source_details[key]
+            for key in (
+                "kind", "source_interface", "request_summary", "details_omitted",
+                "details_sha256", "source_session_context",
+                "source_session_context_basis", "source_session_context_resolution",
+                "measurement_summary", "outcome_context",
+            )
+            if key in source_details
+        }
+        compact_row = {
+            key: selected[key]
+            for key in ("identity", "captured_at", "measurement_basis")
+            if isinstance(selected.get(key), str)
+        }
+        compact_row["observation"] = compact_details
+        compact_row["evidence_reference"] = retain_pointer(
+            selected.get("evidence_reference"),
+        )
+        for key in ("related_work", "recording_context"):
+            value = selected.get(key)
+            if isinstance(value, dict):
+                compact_row[key] = {
+                    field: _short_text(item_value, 256 if field in {
+                        "work_intent_goal", "campaign_objective",
+                    } else 160)
+                    for field, item_value in value.items()
+                    if isinstance(item_value, str) and item_value
+                }
+        limits = selected.get("measurement_limits")
+        if isinstance(limits, list):
+            compact_row["measurement_limits"] = [
+                _short_text(value, 192) for value in limits[:8]
+                if isinstance(value, str)
+            ]
+        result["pressure_hypotheses"] = []
+        result["observations"] = [compact_row]
+        result["improvement_relations"] = []
+        result["campaign_evidence_summary_only"] = True
+        return True
 
     correction_rejection_summaries = []
     record_correction_summaries = []

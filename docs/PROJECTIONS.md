@@ -1812,9 +1812,15 @@ pressure-hypothesis, and improvement-relation path is available, the
 evidence-priority view keeps the newest linked path with its exact evidence
 pointers and reduces session activity to its bounded overview. This applies to
 the normal 72 KiB response limit as well as smaller supported budgets; it is
-not limited to an unusually tight output request. If no complete linked path
-is present or the compact path cannot fit, ordinary omission counts continue
-to disclose which observation rows were removed. Up to four rejected
+not limited to an unusually tight output request. If there is exactly one
+selected observation and no pressure hypotheses or improvement relations have
+been established, the compact view instead retains that verified
+source-backed observation with its exact evidence pointer and bounded source
+session and measurement context. This does not create a pressure hypothesis
+or improvement relation where none is recorded. Histories with multiple
+observations continue to use the normal tail and occurrence retention rules.
+If neither a linked path nor a source-backed observation can fit, ordinary
+omission counts disclose which observation rows were removed. Up to four rejected
 observation-correction summaries retain their status, target, bounded
 rejection reason, and exact source pointer alongside that path, so a useful
 diagnostic does not disappear when its full observation row is compacted out.

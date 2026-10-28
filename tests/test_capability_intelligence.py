@@ -3210,6 +3210,83 @@ def test_compact_projection_prioritizes_standalone_campaign_evidence(
     assert len(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode()) <= 24_000
 
 
+def test_compact_projection_keeps_unlinked_compiler_evidence_and_context(
+    tmp_path: Path,
+) -> None:
+    report = _compiler_language_module_interface_consumption_report()
+    session, state = _session(tmp_path, [])
+    reference = _add_compiler_language_module_interface_consumption_evidence(
+        session, state, report,
+    )
+
+    projection = capability_intelligence.project(session)
+    source_row = next(
+        item for item in projection["observations"]
+        if item["identity"] == report["identity"]
+    )
+    assert source_row["pressure_hypothesis"] is None
+    assert projection["improvement_relations"] == []
+    projection["session_activity"]["oversized_secondary_context"] = "x" * 100_000
+
+    compact = capability_intelligence._compact_projection(
+        projection, 100_000, 8_192,
+    )
+
+    assert compact["source"]["response_truncated"] is True
+    assert [item["identity"] for item in compact["observations"]] == [
+        report["identity"],
+    ]
+    retained = compact["observations"][0]
+    for key, value in reference.items():
+        assert retained["evidence_reference"][key] == value
+    assert compact["source"]["observation_records_verified"] == 1
+    assert retained["related_work"]["campaign_id"] == "cmp_projection_reader"
+    assert retained["observation"]["source_session_context"]["campaign_id"] == (
+        report["campaign"]["identity"]
+    )
+    assert retained["observation"]["source_session_context"]["session_id"] == (
+        report["campaign"]["session_id"]
+    )
+    assert retained["observation"]["source_session_context_resolution"] == (
+        "source-session-declared-not-cross-validated"
+    )
+    assert retained["observation"]["outcome_context"][
+        "source_reported_verification_result"
+    ] == "passed"
+    assert retained["observation"]["outcome_context"]["stage_summary_count"] == 3
+    assert retained["observation"]["outcome_context"][
+        "derived_cache_status_counts"
+    ] == {"hit": 1, "miss": 1}
+    assert retained["observation"]["measurement_summary"][
+        "direct_measurements"]["bootstrap_build_peak_rss_kb"] == 1_498_780
+    assert retained["observation"]["measurement_summary"][
+        "measurement_availability"]["bootstrap_build_peak_cgroup_memory_bytes"] == (
+            "null-in-source-record"
+        )
+    assert compact["pressure_hypotheses"] == []
+    assert compact["improvement_relations"] == []
+    assert "oversized_secondary_context" not in compact["session_activity"]
+    assert len(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode()) <= 8_192
+
+    priority = deepcopy(compact)
+    assert capability_intelligence._compact_campaign_evidence_priority_rows(
+        priority,
+    )
+    assert priority["campaign_evidence_summary_only"] is True
+    assert [item["identity"] for item in priority["observations"]] == [
+        report["identity"],
+    ]
+    assert priority["observations"][0]["observation"][
+        "source_session_context"
+    ]["session_id"] == report["campaign"]["session_id"]
+    assert priority["observations"][0]["observation"][
+        "measurement_summary"
+    ]["direct_measurements"]["bootstrap_build_peak_rss_kb"] == 1_498_780
+    assert priority["observations"][0]["evidence_reference"]["sha256"] == (
+        reference["sha256"]
+    )
+
+
 def test_compact_projection_keeps_pressure_observations_outside_newest_tail(
     tmp_path: Path,
 ) -> None:
