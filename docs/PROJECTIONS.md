@@ -499,7 +499,9 @@ integrity-checked verification relation, the focused view keeps the exact
 verification and owner-result Store references. Opportunity, fulfillment,
 agent receipt, and intervention-burden fields keep their recorded unknown or
 unmeasured states; scheduler coverage does not substitute for agent need or
-service fulfillment. Owner-pass details are reduced to bounded result
+service fulfillment. It also exposes the existing session activity candidate
+summary by source, with occurrence counts kept separate from unique causes and
+environmental defect status. Owner-pass details are reduced to bounded result
 references and verification obligation outcomes; the focused view marks the
 omitted candidate narratives so agents can read the referenced evidence when
 more detail is needed.

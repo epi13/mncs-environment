@@ -5412,6 +5412,13 @@ def test_focused_service_activity_keeps_accountability_and_exact_sources() -> No
     ]
     assert projection["activity_section"] == "services"
     assert projection["subject"]["work_intent_id"] == "int_service_projection"
+    assert projection["session_activity_pressure_candidate_count"] == 1
+    candidate_summary = projection["session_activity_pressure_candidate_summary"]
+    assert candidate_summary["candidate_occurrence_counts_by_source"][
+        "verified-unmeasurable-verification-obligations"
+    ] == 1
+    assert candidate_summary["environmental_defect_status"] == "not-established"
+    assert candidate_summary["agent_intervention_burden_status"] == "not-measured"
     assert focused["source"]["ambient_service_execution_digest"] == (
         "sha256:ambient-pass-digest"
     )

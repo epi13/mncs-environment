@@ -12507,6 +12507,15 @@ def project_session_activity(
         ],
     }
 
+    if activity_section in (None, "services"):
+        candidate_summary = _session_activity_pressure_candidate_summary(activity)
+        result["session_activity_pressure_candidate_count"] = (
+            candidate_summary["candidate_occurrence_count"]
+        )
+        result["session_activity_pressure_candidate_summary"] = (
+            candidate_summary
+        )
+
     if (activity_section is None
             and _projection_response_size(result) > max_result_bytes):
         compact = _compact_session_activity_budget_overview(activity, activity)
