@@ -1289,14 +1289,15 @@ reference.
 When a Family ambient pass persists `family_last_summary`, ECI exposes it as
 `session_activity.family_ambient_observation`, with the selected session,
 Environment, snapshot sequence, an observation-epoch key when recorded, and a
-digest of the bounded summary. This is a separate current-snapshot observation,
-not a rewrite of the scheduler's exact owner-pass result. It carries only
-bounded counts, elapsed time, and epoch reuse state; verification,
-agent-need fulfillment, and intervention burden remain not established or not
-measured. The summary is not linked to a specific scheduler execution unless
-the scheduler trace itself supplies that relation, so do not use its presence
-to reinterpret an earlier owner-pass result. Its digest participates in ECI
-projection identity and survives response-budget compaction.
+digest of the bounded summary. When the pass runs under the Environment owner
+scheduler, its exact execution ID is joined to the matching Family result in
+the latest scheduler trace. Direct calls, older snapshots, missing results,
+and ambiguous matches remain explicit; a later domain pass cannot rewrite an
+earlier scheduler result. The observation carries only bounded counts, elapsed
+time, and epoch reuse state. A valid execution link establishes provenance,
+not verification, agent-need fulfillment, or intervention reduction. Its
+digest participates in ECI projection identity and survives response-budget
+compaction.
 
 When an ambient adapter completes without emitting an entry block, it records
 a compact reason-coded result such as `no-diagnostic-findings`,

@@ -9,9 +9,11 @@ When the latest Family ambient pass has persisted a summary, the same
 projection exposes its bounded counts and owner-reported elapsed time at
 `session_activity.family_ambient_observation`. The observation is scoped to
 the selected session snapshot and its digest participates in ECI identity,
-including compact responses. It remains separate from the scheduler's exact
-owner-pass result, so a later domain pass does not rewrite an earlier failure;
-verification, agent need, and intervention reduction are not inferred.
+including compact responses. When the Family pass runs inside the Environment
+owner scheduler, its recorded execution identity is joined to the matching
+owner-pass result in the latest trace. Direct calls and older snapshots remain
+explicitly unlinked. The link preserves the exact result identity without
+claiming verification, agent need, or intervention reduction.
 
 ```sh
 ./scripts/mncs-env projections <session-id> \

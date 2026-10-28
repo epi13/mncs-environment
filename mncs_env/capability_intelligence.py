@@ -2797,6 +2797,9 @@ def _compact_family_ambient_observation(value: Any) -> dict[str, Any] | None:
         summary["epoch_reused"] = raw_summary["epoch_reused"]
     if not summary:
         return None
+    owner_pass_relation = _compact_family_owner_pass_relation(
+        value.get("owner_pass_relation"),
+    )
     expected_statuses = {
         "ambient_fulfillment_status": "not-established",
         "agent_intervention_burden_status": "not-measured",
@@ -2812,13 +2815,133 @@ def _compact_family_ambient_observation(value: Any) -> dict[str, Any] | None:
             "The summary is the latest persisted Family ambient pass in this session snapshot; earlier passes and unobserved service opportunities are not included.",
             "The owner-reported elapsed time is not agent end-to-end duration; verification and agent intervention burden remain unestablished.",
             "A zero relevant-work count applies to this pass and selected inputs; it does not establish that no agent need or Family pressure exists.",
+            "An exact owner-pass execution link establishes provenance only; it does not establish correctness, agent receipt, or fulfillment.",
         ],
     }
+    if owner_pass_relation is not None:
+        result["owner_pass_relation"] = owner_pass_relation
     return result
+
+
+def _compact_family_owner_pass_relation(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    status = value.get("status")
+    if status not in {
+        "not-recorded", "not-running-under-owner-pass",
+        "different-owner-pass", "invalid",
+        "trace-unavailable", "result-records-unavailable",
+        "result-omitted",
+        "not-present-in-latest-owner-pass-trace", "ambiguous-match",
+        "matched",
+    }:
+        return None
+    result: dict[str, Any] = {"status": status}
+    owner = value.get("owner_pass")
+    if owner == "family":
+        result["owner_pass"] = owner
+    execution_id = value.get("service_execution_id")
+    if (isinstance(execution_id, str)
+            and re.fullmatch(r"ase_[0-9a-f]{32}", execution_id)):
+        result["service_execution_id"] = execution_id
+    result_status = value.get("result_status")
+    if result_status in {
+        "result-recorded", "result-missing", "runner-returned-none",
+        "invalid-result-shape",
+    }:
+        result["result_status"] = result_status
+    result_identity = value.get("result_identity")
+    if (isinstance(result_identity, str)
+            and re.fullmatch(r"[0-9a-f]{64}", result_identity)):
+        result["result_identity"] = result_identity
+    if value.get("verification_status") == "not-established":
+        result["verification_status"] = "not-established"
+    availability = value.get("service_availability_status")
+    if availability in {"available", "unavailable"}:
+        result["service_availability_status"] = availability
+    reason = value.get("service_availability_reason_code")
+    if isinstance(reason, str) and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", reason):
+        result["service_availability_reason_code"] = reason
+    return result
+
+
+def _family_owner_pass_relation(
+    snapshot: dict[str, Any], ambient_service_execution: Any,
+) -> dict[str, Any]:
+    capture_status = snapshot.get("family_last_owner_pass_context_status")
+    raw_context = snapshot.get("family_last_owner_pass_context")
+    if capture_status == "not-running-under-owner-pass":
+        return {"status": "not-running-under-owner-pass"}
+    if capture_status == "different-owner-pass":
+        return {"status": "different-owner-pass"}
+    if capture_status != "recorded":
+        return {"status": "not-recorded" if raw_context is None else "invalid"}
+    if (not isinstance(raw_context, dict)
+            or raw_context.get("schema_version")
+            != invocation_context_module.AMBIENT_OWNER_PASS_CONTEXT_SCHEMA
+            or raw_context.get("owner_pass") != "family"):
+        return {"status": "invalid"}
+    execution_id = raw_context.get("service_execution_id")
+    if (not isinstance(execution_id, str)
+            or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None):
+        return {"status": "invalid"}
+
+    execution = (
+        ambient_service_execution.get("execution")
+        if isinstance(ambient_service_execution, dict) else None
+    )
+    if not isinstance(execution, dict):
+        return {
+            "status": "trace-unavailable", "owner_pass": "family",
+            "service_execution_id": execution_id,
+        }
+    owner_results = execution.get("owner_pass_results")
+    if not isinstance(owner_results, dict):
+        return {
+            "status": "result-records-unavailable", "owner_pass": "family",
+            "service_execution_id": execution_id,
+        }
+    rows = owner_results.get("results")
+    rows = rows if isinstance(rows, list) else []
+    matches = [
+        row for row in rows
+        if isinstance(row, dict)
+        and row.get("owner") == "family"
+        and row.get("service_execution_id") == execution_id
+    ]
+    base = {"owner_pass": "family", "service_execution_id": execution_id}
+    if not matches:
+        omitted = owner_results.get("result_records_omitted")
+        if type(omitted) is int and omitted > 0:
+            return {"status": "result-omitted", **base}
+        return {
+            "status": "not-present-in-latest-owner-pass-trace", **base,
+        }
+    if len(matches) != 1:
+        return {"status": "ambiguous-match", **base}
+    row = matches[0]
+    relation: dict[str, Any] = {"status": "matched", **base}
+    result_status = row.get("result_status")
+    if isinstance(result_status, str):
+        relation["result_status"] = result_status
+    result_identity = row.get("result_identity")
+    if (isinstance(result_identity, str)
+            and re.fullmatch(r"[0-9a-f]{64}", result_identity)):
+        relation["result_identity"] = result_identity
+    if row.get("verification_status") == "not-established":
+        relation["verification_status"] = "not-established"
+    availability = row.get("service_availability_status")
+    if availability in {"available", "unavailable"}:
+        relation["service_availability_status"] = availability
+    reason = row.get("service_availability_reason_code")
+    if isinstance(reason, str) and re.fullmatch(r"[a-z][a-z0-9-]{0,79}", reason):
+        relation["service_availability_reason_code"] = reason
+    return relation
 
 
 def _session_family_ambient_observation(
     session: Any, snapshot: dict[str, Any],
+    ambient_service_execution: Any = None,
 ) -> dict[str, Any] | None:
     """Project the latest persisted Family pass without inferring fulfillment."""
     raw_summary = snapshot.get("family_last_summary")
@@ -2858,11 +2981,15 @@ def _session_family_ambient_observation(
     if (isinstance(epoch_key, str)
             and re.fullmatch(r"[0-9a-f]{64}", epoch_key)):
         source["observation_epoch_key"] = epoch_key
+    owner_pass_relation = _compact_family_owner_pass_relation(
+        _family_owner_pass_relation(snapshot, ambient_service_execution),
+    )
     return {
         "status": "observed",
         "scope": "latest-current-session-family-ambient-pass-summary",
         "source": source,
         "summary": summary,
+        "owner_pass_relation": owner_pass_relation,
         "ambient_fulfillment_status": "not-established",
         "agent_intervention_burden_status": "not-measured",
         "verification_status": "not-established",
@@ -20299,7 +20426,7 @@ def _session_activity(
         ambient_service_execution=ambient_service_execution,
     )
     family_ambient_observation = _session_family_ambient_observation(
-        session, snapshot,
+        session, snapshot, ambient_service_execution,
     )
     doctor_health_history = _session_doctor_health_history(
         session, snapshot, doctor_gap_limit=doctor_gap_limit,

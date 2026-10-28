@@ -6450,6 +6450,92 @@ def test_ambient_service_execution_is_projected_with_session_context_and_limits(
     ] == "not-established"
 
 
+def test_family_ambient_observation_links_exact_owner_pass_result(
+    tmp_path: Path,
+) -> None:
+    session, _ = _session(tmp_path, [])
+    execution_id = "ase_" + "b" * 32
+    result_identity = "c" * 64
+    session.snapshot.update({
+        "snapshot_sequence": 12,
+        "family_last_summary": {
+            "observed_changes": 0,
+            "relevant": 0,
+            "reconciled": 0,
+            "deferred": 0,
+            "escalated": 0,
+            "contributors": 4,
+            "epoch_reused": False,
+            "elapsed_seconds": 2.5,
+        },
+        "family_last_owner_pass_context_status": "recorded",
+        "family_last_owner_pass_context": {
+            "schema_version": (
+                "mncs.environment.ambient-owner-pass-context/1"
+            ),
+            "owner_pass": "family",
+            "service_execution_id": execution_id,
+        },
+        "coherence": {"last_trace": {
+            "mode": "targeted_update",
+            "trace_persistence_status": "session-snapshot",
+            "event_count": 1,
+            "elapsed_seconds": 2.6,
+            "scheduled": [{
+                "pass": "family",
+                "owner": "family",
+                "service_execution_id": execution_id,
+                "run_elapsed_seconds": 2.5,
+            }],
+            "skipped": [],
+            "owner_failures": [],
+            "owner_pass_results": [{
+                "owner": "family",
+                "service_execution_id": execution_id,
+                "result_status": "result-recorded",
+                "result_identity": result_identity,
+                "source_reference_status": "not-recorded",
+                "verification_status": "not-established",
+                "summary": {"relevant": 0},
+            }],
+        }},
+    })
+
+    projection = capability_intelligence.project(session)
+    observation = projection["session_activity"][
+        "family_ambient_observation"
+    ]
+    assert observation["owner_pass_relation"] == {
+        "status": "matched",
+        "owner_pass": "family",
+        "service_execution_id": execution_id,
+        "result_status": "result-recorded",
+        "result_identity": result_identity,
+        "verification_status": "not-established",
+    }
+    assert observation["ambient_fulfillment_status"] == "not-established"
+    assert observation["agent_intervention_burden_status"] == "not-measured"
+
+    session.snapshot["family_last_owner_pass_context"][
+        "service_execution_id"
+    ] = "ase_" + "d" * 32
+    unlinked = capability_intelligence.project(session)["session_activity"][
+        "family_ambient_observation"
+    ]
+    assert unlinked["owner_pass_relation"]["status"] == (
+        "not-present-in-latest-owner-pass-trace"
+    )
+    assert unlinked["owner_pass_relation"]["service_execution_id"] == (
+        "ase_" + "d" * 32
+    )
+
+    compact = capability_intelligence.project(session, max_result_bytes=8_000)
+    assert compact["session_activity"]["family_ambient_observation"][
+        "owner_pass_relation"]["status"] == (
+            "not-present-in-latest-owner-pass-trace"
+        )
+
+
 def test_environment_service_execution_surfaces_family_availability_reason() -> None:
     execution_id = "ase_" + "a" * 32
     trace = {

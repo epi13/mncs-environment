@@ -40,6 +40,60 @@ def test_find_commons_root_accepts_canonical_repository_alias() -> None:
             assert family_module.find_commons_root(session) == commons
 
 
+def test_ambient_family_pass_persists_only_its_current_owner_context() -> None:
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    from mncs_env.invocation_context import ambient_owner_pass_context
+
+    session = SimpleNamespace(
+        session_id="ses_family_owner_context",
+        snapshot={"family_produced": []},
+        _save=lambda: None,
+    )
+    epoch = "a" * 64
+    with (
+        patch.object(family_module, "family_change_module", return_value=object()),
+        patch.object(family_module, "publish_presence"),
+        patch.object(family_module, "read_contributors", return_value=[]),
+        patch.object(family_module, "observe_changes", return_value=[]),
+        patch.object(
+            family_module, "_observation_epoch",
+            side_effect=[
+                (epoch, False), (epoch, False), (epoch, False), (epoch, False),
+            ],
+        ),
+        patch.object(family_module, "read_generation", return_value=(None, {"cursor": 0})),
+        patch.object(family_module, "list_row_ids", return_value=[]),
+    ):
+        with ambient_owner_pass_context(
+            session.session_id, "family", "ase_" + "1" * 32,
+        ):
+            family_module.ambient_pass(session)
+        assert session.snapshot["family_last_owner_pass_context"] == {
+            "schema_version": "mncs.environment.ambient-owner-pass-context/1",
+            "owner_pass": "family",
+            "service_execution_id": "ase_" + "1" * 32,
+        }
+        assert session.snapshot["family_last_owner_pass_context_status"] == (
+            "recorded"
+        )
+
+        with ambient_owner_pass_context(
+            session.session_id, "family", "ase_" + "2" * 32,
+        ):
+            assert family_module.ambient_pass(session)["reused"] is True
+        assert session.snapshot["family_last_owner_pass_context"][
+            "service_execution_id"
+        ] == "ase_" + "2" * 32
+
+        family_module.ambient_pass(session)
+        assert "family_last_owner_pass_context" not in session.snapshot
+        assert session.snapshot["family_last_owner_pass_context_status"] == (
+            "not-running-under-owner-pass"
+        )
+
+
 def _commons_with_family() -> Path | None:
     for root in (Path(os.environ.get("MNCS_COMMONS_ROOT", COMMONS_WORKTREE)), COMMONS_MAIN):
         if (root / "src/mncs_commons/family_change.py").is_file():

@@ -31,6 +31,7 @@ from typing import Any
 from . import workspace as workspace_module
 from .toolchain import language_library_for
 from .identity import digest_hex
+from .invocation_context import current_ambient_owner_pass_context
 
 #: Shared row identities (projection-row namespace).
 GENERATION_ROW = "family:generation"
@@ -1532,6 +1533,25 @@ def observe_changes(session) -> list[dict[str, Any]]:
     return changes
 
 
+def _record_owner_pass_context(session) -> None:
+    """Persist exact scheduler context beside the latest Family summary."""
+    snapshot = getattr(session, "snapshot", None)
+    if not isinstance(snapshot, dict):
+        return
+    context = current_ambient_owner_pass_context(
+        getattr(session, "session_id", None),
+    )
+    if (isinstance(context, dict) and context.get("owner_pass") == "family"):
+        snapshot["family_last_owner_pass_context"] = context
+        snapshot["family_last_owner_pass_context_status"] = "recorded"
+    else:
+        snapshot.pop("family_last_owner_pass_context", None)
+        snapshot["family_last_owner_pass_context_status"] = (
+            "not-running-under-owner-pass" if context is None
+            else "different-owner-pass"
+        )
+
+
 def ambient_pass(session, *, mode: str = "ambient",
                  converge_repairs: bool = True) -> dict[str, Any]:
     """Observe family state, classify drift, revisit, converge (bounded).
@@ -1588,6 +1608,7 @@ def ambient_pass(session, *, mode: str = "ambient",
             session.snapshot["family_last_summary"] = cached
         except AttributeError:
             pass
+        _record_owner_pass_context(session)
         return {"summary": cached, "reused": True, "started_at": started}
     selected = set(_selected_checkout_paths(session))
     repairs_this_pass = 0
@@ -1662,6 +1683,7 @@ def ambient_pass(session, *, mode: str = "ambient",
                                             "summary": dict(summary)}
     except AttributeError:
         pass
+    _record_owner_pass_context(session)
     summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
     try:
         session.snapshot["family_epoch"]["summary"] = dict(summary)
