@@ -1,0 +1,63 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_eci_correction_summary_budget_verification_20261028",
+  "captured_at": "2026-10-28T07:56:05Z",
+  "measurement_basis": "focused-applied-record-correction-compaction-regression-tests",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "implementation_commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282"
+  },
+  "observation": {
+    "kind": "record-correction-provenance-compaction-regression-verification",
+    "source_interface": "MNCS Environment pytest",
+    "request": {
+      "command": "PYTHONPATH=. python -m pytest -q tests/test_capability_intelligence.py -k 'append_only_correction_requires_exact_verified_observation_pointer or compact_projection_prioritizes_standalone_campaign_evidence or append_only_evidence_reference_correction'",
+      "test_file": "tests/test_capability_intelligence.py"
+    },
+    "outcome": {
+      "result": "4 passed, 173 deselected",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "A response-budget summary retains total, applied, and unverified append-only correction counts.",
+        "The compact response retains both the corrected target and correction record status with their exact evidence references.",
+        "Existing standalone observation and append-only pointer-correction response-budget regressions still pass."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_correction_summary_budget_d04cf0f",
+        "repository": "mncs-environment",
+        "commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282",
+        "path": "mncs_env/capability_intelligence.py",
+        "sha256": "cb4c4802899783df62d2bba48e538a4583e0ca650632ce0e6ccd666b5f39163d"
+      }
+    }
+  },
+  "supporting_sources": [
+    {
+      "kind": "implementation",
+      "repository": "mncs-environment",
+      "commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "cb4c4802899783df62d2bba48e538a4583e0ca650632ce0e6ccd666b5f39163d"
+    },
+    {
+      "kind": "regression-test",
+      "repository": "mncs-environment",
+      "commit": "d04cf0fa88ed0542e7b4103fcad6ecfb212c6282",
+      "path": "tests/test_capability_intelligence.py",
+      "sha256": "0bf89369e61291f247815a41c7df1bd7086af3d4f562e9de6136452e320ed292"
+    }
+  ],
+  "measurement_limits": [
+    "The selected tests verify a bounded compaction projection and exact references; the full repository suite was not run for this slice.",
+    "The tests do not measure agent intervention burden, response latency, or long-term recurrence."
+  ],
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0"
+  }
+}
