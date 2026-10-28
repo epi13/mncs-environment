@@ -12118,10 +12118,71 @@ def _projection_content_digest(projection: dict[str, Any]) -> str:
     }, length=32)
 
 
+def _focus_session_activity(
+    activity: dict[str, Any], section: str,
+) -> dict[str, Any]:
+    """Keep one existing activity family with its session and page context."""
+    source = activity.get("source")
+    source = source if isinstance(source, dict) else {}
+    compact_source = {
+        key: source[key]
+        for key in (
+            "event_count", "event_window_limit", "event_page_before_sequence",
+            "next_event_before_sequence", "event_page_scoped",
+            "event_page_has_older_records", "event_window_truncated",
+            "event_window_sequence_start", "event_window_sequence_end",
+            "resource_sample_identity_digest",
+            "verification_activity_digest",
+        )
+        if key in source and (
+            isinstance(source[key], str)
+            or type(source[key]) in (int, bool)
+            or source[key] is None
+        )
+    }
+    result: dict[str, Any] = {
+        "status": activity.get("status", "unavailable"),
+        "context": deepcopy(activity.get("context", {})),
+        "source": compact_source,
+        "detail_status": "section-focused",
+    }
+    if section == "resources":
+        resource_samples = _compact_session_resource_samples(
+            activity.get("resource_samples"), observation_limit=1,
+            preserve_empty=True, response_budget_overview=True,
+        )
+        if resource_samples is not None:
+            result["resource_samples"] = resource_samples
+    elif section == "diagnostics":
+        diagnostic_activity = _compact_session_diagnostic_activity(
+            activity.get("diagnostic_activity"),
+        )
+        if diagnostic_activity is not None:
+            result["diagnostic_activity"] = diagnostic_activity
+    elif section == "verification":
+        verification_activity = _compact_session_verification_activity(
+            activity.get("verification_activity"),
+        )
+        if verification_activity is not None:
+            result["verification_activity"] = verification_activity
+    else:
+        raise ValueError(
+            "session activity section must be resources, diagnostics, or verification"
+        )
+    measurement_limits = activity.get("measurement_limits")
+    if isinstance(measurement_limits, list):
+        result["measurement_limits"] = [
+            _short_text(item, 512) for item in measurement_limits[:12]
+            if isinstance(item, str)
+        ]
+    return result
+
+
 def project_session_activity(
     session: Any, *,
     event_before_sequence: int | None = None,
     event_limit: int = MAX_SESSION_EVENT_WINDOW,
+    activity_section: str | None = None,
     doctor_gap_limit: int = 0,
     max_result_bytes: int = MAX_RESULT_BYTES,
 ) -> dict[str, Any]:
@@ -12147,6 +12208,14 @@ def project_session_activity(
             "session activity event limit must be between 1 and "
             f"{MAX_SESSION_EVENT_WINDOW}"
         )
+    if (activity_section is not None
+            and (not isinstance(activity_section, str)
+                 or activity_section not in (
+                     "resources", "diagnostics", "verification",
+                 ))):
+        raise ValueError(
+            "session activity section must be resources, diagnostics, or verification"
+        )
     if (type(doctor_gap_limit) is not int
             or not 0 <= doctor_gap_limit <= MAX_DOCTOR_GAP_EXAMPLES):
         raise ValueError(
@@ -12161,15 +12230,24 @@ def project_session_activity(
         doctor_gap_limit=doctor_gap_limit,
     )
     context = activity.get("context")
+    projected_activity = (
+        _focus_session_activity(activity, activity_section)
+        if activity_section is not None else activity
+    )
     result: dict[str, Any] = {
         "schema_version": "mncs.environment.session-activity-projection/1",
         "status": activity.get("status", "unavailable"),
+        **({"activity_section": activity_section}
+           if activity_section is not None else {}),
         "subject": {
             "session_id": session.session_id,
             **(context if isinstance(context, dict) else {}),
         },
-        "session_activity": activity,
-        "detail_status": "selected-session-window",
+        "session_activity": projected_activity,
+        "detail_status": (
+            "section-focused" if activity_section is not None
+            else "selected-session-window"
+        ),
         "measurement_limits": [
             "Session evidence is limited to the selected bounded event page and recorded provider artifacts.",
             "Host resource samples describe host state at capture time; they are not agent-attributed consumption and do not establish pressure or causation.",
@@ -12177,7 +12255,8 @@ def project_session_activity(
         ],
     }
 
-    if _projection_response_size(result) > max_result_bytes:
+    if (activity_section is None
+            and _projection_response_size(result) > max_result_bytes):
         compact = _compact_session_activity_budget_overview(activity, activity)
         if compact is not None:
             result["session_activity"] = compact
@@ -12186,7 +12265,8 @@ def project_session_activity(
                 "Session activity detail was reduced to bounded service totals and source-linked examples to fit the requested result budget."
             )
 
-    if _projection_response_size(result) > max_result_bytes:
+    if (activity_section is None
+            and _projection_response_size(result) > max_result_bytes):
         resource_samples = _compact_session_resource_samples(
             activity.get("resource_samples"), observation_limit=1,
             preserve_empty=True, response_budget_overview=True,
@@ -12229,6 +12309,11 @@ def project_session_activity(
         result["detail_status"] = "evidence-summary-only-response-budget"
         result["measurement_limits"].append(
             "Repeated session detail was omitted by the response budget; bounded resource, diagnostic, and verification evidence is retained where available."
+        )
+
+    if _projection_response_size(result) > max_result_bytes:
+        raise ValueError(
+            "focused session activity exceeds the requested result byte limit"
         )
 
     result["content_digest"] = digest_hex({

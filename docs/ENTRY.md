@@ -372,10 +372,11 @@ establish that it is absent from older campaign evidence.
 
 The entry context also exposes `actions.session_activity_projection.argv` for
 the selected session's bounded event, resource, diagnostic, and verification
-evidence. Use it when the combined capability analysis summarizes activity
-detail to preserve campaign evidence within its response budget. This action
-reads the same authenticated session records and does not create a separate
-telemetry store.
+evidence, and `actions.session_resource_samples_projection.argv` for a compact
+resource-only view. Use these when the combined capability analysis summarizes
+activity detail to preserve campaign evidence within its response budget. Both
+actions read the same authenticated session records and do not create a
+separate telemetry store.
 
 ## Environmental capability intelligence
 

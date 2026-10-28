@@ -10714,6 +10714,13 @@ class Session:
                 "--interpret", "session-activity",
             ],
         }
+        actions["session_resource_samples_projection"] = {
+            "argv": [
+                *prefix, "projections", self.session_id,
+                "--interpret", "session-activity",
+                "--activity-section", "resources",
+            ],
+        }
         actions["environmental_capability_history_projection"] = {
             "argv": [
                 *prefix, "projections", self.session_id,

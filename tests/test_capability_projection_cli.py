@@ -63,6 +63,25 @@ class EnvironmentalCapabilityProjectionCliTests(unittest.TestCase):
         self.assertEqual(call.kwargs["session_event_before_sequence"], 32)
         self.assertEqual(call.kwargs["session_event_limit"], 8)
 
+    def test_session_activity_accepts_one_bounded_evidence_section(self) -> None:
+        call = self._run_projection([
+            "projections", "ses_example", "--interpret", "session-activity",
+            "--activity-section", "resources",
+        ])
+
+        self.assertEqual(call.kwargs["activity_section"], "resources")
+
+    def test_activity_section_is_restricted_to_session_activity(self) -> None:
+        args = cli.build_parser().parse_args([
+            "projections", "ses_example", "--interpret", "environmental-capability",
+            "--activity-section", "resources",
+        ])
+        errors = StringIO()
+        with redirect_stderr(errors):
+            self.assertEqual(cli.cmd_projections(args), 2)
+
+        self.assertIn("requires --interpret session-activity", errors.getvalue())
+
     def test_why_route_passes_exact_projection_id(self) -> None:
         call = self._run_projection([
             "projections", "ses_example", "--interpret", "why",

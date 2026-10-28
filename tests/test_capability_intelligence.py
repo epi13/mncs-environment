@@ -4991,6 +4991,12 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
             focused_activity = capability_intelligence.project_session_activity(
                 session, event_limit=4, max_result_bytes=10_000,
             )
+            focused_resource_activity = (
+                capability_intelligence.project_session_activity(
+                    session, event_limit=4, activity_section="resources",
+                    max_result_bytes=10_000,
+                )
+            )
 
     samples = result["session_activity"]["resource_samples"]
     assert samples["status"] == "available"
@@ -5165,7 +5171,7 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
         )
     )
     assert missing_relation["status"] == "sample-not-present-in-selected-session"
-    assert read_artifact.call_count == 4
+    assert read_artifact.call_count == 5
     assert activity_only["status"] == "partial"
     assert activity_only["session_activity"]["resource_samples"][
         "observation_count"
@@ -5200,6 +5206,30 @@ def test_session_resource_sample_is_correlated_sanitized_and_compactable(
     ) <= 10_000
     assert "private-host-name" not in json.dumps(result)
     assert "private-host-name" not in json.dumps(focused_activity)
+    assert focused_resource_activity["activity_section"] == "resources"
+    assert focused_resource_activity["detail_status"] == "section-focused"
+    assert focused_resource_activity["subject"] == focused_activity["subject"]
+    assert set(focused_resource_activity["session_activity"]) == {
+        "status", "context", "source", "detail_status",
+        "resource_samples", "measurement_limits",
+    }
+    focused_sample = focused_resource_activity["session_activity"][
+        "resource_samples"
+    ]["observations"][0]
+    assert focused_sample["identity"] == sample_identity
+    assert focused_sample["source"]["invocation_event"]["identity"] == (
+        "evt_monitor_resource_sample_invoked"
+    )
+    assert focused_sample["source"]["artifact_reference"]["sha256"] == (
+        metadata["sha256"]
+    )
+    assert capability_intelligence._projection_response_size(
+        focused_resource_activity,
+    ) < capability_intelligence._projection_response_size(focused_activity)
+    assert capability_intelligence._projection_response_size(
+        focused_resource_activity,
+    ) <= 10_000
+    assert "private-host-name" not in json.dumps(focused_resource_activity)
     assert "private-process-command" not in json.dumps(result)
     assert "private-argument-is-not-projected" not in json.dumps(result)
     assert "large_diagnostic" not in json.dumps(compact)

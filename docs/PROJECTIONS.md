@@ -472,8 +472,22 @@ store. The default event window is four records; use
 pages. Response-budget compaction retains bounded source-linked examples and
 reports omitted detail. Resource samples remain host snapshots, not
 agent-attributed consumption or proof of environmental pressure. Entry context
-publishes the command as `actions.session_activity_projection.argv` so agents
-can discover it without reconstructing the CLI invocation.
+publishes `actions.session_activity_projection.argv` and the compact
+`actions.session_resource_samples_projection.argv` so agents can discover both
+views without reconstructing the CLI invocation.
+
+To keep unrelated activity detail out of a query, select one existing evidence
+family while preserving the same session context, event cursor, and source
+references:
+
+```bash
+./scripts/mncs-env projections <session> --interpret session-activity \
+  --activity-section resources
+```
+
+The supported sections are `resources`, `diagnostics`, and `verification`.
+The resource section retains one newest sample and reports omitted coverage;
+use its event cursor to inspect older invocation and completion references.
 
 Session activity keeps authenticated Control read observations distinct from
 Environment-bound capability invocations. If valid Control reads are present

@@ -1358,6 +1358,7 @@ def interpretation(
     evidence_offset=None, evidence_limit=capability_intelligence.MAX_EVIDENCE_REFS,
     session_event_before_sequence=None,
     session_event_limit=capability_intelligence.MAX_SESSION_EVENT_WINDOW,
+    activity_section=None,
     doctor_gap_limit=0,
     projection_id=None,
 ):
@@ -1391,6 +1392,7 @@ def interpretation(
             session,
             event_before_sequence=session_event_before_sequence,
             event_limit=session_event_limit,
+            activity_section=activity_section,
             doctor_gap_limit=doctor_gap_limit,
             max_result_bytes=capability_intelligence.MAX_RESULT_BYTES,
         )

@@ -406,6 +406,9 @@ def cmd_projections(args: argparse.Namespace) -> int:
                 ),
             },
         )
+    if (args.activity_section is not None
+            and args.interpret != "session-activity"):
+        return fail('--activity-section requires --interpret session-activity')
     if args.history_pages != 1 and args.interpret != "environmental-capability":
         return fail('--history-pages requires --interpret environmental-capability')
     if (args.evidence_offset is not None
@@ -474,6 +477,7 @@ def cmd_projections(args: argparse.Namespace) -> int:
                         args.doctor_gap_limit
                         if args.doctor_gap_limit is not None else 0
                     ),
+                    activity_section=args.activity_section,
                     projection_id=getattr(args, 'projection', None),
                 )
                 if args.interpret in {
@@ -2697,6 +2701,15 @@ def build_parser() -> argparse.ArgumentParser:
         'capabilities', 'dependencies', 'blockers', 'architecture',
         'structure', 'why', 'environmental-capability', 'session-activity'))
     projections.add_argument('--repository')
+    projections.add_argument(
+        '--activity-section',
+        choices=("resources", "diagnostics", "verification"),
+        default=None,
+        help=(
+            "limit a session-activity projection to one existing evidence "
+            "family while retaining session context and source references"
+        ),
+    )
     projections.add_argument(
         '--projection',
         help='select an exact declared projection for --interpret why',
