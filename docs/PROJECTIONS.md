@@ -1449,12 +1449,21 @@ When ECI reduces session context to preserve campaign evidence, the bounded
 `owner_pass_observations.owner_decision_summary` retains the distinct owner
 passes and their scheduled or skipped decision counts from the returned trace.
 It keeps the source observation count, source omissions, invalid rows, and
-coverage status visible while the detailed observation list retains one exact
-result reference. This lets an agent discover which Environment services ran
-without expanding the full session history. The summary covers scheduler
-decisions only; it does not establish service opportunities, fulfillment,
-agent receipt, or intervention reduction. Partial and unknown source coverage
-remain explicit.
+coverage status visible. In evidence-priority responses, an exact result
+pointer duplicated in the per-owner summary is removed from the retained detail
+row and marked `result_reference_in_owner_summary`; the summary remains the
+single compact reference path. This lets an agent discover which Environment
+services ran without expanding the full session history. The summary covers
+scheduler decisions only; it does not establish service opportunities,
+fulfillment, agent receipt, or intervention reduction. Partial and unknown source
+coverage remain explicit. Schema version 2 also preserves one exact Store result
+reference per owner, paired with the service execution and result identities.
+It reports how many returned results have exact references and how many
+references were omitted by the bound. The per-owner outcome and verification
+counts remain alongside the pointer. Missing references remain visible as
+partial evidence; an exact Store reference alone does not claim content
+integrity or independent verification. Older version 1 summaries remain
+readable without being upgraded from partial context.
 For recorded verification owner results, the same exact Store relation also
 surfaces bounded obligation and outcome counts, reason-code counts, and up to
 eight non-passing obligation summaries under `verification_result_details`.

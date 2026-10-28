@@ -278,6 +278,7 @@ MAX_SESSION_SERVICE_READINESS_RECORDS = 16
 MAX_SESSION_SERVICE_READINESS_CANDIDATES = 8
 MAX_ENVIRONMENT_OWNER_PASS_OBSERVATIONS = 16
 MAX_ECI_OWNER_PASS_SUMMARY_ROWS = 8
+MAX_ECI_OWNER_PASS_RESULT_REFERENCES_PER_OWNER = 1
 MAX_ENVIRONMENT_OWNER_FAILURE_DETAILS = 4
 MAX_ENVIRONMENT_VERIFICATION_DETAILS = 4
 MAX_ENVIRONMENT_OWNER_RESULT_INTEGRITY_RECORDS = 8
@@ -4765,7 +4766,10 @@ def _compact_session_activity_budget_overview(
                         compact_items.append({
                             key: item[key]
                             for key in (
-                                "owner_pass", "result_status", "result_identity",
+                                "owner_pass", "service_execution_id",
+                                "result_status", "result_identity",
+                                "source_content_integrity_status",
+                                "outcome_status",
                                 "verification_status",
                                 "source_reference_status", "source_reference",
                                 "failure_evidence",
@@ -5224,7 +5228,50 @@ def _compact_session_activity_evidence_priority_overview(
                                 pass_observations,
                             )
                         )
-                        retained_items = items[:1]
+                        retained_items = [
+                            dict(item) for item in items[:1]
+                            if isinstance(item, dict)
+                        ]
+                        if owner_decision_summary is not None:
+                            summary_owners = owner_decision_summary.get("owners")
+                            summary_owners = (
+                                summary_owners
+                                if isinstance(summary_owners, list) else []
+                            )
+                            for item in retained_items:
+                                owner = next((
+                                    row for row in summary_owners
+                                    if isinstance(row, dict)
+                                    and row.get("owner_pass")
+                                    == item.get("owner_pass")
+                                ), None)
+                                result_evidence = (
+                                    owner.get("result_evidence")
+                                    if isinstance(owner, dict) else None
+                                )
+                                references = (
+                                    result_evidence.get("references")
+                                    if isinstance(result_evidence, dict) else None
+                                )
+                                if not isinstance(references, list):
+                                    continue
+                                if not any(
+                                    reference.get("service_execution_id")
+                                    == item.get("service_execution_id")
+                                    and reference.get("result_identity")
+                                    == item.get("result_identity")
+                                    and reference.get("source_reference")
+                                    == item.get("source_reference")
+                                    for reference in references
+                                    if isinstance(reference, dict)
+                                ):
+                                    continue
+                                for key in (
+                                    "service_execution_id", "result_identity",
+                                    "source_reference",
+                                ):
+                                    item.pop(key, None)
+                                item["result_reference_in_owner_summary"] = True
                         compact_pass_observations = {
                             "count": pass_observations.get("count", 0),
                             "omitted_count": pass_observations.get(
@@ -5300,6 +5347,63 @@ def _compact_owner_pass_decision_summary(
         counts = dict(sorted(valid_items)[:8])
         return counts or None
 
+    def compact_result_evidence(raw: Any) -> dict[str, Any] | None:
+        if not isinstance(raw, dict):
+            return None
+        unreferenced_result_count = raw.get("unreferenced_result_count")
+        references_omitted = raw.get("references_omitted_count")
+        references = raw.get("references")
+        if (
+            any(
+                type(count) is not int or count < 0
+                for count in (
+                    unreferenced_result_count, references_omitted,
+                )
+                if count is not None
+            )
+            or not isinstance(references, list)
+            or len(references) > MAX_ECI_OWNER_PASS_RESULT_REFERENCES_PER_OWNER
+        ):
+            return None
+        compact_references: list[dict[str, str]] = []
+        seen: set[tuple[str, str, str]] = set()
+        for reference in references:
+            if not isinstance(reference, dict):
+                return None
+            execution_id = reference.get("service_execution_id")
+            result_identity = reference.get("result_identity")
+            source_reference = reference.get("source_reference")
+            if (
+                not isinstance(execution_id, str)
+                or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None
+                or not isinstance(result_identity, str)
+                or re.fullmatch(r"[0-9a-f]{64}", result_identity) is None
+                or not isinstance(source_reference, str)
+                or re.fullmatch(
+                    r"mncs-store:[A-Za-z0-9_.:-]{1,240}", source_reference,
+                ) is None
+                or re.fullmatch(
+                    r"[0-9a-f]{64}", source_reference.rsplit(":", 1)[-1],
+                ) is None
+            ):
+                return None
+            identity = (execution_id, result_identity, source_reference)
+            if identity in seen:
+                return None
+            seen.add(identity)
+            compact_reference = {
+                "service_execution_id": execution_id,
+                "result_identity": result_identity,
+                "source_reference": source_reference,
+            }
+            compact_references.append(compact_reference)
+        result = {"references": compact_references}
+        if unreferenced_result_count:
+            result["unreferenced_result_count"] = unreferenced_result_count
+        if references_omitted:
+            result["references_omitted_count"] = references_omitted
+        return result
+
     prior = value.get("owner_decision_summary")
     if isinstance(prior, dict):
         schema_version = prior.get("schema_version")
@@ -5312,7 +5416,10 @@ def _compact_owner_pass_decision_summary(
         owner_omitted = prior.get("owner_count_omitted")
         owners = prior.get("owners")
         if (
-            schema_version == "mncs.environment.owner-pass-decision-summary/1"
+            schema_version in {
+                "mncs.environment.owner-pass-decision-summary/1",
+                "mncs.environment.owner-pass-decision-summary/2",
+            }
             and status in {"complete", "partial", "coverage-unknown"}
             and (source_count is None or type(source_count) is int and source_count >= 0)
             and (source_omitted is None or type(source_omitted) is int and source_omitted >= 0)
@@ -5349,6 +5456,36 @@ def _compact_owner_pass_decision_summary(
                     counts = compact_status_counts(owner.get(field))
                     if counts is not None:
                         validated_owner[field] = counts
+                result_evidence = compact_result_evidence(
+                    owner.get("result_evidence"),
+                )
+                if result_evidence is not None:
+                    recorded_counts = compact_status_counts(
+                        owner.get("observed_result_status_counts"),
+                    ) or {}
+                    recorded_result_count = recorded_counts.get(
+                        "result-recorded", 0,
+                    )
+                    exact_reference_count = (
+                        len(result_evidence["references"])
+                        + result_evidence.get("references_omitted_count", 0)
+                    )
+                    unreferenced_result_count = result_evidence.get(
+                        "unreferenced_result_count", 0,
+                    )
+                    if recorded_result_count != (
+                        exact_reference_count + unreferenced_result_count
+                    ):
+                        break
+                    validated_owner["result_evidence"] = result_evidence
+                elif owner.get("result_evidence") is not None:
+                    break
+                elif (schema_version ==
+                      "mncs.environment.owner-pass-decision-summary/2"
+                      and (compact_status_counts(
+                          owner.get("observed_result_status_counts"),
+                      ) or {}).get("result-recorded", 0)):
+                    break
                 validated_owners.append(validated_owner)
             else:
                 return {
@@ -5389,6 +5526,9 @@ def _compact_owner_pass_decision_summary(
             "scheduled_count": 0,
             "skipped_count": 0,
             "unclassified_decision_count": 0,
+            "recorded_result_count": 0,
+            "exact_result_references": [],
+            "seen_result_references": set(),
         })
         decision = item.get("decision")
         if decision == "scheduled":
@@ -5408,6 +5548,41 @@ def _compact_owner_pass_decision_summary(
                 continue
             field_counts = owner.setdefault(field, {})
             field_counts[status_value] = field_counts.get(status_value, 0) + 1
+        if item.get("result_status") == "result-recorded":
+            owner["recorded_result_count"] += 1
+            execution_id = item.get("service_execution_id")
+            result_identity = item.get("result_identity")
+            source_reference = item.get("source_reference")
+            if (
+                isinstance(execution_id, str)
+                and re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is not None
+                and isinstance(result_identity, str)
+                and re.fullmatch(r"[0-9a-f]{64}", result_identity) is not None
+                and isinstance(source_reference, str)
+                and re.fullmatch(
+                    r"mncs-store:[A-Za-z0-9_.:-]{1,240}", source_reference,
+                ) is not None
+                and re.fullmatch(
+                    r"[0-9a-f]{64}", source_reference.rsplit(":", 1)[-1],
+                ) is not None
+            ):
+                reference_identity = (
+                    execution_id, result_identity, source_reference,
+                )
+                if reference_identity not in owner["seen_result_references"]:
+                    owner["seen_result_references"].add(reference_identity)
+                    owner["result_reference_count"] = (
+                        owner.get("result_reference_count", 0) + 1
+                    )
+                    if len(owner["exact_result_references"]) < (
+                        MAX_ECI_OWNER_PASS_RESULT_REFERENCES_PER_OWNER
+                    ):
+                        reference = {
+                            "service_execution_id": execution_id,
+                            "result_identity": result_identity,
+                            "source_reference": source_reference,
+                        }
+                        owner["exact_result_references"].append(reference)
 
     owner_rows = []
     for name, counts in list(owners.items())[:MAX_ECI_OWNER_PASS_SUMMARY_ROWS]:
@@ -5423,6 +5598,23 @@ def _compact_owner_pass_decision_summary(
             status_counts = compact_status_counts(counts.get(field))
             if status_counts is not None:
                 owner_row[field] = status_counts
+        recorded_result_count = counts.get("recorded_result_count", 0)
+        exact_reference_count = counts.get("result_reference_count", 0)
+        if recorded_result_count:
+            references = counts.get("exact_result_references", [])
+            result_evidence: dict[str, Any] = {"references": references}
+            if exact_reference_count != len(references):
+                result_evidence["references_omitted_count"] = max(
+                    0, exact_reference_count - len(references),
+                )
+            unreferenced_result_count = max(
+                0, recorded_result_count - exact_reference_count,
+            )
+            if unreferenced_result_count:
+                result_evidence["unreferenced_result_count"] = (
+                    unreferenced_result_count
+                )
+            owner_row["result_evidence"] = result_evidence
         owner_rows.append(owner_row)
     owner_count_omitted = max(0, len(owners) - len(owner_rows))
     unclassified_decision_count = sum(
@@ -5439,7 +5631,7 @@ def _compact_owner_pass_decision_summary(
     else:
         status = "complete"
     return {
-        "schema_version": "mncs.environment.owner-pass-decision-summary/1",
+        "schema_version": "mncs.environment.owner-pass-decision-summary/2",
         "status": status,
         "source_observation_count": source_count,
         "source_omitted_observation_count": source_omitted,
@@ -9750,6 +9942,12 @@ def _compact_projection(
             correction_observations=priority_correction_observation_source,
         ):
             return None
+        if _projection_response_size(candidate) > max_result_bytes:
+            compact_activity = candidate.get("session_activity")
+            if isinstance(compact_activity, dict):
+                # The detail status already marks this view as evidence-priority
+                # compacted. Preserve exact result links before this generic note.
+                compact_activity.pop("measurement_limits", None)
         if _projection_response_size(candidate) > max_result_bytes:
             return None
 

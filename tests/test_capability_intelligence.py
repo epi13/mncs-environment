@@ -5938,6 +5938,10 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
             "observed_verification_status_counts": {
                 "not-established": 1,
             },
+            "result_evidence": {
+                "references": [],
+                "unreferenced_result_count": 1,
+            },
         },
         {
             "owner_pass": "semantics",
@@ -6074,6 +6078,7 @@ def test_projection_enforces_tight_budget_for_session_service_history(
         }
         if recorded:
             row.update({
+                "service_execution_id": f"ase_{index:032x}",
                 "result_identity": f"{index:064x}",
                 "source_reference": (
                     f"mncs-store:ses_projection_reader:owner:{owner}:{index:064x}"
@@ -6292,11 +6297,13 @@ def test_projection_enforces_tight_budget_for_session_service_history(
     assert [item["owner_pass"] for item in compact_observations["items"]] == [
         "doctor",
     ]
-    assert all(item["source_reference"].startswith("mncs-store:")
-               for item in compact_observations["items"])
+    assert compact_observations["items"][0][
+        "result_reference_in_owner_summary"
+    ] is True
+    assert "source_reference" not in compact_observations["items"][0]
     owner_summary = compact_observations["owner_decision_summary"]
     assert owner_summary["schema_version"] == (
-        "mncs.environment.owner-pass-decision-summary/1"
+        "mncs.environment.owner-pass-decision-summary/2"
     )
     assert owner_summary["status"] == "partial"
     assert owner_summary["source_observation_count"] == 7
@@ -6313,6 +6320,16 @@ def test_projection_enforces_tight_budget_for_session_service_history(
             "observed_verification_status_counts": {
                 "not-established": 1,
             },
+            "result_evidence": {
+                "references": [{
+                    "service_execution_id": "ase_" + "0" * 32,
+                    "result_identity": "0" * 64,
+                    "source_reference": (
+                        "mncs-store:ses_projection_reader:owner:doctor:"
+                        + "0" * 64
+                    ),
+                }],
+            },
         },
         {
             "owner_pass": "projections",
@@ -6322,6 +6339,16 @@ def test_projection_enforces_tight_budget_for_session_service_history(
             "observed_result_status_counts": {"result-recorded": 1},
             "observed_verification_status_counts": {
                 "not-established": 1,
+            },
+            "result_evidence": {
+                "references": [{
+                    "service_execution_id": "ase_" + "0" * 31 + "6",
+                    "result_identity": "0" * 63 + "6",
+                    "source_reference": (
+                        "mncs-store:ses_projection_reader:owner:projections:"
+                        + "0" * 63 + "6"
+                    ),
+                }],
             },
         },
     ]
@@ -6436,6 +6463,14 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
                 "outcome_status": "no-failure-reported",
                 "result_status": "result-recorded",
                 "verification_status": "not-established",
+                "service_execution_id": "ase_" + "a" * 32,
+                "result_identity": "a" * 64,
+                "source_reference_status": "store-record",
+                "source_content_integrity_status": "verified",
+                "source_reference": (
+                    "mncs-store:ses_evidence:incremental-coherence:doctor:"
+                    + "a" * 64
+                ),
             },
             {
                 "owner_pass": "doctor",
@@ -6450,6 +6485,13 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
                 "outcome_status": "failure-reported",
                 "result_status": "result-recorded",
                 "verification_status": "verified",
+                "service_execution_id": "ase_" + "b" * 32,
+                "result_identity": "b" * 64,
+                "source_reference_status": "store-record",
+                "source_reference": (
+                    "mncs-store:ses_evidence:incremental-coherence:verification:"
+                    + "b" * 64
+                ),
             },
         ],
     })
@@ -6475,6 +6517,16 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
             "observed_verification_status_counts": {
                 "not-established": 2,
             },
+            "result_evidence": {
+                "references": [{
+                    "service_execution_id": "ase_" + "a" * 32,
+                    "result_identity": "a" * 64,
+                    "source_reference": (
+                        "mncs-store:ses_evidence:incremental-coherence:doctor:"
+                        + "a" * 64
+                    ),
+                }],
+            },
         },
         {
             "owner_pass": "verification",
@@ -6484,6 +6536,16 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
             "observed_result_status_counts": {"result-recorded": 1},
             "observed_outcome_status_counts": {"failure-reported": 1},
             "observed_verification_status_counts": {"verified": 1},
+            "result_evidence": {
+                "references": [{
+                    "service_execution_id": "ase_" + "b" * 32,
+                    "result_identity": "b" * 64,
+                    "source_reference": (
+                        "mncs-store:ses_evidence:incremental-coherence:verification:"
+                        + "b" * 64
+                    ),
+                }],
+            },
         },
     ]
 
@@ -6491,6 +6553,58 @@ def test_owner_pass_decision_summary_retains_observed_result_states() -> None:
         "count": 4,
         "omitted_count": 3,
         "items": [{"owner_pass": "doctor", "decision": "scheduled"}],
+        "owner_decision_summary": summary,
+    })
+    assert compacted_again == summary
+
+
+def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() -> None:
+    rows = []
+    for index, suffix in enumerate(("a", "b", "c")):
+        identity = suffix * 64
+        rows.append({
+            "owner_pass": "projections",
+            "decision": "scheduled",
+            "result_status": "result-recorded",
+            "service_execution_id": "ase_" + suffix * 32,
+            "result_identity": identity,
+            "source_reference_status": "store-record",
+            "source_reference": (
+                "mncs-store:ses_evidence:incremental-coherence:projections:"
+                + identity
+            ),
+            "outcome_status": "no-failure-reported",
+            "verification_status": "not-established",
+        })
+    rows.insert(1, {
+        "owner_pass": "projections",
+        "decision": "scheduled",
+        "result_status": "result-recorded",
+        "service_execution_id": "ase_" + "d" * 32,
+        "result_identity": "d" * 64,
+        "source_reference_status": "not-recorded",
+        "source_reference": "not-a-store-reference",
+    })
+
+    summary = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": len(rows), "omitted_count": 0, "items": rows,
+    })
+
+    assert summary is not None
+    assert summary["schema_version"] == (
+        "mncs.environment.owner-pass-decision-summary/2"
+    )
+    evidence = summary["owners"][0]["result_evidence"]
+    assert evidence["unreferenced_result_count"] == 1
+    assert evidence["references_omitted_count"] == 2
+    assert [row["service_execution_id"] for row in evidence["references"]] == [
+        "ase_" + "a" * 32,
+    ]
+
+    compacted_again = capability_intelligence._compact_owner_pass_decision_summary({
+        "count": len(rows),
+        "omitted_count": len(rows) - 1,
+        "items": rows[:1],
         "owner_decision_summary": summary,
     })
     assert compacted_again == summary
