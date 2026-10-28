@@ -1,0 +1,80 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_resource_accountability_readback_20261028",
+  "captured_at": "2026-10-28T14:46:13Z",
+  "measurement_basis": "verified-projection-path-fixture-and-live-procfs-resource-test",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_7c92de2b1123b25c",
+    "campaign_evidence_count_before_recording": 150,
+    "implementation_commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3640068cee6b",
+      "claim:mncs-environment:worktree:9c9ef6743c84"
+    ]
+  },
+  "observation": {
+    "kind": "owner-resource-evidence-projection-readback",
+    "source_interface": "MNCS Environment owner trace and ECI capability projection",
+    "request": {
+      "verification_observation_identity": "ev_environment_ambient_owner_resource_accountability_verification_20261028",
+      "fixture_execution_ids": [
+        "ase_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ase_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "live_owner_execution_readback_status": "not-observed"
+    },
+    "outcome": {
+      "owner_trace_projection": "process-resource delta retained beside the exact scheduled owner execution identity",
+      "eci_owner_summary_schema": "mncs.environment.owner-pass-decision-summary/5",
+      "eci_resource_record_count": 2,
+      "eci_resource_records_retained": 1,
+      "eci_resource_records_omitted_count": 1,
+      "ambient_fulfillment_status": "not-established",
+      "process_resource_status": "measured-in-fixture",
+      "live_procfs_resource_sampler": "exercised-by-test_resources-cli-test",
+      "interpretation": "The trace and ECI layers preserve measured process counters with the owner execution identity and make aggregation loss explicit. The real procfs-backed resources CLI test verifies raw observation on this host. No fresh owner execution was used to produce a live per-owner delta, so operational cost for a running service is not yet read back."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_resource_accountability_20261028",
+    "title": "Ambient owner executions lack bounded process-resource evidence",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment resource observation, coherence scheduling, and ECI",
+    "owner": "mncs-environment",
+    "basis": "An earlier resident process sample recorded high I/O and memory use but ended before a trace was available, while current owner-pass projections correlated execution IDs and elapsed time without process counters.",
+    "actionable_recommendation": "Sample the scheduler process around existing owner runners, link deltas to exact service execution IDs, retain a bounded ECI view, and make process and child-process attribution limits explicit."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_owner_resource_accountability_verification_20261028",
+      "kind": "implementation-verification-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-owner-resource-accountability-verification-20261028.json"
+    },
+    {
+      "identity": "mncs_environment_ambient_owner_resource_accountability_309c6d8",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+      "path": "mncs_env/capability_intelligence.py",
+      "sha256": "ace8efcbd249e5532e8f1083e4d0b986be0ff902ed6a4d1b02d5b496e917e353"
+    }
+  ],
+  "measurement_limits": [
+    "Projection readback is covered by deterministic fixture tests, not by a fresh production owner-pass result.",
+    "Raw process I/O counters cover the scheduler process only and omit spawned child-process usage.",
+    "The feature establishes resource observability, not service causality, effectiveness, or reduced intervention burden."
+  ]
+}

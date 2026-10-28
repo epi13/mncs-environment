@@ -1,0 +1,107 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_resource_accountability_verification_20261028",
+  "captured_at": "2026-10-28T14:46:13Z",
+  "measurement_basis": "targeted-resource-scheduler-and-capability-intelligence-regression-suites",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_7c92de2b1123b25c",
+    "campaign_evidence_count_before_recording": 150,
+    "implementation_commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3640068cee6b",
+      "claim:mncs-environment:worktree:9c9ef6743c84"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-resource-evidence-regression-verification",
+    "source_interface": "MNCS Environment pytest, Python compileall, and Git diff checks",
+    "request": {
+      "commands": [
+        "python -m pytest -q tests/test_resources.py tests/test_incremental.py tests/test_capability_intelligence.py",
+        "python -m compileall -q mncs_env tests",
+        "git diff --check"
+      ]
+    },
+    "outcome": {
+      "test_result": "226 passed, 21 skipped in 8.45s",
+      "verification_status": "passed",
+      "verified_behaviors": [
+        "Procfs process I/O reads are byte-bounded and missing or partial measurements remain explicit.",
+        "CPU ticks, RSS boundary samples, RSS high-water growth, and process I/O deltas are derived only when the same process birth identity brackets the interval.",
+        "Recovery-scan owner rows link resource deltas to the exact service execution identity, and the path-free trace projection retains those deltas.",
+        "The ECI owner summary retains at most one resource record per owner and reports total and omitted record counts.",
+        "The ECI keeps ambient fulfillment not-established and continues to read previous owner-summary schema versions.",
+        "The live resource CLI test exercises actual procfs counters without opening Store."
+      ],
+      "implementation_reference": {
+        "identity": "mncs_environment_ambient_owner_resource_accountability_309c6d8",
+        "kind": "source-code-implementation",
+        "repository": "mncs-environment",
+        "commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+        "path": "mncs_env/coherence.py",
+        "sha256": "704eaa0d79b9a18088ce7625daad93f3667845fc2b18c632526110001bd67d7d"
+      },
+      "resource_regression_test_reference": {
+        "identity": "mncs_environment_process_resource_counter_tests_309c6d8",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+        "path": "tests/test_resources.py",
+        "sha256": "457df506adec85c70162aec35e18e434ddd72c763000d0658b47a93b323a890c"
+      },
+      "projection-regression-test_reference": {
+        "identity": "mncs_environment_owner_resource_projection_tests_309c6d8",
+        "kind": "regression-test-source",
+        "repository": "mncs-environment",
+        "commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+        "path": "tests/test_capability_intelligence.py",
+        "sha256": "e043501a70e89df53598c0861103b9672420248411a5a71d9e62e62394249133"
+      }
+    },
+    "scope_limit": "The repository-wide suite was not run; 21 cases requiring the external compiler or Automation checkout were skipped."
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "supporting-context",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_resource_accountability_20261028",
+    "title": "Ambient owner executions lack bounded process-resource evidence",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment resource observation, coherence scheduling, and ECI",
+    "owner": "mncs-environment",
+    "basis": "An earlier resident process sample recorded high I/O and memory use but ended before a trace was available, while current owner-pass projections correlated execution IDs and elapsed time without process counters.",
+    "actionable_recommendation": "Sample the scheduler process around existing owner runners, link deltas to exact service execution IDs, retain a bounded ECI view, and make process and child-process attribution limits explicit."
+  },
+  "supporting_sources": [
+    {
+      "identity": "mncs_environment_ambient_owner_resource_accountability_309c6d8",
+      "kind": "source-code-implementation",
+      "repository": "mncs-environment",
+      "commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+      "path": "mncs_env/coherence.py",
+      "sha256": "704eaa0d79b9a18088ce7625daad93f3667845fc2b18c632526110001bd67d7d"
+    },
+    {
+      "identity": "mncs_environment_process_resource_counter_tests_309c6d8",
+      "kind": "regression-test-source",
+      "repository": "mncs-environment",
+      "commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+      "path": "tests/test_resources.py",
+      "sha256": "457df506adec85c70162aec35e18e434ddd72c763000d0658b47a93b323a890c"
+    }
+  ],
+  "measurement_limits": [
+    "Scheduler-process counters exclude spawned children and can include work in the bracketed interval not caused by the owner service.",
+    "The projection relationship is verified with deterministic fixture evidence; this session did not run a fresh resident tick or observe a live per-owner resource delta.",
+    "Verification proves the evidence path and bounded parsing, not reduced agent burden, service fulfillment, or improved runtime cost."
+  ]
+}

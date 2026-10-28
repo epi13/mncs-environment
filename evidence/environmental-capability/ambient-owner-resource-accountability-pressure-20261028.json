@@ -1,0 +1,70 @@
+{
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "identity": "ev_environment_ambient_owner_resource_accountability_pressure_20261028",
+  "captured_at": "2026-10-28T14:46:13Z",
+  "measurement_basis": "prior-resident-process-sample-and-owner-pass-projection-gap",
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "environment_id": "renv_36f68baa06a187b0",
+    "work_intent_id": "int_e9a2959ffe2e952c",
+    "campaign_state_checkpoint_id_before_recording": "chk_7c92de2b1123b25c",
+    "campaign_evidence_count_before_recording": 150,
+    "implementation_commit": "309c6d8f896ab414049b4acac2dbc83e70ac4ba4",
+    "claim_ids": [
+      "claim:mncs-environment:worktree:3640068cee6b",
+      "claim:mncs-environment:worktree:9c9ef6743c84"
+    ]
+  },
+  "observation": {
+    "kind": "ambient-owner-process-resource-attribution-gap",
+    "source_interface": "MNCS Environment resource observation, incremental coherence, and capability intelligence",
+    "request": {
+      "prior_resident_process_sample": {
+        "source_evidence_identity": "ev_environment_ambient_trigger_subject_projection_pressure_20261028",
+        "result": "failed-before-trace-output",
+        "exception": "KeyError: store_replay",
+        "sampled_elapsed_seconds": 89,
+        "sampled_cpu_percent": 88.4,
+        "sampled_rss_kb": 525824,
+        "sampled_process_write_bytes": 405254144,
+        "subsystem_attribution": "not-established"
+      },
+      "projection_gap": "The existing scheduler trace and ECI correlated owner execution identities and elapsed time but did not carry process-counter deltas for each owner interval."
+    },
+    "outcome": {
+      "interpretation": "A prior resident attempt exposed substantial process-level I/O and memory use without identifying which stage or owner accounted for it. The process sample does not establish a Btrfs cause. Existing host resource samples also do not provide owner-pass attribution. This supports adding bounded process observations beside existing owner execution evidence.",
+      "scope": "One previously observed resident failure and a source review of the existing owner-pass trace and ECI projection."
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "definition_id": "env_e37e615224015d39"
+  },
+  "pressure_hypothesis_role": "occurrence",
+  "pressure_hypothesis": {
+    "identity": "ph_environment_ambient_owner_resource_accountability_20261028",
+    "title": "Ambient owner executions lack bounded process-resource evidence",
+    "category": "environmental-service-accountability",
+    "subsystem": "MNCS Environment resource observation, coherence scheduling, and ECI",
+    "owner": "mncs-environment",
+    "basis": "An earlier resident process sample recorded high I/O and memory use but ended before a trace was available, while current owner-pass projections correlated execution IDs and elapsed time without process counters.",
+    "actionable_recommendation": "Sample the scheduler process around existing owner runners, link deltas to exact service execution IDs, retain a bounded ECI view, and make process and child-process attribution limits explicit."
+  },
+  "supporting_sources": [
+    {
+      "identity": "ev_environment_ambient_trigger_subject_projection_pressure_20261028",
+      "kind": "prior-operational-pressure-observation",
+      "repository": "mncs-environment",
+      "path": "evidence/environmental-capability/ambient-trigger-subject-projection-pressure-20261028.json"
+    }
+  ],
+  "measurement_limits": [
+    "The prior process counters are not attributed to a specific owner, Store operation, or filesystem cause.",
+    "No new resident tick was run for this change; live per-owner counter values remain unobserved.",
+    "This observation identifies a missing evidence relationship, not a verified resource pressure or service failure."
+  ]
+}
