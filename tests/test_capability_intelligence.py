@@ -6112,6 +6112,96 @@ def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     assert "service_accountability" not in absent
 
 
+def test_service_accountability_rolls_up_scheduler_verification_status() -> None:
+    execution = {
+        "status": "observed",
+        "source": {"owner_pass_decision_coverage": "complete"},
+        "execution": {
+            "mode": "bounded_reconciliation",
+            "decision_record_status": "recorded",
+            "owner_pass_decision_coverage": "complete",
+            "scheduled_passes": [
+                {
+                    "owner": "doctor",
+                    "service_execution_id": "ase_" + "1" * 32,
+                    "verification_status": "not-established",
+                },
+                {
+                    "owner": "diagnostics",
+                    "service_execution_id": "ase_" + "2" * 32,
+                    "verification_status": "verified",
+                },
+                {
+                    "owner": "projections",
+                    "service_execution_id": "ase_" + "3" * 32,
+                },
+            ],
+            "skipped_passes": [],
+            "owner_failures": [],
+            "owner_pass_results": {"status": "recorded", "results": []},
+        },
+    }
+    direct = capability_intelligence._environment_service_execution_accountability(
+        execution, include_owner_pass_observations=True,
+    )
+    summary = direct["summary"]
+    assert summary["scheduled_pass_verification_status_observation_count"] == 3
+    assert summary["scheduled_pass_verification_status_coverage"] == "complete"
+    assert summary["scheduled_pass_verification_status_counts"] == {
+        "not-established": 1,
+        "not-recorded": 1,
+        "verified": 1,
+    }
+    assert summary["scheduled_pass_verification_status_counts_by_owner"] == {
+        "diagnostics": {"verified": 1},
+        "doctor": {"not-established": 1},
+        "projections": {"not-recorded": 1},
+    }
+    assert direct["owner_pass_observations"]["items"][2][
+        "verification_status"
+    ] == "not-recorded"
+
+    readiness = {
+        "services": [],
+        "source": {"service_declaration_status": "explicit-empty"},
+        "summary": {},
+    }
+    accountability = capability_intelligence._session_service_accountability(
+        readiness, None, {"campaign": {}, "intent": {}},
+        ambient_service_execution=execution,
+    )
+    compact = capability_intelligence._compact_service_accountability_overview(
+        accountability, execution,
+    )
+    compact_summary = compact["summary"]["environment_service_execution"][
+        "summary"
+    ]
+    assert compact_summary[
+        "scheduled_pass_verification_status_counts"
+    ] == summary["scheduled_pass_verification_status_counts"]
+    assert compact_summary[
+        "scheduled_pass_verification_status_counts_by_owner"
+    ] == summary["scheduled_pass_verification_status_counts_by_owner"]
+    compact_priority = (
+        capability_intelligence._compact_session_activity_evidence_priority_overview(
+            {
+                "status": "observed",
+                "service_accountability": accountability,
+                "ambient_service_execution": execution,
+            },
+        )
+    )
+    priority_summary = compact_priority["service_accountability"]["summary"][
+        "environment_service_execution"
+    ]["summary"]
+    assert priority_summary[
+        "scheduled_pass_verification_status_counts"
+    ] == summary["scheduled_pass_verification_status_counts"]
+    assert priority_summary[
+        "scheduled_pass_verification_status_counts_by_owner"
+    ] == summary["scheduled_pass_verification_status_counts_by_owner"]
+
+
 def test_projection_enforces_tight_budget_for_session_service_history(
     tmp_path: Path,
 ) -> None:

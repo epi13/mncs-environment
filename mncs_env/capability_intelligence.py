@@ -3230,6 +3230,54 @@ def _compact_selected_session_delivery_observation(
     }
 
 
+def _compact_scheduled_pass_verification_status_summary(
+    value: Any,
+) -> dict[str, Any]:
+    """Retain bounded scheduler verification-status counts by service owner."""
+    if not isinstance(value, dict):
+        return {}
+    compact: dict[str, Any] = {}
+    count = value.get("scheduled_pass_verification_status_observation_count")
+    if type(count) is int and count >= 0:
+        compact["scheduled_pass_verification_status_observation_count"] = count
+    coverage = value.get("scheduled_pass_verification_status_coverage")
+    if (isinstance(coverage, str)
+            and coverage in {"complete", "partial", "unavailable"}):
+        compact["scheduled_pass_verification_status_coverage"] = coverage
+    status_counts = value.get("scheduled_pass_verification_status_counts")
+    if isinstance(status_counts, dict):
+        compact["scheduled_pass_verification_status_counts"] = {
+            status: count
+            for status, count in list(status_counts.items())[:12]
+            if isinstance(status, str)
+            and re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", status) is not None
+            and type(count) is int and count >= 0
+        }
+    owner_counts = value.get(
+        "scheduled_pass_verification_status_counts_by_owner",
+    )
+    if isinstance(owner_counts, dict):
+        compact_owners: dict[str, dict[str, int]] = {}
+        for owner, counts in list(owner_counts.items())[:16]:
+            if (not isinstance(owner, str)
+                    or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner) is None
+                    or not isinstance(counts, dict)):
+                continue
+            valid_counts = {
+                status: count
+                for status, count in list(counts.items())[:12]
+                if isinstance(status, str)
+                and re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", status) is not None
+                and type(count) is int and count >= 0
+            }
+            if valid_counts:
+                compact_owners[owner] = dict(sorted(valid_counts.items()))
+        compact["scheduled_pass_verification_status_counts_by_owner"] = (
+            dict(sorted(compact_owners.items()))
+        )
+    return compact
+
+
 def _compact_service_accountability_overview(
     value: Any, ambient_service_execution: Any = None,
 ) -> dict[str, Any] | None:
@@ -3356,6 +3404,11 @@ def _compact_service_accountability_overview(
             or (key == "owner_failure_count" and key in execution_summary
                 and execution_summary.get(key) is None)
         }
+        compact_environment_summary.update(
+            _compact_scheduled_pass_verification_status_summary(
+                execution_summary,
+            )
+        )
         failure_details = _compact_environment_owner_failure_details(
             execution_summary.get("owner_failure_details"),
         )
@@ -5272,6 +5325,11 @@ def _compact_session_activity_budget_overview(
                 if isinstance(execution_summary, dict):
                     compact_execution["summary"] = dict(execution_summary)
                     execution_summary = compact_execution["summary"]
+                    execution_summary.update(
+                        _compact_scheduled_pass_verification_status_summary(
+                            execution_summary,
+                        )
+                    )
                     failure_details = _compact_environment_owner_failure_details(
                         execution_summary.get("owner_failure_details"),
                     )
@@ -5803,6 +5861,11 @@ def _compact_session_activity_evidence_priority_overview(
                         )
                         if key in execution_summary
                     }
+                    compact_execution_summary.update(
+                        _compact_scheduled_pass_verification_status_summary(
+                            execution_summary,
+                        )
+                    )
                     owner_result_integrity = (
                         _compact_owner_result_content_integrity(
                             execution_summary.get(
@@ -23277,15 +23340,24 @@ def _environment_service_execution_accountability(
             if (not isinstance(execution_id, str)
                     or re.fullmatch(r"ase_[0-9a-f]{32}", execution_id) is None):
                 continue
+            raw_verification_status = item.get("verification_status")
+            if (isinstance(raw_verification_status, str)
+                    and re.fullmatch(
+                        r"[a-z][a-z0-9_-]{0,79}",
+                        raw_verification_status,
+                    ) is not None):
+                verification_status = raw_verification_status
+            elif "verification_status" not in item:
+                verification_status = "not-recorded"
+            else:
+                verification_status = "invalid"
             row: dict[str, Any] = {
                 "owner_pass": owner,
                 "decision": "scheduled",
                 "service_execution_id": execution_id,
                 "trigger_observation_status": "not-recorded",
                 "outcome_status": item.get("owner_outcome_status", "unknown"),
-                "verification_status": item.get(
-                    "verification_status", "not-established",
-                ),
+                "verification_status": verification_status,
             }
             disposition = item.get("scheduler_disposition_code")
             if type(disposition) is int and disposition >= 0:
@@ -23423,6 +23495,43 @@ def _environment_service_execution_accountability(
         summary["owner_pass_observation_count"] = owner_pass_observations[
             "count"
         ]
+        verification_status_counts: dict[str, int] = {}
+        verification_status_counts_by_owner: dict[str, dict[str, int]] = {}
+        for row in observations:
+            if not isinstance(row, dict) or row.get("decision") != "scheduled":
+                continue
+            status = row.get("verification_status")
+            if (not isinstance(status, str)
+                    or re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", status) is None):
+                status = "invalid"
+            verification_status_counts[status] = (
+                verification_status_counts.get(status, 0) + 1
+            )
+            owner = row.get("owner_pass")
+            if (not isinstance(owner, str)
+                    or re.fullmatch(r"[a-z][a-z0-9-]{0,63}", owner) is None):
+                continue
+            owner_counts = verification_status_counts_by_owner.setdefault(
+                owner, {},
+            )
+            owner_counts[status] = owner_counts.get(status, 0) + 1
+        summary["scheduled_pass_verification_status_observation_count"] = sum(
+            verification_status_counts.values()
+        )
+        decision_coverage = execution.get("owner_pass_decision_coverage")
+        summary["scheduled_pass_verification_status_coverage"] = (
+            decision_coverage
+            if isinstance(decision_coverage, str)
+            and decision_coverage in {"complete", "partial"}
+            else "unavailable"
+        )
+        summary["scheduled_pass_verification_status_counts"] = dict(sorted(
+            verification_status_counts.items(),
+        ))
+        summary["scheduled_pass_verification_status_counts_by_owner"] = {
+            owner: dict(sorted(counts.items()))
+            for owner, counts in sorted(verification_status_counts_by_owner.items())
+        }
     summary["ambient_fulfillment_status"] = (
         execution.get("ambient_fulfillment", "not-established")
         if isinstance(execution, dict) else "not-established"

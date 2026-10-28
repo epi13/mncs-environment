@@ -1456,7 +1456,14 @@ single compact reference path. This lets an agent discover which Environment
 services ran without expanding the full session history. The summary covers
 scheduler decisions only; it does not establish service opportunities,
 fulfillment, agent receipt, or intervention reduction. Partial and unknown
-source coverage remain explicit. Schema version 2 preserves one exact Store
+source coverage remain explicit. The enclosing execution summary also exposes
+`scheduled_pass_verification_status_counts` and
+`scheduled_pass_verification_status_counts_by_owner` for recorded scheduled
+passes. Missing status fields are counted as `not-recorded`, distinct from an
+explicit `not-established` status. Their coverage follows the scheduler's
+complete or partial pass-decision coverage. These are scheduler-reported
+verification states, not independent verification of service correctness,
+agent need, or fulfillment. Schema version 2 preserves one exact Store
 result reference per owner, paired with the service execution and result
 identities. It reports how many returned results have exact references and how
 many references were omitted by the bound. Version 3 adds per-owner source
