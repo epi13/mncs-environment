@@ -1,0 +1,66 @@
+{
+  "captured_at": "2026-10-28T09:32:13Z",
+  "identity": "ev_environment_campaign_preflight_outcome_pressure_correction_20261028",
+  "measurement_basis": "live-ECI-pressure-definition-diagnostic-and-append-only-correction",
+  "measurement_limits": [
+    "This correction changes one recommendation field on one exact immutable observation.",
+    "It does not revise the original live readback result or establish service effectiveness.",
+    "The ECI consistency result depends on the referenced occurrence and corrected record both remaining in the selected evidence pages."
+  ],
+  "observation": {
+    "kind": "environmental-observation-correction",
+    "outcome": {
+      "preserved_original_record": true,
+      "replacement_matches_occurrence_definition": true,
+      "status": "append-only-correction-recorded"
+    },
+    "request": {
+      "corrected_field_paths": [
+        "pressure_hypothesis.actionable_recommendation"
+      ],
+      "projection_identity": "eci_39b40a1a55e55d59",
+      "target_identity": "ev_environment_campaign_preflight_outcome_readback_20261028"
+    },
+    "source_interface": "MNCS Environment ECI pressure definition projection"
+  },
+  "record_correction": {
+    "corrected_field_paths": [
+      "pressure_hypothesis.actionable_recommendation"
+    ],
+    "reason": "The live ECI projection identified conflicting recommendations for one pressure identity. Align this readback with the exact occurrence definition while preserving the immutable original.",
+    "replacement_values": {
+      "pressure_hypothesis.actionable_recommendation": "Persist a bounded result for each accepted campaign checkpoint and expose its validation status and limits through campaign-state and ECI reads."
+    },
+    "schema_version": "mncs.environment.observation-correction/1",
+    "target_reference": {
+      "commit": "84332af3b0fdf8e071a2aec70bc370a57020c96f",
+      "identity": "ev_environment_campaign_preflight_outcome_readback_20261028",
+      "path": "evidence/environmental-capability/campaign-preflight-outcome-readback-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "2ee7f42a8429792c044ed7acc8bcc7617e0a4853c1c5aaa2f975219bcd76bd49"
+    }
+  },
+  "recorder": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "consumer_id": "mncs-environment-capability-campaign",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19"
+  },
+  "related_work": {
+    "campaign_id": "cmp_c2d1ef45b03f9f1c",
+    "environment_id": "renv_36f68baa06a187b0",
+    "session_id": "ses_9db7b7c6f04e4d19",
+    "work_intent_goal": "Improve MNCS's ability to observe, interpret, and improve how the environment serves agents working within MNCS.",
+    "work_intent_id": "int_e9a2959ffe2e952c"
+  },
+  "schema_version": "mncs.environment.environmental-observation/1",
+  "supporting_sources": [
+    {
+      "commit": "84332af3b0fdf8e071a2aec70bc370a57020c96f",
+      "identity": "ev_environment_campaign_preflight_outcome_readback_20261028",
+      "path": "evidence/environmental-capability/campaign-preflight-outcome-readback-20261028.json",
+      "repository": "mncs-environment",
+      "sha256": "2ee7f42a8429792c044ed7acc8bcc7617e0a4853c1c5aaa2f975219bcd76bd49"
+    }
+  ]
+}
