@@ -5571,7 +5571,10 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
                 "identity": language_service,
                 "status": "not-attempted",
                 "code": "environment-invocation-not-admitted",
-                "reason": "session policy did not admit the service invocation",
+                "reason": (
+                    "mncs-language-service is outside this session's "
+                    "writable authority"
+                ),
             },
         ],
     })
@@ -5700,6 +5703,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     )
     services = {item["identity"]: item for item in readiness["services"]}
     assert services[language_service]["status"] == "degraded"
+    assert services[language_service]["operation_admission_reason_class"] == (
+        "outside-writable-authority"
+    )
     assert services[forge_service]["dependencies"] == [{
         "service_identity": language_service,
         "observed_status": "degraded",
@@ -5739,6 +5745,15 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert language_accountability["operation_status"] == "not-attempted"
     assert language_accountability["operation_code"] == (
         "environment-invocation-not-admitted"
+    )
+    assert language_accountability[
+        "operation_admission_reason_class"
+    ] == "outside-writable-authority"
+    assert accountability["summary"][
+        "operation_admission_reason_class_counts"
+    ] == {"outside-writable-authority": 1}
+    assert "outside this session's writable authority" not in json.dumps(
+        accountability
     )
     assert accountable_services[forge_service]["operation_code"] == (
         "service-start-failed"
@@ -6118,6 +6133,13 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert compact_language["recovery_path"]["binding_relation_status"] == (
         "capability-not-present-in-current-binding-snapshot"
     )
+    assert compact_language["operation_admission_reason_class"] == (
+        "outside-writable-authority"
+    )
+    assert "agent_intervention_burden_status" not in compact_language
+    assert compact_accountability["summary"][
+        "agent_intervention_burden_status"
+    ] == "not-measured"
     assert compact_language["bindings"][0]["supporting_events"][0][
         "identity"
     ] == "evt_service_readiness_invoked"
@@ -6130,6 +6152,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert compact_accountability["summary"][
         "readiness_probe_coverage_status"
     ] == "complete-for-selected-snapshot"
+    assert compact_accountability["summary"][
+        "operation_admission_reason_class_counts"
+    ] == {"outside-writable-authority": 1}
     assert private_path not in json.dumps(compact)
 
     observations = session.snapshot["service_observations"]

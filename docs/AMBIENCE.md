@@ -312,6 +312,10 @@ retain priority in the bounded binding-detail view, while an incomplete wider
 inventory remains explicitly partial. Substrate availability and a service
 operation are not treated as proof of provider success, post-operation
 verification, or reduced agent intervention.
+Invocation-admission denials also expose normalized reason classes, allowing
+the projection to distinguish a writable-scope gate from an unresolved denial
+without exposing provider prose or treating a denial as proof that broader
+authority should be granted.
 
 A future campaign that needs another cache, event, or evidence
 architecture should first check whether these primitives already

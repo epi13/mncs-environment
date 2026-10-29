@@ -112,6 +112,13 @@ that an agent need was fulfilled. Declared reconcile bindings are retained in
 the bounded binding-detail window; when the wider inventory is incomplete, the
 relation reports the observed match without claiming a complete inventory.
 
+When a recorded service operation has code
+`environment-invocation-not-admitted`, readiness and service-accountability
+rows expose a normalized `operation_admission_reason_class` and the summary
+counts those classes. The free-form denial reason is not copied. This can
+distinguish an outside-writable-authority gate from an unresolved denial
+without deciding whether expanding that authority would be appropriate.
+
 The compact `owner_decision_summary` groups returned owner-pass observations
 by decision and includes observed result, scheduler-outcome, and verification
 status counts when those fields were recorded. Its source-observation counts

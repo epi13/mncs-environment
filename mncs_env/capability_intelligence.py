@@ -3328,6 +3328,7 @@ def _compact_service_accountability_overview(
         "readiness_probe_configuration_missing_count",
         "readiness_probe_observation_unmatched_count",
         "readiness_probe_coverage_status",
+        "operation_admission_reason_class_counts",
     )
     compact_summary = {
         key: summary[key]
@@ -3353,6 +3354,7 @@ def _compact_service_accountability_overview(
     for key in (
         "capability_relation_status_counts", "readiness_status_counts",
         "reconciliation_operation_status_counts",
+        "operation_admission_reason_class_counts",
         "ambient_probe_use_relation_status_counts",
         "owner_pass_outcome_disposition_counts",
         "owner_pass_outcome_reason_counts",
@@ -10819,6 +10821,19 @@ def _compact_projection(
         # its two nested uncertainty notes concise so exact owner-pass evidence
         # can survive the response budget without duplicating the same caveats.
         compact_accountability = deepcopy(raw_service_accountability)
+        compact_services = compact_accountability.get("services")
+        if isinstance(compact_services, list):
+            # These assurance statuses are repeated in the overview summary;
+            # omit their per-service copies first under response pressure so
+            # actionable recovery and admission evidence remains inspectable.
+            for service in compact_services[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+                if not isinstance(service, dict):
+                    continue
+                for key in (
+                    "ambient_fulfillment_status", "agent_receipt_status",
+                    "agent_intervention_burden_status", "outcome_quality_status",
+                ):
+                    service.pop(key, None)
         if isinstance(compact_accountability.get("measurement_limits"), list):
             compact_accountability["measurement_limits"] = [
                 "Selected-session declarations and bounded owner-pass records do not enumerate every service opportunity or establish agent need, fulfillment, receipt, intervention burden, or outcome quality.",
@@ -23260,6 +23275,10 @@ def _session_service_readiness(
                 row["observed_at"] = observed_at
         if operation is not None and (operation_code := code(operation.get("code"))):
             row["operation_code"] = operation_code
+            if operation_code == "environment-invocation-not-admitted":
+                row["operation_admission_reason_class"] = (
+                    _authority_denial_reason_class(operation.get("reason"))
+                )
         if dependencies:
             row["dependencies"] = [
                 {
@@ -23980,7 +23999,7 @@ def _service_ambient_owner_pass_observation(
             else "complete-for-projected-activity"
         ),
         "interpretation_limit": (
-            "Scoped use does not establish agent need, fulfillment, or reduced burden."
+            "Scoped use does not prove need, fulfillment, or benefit."
         ),
     }
 
@@ -24944,6 +24963,7 @@ def _session_service_accountability(
     relation_counts: dict[str, int] = {}
     readiness_counts: dict[str, int] = {}
     operation_counts: dict[str, int] = {}
+    operation_admission_reason_counts: dict[str, int] = {}
     available_binding_count = 0
     exact_binding_use_count = 0
     capability_name_use_count = 0
@@ -25001,6 +25021,17 @@ def _session_service_accountability(
         if isinstance(operation_status, str):
             operation_counts[operation_status] = (
                 operation_counts.get(operation_status, 0) + 1
+            )
+        operation_reason_class = service.get(
+            "operation_admission_reason_class",
+        )
+        if (isinstance(operation_reason_class, str)
+                and re.fullmatch(
+                    r"[a-z][a-z0-9-]{0,79}", operation_reason_class,
+                )):
+            operation_admission_reason_counts[operation_reason_class] = (
+                operation_admission_reason_counts.get(operation_reason_class, 0)
+                + 1
             )
 
         projected_bindings: list[dict[str, Any]] = []
@@ -25084,6 +25115,12 @@ def _session_service_accountability(
                     bool(delivery)
                     and delivery.get("status") != "unavailable"
                 ),
+            )
+        if isinstance(operation_reason_class, str) and re.fullmatch(
+            r"[a-z][a-z0-9-]{0,79}", operation_reason_class,
+        ):
+            projected["operation_admission_reason_class"] = (
+                operation_reason_class
             )
         for key in ("observation_code", "operation_code"):
             code = service.get(key)
@@ -25195,6 +25232,9 @@ def _session_service_accountability(
         "capability_relation_status_counts": dict(sorted(relation_counts.items())),
         "readiness_status_counts": dict(sorted(readiness_counts.items())),
         "reconciliation_operation_status_counts": dict(sorted(operation_counts.items())),
+        "operation_admission_reason_class_counts": dict(sorted(
+            operation_admission_reason_counts.items(),
+        )),
         "available_service_capability_binding_count": available_binding_count,
         "exact_binding_use_observed_count": exact_binding_use_count,
         "capability_name_use_observed_count": capability_name_use_count,
@@ -25284,7 +25324,6 @@ def _session_service_accountability(
         "measurement_limits": [
             "Service readiness and reconciliation status come from one session snapshot; they are not historical service outcomes.",
             "A probe-capability match relates exact capability identity to a current binding, not successful provider behavior.",
-            "Recovery links do not establish causality.",
             "Only invocation evidence attributed to the exact current binding is counted as exact binding use; capability-name-only activity is reported separately.",
             "An invocation records use of an Environment binding; it does not establish that the service was needed, fulfilled an opportunity, or reduced agent work.",
             "Discoverability, agent receipt, eligible service opportunities, intervention burden, and outcome quality remain unavailable unless separately recorded.",
