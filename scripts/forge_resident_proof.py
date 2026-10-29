@@ -221,7 +221,10 @@ def main():
         from mncs_env import capabilities
         bindings = capabilities.discover_capabilities(
             campaign, repository_roots={"mncs-forge": alternate,
-                "mncs-language": campaign / "mncs-language", "mncs-language-service": campaign / "mncs-language-service"})
+                "mncs-language": campaign / "mncs-language",
+                "mncs-language-service": campaign / "mncs-language-service",
+                "mncs-compiler": campaign / "mncs-compiler",
+                "mncs-vm": campaign / "mncs-vm"})
         binding = next(item for item in bindings if item["capability"] == "mncs-forge:resident-status")
         ambient = capabilities.invoke(binding, ["--config", str(config)],
             env=restored["identity"]["runtime"], timeout_seconds=3, output_limit_bytes=16384)

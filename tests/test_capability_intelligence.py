@@ -5752,6 +5752,30 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert accountability["summary"][
         "operation_admission_reason_class_counts"
     ] == {"outside-writable-authority": 1}
+    admission_observations = accountability["summary"][
+        "service_admission_observations"
+    ]
+    assert admission_observations["status"] == "observed"
+    assert admission_observations["coverage_status"] == (
+        "complete-for-selected-snapshot"
+    )
+    assert admission_observations["classified_admission_count"] == 1
+    assert admission_observations["records"] == [{
+        "service_identity": language_service,
+        "admission_reason_class": "outside-writable-authority",
+        "readiness_status": "degraded",
+        "operation_status": "not-attempted",
+        "required": True,
+        "operation_code": "environment-invocation-not-admitted",
+        "source_reference": {
+            "kind": "current-session-snapshot-service",
+            "snapshot_sequence": 37,
+        },
+    }]
+    assert admission_observations["agent_need_status"] == "not-established"
+    assert admission_observations[
+        "agent_intervention_burden_status"
+    ] == "not-measured"
     assert "outside this session's writable authority" not in json.dumps(
         accountability
     )
@@ -5824,6 +5848,18 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     ]["summary"]["operation_admission_reason_class_counts"] == {
         "outside-writable-authority": 1,
     }
+    assert focused_summary_fallback["session_activity"][
+        "service_accountability"
+    ]["summary"]["service_admission_observations"]["records"][0][
+        "admission_reason_class"
+    ] == "outside-writable-authority"
+    compact_admission = focused_summary_fallback["session_activity"][
+        "service_accountability"
+    ]["summary"]["service_admission_observations"]
+    assert compact_admission["agent_need_status"] == "not-established"
+    assert compact_admission[
+        "agent_intervention_burden_status"
+    ] == "not-measured"
     assert capability_intelligence._projection_response_size(
         focused_summary_fallback,
     ) <= focused_size - 1
@@ -6201,6 +6237,9 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert compact_accountability["summary"][
         "operation_admission_reason_class_counts"
     ] == {"outside-writable-authority": 1}
+    assert "service_admission_observations" not in compact_accountability[
+        "summary"
+    ]
     assert private_path not in json.dumps(compact)
 
     observations = session.snapshot["service_observations"]
@@ -6339,6 +6378,46 @@ def test_service_invocation_admission_reason_classes_preserve_cause() -> None:
     ) == "outside-writable-authority"
     assert classifier("unrecognized admission condition") == "other-denial"
     assert classifier(None) == "reason-unavailable"
+
+
+def test_service_admission_observations_preserve_partial_snapshot_limits() -> None:
+    summary = capability_intelligence._service_admission_observations(
+        [{
+            "service_identity": "mncs-language-service:resident-workspace",
+            "capability": "mncs-language-service:resident-status",
+            "required": True,
+            "readiness_status": "degraded",
+            "operation_status": "not-attempted",
+            "operation_code": "environment-invocation-not-admitted",
+            "operation_admission_reason_class": "outside-writable-authority",
+            "source_reference": {
+                "kind": "current-session-snapshot-service",
+                "session_id": "ses_admission_observation",
+                "environment_id": "renv_admission_observation",
+                "snapshot_sequence": 12,
+                "service_identity": "mncs-language-service:resident-workspace",
+            },
+        }],
+        2,
+        coverage_complete=False,
+    )
+    assert summary["status"] == "partial"
+    assert summary["coverage_status"] == "partial-selected-snapshot"
+    assert summary["service_rows_examined_count"] == 1
+    assert summary["service_rows_omitted_count"] == 1
+    assert summary["classified_admission_count"] == 1
+    assert summary["records"][0]["admission_reason_class"] == (
+        "outside-writable-authority"
+    )
+    assert summary["agent_need_status"] == "not-established"
+    assert summary["agent_intervention_burden_status"] == "not-measured"
+    compact = capability_intelligence._compact_service_admission_observations(
+        summary,
+    )
+    assert compact is not None
+    assert compact["causal_status"] == "not-established"
+    assert compact["agent_need_status"] == "not-established"
+    assert compact["agent_intervention_burden_status"] == "not-measured"
 
 
 def test_verification_executor_readiness_summary_covers_detail_omissions() -> None:

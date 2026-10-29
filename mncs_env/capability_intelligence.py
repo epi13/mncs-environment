@@ -3461,6 +3461,64 @@ def _compact_scheduled_pass_verification_status_summary(
     return compact
 
 
+def _compact_service_admission_observations(
+    value: Any,
+) -> dict[str, Any] | None:
+    """Keep service-specific admission causes when detail rows are compacted."""
+    if (not isinstance(value, dict)
+            or value.get("schema_version")
+            != "mncs.environment.service-admission-observations/1"
+            or value.get("scope")
+            != "selected-session-service-operation-observations"):
+        return None
+    statuses = {
+        "observed", "partial", "not-observed-in-complete-snapshot",
+        "unavailable",
+    }
+    status = value.get("status")
+    coverage = value.get("coverage_status")
+    if (status not in statuses
+            or coverage not in {
+                "complete-for-selected-snapshot", "partial-selected-snapshot",
+                "unknown",
+            }):
+        return None
+    result: dict[str, Any] = {
+        "schema_version": value["schema_version"],
+        "status": status,
+        "coverage_status": coverage,
+        "causal_status": "not-established",
+        "agent_need_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+    }
+    for key in ("records_omitted_count", "invalid_record_count"):
+        count = value.get(key)
+        if type(count) is int and 0 < count <= 10**9:
+            result[key] = count
+    records = value.get("records")
+    records = records if isinstance(records, list) else []
+    compact_records = []
+    for row in records[:8]:
+        if not isinstance(row, dict):
+            continue
+        identity = row.get("service_identity")
+        reason_class = row.get("admission_reason_class")
+        if (not isinstance(identity, str)
+                or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9:._/-]{0,159}", identity) is None
+                or not isinstance(reason_class, str)
+                or re.fullmatch(r"[a-z][a-z0-9-]{0,79}", reason_class) is None):
+            continue
+        compact_row: dict[str, Any] = {
+            "service_identity": identity,
+            "admission_reason_class": reason_class,
+        }
+        if type(row.get("required")) is bool:
+            compact_row["required"] = row["required"]
+        compact_records.append(compact_row)
+    result["records"] = compact_records
+    return result
+
+
 def _compact_service_accountability_overview(
     value: Any, ambient_service_execution: Any = None,
     *, include_service_details: bool = False,
@@ -3511,6 +3569,7 @@ def _compact_service_accountability_overview(
         "readiness_probe_observation_unmatched_count",
         "readiness_probe_coverage_status",
         "operation_admission_reason_class_counts",
+        "service_admission_observations",
     )
     compact_summary = {
         key: summary[key]
@@ -3522,6 +3581,13 @@ def _compact_service_accountability_overview(
         }
             and key in summary and summary[key] is None)
     }
+    service_admission_observations = _compact_service_admission_observations(
+        summary.get("service_admission_observations"),
+    )
+    if service_admission_observations is not None:
+        compact_summary["service_admission_observations"] = (
+            service_admission_observations
+        )
     executor_readiness_relation = summary.get(
         "ambient_verification_executor_readiness_relation",
     )
@@ -3740,7 +3806,10 @@ def _compact_service_accountability_overview(
             max(0, projected_count - len(compact_services)),
         )
     else:
-        omitted = projected_count + previously_omitted
+        # projected_service_count is already the total represented by the
+        # overview. If a prior compaction supplied an omission count, adding
+        # the total again would double-count those same service rows.
+        omitted = max(projected_count, previously_omitted)
     result = {
         "schema_version": value.get("schema_version"),
         "status": value.get("status"),
@@ -5981,6 +6050,7 @@ def _compact_session_activity_budget_overview(
                 compact_accountability["source"] = {
                     key: accountability_source[key]
                     for key in (
+                        "service_session_id", "environment_id",
                         "snapshot_sequence", "service_declaration_status",
                     )
                     if key in accountability_source
@@ -12560,6 +12630,23 @@ def _compact_projection(
             result["session_activity"].get("ambient_owner_pass_activity"), dict,
         ):
             result["session_activity"].pop("ambient_owner_pass_activity")
+        elif (isinstance(
+            result["session_activity"].get("service_accountability"), dict,
+        ) and result["session_activity"]["service_accountability"].get(
+            "services"
+        ) and isinstance(
+            result["session_activity"]["service_accountability"].get(
+                "summary",
+            ), dict,
+        ) and result["session_activity"]["service_accountability"][
+            "summary"
+        ].get("service_admission_observations") is not None):
+            # Prefer exact service detail rows when the same admission link
+            # would force those rows out. The summary-only fallback retains
+            # the link if the response needs to omit the detail rows entirely.
+            result["session_activity"]["service_accountability"][
+                "summary"
+            ].pop("service_admission_observations", None)
         elif (result["session_activity"].get(
             "service_accountability", {},
         ).get("services")):
@@ -25256,6 +25343,101 @@ def _service_verification_dependency_correlation(
     }
 
 
+def _service_admission_observations(
+    services: Any, declared_service_count: Any, *, coverage_complete: bool,
+) -> dict[str, Any]:
+    """Connect each recorded admission cause to its declared service context."""
+    rows = services if isinstance(services, list) else []
+    declared_count = (
+        declared_service_count
+        if type(declared_service_count) is int and declared_service_count >= 0
+        else None
+    )
+    reason_rows = [
+        row for row in rows
+        if isinstance(row, dict)
+        and isinstance(row.get("operation_admission_reason_class"), str)
+        and re.fullmatch(
+            r"[a-z][a-z0-9-]{0,79}",
+            row["operation_admission_reason_class"],
+        )
+    ]
+    records = []
+    invalid_records = 0
+    reason_counts: dict[str, int] = {}
+    for row in reason_rows:
+        identity = row.get("service_identity")
+        if (not isinstance(identity, str)
+                or re.fullmatch(
+                    r"[A-Za-z0-9][A-Za-z0-9:._/-]{0,159}", identity,
+                ) is None):
+            invalid_records += 1
+            continue
+        reason_class = row["operation_admission_reason_class"]
+        reason_counts[reason_class] = reason_counts.get(reason_class, 0) + 1
+        record: dict[str, Any] = {
+            "service_identity": identity,
+            "admission_reason_class": reason_class,
+            "readiness_status": row.get("readiness_status", "unknown"),
+            "operation_status": row.get("operation_status", "not-recorded"),
+        }
+        if type(row.get("required")) is bool:
+            record["required"] = row["required"]
+        operation_code = row.get("operation_code")
+        if (isinstance(operation_code, str)
+                and re.fullmatch(r"[a-z][a-z0-9.-]{0,79}", operation_code)):
+            record["operation_code"] = operation_code
+        reference = row.get("source_reference")
+        if (isinstance(reference, dict)
+                and reference.get("kind")
+                == "current-session-snapshot-service"
+                and reference.get("service_identity") == identity):
+            source_reference = {"kind": "current-session-snapshot-service"}
+            sequence = reference.get("snapshot_sequence")
+            if type(sequence) is int and sequence >= 0:
+                source_reference["snapshot_sequence"] = sequence
+            record["source_reference"] = source_reference
+        records.append(record)
+    complete = (
+        coverage_complete
+        and declared_count is not None
+        and len(rows) == declared_count
+        and invalid_records == 0
+    )
+    coverage_status = (
+        "complete-for-selected-snapshot" if complete
+        else "partial-selected-snapshot" if declared_count is not None
+        else "unknown"
+    )
+    returned = records[:8]
+    return {
+        "schema_version": "mncs.environment.service-admission-observations/1",
+        "status": (
+            "observed" if records and complete and len(records) <= 8
+            else "partial" if records
+            else "not-observed-in-complete-snapshot" if complete
+            else "unavailable"
+        ),
+        "scope": "selected-session-service-operation-observations",
+        "coverage_status": coverage_status,
+        "declared_service_count": declared_count,
+        "service_rows_examined_count": len(rows),
+        "service_rows_omitted_count": (
+            max(0, declared_count - len(rows))
+            if declared_count is not None else 0
+        ),
+        "classified_admission_count": len(reason_rows),
+        "returned_record_count": len(returned),
+        "records_omitted_count": max(0, len(records) - len(returned)),
+        "invalid_record_count": invalid_records,
+        "reason_class_counts": dict(sorted(reason_counts.items())),
+        "records": returned,
+        "causal_status": "not-established",
+        "agent_need_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+    }
+
+
 def _session_service_accountability(
     service_readiness: Any, capability_delivery: Any,
     snapshot: dict[str, Any] | None = None,
@@ -25646,6 +25828,10 @@ def _session_service_accountability(
     readiness_summary = (
         readiness_summary if isinstance(readiness_summary, dict) else {}
     )
+    readiness_source = service_readiness.get("source")
+    readiness_source = (
+        readiness_source if isinstance(readiness_source, dict) else {}
+    )
     declared_service_count = readiness_summary.get("declared_service_count")
     if type(declared_service_count) is not int or declared_service_count < 0:
         declared_service_count = len(raw_services)
@@ -25730,6 +25916,14 @@ def _session_service_accountability(
         "operation_admission_reason_class_counts": dict(sorted(
             operation_admission_reason_counts.items(),
         )),
+        "service_admission_observations": _service_admission_observations(
+            services, declared_service_count,
+            coverage_complete=(
+                service_readiness.get("status") == "observed"
+                and readiness_source.get("declared_services_truncated") is False
+                and readiness_source.get("operations_truncated") is False
+            ),
+        ),
         "available_service_capability_binding_count": available_binding_count,
         "exact_binding_use_observed_count": exact_binding_use_count,
         "capability_name_use_observed_count": capability_name_use_count,

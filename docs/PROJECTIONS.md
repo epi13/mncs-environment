@@ -1355,6 +1355,19 @@ snapshot remains distinct from binding availability and observed use, so a
 ready binding does not imply a ready service. Source references retain the
 session, Environment, and snapshot revision. The summary repeats readiness
 probe coverage counts to relate this view to its declarations and records.
+The focused services view retains `service_admission_observations` in its
+summary-only response. Each bounded record links the normalized
+operation-admission cause to the exact service identity and requiredness; the
+enclosing service source identifies the session, Environment, and snapshot
+revision. Its coverage describes the selected service-operation snapshot only;
+it is not a denominator of agent needs or eligible service opportunities. The
+relation does not establish that a service caused a limitation or that an agent
+had to compensate for it. Compact forms preserve the explicit
+`not-established` agent-need and `not-measured` intervention-burden statuses.
+The broader environmental-capability projection prefers per-service detail
+rows when its response budget is tight and may omit this derived relation in
+that compact view.
+
 When `requirements.services` is explicitly present as an empty list, the
 projection reports `status: empty-declared-scope`, zero declared readiness
 services, and the session, Environment, snapshot, campaign, and WorkIntent
