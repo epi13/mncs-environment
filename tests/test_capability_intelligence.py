@@ -10138,6 +10138,75 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
     assert activity_candidate_summary["unique_pressure_count_status"] == (
         "not-established"
     )
+    exact_join_basis = (
+        "exact resolution issue code, repository, relative dependency path, and resolution scope"
+    )
+    dependency_correlation = {
+        "schema_version": (
+            "mncs.environment.service-verification-dependency-correlation/1"
+        ),
+        "status": "observed",
+        "join_basis": exact_join_basis,
+        "shared_dependency_count": 1,
+        "groups": [{
+            "resolution_issue_code": "dependency-path-not-present",
+            "dependency": {
+                "repository": "mncs-compiler",
+                "path": ".bootstrap/target/release/mncs-compiler-stage0-probe",
+            },
+            "resolution_scope": "selected-checkout-closure",
+            "service_count": 2,
+            "verification_obligation_observation_count": 8,
+        }],
+        "matched_groups_omitted_count": 0,
+        "causal_status": "not-established",
+    }
+    readiness_relation["service_recovery_dependency_correlation"] = (
+        dependency_correlation
+    )
+    exact_overlap_summary = (
+        capability_intelligence._session_activity_pressure_candidate_summary({
+            "service_readiness": {
+                "summary": {"investigation_candidate_count": 2},
+            },
+            "service_accountability": accountability,
+        })
+    )
+    assert exact_overlap_summary["candidate_occurrence_count"] == 3
+    assert exact_overlap_summary["unique_pressure_count_status"] == (
+        "not-established"
+    )
+    assert exact_overlap_summary["cross_source_overlap_status"] == "partial"
+    assert exact_overlap_summary[
+        "exact_service_verification_dependency_overlap"
+    ] == {
+        "shared_dependency_group_count": 1,
+        "relation_status": "observed",
+        "source_relation": (
+            "session_activity.service_accountability.summary."
+            "ambient_verification_executor_readiness_relation."
+            "service_recovery_dependency_correlation"
+        ),
+        "causal_status": "not-established",
+    }
+    readiness_relation["service_recovery_dependency_correlation"] = {
+        **dependency_correlation,
+        "join_basis": "same provider identity",
+    }
+    unrecognized_overlap_summary = (
+        capability_intelligence._session_activity_pressure_candidate_summary({
+            "service_accountability": accountability,
+        })
+    )
+    assert unrecognized_overlap_summary["cross_source_overlap_status"] == (
+        "not-assessed"
+    )
+    assert "exact_service_verification_dependency_overlap" not in (
+        unrecognized_overlap_summary
+    )
+    readiness_relation["service_recovery_dependency_correlation"] = (
+        dependency_correlation
+    )
     projection["session_activity"]["service_accountability"] = accountability
     projection["session_activity_pressure_candidate_summary"] = (
         capability_intelligence._session_activity_pressure_candidate_summary(
@@ -10159,6 +10228,11 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "session_activity_pressure_candidate_summary"
     ]["candidate_occurrence_counts_by_source"][
         "verified-unmeasurable-verification-obligations"
+    ] == 1
+    assert accountable_compact_projection[
+        "session_activity_pressure_candidate_summary"
+    ]["exact_service_verification_dependency_overlap"][
+        "shared_dependency_group_count"
     ] == 1
     assert accountable_compact_projection["session_activity"][
         "service_accountability"

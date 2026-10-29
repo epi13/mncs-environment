@@ -4901,6 +4901,39 @@ def _ambient_verification_executor_readiness_relation(
     return relation
 
 
+def _session_activity_exact_dependency_overlap(
+    readiness_relation: Any,
+) -> dict[str, Any] | None:
+    """Expose the existing exact service/verification join in the summary."""
+    correlation = (
+        readiness_relation.get("service_recovery_dependency_correlation")
+        if isinstance(readiness_relation, dict) else None
+    )
+    if (not isinstance(correlation, dict)
+            or correlation.get("schema_version")
+            != "mncs.environment.service-verification-dependency-correlation/1"
+            or correlation.get("status") not in {"observed", "partial"}
+            or correlation.get("join_basis") != (
+                "exact resolution issue code, repository, relative dependency path, and resolution scope"
+            )):
+        return None
+    group_count = correlation.get("shared_dependency_count")
+    groups = correlation.get("groups")
+    if (type(group_count) is not int or group_count < 1
+            or not isinstance(groups, list) or not groups):
+        return None
+    return {
+        "shared_dependency_group_count": group_count,
+        "relation_status": correlation["status"],
+        "source_relation": (
+            "session_activity.service_accountability.summary."
+            "ambient_verification_executor_readiness_relation."
+            "service_recovery_dependency_correlation"
+        ),
+        "causal_status": "not-established",
+    }
+
+
 def _session_activity_pressure_candidate_summary(
     activity: Any,
 ) -> dict[str, Any]:
@@ -4956,6 +4989,9 @@ def _session_activity_pressure_candidate_summary(
     if (type(verified_verification_candidates) is not int
             or verified_verification_candidates < 0):
         verified_verification_candidates = 0
+    exact_dependency_overlap = _session_activity_exact_dependency_overlap(
+        readiness_relation,
+    )
 
     counts = {
         "rpc-failure-candidates": row_count("rpc_failure_candidates"),
@@ -4979,10 +5015,18 @@ def _session_activity_pressure_candidate_summary(
         "candidate_occurrence_count": sum(counts.values()),
         "candidate_occurrence_counts_by_source": counts,
         "unique_pressure_count_status": "not-established",
-        "cross_source_overlap_status": "not-assessed",
+        "cross_source_overlap_status": (
+            "partial" if exact_dependency_overlap is not None
+            else "not-assessed"
+        ),
         "environmental_defect_status": "not-established",
         "agent_intervention_burden_status": "not-measured",
         "recurrence_status": "not-established",
+        **({
+            "exact_service_verification_dependency_overlap": (
+                exact_dependency_overlap
+            ),
+        } if exact_dependency_overlap is not None else {}),
         "measurement_limits": [
             "Counts are bounded source-category occurrences and may overlap; they are not a count of unique causes or defects.",
             "The nested verification candidate summary retains exact Store evidence references and its own coverage limits.",
@@ -11601,6 +11645,20 @@ def _compact_projection(
             )
             if key in candidate_summary
         }
+        overlap = candidate_summary.get(
+            "exact_service_verification_dependency_overlap",
+        )
+        if isinstance(overlap, dict):
+            compact_candidate_summary[
+                "exact_service_verification_dependency_overlap"
+            ] = {
+                key: overlap[key]
+                for key in (
+                    "shared_dependency_group_count", "relation_status",
+                    "source_relation", "causal_status",
+                )
+                if key in overlap
+            }
         compact_candidate_summary["candidate_occurrence_counts_by_source"] = {
             key: count for key, count in candidate_counts.items()
             if isinstance(key, str) and type(count) is int and count >= 0
@@ -12809,7 +12867,7 @@ def _focus_session_activity(
                         )
                 compact_execution = _compact_focused_service_execution(
                     environment_execution,
-                    include_verification_details=False,
+                    include_verification_details=True,
                 )
                 if compact_execution is not None:
                     compact_summary = compact_accountability.get("summary")

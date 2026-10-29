@@ -1610,7 +1610,14 @@ source counts. This is a count of bounded source-category occurrences;
 categories may overlap, so it is not a count of unique pressures or causes.
 The summary explicitly leaves uniqueness, defect attribution, and
 intervention burden unestablished. The nested verification summary carries
-the source pointers needed to inspect the underlying records.
+the source pointers needed to inspect the underlying records. When the
+service-accountability relation has an exact service-recovery/verification
+dependency join, the summary marks cross-source overlap as `partial` and adds
+`exact_service_verification_dependency_overlap` with the observed shared-group
+count, relation coverage status, and a path to the nested source relation. The
+exact join basis and dependency details remain in that source relation. This only summarizes that
+selected-session dependency join; it is not an exhaustive pressure-overlap
+analysis, a unique-cause count, or a causal claim.
 
 When a Family ambient pass persists `family_last_summary`, ECI exposes it as
 `session_activity.family_ambient_observation`, with the selected session,
