@@ -2626,7 +2626,11 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
     readiness_status_counts: dict[str, int] = {}
     executor_availability_status_counts: dict[str, int] = {}
     unavailable_binding_candidates: dict[tuple[str, str], set[str]] = {}
+    unavailable_dependency_candidates: dict[
+        tuple[str, str, str], dict[str, set[tuple[str, str]]]
+    ] = {}
     unavailable_binding_detail_omitted_count = 0
+    unavailable_binding_resolution_issue_not_recorded_count = 0
     partial_same_provider_context_count = 0
     for relation in raw_obligations:
         if not isinstance(relation, dict):
@@ -2761,6 +2765,23 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
                 unavailable_binding_candidates.setdefault(key, set()).add(
                     compact_relation["obligation_identity"],
                 )
+                resolution_issue = _compact_invocation_resolution_issue(
+                    binding.get("availability_resolution_issue"),
+                )
+                if resolution_issue is None:
+                    unavailable_binding_resolution_issue_not_recorded_count += 1
+                    continue
+                dependency = resolution_issue["dependency"]
+                issue_key = (
+                    resolution_issue["code"], dependency["repository"],
+                    dependency["path"],
+                )
+                unavailable_dependency_candidates.setdefault(
+                    issue_key, {},
+                ).setdefault(binding_capability, set()).add((
+                    compact_relation["obligation_identity"],
+                    binding_capability,
+                ))
         if len(compact_obligations) >= 2:
             omitted_by_budget += 1
             continue
@@ -2791,6 +2812,23 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
         for (capability, availability_code), obligations
         in sorted(unavailable_binding_candidates.items())[:8]
     ]
+    unavailable_dependency_groups = []
+    for (issue_code, repository, path), capabilities in sorted(
+        unavailable_dependency_candidates.items(),
+    )[:8]:
+        capability_names = sorted(capabilities)
+        unavailable_dependency_groups.append({
+            "resolution_issue_code": issue_code,
+            "dependency": {"repository": repository, "path": path},
+            "binding_observation_count": sum(
+                len(observations) for observations in capabilities.values()
+            ),
+            "dependent_capability_count": len(capabilities),
+            "dependent_capabilities": capability_names[:8],
+            "dependent_capabilities_omitted_count": max(
+                0, len(capability_names) - 8,
+            ),
+        })
     result["provider_readiness_summary"] = {
         "schema_version": (
             "mncs.environment.verification-executor-readiness-summary/1"
@@ -2802,6 +2840,7 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
             and readiness_context_count == readiness_candidate_count
             and partial_same_provider_context_count == 0
             and unavailable_binding_detail_omitted_count == 0
+            and unavailable_binding_resolution_issue_not_recorded_count == 0
             and value.get("binding_scan_complete") is True
             else "partial"
         ),
@@ -2825,12 +2864,22 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
         "same_provider_unavailable_binding_detail_omitted_count": (
             unavailable_binding_detail_omitted_count
         ),
+        "same_provider_unavailable_binding_resolution_issue_not_recorded_count": (
+            unavailable_binding_resolution_issue_not_recorded_count
+        ),
         "same_provider_partial_context_count": (
             partial_same_provider_context_count
         ),
         "same_provider_unavailable_bindings": unavailable_binding_groups,
         "same_provider_unavailable_binding_groups_omitted_count": max(
             0, len(unavailable_binding_candidates) - len(unavailable_binding_groups),
+        ),
+        "same_provider_unavailable_dependency_groups": (
+            unavailable_dependency_groups
+        ),
+        "same_provider_unavailable_dependency_groups_omitted_count": max(
+            0, len(unavailable_dependency_candidates)
+            - len(unavailable_dependency_groups),
         ),
         "causal_status": "not-established",
         "measurement_limits": [

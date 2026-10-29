@@ -124,12 +124,12 @@ For ambient verification, `ambient_verification_executor_readiness_relation`
 also carries a `provider_readiness_summary` over integrity-verified
 selected-session obligations. The summary preserves readiness and executor
 availability counts, plus repeated same-provider unavailable capability
-codes, even when the exact-link detail window returns only two rows. It
-reports how many detail rows were omitted and keeps the relationship partial
-when source context was incomplete. These are bounded context observations;
-they do not establish that provider unavailability caused a verification gap,
-that an agent needed or received the capability, or that intervention was
-reduced.
+codes and repository-relative resolution dependencies, even when the
+exact-link detail window returns only two rows. It reports how many detail
+rows were omitted and keeps the relationship partial when source context was
+incomplete. These are bounded context observations; they do not establish
+that provider unavailability caused a verification gap, that an agent needed
+or received the capability, or that intervention was reduced.
 
 The compact `owner_decision_summary` groups returned owner-pass observations
 by decision and includes observed result, scheduler-outcome, and verification

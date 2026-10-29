@@ -6328,6 +6328,18 @@ def test_verification_executor_readiness_summary_covers_detail_omissions() -> No
                     "unavailable_bindings": [{
                         "capability": "mncs-compiler:compiler-build",
                         "availability_code": "provider-invocation-unresolvable",
+                        "availability_resolution_issue": {
+                            "schema_version": (
+                                "mncs.environment.invocation-resolution-issue/1"
+                            ),
+                            "code": "dependency-path-not-present",
+                            "dependency": {
+                                "repository": "mncs-compiler",
+                                "path": ".bootstrap/bin/compiler-probe",
+                            },
+                            "resolution_scope": "selected-checkout-closure",
+                            "status": "unresolved",
+                        },
                     }],
                 },
             },
@@ -6366,6 +6378,20 @@ def test_verification_executor_readiness_summary_covers_detail_omissions() -> No
         "capability": "mncs-compiler:compiler-build",
         "availability_code": "provider-invocation-unresolvable",
         "candidate_observation_count": 3,
+    }]
+    assert summary[
+        "same_provider_unavailable_binding_resolution_issue_not_recorded_count"
+    ] == 0
+    assert summary["same_provider_unavailable_dependency_groups"] == [{
+        "resolution_issue_code": "dependency-path-not-present",
+        "dependency": {
+            "repository": "mncs-compiler",
+            "path": ".bootstrap/bin/compiler-probe",
+        },
+        "binding_observation_count": 3,
+        "dependent_capability_count": 1,
+        "dependent_capabilities": ["mncs-compiler:compiler-build"],
+        "dependent_capabilities_omitted_count": 0,
     }]
 
 
