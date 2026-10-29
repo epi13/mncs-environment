@@ -276,13 +276,16 @@ class EpochTests(DoctorFixture):
         self.assertEqual(code, 0, terse)
         self.assertEqual(terse["observation"], "epoch")
 
-    def test_status_terse_falls_back_when_epoch_is_stale(self):
+    def test_status_terse_marks_snapshot_as_historical_without_claiming_epoch_stale(self):
         self.ready()
         _, first = self.enter()
         (self.project / "notes.txt").write_text("uncommitted work")
         code, terse = self.run_cli("status", first["session_id"], "--terse")
         self.assertEqual(code, 0, terse)
         self.assertEqual(terse["observation"], "snapshot")
+        self.assertIn("historical snapshot", terse["note"])
+        self.assertIn("did not validate Doctor epoch freshness", terse["note"])
+        self.assertNotIn("epoch stale", terse["note"])
 
     def test_fileside_epoch_ttl_expiry(self):
         self.ready()

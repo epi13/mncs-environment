@@ -758,7 +758,9 @@ def cmd_status(args: argparse.Namespace) -> int:
                  "unavailable": recorded.get("unavailable", {"count": 0, "digest": None}),
                  "readiness": recorded.get("readiness"),
                  "lifecycle": snapshot.get("lifecycle"),
-                 "note": "epoch stale or missing; run doctor for a fresh validated pass"})
+                 "note": ("historical snapshot; this status pass did not validate "
+                          "Doctor epoch freshness or probe live services; run health "
+                          "for live read-only probes or doctor for a validated pass")})
             return 0
     if args.session:
         with closing(_open(args)) as session:
