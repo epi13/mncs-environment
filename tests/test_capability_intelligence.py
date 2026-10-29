@@ -6280,6 +6280,95 @@ def test_service_recovery_path_exposes_bounded_binding_issue_without_provider_pr
     )
 
 
+def test_service_invocation_admission_reason_classes_preserve_cause() -> None:
+    classifier = (
+        capability_intelligence._service_invocation_admission_reason_class
+    )
+    assert classifier(
+        "capability 'mncs-doctor:compiler-vm-reconcile' is not available: "
+        "composition toolchain unresolvable"
+    ) == "capability-unavailable"
+    assert classifier(
+        "mncs-language-service is outside this session's writable authority"
+    ) == "outside-writable-authority"
+    assert classifier("unrecognized admission condition") == "other-denial"
+    assert classifier(None) == "reason-unavailable"
+
+
+def test_verification_executor_readiness_summary_covers_detail_omissions() -> None:
+    session_id = "ses_executor_readiness_summary"
+    obligations = []
+    for index, suffix in enumerate(("a", "b", "c"), start=1):
+        obligation = f"mncs-compiler.executor-readiness-{index}"
+        obligations.append({
+            "repository": "mncs-compiler",
+            "obligation_identity": obligation,
+            "unmeasurable_reason": "executor-not-native",
+            "obligation_example_status": "complete",
+            "capability_identity": (
+                f"mncs-compiler:verification-executor/{obligation}"
+            ),
+            "verification_source_integrity_status": "verified",
+            "owner_result_content_integrity_status": (
+                "content-integrity-verified"
+            ),
+            "verification_evidence_reference": (
+                f"mncs-store:{session_id}:verification:" + suffix * 64
+            ),
+            "owner_result_reference": (
+                f"mncs-store:{session_id}:incremental-coherence:verification:"
+                + str(index) * 64
+            ),
+            "provider_execution_readiness": {
+                "readiness_status": "not-established",
+                "executor_availability_status": "available",
+                "binding_scan_complete": True,
+                "same_provider_capability_context": {
+                    "status": "observed",
+                    "unavailable_bindings": [{
+                        "capability": "mncs-compiler:compiler-build",
+                        "availability_code": "provider-invocation-unresolvable",
+                    }],
+                },
+            },
+        })
+    context = capability_intelligence._compact_verification_executor_context({
+        "status": "observed",
+        "scope": (
+            "selected-session-integrity-verified-unmeasurable-"
+            "verification-obligations"
+        ),
+        "binding_scan_complete": True,
+        "obligation_count": len(obligations),
+        "obligations_returned": len(obligations),
+        "obligations": obligations,
+    })
+
+    assert context is not None
+    assert len(context["obligations"]) == 2
+    summary = context["provider_readiness_summary"]
+    assert summary["status"] == "observed"
+    assert summary["source_obligation_count"] == 3
+    assert summary["verified_observation_count"] == 3
+    assert summary["provider_readiness_context_count"] == 3
+    assert summary["detail_rows_returned_count"] == 2
+    assert summary["detail_rows_omitted_by_response_budget"] == 1
+    assert summary["readiness_status_counts"] == {"not-established": 3}
+    assert summary["executor_availability_status_counts"] == {"available": 3}
+    assert summary[
+        "same_provider_unavailable_binding_observation_count"
+    ] == 3
+    assert summary[
+        "same_provider_unavailable_binding_detail_omitted_count"
+    ] == 0
+    assert summary["same_provider_partial_context_count"] == 0
+    assert summary["same_provider_unavailable_bindings"] == [{
+        "capability": "mncs-compiler:compiler-build",
+        "availability_code": "provider-invocation-unresolvable",
+        "candidate_observation_count": 3,
+    }]
+
+
 def test_explicit_empty_service_scope_remains_accountable_and_bounded(
     tmp_path: Path,
 ) -> None:
@@ -9743,6 +9832,14 @@ def test_ambient_verification_failure_surfaces_verified_reason_under_budget(
         "ambient_verification_executor_readiness_relation"
     ]
     assert readiness_relation["status"] == "observed"
+    readiness_summary = readiness_relation["provider_readiness_summary"]
+    assert readiness_summary["source_obligation_count"] == 1
+    assert readiness_summary["provider_readiness_context_count"] == 1
+    assert readiness_summary["same_provider_unavailable_bindings"] == [{
+        "capability": "mncs-test:canonical-vm-tests",
+        "availability_code": "provider-invocation-unresolvable",
+        "candidate_observation_count": 1,
+    }]
     assert readiness_relation["join_basis"] == (
         "exact repository, obligation, executor capability, verification evidence Store reference, and owner-result Store reference"
     )

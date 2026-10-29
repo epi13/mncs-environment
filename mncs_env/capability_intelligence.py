@@ -2621,6 +2621,13 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
     if type(existing_omitted) is not int or existing_omitted < 0:
         existing_omitted = 0
     omitted_by_budget = existing_omitted
+    readiness_candidate_count = 0
+    readiness_context_count = 0
+    readiness_status_counts: dict[str, int] = {}
+    executor_availability_status_counts: dict[str, int] = {}
+    unavailable_binding_candidates: dict[tuple[str, str], set[str]] = {}
+    unavailable_binding_detail_omitted_count = 0
+    partial_same_provider_context_count = 0
     for relation in raw_obligations:
         if not isinstance(relation, dict):
             continue
@@ -2704,6 +2711,56 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
         if ("verification_evidence_reference" not in compact_relation
                 or "owner_result_reference" not in compact_relation):
             continue
+        readiness_candidate_count += 1
+        if readiness is not None:
+            readiness_context_count += 1
+            readiness_status = readiness.get("readiness_status")
+            if (isinstance(readiness_status, str)
+                    and re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", readiness_status)):
+                readiness_status_counts[readiness_status] = (
+                    readiness_status_counts.get(readiness_status, 0) + 1
+                )
+            executor_status = readiness.get("executor_availability_status")
+            if (isinstance(executor_status, str)
+                    and re.fullmatch(r"[a-z][a-z0-9_-]{0,79}", executor_status)):
+                executor_availability_status_counts[executor_status] = (
+                    executor_availability_status_counts.get(executor_status, 0) + 1
+                )
+            provider_context = readiness.get(
+                "same_provider_capability_context",
+            )
+            if isinstance(provider_context, dict):
+                if provider_context.get("status") == "partial":
+                    partial_same_provider_context_count += 1
+                omitted_bindings = provider_context.get(
+                    "unavailable_bindings_omitted_count", 0,
+                )
+                if type(omitted_bindings) is int and omitted_bindings >= 0:
+                    unavailable_binding_detail_omitted_count += omitted_bindings
+            unavailable = (
+                provider_context.get("unavailable_bindings", [])
+                if isinstance(provider_context, dict) else []
+            )
+            for binding in unavailable:
+                if not isinstance(binding, dict):
+                    continue
+                binding_capability = binding.get("capability")
+                if (not isinstance(binding_capability, str)
+                        or re.fullmatch(
+                            r"[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9._:/-]{0,191}",
+                            binding_capability,
+                        ) is None):
+                    continue
+                availability_code = binding.get("availability_code")
+                if (not isinstance(availability_code, str)
+                        or re.fullmatch(
+                            r"[a-z][a-z0-9_-]{0,79}", availability_code,
+                        ) is None):
+                    availability_code = "not-recorded"
+                key = (binding_capability, availability_code)
+                unavailable_binding_candidates.setdefault(key, set()).add(
+                    compact_relation["obligation_identity"],
+                )
         if len(compact_obligations) >= 2:
             omitted_by_budget += 1
             continue
@@ -2715,6 +2772,72 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
     if omitted_by_budget:
         result["obligations_omitted_by_response_budget"] = omitted_by_budget
         result["obligations_truncated_by_response_budget"] = True
+    source_obligation_count = value.get("obligation_count")
+    if type(source_obligation_count) is not int or source_obligation_count < 0:
+        source_obligation_count = len(raw_obligations) + existing_omitted
+    source_returned_count = value.get("obligations_returned")
+    if type(source_returned_count) is not int or source_returned_count < 0:
+        source_returned_count = len(raw_obligations)
+    source_omitted_count = max(
+        existing_omitted,
+        max(0, source_obligation_count - source_returned_count),
+    )
+    unavailable_binding_groups = [
+        {
+            "capability": capability,
+            "availability_code": availability_code,
+            "candidate_observation_count": len(obligations),
+        }
+        for (capability, availability_code), obligations
+        in sorted(unavailable_binding_candidates.items())[:8]
+    ]
+    result["provider_readiness_summary"] = {
+        "schema_version": (
+            "mncs.environment.verification-executor-readiness-summary/1"
+        ),
+        "status": (
+            "observed"
+            if source_omitted_count == 0
+            and readiness_candidate_count == source_obligation_count
+            and readiness_context_count == readiness_candidate_count
+            and partial_same_provider_context_count == 0
+            and unavailable_binding_detail_omitted_count == 0
+            and value.get("binding_scan_complete") is True
+            else "partial"
+        ),
+        "scope": "selected-session-integrity-verified-obligations",
+        "source_obligation_count": source_obligation_count,
+        "verified_observation_count": readiness_candidate_count,
+        "provider_readiness_context_count": readiness_context_count,
+        "provider_readiness_context_missing_count": max(
+            0, readiness_candidate_count - readiness_context_count,
+        ),
+        "detail_rows_returned_count": len(compact_obligations),
+        "detail_rows_omitted_by_response_budget": omitted_by_budget,
+        "readiness_status_counts": dict(sorted(readiness_status_counts.items())),
+        "executor_availability_status_counts": dict(sorted(
+            executor_availability_status_counts.items()
+        )),
+        "same_provider_unavailable_binding_observation_count": sum(
+            len(obligations)
+            for obligations in unavailable_binding_candidates.values()
+        ),
+        "same_provider_unavailable_binding_detail_omitted_count": (
+            unavailable_binding_detail_omitted_count
+        ),
+        "same_provider_partial_context_count": (
+            partial_same_provider_context_count
+        ),
+        "same_provider_unavailable_bindings": unavailable_binding_groups,
+        "same_provider_unavailable_binding_groups_omitted_count": max(
+            0, len(unavailable_binding_candidates) - len(unavailable_binding_groups),
+        ),
+        "causal_status": "not-established",
+        "measurement_limits": [
+            "Counts cover integrity-verified selected-session obligations and their bounded provider context only.",
+            "Provider availability does not establish executor readiness, agent receipt, or that the provider caused an unmeasurable obligation.",
+        ],
+    }
     result["measurement_limits"] = [
         "The bounded context links integrity-verified obligation evidence to current bindings; it does not establish execution readiness or fulfillment.",
         "Same-provider capability context is identity-correlated and does not establish dependency or cause.",
@@ -4675,6 +4798,11 @@ def _ambient_verification_executor_readiness_relation(
             "Same-provider capability rows are identity-correlated and do not establish a dependency.",
         ],
     }
+    provider_readiness_summary = context.get("provider_readiness_summary")
+    if (isinstance(provider_readiness_summary, dict)
+            and provider_readiness_summary.get("schema_version")
+            == "mncs.environment.verification-executor-readiness-summary/1"):
+        relation["provider_readiness_summary"] = provider_readiness_summary
     if candidates:
         relation["investigation_candidate_summary"] = (
             _verification_executor_candidate_summary(candidates, links)
@@ -19903,6 +20031,23 @@ def _authority_denial_reason_class(reason: Any) -> str:
                  if fragment in normalized), "other-denial")
 
 
+def _service_invocation_admission_reason_class(reason: Any) -> str:
+    """Classify why a service invocation was not admitted without prose."""
+    if not isinstance(reason, str) or not reason:
+        return "reason-unavailable"
+    normalized = " ".join(reason.lower().split())
+    if re.search(
+        r"\bcapability\b.{0,160}\b(?:is\s+)?not available\b",
+        normalized,
+    ):
+        return "capability-unavailable"
+    if any(fragment in normalized for fragment in (
+        "cannot resolve", "could not resolve", "unresolvable",
+    )):
+        return "provider-invocation-unresolvable"
+    return _authority_denial_reason_class(reason)
+
+
 def _authority_event_objective_context(payload: dict[str, Any]) -> dict[str, str]:
     """Project stable objective references carried by one authority event."""
     result: dict[str, str] = {}
@@ -23277,7 +23422,9 @@ def _session_service_readiness(
             row["operation_code"] = operation_code
             if operation_code == "environment-invocation-not-admitted":
                 row["operation_admission_reason_class"] = (
-                    _authority_denial_reason_class(operation.get("reason"))
+                    _service_invocation_admission_reason_class(
+                        operation.get("reason"),
+                    )
                 )
         if dependencies:
             row["dependencies"] = [

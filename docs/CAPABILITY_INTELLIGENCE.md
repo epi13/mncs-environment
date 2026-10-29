@@ -116,8 +116,20 @@ When a recorded service operation has code
 `environment-invocation-not-admitted`, readiness and service-accountability
 rows expose a normalized `operation_admission_reason_class` and the summary
 counts those classes. The free-form denial reason is not copied. This can
-distinguish an outside-writable-authority gate from an unresolved denial
-without deciding whether expanding that authority would be appropriate.
+distinguish an unavailable bound capability from an
+outside-writable-authority gate; other denials remain unresolved. The class
+does not decide whether broader authority would be appropriate.
+
+For ambient verification, `ambient_verification_executor_readiness_relation`
+also carries a `provider_readiness_summary` over integrity-verified
+selected-session obligations. The summary preserves readiness and executor
+availability counts, plus repeated same-provider unavailable capability
+codes, even when the exact-link detail window returns only two rows. It
+reports how many detail rows were omitted and keeps the relationship partial
+when source context was incomplete. These are bounded context observations;
+they do not establish that provider unavailability caused a verification gap,
+that an agent needed or received the capability, or that intervention was
+reduced.
 
 The compact `owner_decision_summary` groups returned owner-pass observations
 by decision and includes observed result, scheduler-outcome, and verification
