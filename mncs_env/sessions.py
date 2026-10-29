@@ -1985,7 +1985,7 @@ def _resolve_declared_runtime_toolchain_checkouts(
     return roots, facts, diagnostics
 
 
-def _discover_read_only_consumed_provider_bindings(
+def _discover_consumed_provider_bindings(
     workspace_root: str | Path,
     consumer_roots: dict[str, Path],
     consumer_facts: dict[str, dict[str, Any]],
@@ -1997,17 +1997,47 @@ def _discover_read_only_consumed_provider_bindings(
     dict[str, dict[str, str]],
     dict[str, Any],
 ]:
-    """Bind only declared read-only capabilities from observed workspace repos.
+    """Bind declared providers without extending their mutation authority.
 
     Consumed providers remain outside ``selected_checkouts`` and therefore do
-    not inherit the consumer's write scope. The provider must be an exact
-    workspace-observed repository, and its consumed contract must declare
-    exactly the ``read`` effect before Environment exposes the binding.
+    not inherit the consumer's write scope. Read-only dependencies must expose
+    exactly ``read``. The one effectful integration is Forge's typed native
+    application executor: only the Compiler project may declare it, and its
+    ``execute`` effect must be checked against the selected Compiler checkout
+    passed as the invocation's explicit effect target.
     """
     root = Path(workspace_root).resolve()
-    consumers_by_capability = capabilities_module.declared_consumed_contracts(
-        consumer_roots,
+    declarations_by_capability = (
+        capabilities_module.declared_consumed_contract_declarations(
+            consumer_roots,
+        )
     )
+    consumers_by_capability = {
+        capability: sorted({
+            str(declaration["consumer"])
+            for declaration in declarations
+            if isinstance(declaration.get("consumer"), str)
+        })
+        for capability, declarations in declarations_by_capability.items()
+    }
+
+    def typed_execution_dependency(capability: str) -> bool:
+        declarations = declarations_by_capability.get(capability, [])
+        return (
+            capability == "mncs-forge:native-application-execution"
+            and len(declarations) == 1
+            and declarations[0].get("consumer") == "mncs-compiler"
+            and declarations[0].get("effects") == ["execute"]
+            and declarations[0].get("scope") == "typed-native-application-execution"
+        )
+
+    def dependency_authority_scope(capability: str) -> str:
+        return (
+            "session-checked-effect-target"
+            if typed_execution_dependency(capability)
+            else "workspace-read-only"
+        )
+
     diagnostic_rows: dict[str, dict[str, Any]] = {}
 
     def record_diagnostic(capability: str, code: str) -> None:
@@ -2015,7 +2045,7 @@ def _discover_read_only_consumed_provider_bindings(
             "code": code,
             "consumers": consumers_by_capability.get(capability, []),
             "provider_checkout_selected": False,
-            "authority_scope": "workspace-read-only",
+            "authority_scope": dependency_authority_scope(capability),
         }
 
     def diagnostic_view() -> dict[str, Any]:
@@ -2139,9 +2169,79 @@ def _discover_read_only_consumed_provider_bindings(
                 record_diagnostic(capability, "provider-checkout-state-unavailable")
             continue
         if row.get("dirty") is not False:
-            for capability in capabilities_by_provider[provider]:
-                record_diagnostic(capability, "provider-checkout-dirty")
-            continue
+            provider_rows = [
+                item for item in workspace_repositories
+                if isinstance(item, dict)
+                and item.get("manifest_repository") == provider
+            ]
+            candidates = [
+                item for item in provider_rows
+                if item.get("path") != str(resolved)
+                and item.get("head") == row.get("head")
+                and item.get("dirty") is False
+                and isinstance(item.get("path"), str)
+            ]
+            if not candidates:
+                # A bounded, provider-specific refresh can find a clean
+                # registered worktree when the canonical root is dirty and
+                # the initial workspace projection did not include it.
+                refreshed_view = workspace_module.discover_workspace(
+                    root, timeout_seconds=2.0, repositories=[provider],
+                )
+                refreshed_scan = refreshed_view.get("scan", {})
+                if (not refreshed_view.get("error")
+                        and refreshed_scan.get("status") == "complete"):
+                    provider_rows = [
+                        item for item in refreshed_view.get("repositories", [])
+                        if isinstance(item, dict)
+                        and item.get("manifest_repository") == provider
+                    ]
+                    candidates = [
+                        item for item in provider_rows
+                        if item.get("path") != str(resolved)
+                        and item.get("head") == row.get("head")
+                        and item.get("dirty") is False
+                        and isinstance(item.get("path"), str)
+                    ]
+            if len(candidates) == 1:
+                candidate_row = candidates[0]
+                candidate_path = Path(str(candidate_row["path"]))
+                try:
+                    verified = workspace_module.verify_registered_checkout(
+                        candidate_path,
+                        repository=provider,
+                        workspace_root=root,
+                        expected_branch=(
+                            candidate_row.get("branch")
+                            if isinstance(candidate_row.get("branch"), str)
+                            else None
+                        ),
+                        expected_head=str(row["head"]),
+                    )
+                    candidate_state = workspace_module.inspect_repo(
+                        Path(verified["path"]), _refresh=True,
+                    )
+                except (OSError, RuntimeError, ValueError,
+                        workspace_module.WorkspaceResolutionError):
+                    candidate_state = None
+                if (candidate_state is not None
+                        and candidate_state.manifest_repository == provider
+                        and candidate_state.head == row.get("head")
+                        and candidate_state.dirty is False):
+                    resolved = Path(verified["path"])
+                    row = candidate_state.record()
+                else:
+                    candidates = []
+            if resolved == candidate:
+                # No clean same-head registered worktree displaced the dirty
+                # canonical provider checkout.
+                for capability in capabilities_by_provider[provider]:
+                    record_diagnostic(
+                        capability,
+                        "provider-checkout-ambiguous"
+                        if len(candidates) > 1 else "provider-checkout-dirty",
+                    )
+                continue
         provider_roots[provider] = resolved
         provider_facts[provider] = {
             "repository": provider,
@@ -2149,7 +2249,7 @@ def _discover_read_only_consumed_provider_bindings(
             "branch": row.get("branch"),
             "head": row.get("head"),
             "clean": not bool(row.get("dirty")),
-            "source_ref": "declared-read-only-provider-dependency",
+            "source_ref": "declared-consumed-provider-dependency",
             "authoritative_head": row.get("head"),
         }
     if not provider_roots:
@@ -2191,16 +2291,30 @@ def _discover_read_only_consumed_provider_bindings(
         if len(matches) != 1:
             record_diagnostic(capability, "provider-binding-ambiguous")
             continue
-        if matches[0].get("effects") != ["read"]:
+        if matches[0].get("effects") == ["read"]:
+            dependency_authority = {
+                "provenance_key": "consumed_read_only_dependency",
+                "authority_scope": "workspace-read-only",
+            }
+        elif (matches[0].get("effects") == ["execute"]
+                and typed_execution_dependency(capability)):
+            dependency_authority = {
+                "provenance_key": "consumed_typed_execution_dependency",
+                "authority_scope": "session-checked-effect-target",
+            }
+        else:
             record_diagnostic(capability, "provider-effects-not-read-only")
             continue
         binding = dict(matches[0])
         provenance = binding.get("provenance")
         provenance = dict(provenance) if isinstance(provenance, dict) else {}
-        provenance["consumed_read_only_dependency"] = {
+        provenance[dependency_authority["provenance_key"]] = {
             "consumers": consumers,
             "provider_checkout_selected": False,
-            "authority_scope": "workspace-read-only",
+            "authority_scope": dependency_authority["authority_scope"],
+            **({"effect_target_repository": "mncs-compiler"}
+               if dependency_authority["provenance_key"]
+               == "consumed_typed_execution_dependency" else {}),
         }
         binding["provenance"] = provenance
         result.append(binding)
@@ -2601,10 +2715,10 @@ def resolve_environment(
             runtime_toolchain_facts=runtime_toolchain_facts,
             language_binary=language_binary,
         )
-        (read_only_provider_bindings, consumed_runtime_roots,
+        (consumed_provider_bindings, consumed_runtime_roots,
          consumed_runtime_facts, consumed_runtime_diagnostics,
          consumed_provider_diagnostics) = (
-            _discover_read_only_consumed_provider_bindings(
+            _discover_consumed_provider_bindings(
                 resolved_root, selected_roots, selected_facts,
                 workspace_view.get("repositories", []),
             )
@@ -2612,7 +2726,7 @@ def resolve_environment(
         workspace_view["consumed_provider_diagnostics"] = (
             consumed_provider_diagnostics
         )
-        discovered.extend(read_only_provider_bindings)
+        discovered.extend(consumed_provider_bindings)
         runtime_toolchain_roots.update(consumed_runtime_roots)
         runtime_toolchain_facts.update(consumed_runtime_facts)
         runtime_toolchain_diagnostics.update(consumed_runtime_diagnostics)
@@ -6295,6 +6409,16 @@ class Session:
         records carry both executor and effect target.
         """
         binding = self._binding(capability)
+        provenance = binding.get("provenance", {})
+        provenance = provenance if isinstance(provenance, dict) else {}
+        typed_execution = provenance.get("consumed_typed_execution_dependency")
+        if isinstance(typed_execution, dict):
+            expected_repository = typed_execution.get("effect_target_repository")
+            if (not isinstance(effect_target, dict)
+                    or effect_target.get("repository") != expected_repository):
+                raise AuthorityDenied(
+                    f"capability {capability!r} requires its declared effect target"
+                )
         if (request_surface is not None
                 and request_surface
                 != invocation_context_module.SESSION_INVOKE_REQUEST_SURFACE):
@@ -9094,17 +9218,17 @@ class Session:
                 runtime_toolchain_facts=runtime_toolchain_facts,
                 language_binary=language_binary,
             )
-            (read_only_provider_bindings, consumed_runtime_roots,
+            (consumed_provider_bindings, consumed_runtime_roots,
              consumed_runtime_facts, consumed_runtime_diagnostics,
              consumed_provider_diagnostics) = (
-                _discover_read_only_consumed_provider_bindings(
+                _discover_consumed_provider_bindings(
                     workspace_root, roots, facts,
                     (self.snapshot.get("workspace") or {}).get(
                         "repositories", [],
                     ),
                 )
             )
-            discovered.extend(read_only_provider_bindings)
+            discovered.extend(consumed_provider_bindings)
             runtime_toolchain_roots.update(consumed_runtime_roots)
             runtime_toolchain_facts.update(consumed_runtime_facts)
             runtime_toolchain_diagnostics.update(consumed_runtime_diagnostics)

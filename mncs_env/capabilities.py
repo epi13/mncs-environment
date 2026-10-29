@@ -848,17 +848,17 @@ def discover_capabilities(
     return bindings
 
 
-def declared_consumed_contracts(
+def declared_consumed_contract_declarations(
     consumer_repository_roots: dict[str, Path | str],
-) -> dict[str, list[str]]:
-    """Return provider capabilities named by selected repository contracts.
+) -> dict[str, list[dict[str, Any]]]:
+    """Return bounded provider contract declarations from selected repositories.
 
     A consumer declaration identifies a capability dependency, but does not
     by itself add a provider to the selected checkout or grant mutation
-    authority. Environment uses this bounded view to resolve workspace-local
-    dependencies whose provider contract is independently read-only.
+    authority. Environment uses this bounded view to resolve explicitly
+    declared dependencies and applies the provider's effect policy separately.
     """
-    consumers_by_capability: dict[str, set[str]] = {}
+    declarations_by_capability: dict[str, list[dict[str, Any]]] = {}
     for consumer, raw_root in sorted(consumer_repository_roots.items()):
         root = Path(raw_root)
         manifest_path = root / ".mncs" / "project.json"
@@ -885,10 +885,44 @@ def declared_consumed_contracts(
                     or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", contract)):
                 continue
             capability = f"{provider}:{contract}"
-            consumers_by_capability.setdefault(capability, set()).add(consumer)
+            declaration: dict[str, Any] = {"consumer": consumer}
+            effects = item.get("effects")
+            if (isinstance(effects, list)
+                    and len(effects) <= 8
+                    and all(isinstance(effect, str) and len(effect) <= 32
+                            for effect in effects)):
+                declaration["effects"] = list(effects)
+            scope = item.get("scope")
+            if isinstance(scope, str) and len(scope) <= 256:
+                declaration["scope"] = scope
+            declarations_by_capability.setdefault(capability, []).append(declaration)
     return {
-        capability: sorted(consumers)
-        for capability, consumers in sorted(consumers_by_capability.items())
+        capability: sorted(
+            declarations,
+            key=lambda declaration: (
+                str(declaration.get("consumer", "")),
+                str(declaration.get("scope", "")),
+                tuple(declaration.get("effects", [])),
+            ),
+        )
+        for capability, declarations in sorted(declarations_by_capability.items())
+    }
+
+
+def declared_consumed_contracts(
+    consumer_repository_roots: dict[str, Path | str],
+) -> dict[str, list[str]]:
+    """Return provider capabilities named by selected repository contracts."""
+    declarations = declared_consumed_contract_declarations(
+        consumer_repository_roots,
+    )
+    return {
+        capability: sorted({
+            str(declaration["consumer"])
+            for declaration in rows
+            if isinstance(declaration.get("consumer"), str)
+        })
+        for capability, rows in declarations.items()
     }
 
 

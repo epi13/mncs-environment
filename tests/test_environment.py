@@ -4831,6 +4831,117 @@ class CapabilityTests(unittest.TestCase):
             self.assertIn(contract, consumers)
             self.assertEqual(consumers[contract], ["mncs-environment"])
 
+    def test_typed_compiler_execution_dependency_binds_with_session_effect_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace_root = Path(directory)
+            consumer = self._git_checkout(
+                workspace_root / "mncs-compiler", "mncs-compiler", {
+                    "contracts": {"consumes": [{
+                        "contract": "mncs-forge.native-application-execution",
+                        "effects": ["execute"],
+                        "scope": "typed-native-application-execution",
+                    }, {
+                        "contract": "mncs-forge.unrelated-execution",
+                        "effects": ["execute"],
+                        "scope": "typed-native-application-execution",
+                    }]},
+                },
+            )
+            provider = self._git_checkout(
+                workspace_root / "mncs-forge", "mncs-forge", {
+                    "contracts": {"provides": [{
+                        "contract": "native-application-execution",
+                        "version": "1",
+                        "effects": ["execute"],
+                        "invocation": {
+                            "kind": "executable",
+                            "path": "tools/execute.sh",
+                        },
+                    }, {
+                        "contract": "unrelated-execution",
+                        "version": "1",
+                        "effects": ["execute"],
+                        "invocation": {
+                            "kind": "executable",
+                            "path": "tools/unrelated.sh",
+                        },
+                    }]},
+                },
+            )
+            execute = provider / "tools" / "execute.sh"
+            execute.parent.mkdir(parents=True)
+            execute.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            execute.chmod(0o755)
+            unrelated = provider / "tools" / "unrelated.sh"
+            unrelated.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            unrelated.chmod(0o755)
+            subprocess.run(["git", "-C", str(provider), "add", "."], check=True)
+            subprocess.run([
+                "git", "-C", str(provider), "-c", "user.name=Environment Test",
+                "-c", "user.email=environment-test@example.invalid", "commit", "-qm",
+                "typed native application execution contract",
+            ], check=True)
+            clean_provider = provider / ".worktrees" / "clean-same-head"
+            subprocess.run([
+                "git", "-C", str(provider), "worktree", "add", "-q",
+                "-b", "campaign/clean-same-head", str(clean_provider), "HEAD",
+            ], check=True)
+            (provider / "README.md").write_text(
+                "mncs-forge with a pre-existing local edit\n", encoding="utf-8",
+            )
+            provider_observation = workspace.discover_workspace(
+                workspace_root, timeout_seconds=5.0, repositories=["mncs-forge"],
+            )
+            self.assertEqual(provider_observation["scan"]["status"], "complete")
+
+            consumer_head = workspace.inspect_repo(consumer, _refresh=True).head
+            selected_roots = {"mncs-compiler": consumer}
+            selected_facts = {"mncs-compiler": {
+                "repository": "mncs-compiler",
+                "path": str(consumer),
+                "head": consumer_head,
+                "branch": "main",
+                "clean": True,
+                "source_ref": "session-pinned-checkout",
+                "authoritative_head": consumer_head,
+            }}
+            (bindings, _runtime_roots, _runtime_facts,
+             runtime_diagnostics, provider_diagnostics) = (
+                sessions._discover_consumed_provider_bindings(
+                    workspace_root,
+                    selected_roots,
+                    selected_facts,
+                    provider_observation["repositories"],
+                )
+            )
+
+            self.assertEqual(runtime_diagnostics, {})
+            self.assertEqual(provider_diagnostics["count"], 1)
+            self.assertEqual(provider_diagnostics["items"], [{
+                "capability": "mncs-forge:unrelated-execution",
+                "code": "provider-effects-not-read-only",
+                "consumers": ["mncs-compiler"],
+                "provider_checkout_selected": False,
+                "authority_scope": "workspace-read-only",
+            }])
+            self.assertEqual(set(selected_roots), {"mncs-compiler"})
+            self.assertEqual(workspace.inspect_repo(provider, _refresh=True).dirty, True)
+            binding = next(
+                item for item in bindings
+                if item["capability"] == "mncs-forge:native-application-execution"
+            )
+            self.assertEqual(binding["effects"], ["execute"])
+            self.assertEqual(binding["provider_root"], str(clean_provider))
+            self.assertEqual(
+                binding["provenance"]["consumed_typed_execution_dependency"],
+                {
+                    "consumers": ["mncs-compiler"],
+                    "provider_checkout_selected": False,
+                    "authority_scope": "session-checked-effect-target",
+                    "effect_target_repository": "mncs-compiler",
+                },
+            )
+
     def test_consumed_readonly_provider_binds_without_selected_or_write_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory)
@@ -4949,7 +5060,7 @@ class CapabilityTests(unittest.TestCase):
             }}
             (read_only_bindings, _runtime_roots, _runtime_facts,
              runtime_diagnostics, provider_diagnostics) = (
-                sessions._discover_read_only_consumed_provider_bindings(
+                sessions._discover_consumed_provider_bindings(
                     workspace_root,
                     selected_roots,
                     selected_facts,
@@ -5011,7 +5122,7 @@ class CapabilityTests(unittest.TestCase):
             doc_script.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
             (dirty_bindings, _runtime_roots, _runtime_facts,
              _runtime_diagnostics, dirty_diagnostics) = (
-                sessions._discover_read_only_consumed_provider_bindings(
+                sessions._discover_consumed_provider_bindings(
                     workspace_root,
                     selected_roots,
                     selected_facts,
@@ -5041,7 +5152,7 @@ class CapabilityTests(unittest.TestCase):
             )
             (symlink_bindings, _runtime_roots, _runtime_facts,
              _runtime_diagnostics, symlink_diagnostics) = (
-                sessions._discover_read_only_consumed_provider_bindings(
+                sessions._discover_consumed_provider_bindings(
                     workspace_root,
                     selected_roots,
                     selected_facts,
@@ -6292,6 +6403,41 @@ class ToolchainTests(unittest.TestCase):
 
 
 class SessionTests(unittest.TestCase):
+    def test_typed_execution_dependency_requires_its_declared_effect_target(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            session = make_session(Path(directory))
+            binding = capabilities.probe_availability(capabilities.bind(
+                provider="mncs-forge",
+                capability="mncs-forge:native-application-execution",
+                contract_revision="1",
+                entrypoint="execute",
+                address="/bin/echo",
+                effects=["execute"],
+            ))
+            binding.setdefault("provenance", {})[
+                "consumed_typed_execution_dependency"
+            ] = {
+                "consumers": ["mncs-compiler"],
+                "provider_checkout_selected": False,
+                "authority_scope": "session-checked-effect-target",
+                "effect_target_repository": "mncs-compiler",
+            }
+            session.snapshot["bindings"] = [binding]
+            with self.assertRaisesRegex(
+                sessions.AuthorityDenied, "requires its declared effect target",
+            ):
+                session.invoke(
+                    "mncs-forge:native-application-execution", ["--call-json", "{}"],
+                )
+            with self.assertRaisesRegex(
+                sessions.AuthorityDenied, "requires its declared effect target",
+            ):
+                session.invoke(
+                    "mncs-forge:native-application-execution", ["--call-json", "{}"],
+                    effect_target={"repository": "mncs-forge"},
+                )
+            session.close()
+
     def test_context_lists_exact_binding_ids_for_available_capabilities(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             session = make_session(Path(directory))
