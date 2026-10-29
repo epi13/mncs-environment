@@ -304,6 +304,15 @@ also contains owner-scoped calls. Their event references and scoped-call count
 make mixed activity inspectable; missing context is a possible integration
 gap, not proof of agent intervention or service failure.
 
+For each declared readiness service, the projection also links its reconcile
+capability to the current binding inventory and records whether a
+service-level operation was recorded. This makes unavailable or missing
+recovery paths inspectable alongside readiness. Declared reconcile bindings
+retain priority in the bounded binding-detail view, while an incomplete wider
+inventory remains explicitly partial. Substrate availability and a service
+operation are not treated as proof of provider success, post-operation
+verification, or reduced agent intervention.
+
 A future campaign that needs another cache, event, or evidence
 architecture should first check whether these primitives already
 solve the generic part. Generalize only demonstrated shared

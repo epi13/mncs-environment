@@ -18737,6 +18737,7 @@ def _capability_delivery_view(
     *, event_window_truncated: bool, event_page_scoped: bool,
     invocation_summaries_omitted: int,
     service_probe_capabilities: list[str] | None = None,
+    service_reconcile_capabilities: list[str] | None = None,
     verification_executor_obligations: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Relate this session's binding snapshot to bounded, observed capability use."""
@@ -19327,6 +19328,10 @@ def _capability_delivery_view(
         capability for capability in (service_probe_capabilities or [])
         if isinstance(capability, str) and capability
     ))
+    reconcile_capabilities = list(dict.fromkeys(
+        capability for capability in (service_reconcile_capabilities or [])
+        if isinstance(capability, str) and capability
+    ))
     bindings_by_capability_records: dict[str, list[dict[str, Any]]] = {}
     for binding in binding_records:
         bindings_by_capability_records.setdefault(
@@ -19450,9 +19455,12 @@ def _capability_delivery_view(
         selected_binding_keys.add(key)
         selected_binding_records.append(binding)
 
-    # Reserve one detail for each declared probe first, preferring the exact
-    # binding that was invoked in this event window when that evidence exists.
-    for capability in probe_capabilities:
+    # Reserve bounded detail for every declared readiness and reconcile
+    # capability before filling the remaining inventory from general use.
+    # Prefer an exact invocation binding when that evidence exists.
+    for capability in dict.fromkeys(
+        [*probe_capabilities, *reconcile_capabilities],
+    ):
         capability_bindings = bindings_by_capability_records.get(capability, [])
         observed_binding = next((
             binding for binding in capability_bindings
@@ -19685,7 +19693,7 @@ def _capability_delivery_view(
         "bindings_omitted": omitted_bindings,
         "bindings": selected_binding_records,
         "binding_details_selection_basis": (
-            "declared-service-probes-then-integrity-verified-verification-executors-then-exact-invocation-bindings-then-provider-evidence-references-then-observed-capabilities-then-capability-provider-order"
+            "declared-service-probes-then-declared-service-reconcile-capabilities-then-integrity-verified-verification-executors-then-exact-invocation-bindings-then-provider-evidence-references-then-observed-capabilities-then-capability-provider-order"
         ),
         "service_probe_binding_counts": probe_binding_counts,
         "service_probe_binding_count_scan_complete": (
@@ -23972,7 +23980,7 @@ def _service_ambient_owner_pass_observation(
             else "complete-for-projected-activity"
         ),
         "interpretation_limit": (
-            "An exact scoped invocation links a capability call to an owner-pass execution and current binding; it does not establish that the service was needed, fulfilled an agent opportunity, or reduced intervention burden."
+            "Scoped use does not establish agent need, fulfillment, or reduced burden."
         ),
     }
 
@@ -24666,6 +24674,90 @@ def _service_observed_capability_activity(
     }
 
 
+def _service_reconcile_capabilities(snapshot: Any) -> dict[str, str]:
+    """Return bounded declared service-to-reconcile capability identities."""
+    snapshot_record = snapshot if isinstance(snapshot, dict) else {}
+    requirements = snapshot_record.get("requirements")
+    requirements = requirements if isinstance(requirements, dict) else {}
+    declarations = requirements.get("services")
+    declarations = declarations if isinstance(declarations, list) else []
+    result: dict[str, str] = {}
+    for declaration in declarations[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+        if not isinstance(declaration, dict):
+            continue
+        service_identity = declaration.get("identity")
+        reconcile = declaration.get("reconcile")
+        capability = (
+            reconcile.get("capability")
+            if isinstance(reconcile, dict) else None
+        )
+        if (
+            isinstance(service_identity, str)
+            and re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}", service_identity,
+            )
+            and isinstance(capability, str)
+            and re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}", capability,
+            )
+        ):
+            result[service_identity] = capability
+    return result
+
+
+def _service_recovery_path_projection(
+    capability: Any, bindings: list[dict[str, Any]], *,
+    binding_snapshot_complete: bool, delivery_available: bool,
+) -> dict[str, Any]:
+    """Relate one declared reconcile capability to bounded binding evidence."""
+    if (not isinstance(capability, str)
+            or re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}", capability,
+            ) is None):
+        return {"binding_relation_status": "recovery-capability-not-declared"}
+
+    matches = [
+        binding for binding in bindings
+        if isinstance(binding, dict) and binding.get("capability") == capability
+    ]
+    if not delivery_available:
+        relation = "capability-delivery-unavailable"
+    elif len(matches) > 1:
+        relation = "ambiguous-multiple-capability-bindings"
+    elif len(matches) == 1 and binding_snapshot_complete:
+        relation = "exact-capability-identity-match"
+    elif len(matches) == 1:
+        relation = "observed-match-in-incomplete-binding-snapshot"
+    elif binding_snapshot_complete:
+        relation = "capability-not-present-in-current-binding-snapshot"
+    else:
+        relation = "capability-not-observed-in-incomplete-binding-snapshot"
+
+    result: dict[str, Any] = {
+        "capability_identity": capability,
+        "binding_relation_status": relation,
+    }
+    if len(matches) == 1:
+        binding = matches[0]
+        availability_status = binding.get("availability_status")
+        if availability_status in {
+            "available", "unavailable", "unknown", "unrecorded",
+        }:
+            result["binding_availability_status"] = availability_status
+        availability_code = binding.get("availability_code")
+        if (isinstance(availability_code, str)
+                and re.fullmatch(
+                    r"[a-z][a-z0-9.-]{0,79}", availability_code,
+                )):
+            result["binding_availability_code"] = availability_code
+        resolution_issue = _compact_invocation_resolution_issue(
+            binding.get("availability_resolution_issue"),
+        )
+        if resolution_issue is not None:
+            result["availability_resolution_issue"] = resolution_issue
+    return result
+
+
 def _session_service_accountability(
     service_readiness: Any, capability_delivery: Any,
     snapshot: dict[str, Any] | None = None,
@@ -24684,6 +24776,7 @@ def _session_service_accountability(
     )
     raw_services = service_readiness.get("services")
     raw_services = raw_services if isinstance(raw_services, list) else []
+    recovery_capability_by_service = _service_reconcile_capabilities(snapshot)
     if not raw_services:
         readiness_source = service_readiness.get("source")
         readiness_source = (
@@ -24943,6 +25036,8 @@ def _session_service_accountability(
             elif use_status == "invoked-in-selected-event-window":
                 capability_name_use_count += 1
 
+        recovery_capability = recovery_capability_by_service.get(identity)
+
         source_reference = service.get("source_reference")
         source_reference = source_reference if isinstance(source_reference, dict) else {}
         binding_match_count = (
@@ -24981,6 +25076,15 @@ def _session_service_accountability(
                     and type(source_reference.get(key)) is int)
             },
         }
+        if recovery_capability is not None:
+            projected["recovery_path"] = _service_recovery_path_projection(
+                recovery_capability, raw_bindings,
+                binding_snapshot_complete=binding_snapshot_complete,
+                delivery_available=(
+                    bool(delivery)
+                    and delivery.get("status") != "unavailable"
+                ),
+            )
         for key in ("observation_code", "operation_code"):
             code = service.get(key)
             if (isinstance(code, str)
@@ -25180,6 +25284,7 @@ def _session_service_accountability(
         "measurement_limits": [
             "Service readiness and reconciliation status come from one session snapshot; they are not historical service outcomes.",
             "A probe-capability match relates exact capability identity to a current binding, not successful provider behavior.",
+            "Recovery links do not establish causality.",
             "Only invocation evidence attributed to the exact current binding is counted as exact binding use; capability-name-only activity is reported separately.",
             "An invocation records use of an Environment binding; it does not establish that the service was needed, fulfilled an opportunity, or reduced agent work.",
             "Discoverability, agent receipt, eligible service opportunities, intervention burden, and outcome quality remain unavailable unless separately recorded.",
@@ -28821,6 +28926,9 @@ def _session_activity(
         and isinstance(item.get("capability"), str)
         and item["capability"]
     ))
+    declared_service_reconcile_capabilities = list(dict.fromkeys(
+        _service_reconcile_capabilities(snapshot).values()
+    ))
     verification_executor_obligations = (
         _verification_executor_obligation_candidates(
             ambient_service_execution,
@@ -28832,6 +28940,9 @@ def _session_activity(
         event_page_scoped=event_before_sequence is not None,
         invocation_summaries_omitted=capabilities_omitted,
         service_probe_capabilities=declared_service_probe_capabilities,
+        service_reconcile_capabilities=(
+            declared_service_reconcile_capabilities
+        ),
         verification_executor_obligations=verification_executor_obligations,
     )
     ambient_owner_pass_activity = _session_ambient_owner_pass_activity(

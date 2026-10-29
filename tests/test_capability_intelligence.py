@@ -5495,6 +5495,8 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     language_service = "mncs-language-service:resident-workspace"
     forge_service = "mncs-forge:resident-workspace"
     language_probe = "mncs-language-service:ready"
+    language_recovery = "mncs-language-service:resident-reconcile"
+    forge_recovery = "mncs-forge:resident-reconcile"
     service_execution_id = "ase_" + "c" * 32
     owner_usage = _measured_owner_resource_usage()
     owner_pass_context = {
@@ -5517,12 +5519,14 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
                     "identity": language_service,
                     "required": True,
                     "probe": {"capability": language_probe},
+                    "reconcile": {"capability": language_recovery},
                     "ready_when": {"/ready": True},
                 },
                 {
                     "identity": forge_service,
                     "required": False,
                     "probe": {"capability": "mncs-forge:ready"},
+                    "reconcile": {"capability": forge_recovery},
                     "ready_when": {"/ready": True},
                     "environment_from_service": {
                         "MNCS_LANGUAGE_WORKSPACE": {
@@ -5571,17 +5575,19 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
             },
         ],
     })
-    session.snapshot["bindings"] = [{
-        "binding_id": "cap_language_service_ready",
-        "provider": "mncs-language-service-provider",
-        "capability": language_probe,
-        "contract_revision": "2",
-        "availability": {
-            "status": "available",
-            "verification": "probe-success",
-            "observed_at": "2026-10-26T18:10:19.900Z",
+    session.snapshot["bindings"] = [
+        {
+            "binding_id": "cap_language_service_ready",
+            "provider": "mncs-language-service-provider",
+            "capability": language_probe,
+            "contract_revision": "2",
+            "availability": {
+                "status": "available",
+                "verification": "probe-success",
+                "observed_at": "2026-10-26T18:10:19.900Z",
+            },
         },
-    }]
+    ]
     session.snapshot["coherence"] = {"last_trace": {
         "mode": "targeted_update",
         "trace_persistence_status": "session-snapshot",
@@ -5750,6 +5756,17 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert language_accountability["bindings"][0]["availability_status"] == (
         "available"
     )
+    language_recovery_path = language_accountability["recovery_path"]
+    assert language_recovery_path["capability_identity"] == language_recovery
+    assert language_recovery_path["binding_relation_status"] == (
+        "capability-not-present-in-current-binding-snapshot"
+    )
+    forge_recovery_path = accountable_services[forge_service]["recovery_path"]
+    assert forge_recovery_path["capability_identity"] == forge_recovery
+    assert forge_recovery_path["binding_relation_status"] == (
+        "capability-not-present-in-current-binding-snapshot"
+    )
+    assert private_path not in json.dumps(accountability)
     assert language_accountability["bindings"][0]["use_observation_status"] == (
         "invoked-for-exact-session-binding"
     )
@@ -6095,6 +6112,12 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
         item for item in compact_accountability["services"]
         if item["service_identity"] == language_service
     )
+    assert compact_language["recovery_path"]["capability_identity"] == (
+        language_recovery
+    )
+    assert compact_language["recovery_path"]["binding_relation_status"] == (
+        "capability-not-present-in-current-binding-snapshot"
+    )
     assert compact_language["bindings"][0]["supporting_events"][0][
         "identity"
     ] == "evt_service_readiness_invoked"
@@ -6177,6 +6200,58 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert unmatched_summary["probe_observation_unmatched_count"] == 1
     assert unmatched_summary["probe_observation_coverage_status"] == (
         "partial-selected-snapshot"
+    )
+
+
+def test_service_recovery_path_exposes_bounded_binding_issue_without_provider_prose(
+) -> None:
+    private_path = "/home/private/workspace/.bootstrap/secret"
+    recovery = capability_intelligence._service_recovery_path_projection(
+        "mncs-forge:resident-reconcile",
+        [{
+            "provider": "mncs-forge-provider",
+            "capability": "mncs-forge:resident-reconcile",
+            "binding_id": "cap_forge_reconcile",
+            "contract_revision": "1",
+            "availability_status": "unavailable",
+            "availability_code": "provider-invocation-unresolvable",
+            "availability_reason": f"missing dependency at {private_path}",
+            "availability_resolution_issue": {
+                "schema_version": "mncs.environment.invocation-resolution-issue/1",
+                "code": "dependency-path-not-present",
+                "dependency": {
+                    "repository": "mncs-compiler",
+                    "path": ".bootstrap/target/release/probe",
+                },
+                "resolution_scope": "selected-checkout-closure",
+                "status": "unresolved",
+            },
+        }],
+        binding_snapshot_complete=True,
+        delivery_available=True,
+    )
+    assert recovery["binding_relation_status"] == (
+        "exact-capability-identity-match"
+    )
+    assert recovery["binding_availability_status"] == "unavailable"
+    assert recovery["binding_availability_code"] == (
+        "provider-invocation-unresolvable"
+    )
+    assert recovery["availability_resolution_issue"]["dependency"] == {
+        "repository": "mncs-compiler",
+        "path": ".bootstrap/target/release/probe",
+    }
+    assert private_path not in json.dumps(recovery)
+    assert "availability_reason" not in recovery
+
+    partial = capability_intelligence._service_recovery_path_projection(
+        "mncs-forge:resident-reconcile",
+        [{"capability": "mncs-forge:resident-reconcile"}],
+        binding_snapshot_complete=False,
+        delivery_available=True,
+    )
+    assert partial["binding_relation_status"] == (
+        "observed-match-in-incomplete-binding-snapshot"
     )
 
 
@@ -7851,8 +7926,9 @@ def test_owner_pass_result_evidence_reports_partial_coverage_and_is_bounded() ->
     assert compacted_again == summary
 
 
-def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
+def test_probe_and_reconcile_bindings_survive_large_inventory_truncation() -> None:
     probe_capability = "mncs-doctor:compiler-vm-health"
+    reconcile_capability = "mncs-doctor:compiler-vm-reconcile"
     irrelevant_bindings = [{
         "binding_id": f"cap_unrelated_{index:02d}",
         "provider": "mncs-test-provider",
@@ -7871,6 +7947,17 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
         "availability": {
             "status": "available", "verification": "substrate",
             "observed_at": "2026-10-27T00:00:00Z",
+        },
+    }
+    reconcile_binding = {
+        "binding_id": "cap_compiler_vm_reconcile",
+        "provider": "mncs-doctor",
+        "capability": reconcile_capability,
+        "contract_revision": "2",
+        "availability": {
+            "status": "unavailable", "verification": "substrate",
+            "code": "provider-invocation-unresolvable",
+            "reason": "compiler probe is absent from selected checkout",
         },
     }
     verification_capability = (
@@ -7924,8 +8011,8 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     snapshot = {
         "environment_id": "renv_service_probe_inventory",
         "bindings": [
-            *irrelevant_bindings, probe_binding,
-            verification_binding, canonical_vm_binding,
+            *irrelevant_bindings, probe_binding, verification_binding,
+            canonical_vm_binding, reconcile_binding,
         ],
     }
 
@@ -7935,6 +8022,7 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
         event_page_scoped=False,
         invocation_summaries_omitted=0,
         service_probe_capabilities=[probe_capability],
+        service_reconcile_capabilities=[reconcile_capability],
         verification_executor_obligations=[
             {
                 "repository": "mncs-commons",
@@ -7973,16 +8061,21 @@ def test_service_probe_bindings_survive_large_inventory_truncation() -> None:
     )
 
     assert delivery["binding_count"] == (
-        capability_intelligence.MAX_SESSION_ACTIVITY_BINDINGS + 11
+        capability_intelligence.MAX_SESSION_ACTIVITY_BINDINGS + 12
     )
-    assert delivery["bindings_omitted"] == 11
+    assert delivery["bindings_omitted"] == 12
     assert delivery["binding_details_selection_basis"].startswith(
-        "declared-service-probes-then-integrity-verified-verification-executors"
+        "declared-service-probes-then-declared-service-reconcile-capabilities"
     )
     assert delivery["service_probe_binding_counts"] == {probe_capability: 1}
     assert delivery["service_probe_binding_count_scan_complete"] is True
     assert delivery["bindings"][0]["capability"] == probe_capability
-    assert delivery["bindings"][1]["capability"] == verification_capability
+    assert delivery["bindings"][1]["capability"] == reconcile_capability
+    assert delivery["bindings"][1]["availability_status"] == "unavailable"
+    assert delivery["bindings"][1]["availability_code"] == (
+        "provider-invocation-unresolvable"
+    )
+    assert delivery["bindings"][2]["capability"] == verification_capability
     verification_context = delivery["verification_executor_context"]
     assert verification_context["binding_scan_complete"] is True
     obligation_relation = verification_context["obligations"][0]

@@ -44,8 +44,10 @@ scanned binding snapshot and coalesced declarations. Check
 before interpreting them as complete. These fields do not establish that the
 referenced file implements the capability or that an agent discovered it.
 When the bounded binding-detail window is full, declared service probes and
-exact observed use retain priority; bindings with provider-declared evidence
-references are then selected before ordinary inventory rows.
+reconcile capabilities retain priority, followed by integrity-linked
+verification executors, exact observed use, and bindings with provider-declared
+evidence references. The inventory remains marked partial when other binding
+details were omitted.
 
 Inspect `capability_accountability_links` in the result. It reports exact
 repository, commit, path, and SHA-256 relationships, along with their source
@@ -95,6 +97,20 @@ causality or fulfillment. Missing calls remain window-scoped, and partial
 activity remains explicit. Agent need, receipt, and intervention burden stay
 unestablished or unmeasured; no opportunity denominator or effectiveness score
 is inferred.
+
+For services with a declared `reconcile` capability, the service-accountability
+view now exposes a bounded `recovery_path` relation. It links that capability
+to matching current-session bindings, their substrate availability, the
+service-level operation record, and the same-snapshot readiness observation.
+The relation distinguishes a missing binding from an unavailable binding and
+retains only validated availability codes and repository-relative invocation
+resolution issues. It does not expose recovery arguments or raw provider
+reasons, and it does not imply that a provider ran, that readiness was probed
+after the operation, or that recovery caused the observed state. Binding
+availability is substrate evidence; it is not provider readiness or proof
+that an agent need was fulfilled. Declared reconcile bindings are retained in
+the bounded binding-detail window; when the wider inventory is incomplete, the
+relation reports the observed match without claiming a complete inventory.
 
 The compact `owner_decision_summary` groups returned owner-pass observations
 by decision and includes observed result, scheduler-outcome, and verification
