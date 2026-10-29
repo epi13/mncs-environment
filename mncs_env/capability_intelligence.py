@@ -2627,7 +2627,7 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
     executor_availability_status_counts: dict[str, int] = {}
     unavailable_binding_candidates: dict[tuple[str, str], set[str]] = {}
     unavailable_dependency_candidates: dict[
-        tuple[str, str, str], dict[str, set[tuple[str, str]]]
+        tuple[str, str, str, str], dict[str, set[tuple[str, str]]]
     ] = {}
     unavailable_binding_detail_omitted_count = 0
     unavailable_binding_resolution_issue_not_recorded_count = 0
@@ -2774,7 +2774,7 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
                 dependency = resolution_issue["dependency"]
                 issue_key = (
                     resolution_issue["code"], dependency["repository"],
-                    dependency["path"],
+                    dependency["path"], resolution_issue["resolution_scope"],
                 )
                 unavailable_dependency_candidates.setdefault(
                     issue_key, {},
@@ -2813,13 +2813,22 @@ def _compact_verification_executor_context(value: Any) -> dict[str, Any] | None:
         in sorted(unavailable_binding_candidates.items())[:8]
     ]
     unavailable_dependency_groups = []
-    for (issue_code, repository, path), capabilities in sorted(
+    for (issue_code, repository, path, resolution_scope), capabilities in sorted(
         unavailable_dependency_candidates.items(),
     )[:8]:
         capability_names = sorted(capabilities)
+        obligation_identities = {
+            obligation_identity
+            for observations in capabilities.values()
+            for obligation_identity, _capability in observations
+        }
         unavailable_dependency_groups.append({
             "resolution_issue_code": issue_code,
             "dependency": {"repository": repository, "path": path},
+            "resolution_scope": resolution_scope,
+            "affected_verification_obligation_count": len(
+                obligation_identities,
+            ),
             "binding_observation_count": sum(
                 len(observations) for observations in capabilities.values()
             ),
@@ -3755,7 +3764,9 @@ def _compact_scheduler_input_chain(value: Any) -> dict[str, Any] | None:
     return coherence_module.project_scheduler_input_chain(value)
 
 
-def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
+def _compact_focused_service_execution(
+    value: Any, *, include_verification_details: bool = True,
+) -> dict[str, Any] | None:
     """Keep service execution coverage and exact result sources in a focused view."""
     if not isinstance(value, dict):
         return None
@@ -3924,6 +3935,12 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
 
     details = summary.get("verification_result_details")
     details = details if isinstance(details, list) else []
+    omitted_verification_detail_count = None
+    if not include_verification_details:
+        source_omitted = summary.get("verification_result_details_omitted_count", 0)
+        source_omitted = source_omitted if type(source_omitted) is int else 0
+        omitted_verification_detail_count = max(0, source_omitted) + len(details)
+        details = []
     compact_details = []
     for row in details[:4]:
         if not isinstance(row, dict):
@@ -4011,8 +4028,12 @@ def _compact_focused_service_execution(value: Any) -> dict[str, Any] | None:
         compact_details.append(compact_row)
     if details:
         compact_summary["verification_result_details"] = compact_details
+        compact_summary[
+            "verification_result_details_omitted_by_focused_view"
+        ] = max(0, len(details) - len(compact_details))
+    elif omitted_verification_detail_count is not None:
         compact_summary["verification_result_details_omitted_by_focused_view"] = (
-            max(0, len(details) - len(compact_details))
+            omitted_verification_detail_count
         )
 
     publication_usage = resources_module.compact_process_usage(
@@ -12788,6 +12809,7 @@ def _focus_session_activity(
                         )
                 compact_execution = _compact_focused_service_execution(
                     environment_execution,
+                    include_verification_details=False,
                 )
                 if compact_execution is not None:
                     compact_summary = compact_accountability.get("summary")
@@ -25014,6 +25036,168 @@ def _service_recovery_path_projection(
     return result
 
 
+def _service_verification_dependency_correlation(
+    services: Any, provider_summary: Any, *,
+    service_coverage_complete: bool,
+) -> dict[str, Any] | None:
+    """Join service recovery and verification context on exact dependencies."""
+    if (not isinstance(services, list)
+            or not isinstance(provider_summary, dict)
+            or provider_summary.get("schema_version")
+            != "mncs.environment.verification-executor-readiness-summary/1"):
+        return None
+    services_by_dependency: dict[
+        tuple[str, str, str, str], set[str]
+    ] = {}
+    for service in services[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+        if not isinstance(service, dict):
+            continue
+        service_identity = service.get("service_identity")
+        recovery_path = service.get("recovery_path")
+        if (not isinstance(service_identity, str) or not service_identity
+                or len(service_identity) > 256
+                or not isinstance(recovery_path, dict)):
+            continue
+        issue = _compact_invocation_resolution_issue(
+            recovery_path.get("availability_resolution_issue"),
+        )
+        if issue is None:
+            continue
+        dependency = issue["dependency"]
+        key = (
+            issue["code"], dependency["repository"], dependency["path"],
+            issue["resolution_scope"],
+        )
+        services_by_dependency.setdefault(key, set()).add(service_identity)
+
+    groups = []
+    raw_groups = provider_summary.get(
+        "same_provider_unavailable_dependency_groups",
+    )
+    raw_groups = raw_groups if isinstance(raw_groups, list) else []
+    for group in raw_groups[:8]:
+        if not isinstance(group, dict):
+            continue
+        dependency = group.get("dependency")
+        if not isinstance(dependency, dict):
+            continue
+        issue = _compact_invocation_resolution_issue({
+            "schema_version": "mncs.environment.invocation-resolution-issue/1",
+            "code": group.get("resolution_issue_code"),
+            "dependency": dependency,
+            "resolution_scope": group.get("resolution_scope"),
+            "status": "unresolved",
+        })
+        if issue is None:
+            continue
+        dependency = issue["dependency"]
+        key = (
+            issue["code"], dependency["repository"], dependency["path"],
+            issue["resolution_scope"],
+        )
+        service_identities = sorted(services_by_dependency.get(key, set()))
+        if not service_identities:
+            continue
+        capabilities = [
+            capability for capability in group.get(
+                "dependent_capabilities", [],
+            )
+            if isinstance(capability, str)
+            and re.fullmatch(
+                r"[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9._:/-]{0,191}",
+                capability,
+            ) is not None
+        ]
+        obligation_count = group.get(
+            "affected_verification_obligation_count", 0,
+        )
+        binding_count = group.get("binding_observation_count", 0)
+        capability_count = group.get(
+            "dependent_capability_count", len(capabilities),
+        )
+        if type(capability_count) is not int or capability_count < 0:
+            capability_count = len(capabilities)
+        capability_omitted = group.get(
+            "dependent_capabilities_omitted_count", 0,
+        )
+        if type(capability_omitted) is not int or capability_omitted < 0:
+            capability_omitted = 0
+        groups.append({
+            "resolution_issue_code": issue["code"],
+            "dependency": dependency,
+            "resolution_scope": issue["resolution_scope"],
+            "service_count": len(service_identities),
+            "service_identities": service_identities[:8],
+            "service_identities_omitted_count": max(
+                0, len(service_identities) - 8,
+            ),
+            "verification_obligation_observation_count": (
+                obligation_count
+                if type(obligation_count) is int and obligation_count >= 0
+                else 0
+            ),
+            "verification_binding_observation_count": (
+                binding_count
+                if type(binding_count) is int and binding_count >= 0
+                else 0
+            ),
+            "verification_dependent_capability_count": capability_count,
+            "verification_dependent_capabilities": capabilities[:8],
+            "verification_dependent_capabilities_omitted_count": max(
+                0, len(capabilities) - 8,
+            ) + capability_omitted,
+            "causal_status": "not-established",
+        })
+    if not groups:
+        return None
+    groups.sort(key=lambda item: (
+        item["resolution_issue_code"],
+        item["dependency"]["repository"],
+        item["dependency"]["path"],
+    ))
+    omitted_groups = provider_summary.get(
+        "same_provider_unavailable_dependency_groups_omitted_count", 0,
+    )
+    if type(omitted_groups) is not int or omitted_groups < 0:
+        omitted_groups = 0
+    return {
+        "schema_version": (
+            "mncs.environment.service-verification-dependency-correlation/1"
+        ),
+        "status": (
+            "observed"
+            if service_coverage_complete
+            and provider_summary.get("status") == "observed"
+            and type(omitted_groups) is int and omitted_groups == 0
+            else "partial"
+        ),
+        "scope": (
+            "selected-session-service-recovery-and-verification-context"
+        ),
+        "join_basis": (
+            "exact resolution issue code, repository, relative dependency path, and resolution scope"
+        ),
+        "service_coverage_status": (
+            "complete" if service_coverage_complete else "partial"
+        ),
+        "verification_context_status": provider_summary.get(
+            "status", "unknown",
+        ),
+        "shared_dependency_count": len(groups),
+        "groups": groups[:8],
+        "matched_groups_omitted_count": max(
+            0, len(groups) - 8,
+        ),
+        "verification_dependency_groups_omitted_count": omitted_groups,
+        "causal_status": "not-established",
+        "agent_intervention_burden_status": "not-measured",
+        "measurement_limits": [
+            "The relation connects matching declared dependency-resolution observations in the selected session; it does not establish that the dependency caused an agent need or verification failure.",
+            "Service and verification coverage is limited to the bounded current-session projections; the relation does not establish cross-session recurrence or reduced intervention.",
+        ],
+    }
+
+
 def _session_service_accountability(
     service_readiness: Any, capability_delivery: Any,
     snapshot: dict[str, Any] | None = None,
@@ -25407,6 +25591,22 @@ def _session_service_accountability(
     declared_service_count = readiness_summary.get("declared_service_count")
     if type(declared_service_count) is not int or declared_service_count < 0:
         declared_service_count = len(raw_services)
+    if executor_readiness_relation is not None:
+        provider_summary = executor_readiness_relation.get(
+            "provider_readiness_summary",
+        )
+        shared_dependency_relation = (
+            _service_verification_dependency_correlation(
+                services, provider_summary,
+                service_coverage_complete=(
+                    len(services) == declared_service_count
+                ),
+            )
+        )
+        if shared_dependency_relation is not None:
+            executor_readiness_relation[
+                "service_recovery_dependency_correlation"
+            ] = shared_dependency_relation
     explicit_session_invocations_by_capability: dict[str, int] = {}
     explicit_session_activity_incomplete = False
     for service in services:

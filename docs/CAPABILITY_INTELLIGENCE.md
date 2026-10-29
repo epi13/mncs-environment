@@ -113,8 +113,11 @@ the bounded binding-detail window; when the wider inventory is incomplete, the
 relation reports the observed match without claiming a complete inventory.
 The focused `services` activity projection keeps bounded per-service rows,
 including recovery paths and normalized admission causes, so agents can
-inspect those relationships directly. It falls back to the summary-only view
-when needed to meet the caller's result-byte limit.
+inspect those relationships directly. It summarizes detailed verification
+results through their linked readiness relation and exposes the omitted-row
+count; the dedicated verification view retains the detailed results. The
+service view falls back to the summary-only form when needed to meet the
+caller's result-byte limit.
 
 When a recorded service operation has code
 `environment-invocation-not-admitted`, readiness and service-accountability
@@ -134,6 +137,11 @@ rows were omitted and keeps the relationship partial when source context was
 incomplete. These are bounded context observations; they do not establish
 that provider unavailability caused a verification gap, that an agent needed
 or received the capability, or that intervention was reduced.
+When a service recovery path names the same unresolved dependency, the
+projection adds a `service_recovery_dependency_correlation` by exact issue
+code, repository, relative path, and resolution scope. It connects affected
+service identities to verification-obligation and capability counts while
+leaving causal attribution unestablished.
 
 The compact `owner_decision_summary` groups returned owner-pass observations
 by decision and includes observed result, scheduler-outcome, and verification

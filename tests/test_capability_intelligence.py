@@ -6434,11 +6434,113 @@ def test_verification_executor_readiness_summary_covers_detail_omissions() -> No
             "repository": "mncs-compiler",
             "path": ".bootstrap/bin/compiler-probe",
         },
+        "resolution_scope": "selected-checkout-closure",
+        "affected_verification_obligation_count": 3,
         "binding_observation_count": 3,
         "dependent_capability_count": 1,
         "dependent_capabilities": ["mncs-compiler:compiler-build"],
         "dependent_capabilities_omitted_count": 0,
     }]
+
+
+def test_service_verification_dependency_correlation_uses_exact_issue_identity(
+) -> None:
+    issue = {
+        "schema_version": "mncs.environment.invocation-resolution-issue/1",
+        "code": "dependency-path-not-present",
+        "dependency": {
+            "repository": "mncs-compiler",
+            "path": ".bootstrap/bin/compiler-probe",
+        },
+        "resolution_scope": "selected-checkout-closure",
+        "status": "unresolved",
+    }
+    services = [{
+        "service_identity": "mncs-doctor:compiler-vm-coherence",
+        "recovery_path": {"availability_resolution_issue": issue},
+    }, {
+        "service_identity": "mncs-forge:resident-workspace",
+        "recovery_path": {"availability_resolution_issue": issue},
+    }, {
+        "service_identity": "mncs-language-service:resident-workspace",
+        "recovery_path": {
+            "availability_resolution_issue": {
+                **issue,
+                "dependency": {
+                    "repository": "mncs-language-service",
+                    "path": "bin/lsp-provider",
+                },
+            },
+        },
+    }]
+    provider_summary = {
+        "schema_version": (
+            "mncs.environment.verification-executor-readiness-summary/1"
+        ),
+        "status": "observed",
+        "verified_observation_count": 3,
+        "same_provider_unavailable_dependency_groups_omitted_count": 0,
+        "same_provider_unavailable_dependency_groups": [{
+            "resolution_issue_code": issue["code"],
+            "dependency": issue["dependency"],
+            "resolution_scope": issue["resolution_scope"],
+            "affected_verification_obligation_count": 3,
+            "binding_observation_count": 6,
+            "dependent_capability_count": 2,
+            "dependent_capabilities": [
+                "mncs-compiler:compiler-build",
+                "mncs-compiler:compiler-producer",
+            ],
+            "dependent_capabilities_omitted_count": 0,
+        }],
+    }
+
+    relation = capability_intelligence._service_verification_dependency_correlation(
+        services, provider_summary, service_coverage_complete=True,
+    )
+    assert relation is not None
+    assert relation["status"] == "observed"
+    assert relation["shared_dependency_count"] == 1
+    assert relation["join_basis"].startswith("exact resolution issue code")
+    assert relation["groups"] == [{
+        "resolution_issue_code": "dependency-path-not-present",
+        "dependency": {
+            "repository": "mncs-compiler",
+            "path": ".bootstrap/bin/compiler-probe",
+        },
+        "resolution_scope": "selected-checkout-closure",
+        "service_count": 2,
+        "service_identities": [
+            "mncs-doctor:compiler-vm-coherence",
+            "mncs-forge:resident-workspace",
+        ],
+        "service_identities_omitted_count": 0,
+        "verification_obligation_observation_count": 3,
+        "verification_binding_observation_count": 6,
+        "verification_dependent_capability_count": 2,
+        "verification_dependent_capabilities": [
+            "mncs-compiler:compiler-build",
+            "mncs-compiler:compiler-producer",
+        ],
+        "verification_dependent_capabilities_omitted_count": 0,
+        "causal_status": "not-established",
+    }]
+    assert relation["causal_status"] == "not-established"
+    assert relation["agent_intervention_burden_status"] == "not-measured"
+
+    mismatched = {
+        **provider_summary,
+        "same_provider_unavailable_dependency_groups": [{
+            **provider_summary["same_provider_unavailable_dependency_groups"][0],
+            "dependency": {
+                "repository": "mncs-compiler",
+                "path": ".bootstrap/bin/other-probe",
+            },
+        }],
+    }
+    assert capability_intelligence._service_verification_dependency_correlation(
+        services, mismatched, service_coverage_complete=True,
+    ) is None
 
 
 def test_explicit_empty_service_scope_remains_accountable_and_bounded(
@@ -7146,6 +7248,37 @@ def test_focused_service_execution_explains_reconciliation_basis() -> None:
     assert owner["scheduler_disposition_code"] == 2
     assert owner["trigger_kinds"] == []
     assert owner["timer_or_lifecycle_due"] is False
+
+
+def test_focused_service_execution_can_summarize_verification_details() -> None:
+    observed = {
+        "status": "observed",
+        "scope": "selected-session-owner-pass-execution",
+        "source": {},
+        "summary": {
+            "verification_result_detail_count": 2,
+            "verification_result_details_status": "recorded",
+            "verification_result_details_omitted_count": 1,
+            "verification_result_details": [{
+                "owner_pass": "verification",
+                "result_identity": "result-one",
+            }, {
+                "owner_pass": "verification",
+                "result_identity": "result-two",
+            }],
+        },
+    }
+
+    full = capability_intelligence._compact_focused_service_execution(observed)
+    assert len(full["summary"]["verification_result_details"]) == 2
+    focused = capability_intelligence._compact_focused_service_execution(
+        observed, include_verification_details=False,
+    )
+    assert "verification_result_details" not in focused["summary"]
+    assert focused["summary"][
+        "verification_result_details_omitted_by_focused_view"
+    ] == 3
+    assert focused["summary"]["verification_result_detail_count"] == 2
 
 
 def test_old_scheduler_execution_stays_unclassified_in_service_view() -> None:
