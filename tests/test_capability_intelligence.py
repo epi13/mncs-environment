@@ -5781,6 +5781,52 @@ def test_session_service_readiness_correlates_snapshot_dependencies_safely(
     assert forge_recovery_path["binding_relation_status"] == (
         "capability-not-present-in-current-binding-snapshot"
     )
+    focused_services = capability_intelligence.project_session_activity(
+        session, event_limit=4, activity_section="services",
+    )
+    focused_accountability = focused_services["session_activity"][
+        "service_accountability"
+    ]
+    focused_services_by_identity = {
+        item["service_identity"]: item
+        for item in focused_accountability["services"]
+    }
+    assert set(focused_services_by_identity) == {language_service, forge_service}
+    assert focused_accountability["response_budget_summary_only"] is False
+    assert focused_services_by_identity[language_service][
+        "operation_admission_reason_class"
+    ] == "outside-writable-authority"
+    assert focused_services_by_identity[language_service]["recovery_path"][
+        "capability_identity"
+    ] == language_recovery
+    assert focused_services_by_identity[forge_service]["recovery_path"][
+        "capability_identity"
+    ] == forge_recovery
+    assert capability_intelligence._projection_response_size(
+        focused_services,
+    ) <= capability_intelligence.MAX_RESULT_BYTES
+    assert private_path not in json.dumps(focused_services)
+    focused_size = capability_intelligence._projection_response_size(
+        focused_services,
+    )
+    focused_summary_fallback = capability_intelligence.project_session_activity(
+        session, event_limit=4, activity_section="services",
+        max_result_bytes=focused_size - 1,
+    )
+    assert focused_summary_fallback["detail_status"] == (
+        "summary-only-response-budget"
+    )
+    assert focused_summary_fallback["session_activity"][
+        "service_accountability"
+    ]["services"] == []
+    assert focused_summary_fallback["session_activity"][
+        "service_accountability"
+    ]["summary"]["operation_admission_reason_class_counts"] == {
+        "outside-writable-authority": 1,
+    }
+    assert capability_intelligence._projection_response_size(
+        focused_summary_fallback,
+    ) <= focused_size - 1
     assert private_path not in json.dumps(accountability)
     assert language_accountability["bindings"][0]["use_observation_status"] == (
         "invoked-for-exact-session-binding"

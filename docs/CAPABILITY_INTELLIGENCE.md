@@ -111,6 +111,10 @@ availability is substrate evidence; it is not provider readiness or proof
 that an agent need was fulfilled. Declared reconcile bindings are retained in
 the bounded binding-detail window; when the wider inventory is incomplete, the
 relation reports the observed match without claiming a complete inventory.
+The focused `services` activity projection keeps bounded per-service rows,
+including recovery paths and normalized admission causes, so agents can
+inspect those relationships directly. It falls back to the summary-only view
+when needed to meet the caller's result-byte limit.
 
 When a recorded service operation has code
 `environment-invocation-not-admitted`, readiness and service-accountability

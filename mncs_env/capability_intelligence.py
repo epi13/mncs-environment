@@ -3454,6 +3454,7 @@ def _compact_scheduled_pass_verification_status_summary(
 
 def _compact_service_accountability_overview(
     value: Any, ambient_service_execution: Any = None,
+    *, include_service_details: bool = False,
 ) -> dict[str, Any] | None:
     """Keep measured totals and their selected-session source under response pressure."""
     if not isinstance(value, dict):
@@ -3710,17 +3711,37 @@ def _compact_service_accountability_overview(
     previously_omitted = value.get("services_omitted_count", 0)
     if type(previously_omitted) is not int or previously_omitted < 0:
         previously_omitted = 0
-    omitted = projected_count + previously_omitted
+    compact_services = []
+    if include_service_details:
+        for service in services[:MAX_SESSION_SERVICE_READINESS_RECORDS]:
+            if (not isinstance(service, dict)
+                    or not isinstance(service.get("service_identity"), str)):
+                continue
+            compact_service = deepcopy(service)
+            # These assurance states repeat the overview summary and can be
+            # reconstructed there without losing service-specific evidence.
+            for key in (
+                "ambient_fulfillment_status", "agent_receipt_status",
+                "agent_intervention_burden_status", "outcome_quality_status",
+            ):
+                compact_service.pop(key, None)
+            compact_services.append(compact_service)
+        omitted = max(
+            previously_omitted,
+            max(0, projected_count - len(compact_services)),
+        )
+    else:
+        omitted = projected_count + previously_omitted
     result = {
         "schema_version": value.get("schema_version"),
         "status": value.get("status"),
         "scope": value.get("scope"),
         "source": compact_source,
         "summary": compact_summary,
-        "services": [],
+        "services": compact_services,
         "services_truncated": omitted > 0,
         "services_omitted_count": omitted,
-        "response_budget_summary_only": True,
+        "response_budget_summary_only": not bool(compact_services),
     }
     observed_activity = _compact_service_observed_capability_activity(
         value.get("observed_capability_activity"),
@@ -12748,7 +12769,7 @@ def _focus_session_activity(
         accountability = activity.get("service_accountability")
         if isinstance(accountability, dict):
             compact_accountability = _compact_service_accountability_overview(
-                accountability,
+                accountability, include_service_details=True,
             )
             if compact_accountability is not None:
                 accountability_summary = accountability.get("summary")
@@ -12932,6 +12953,26 @@ def project_session_activity(
         result["measurement_limits"].append(
             "Repeated session detail was omitted by the response budget; bounded resource, diagnostic, and verification evidence is retained where available."
         )
+
+    if (activity_section == "services"
+            and _projection_response_size(result) > max_result_bytes):
+        accountability = activity.get("service_accountability")
+        ambient_execution = activity.get("ambient_service_execution")
+        compact_accountability = _compact_service_accountability_overview(
+            accountability, ambient_execution,
+        )
+        if (compact_accountability is not None
+                and isinstance(result.get("session_activity"), dict)):
+            result["session_activity"][
+                "service_accountability"
+            ] = compact_accountability
+            result["session_activity"][
+                "detail_status"
+            ] = "summary-only-response-budget"
+            result["detail_status"] = "summary-only-response-budget"
+            result["measurement_limits"].append(
+                "Per-service accountability details were reduced to the overview summary to satisfy the requested result byte limit."
+            )
 
     if _projection_response_size(result) > max_result_bytes:
         raise ValueError(
