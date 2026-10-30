@@ -1416,8 +1416,8 @@ def test_scope_grant_refresh_accepts_dirty_changes_under_exact_live_claim(
         session.close()
 
 
-@pytest.mark.parametrize("claim_state", ["missing", "released", "foreign"])
-def test_scope_grant_refresh_requires_one_live_matching_claim(
+@pytest.mark.parametrize("claim_state", ["missing", "released"])
+def test_scope_grant_refresh_accepts_clean_forward_head_without_live_claim(
     tmp_path: Path, claim_state: str,
 ) -> None:
     workspace = tmp_path / "workspace"
@@ -1444,35 +1444,164 @@ def test_scope_grant_refresh_requires_one_live_matching_claim(
                 reason="test release before a refresh",
                 request_id="req_refresh_released_claim_release",
             )
-        elif claim_state == "foreign":
-            claims.acquire(
-                session.store,
-                repository="mncs-control-mcp",
-                session_id="ses_foreign_refresh_owner",
-                consumer_id="foreign-refresh-owner",
-                basis=claims.BASIS_EXPLICIT,
-                reason="foreign writer on the same worktree",
-                scope={
-                    "kind": "worktree",
-                    "checkout": str(checkout),
-                    "branch": f"campaign/scope-refresh-{claim_state}",
-                },
-                checkout_facts={"dirty": False, "foreign_signals": []},
-                request_id="req_refresh_foreign_claim",
-            )
-
         (checkout / "README.md").write_text("advance without the session claim\n")
         _git(checkout, "add", "README.md")
-        _git(checkout, "commit", "-m", "advance before rejected refresh")
+        _git(checkout, "commit", "-m", "advance before scope refresh")
         refreshed_facts = _refresh_owner_facts(
             checkout, workspace, "mncs-control-mcp",
             f"campaign/scope-refresh-{claim_state}",
+        )
+        refreshed = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            request_id=f"req_refresh_{claim_state}_update",
+            owner_authorized_checkout=refreshed_facts,
+        )
+
+        assert refreshed["refresh_of"] == first["identity"]
+        assert refreshed["repository_identity"]["head"] == refreshed_facts["head"]
+        assert refreshed["repository_identity"]["clean"] is True
+        assert session.authority_scope_grants() == [refreshed]
+
+        claim = session.acquire_claim(
+            "mncs-control-mcp",
+            reason="claim the refreshed clean descendant checkout",
+            request_id=f"req_refresh_{claim_state}_claim_after_update",
+        )
+        assert claim["scope"]["checkout"] == str(checkout)
+        assert claim["scope"]["branch"] == f"campaign/scope-refresh-{claim_state}"
+        assert session.release_claim(
+            "mncs-control-mcp", claim_id=claim["claim_id"],
+            reason="finish the refreshed checkout workflow",
+            request_id=f"req_refresh_{claim_state}_claim_after_update_release",
+        )
+    finally:
+        session.close()
+
+
+def test_scope_grant_refresh_rejects_a_foreign_claim_during_clean_advance(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        checkout, facts = _nested_target_checkout(
+            session, workspace, "refresh-foreign-forward",
+            "campaign/scope-refresh-foreign-forward",
+        )
+        first = _grant(
+            session,
+            request_id="req_refresh_foreign_forward_initial",
+            owner_authorized_checkout=facts,
+        )
+        claims.acquire(
+            session.store,
+            repository="mncs-control-mcp",
+            session_id="ses_foreign_refresh_owner",
+            consumer_id="foreign-refresh-owner",
+            basis=claims.BASIS_EXPLICIT,
+            reason="foreign writer on the same worktree",
+            scope={
+                "kind": "worktree",
+                "checkout": str(checkout),
+                "branch": "campaign/scope-refresh-foreign-forward",
+            },
+            checkout_facts={"dirty": False, "foreign_signals": []},
+            request_id="req_refresh_foreign_forward_claim",
+        )
+
+        (checkout / "README.md").write_text("advance with foreign claim held\n")
+        _git(checkout, "add", "README.md")
+        _git(checkout, "commit", "-m", "advance during foreign claim")
+        refreshed_facts = _refresh_owner_facts(
+            checkout, workspace, "mncs-control-mcp",
+            "campaign/scope-refresh-foreign-forward",
         )
         with pytest.raises(sessions.AuthorityScopeConflict) as error:
             _grant(
                 session,
                 revision=session.effective_authority()["revision"],
-                request_id=f"req_refresh_{claim_state}_update",
+                request_id="req_refresh_foreign_forward_rejected",
+                owner_authorized_checkout=refreshed_facts,
+            )
+        assert error.value.diagnostics["code"] == "authority-scope-conflict"
+        assert session.authority_scope_grants() == [first]
+    finally:
+        session.close()
+
+
+def test_scope_grant_refresh_without_claim_rejects_dirty_forward_head(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        checkout, facts = _nested_target_checkout(
+            session, workspace, "refresh-dirty-forward",
+            "campaign/scope-refresh-dirty-forward",
+        )
+        first = _grant(
+            session,
+            request_id="req_refresh_dirty_forward_initial",
+            owner_authorized_checkout=facts,
+        )
+        (checkout / "README.md").write_text("first clean descendant\n")
+        _git(checkout, "add", "README.md")
+        _git(checkout, "commit", "-m", "advance before dirty refresh")
+        (checkout / "README.md").write_text("dirty after head advance\n")
+        refreshed_facts = _refresh_owner_facts(
+            checkout, workspace, "mncs-control-mcp",
+            "campaign/scope-refresh-dirty-forward",
+        )
+
+        with pytest.raises(sessions.AuthorityScopeConflict) as error:
+            _grant(
+                session,
+                revision=session.effective_authority()["revision"],
+                request_id="req_refresh_dirty_forward_rejected",
+                owner_authorized_checkout=refreshed_facts,
+            )
+        assert error.value.diagnostics["code"] == "authority-scope-conflict"
+        assert session.authority_scope_grants() == [first]
+    finally:
+        session.close()
+
+
+def test_scope_grant_refresh_without_claim_rejects_rewritten_history(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    session = _session(tmp_path / "state", workspace)
+    try:
+        checkout, facts = _nested_target_checkout(
+            session, workspace, "refresh-rewritten",
+            "campaign/scope-refresh-rewritten",
+        )
+        first = _grant(
+            session,
+            request_id="req_refresh_rewritten_initial",
+            owner_authorized_checkout=facts,
+        )
+        tree = _git(checkout, "rev-parse", "HEAD^{tree}")
+        unrelated_head = _git(
+            checkout, "-c", "user.name=Scope Grant Test",
+            "-c", "user.email=scope-grant@example.invalid",
+            "commit-tree", tree, "-m", "unrelated replacement history",
+        )
+        _git(checkout, "reset", "--hard", unrelated_head)
+        refreshed_facts = _refresh_owner_facts(
+            checkout, workspace, "mncs-control-mcp",
+            "campaign/scope-refresh-rewritten",
+        )
+
+        with pytest.raises(sessions.AuthorityScopeConflict) as error:
+            _grant(
+                session,
+                revision=session.effective_authority()["revision"],
+                request_id="req_refresh_rewritten_rejected",
                 owner_authorized_checkout=refreshed_facts,
             )
         assert error.value.diagnostics["code"] == "authority-scope-conflict"

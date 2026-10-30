@@ -1466,6 +1466,7 @@ def _verified_scope_checkout(
     *,
     authorized_checkout: dict[str, Any] | None = None,
     owner_authorized_checkout: dict[str, Any] | None = None,
+    allow_forward_head: bool = False,
 ) -> tuple[Path, dict[str, str]]:
     """Resolve the selected registered checkout, including nested worktrees.
 
@@ -1554,7 +1555,32 @@ def _verified_scope_checkout(
             "repository_root", "workspace_root", "git_common_directory",
         ):
             recorded = owner_authorized_checkout.get(field)
-            if isinstance(recorded, str) and observed.get(field) != recorded:
+            if not isinstance(recorded, str):
+                continue
+            if field == "head" and allow_forward_head:
+                if observed.get(field) == recorded:
+                    continue
+                ancestry = workspace_module._git(
+                    checkout_path, "merge-base", "--is-ancestor",
+                    recorded, observed[field],
+                )
+                if ancestry is not None and ancestry.returncode == 0:
+                    continue
+                raise ValueError(
+                    "owner-authorized checkout revision is not an ancestor "
+                    "of the current worktree revision"
+                )
+            expected = recorded
+            if field in {"repository_root", "workspace_root", "git_common_directory"}:
+                try:
+                    expected = str(
+                        workspace_module.resolve_control_workspace_alias(Path(recorded))
+                    )
+                except (OSError, ValueError) as error:
+                    raise ValueError(
+                        f"owner-authorized checkout {field} is not canonical"
+                    ) from error
+            if observed.get(field) != expected:
                 raise ValueError(f"owner-authorized checkout {field} changed")
         if selected is not None:
             for field in (
@@ -4065,6 +4091,35 @@ class Session:
                     ),
                 )
 
+            # A clean commit advance in the same registered checkout does not
+            # change its ownership identity. Permit the authenticated owner to
+            # refresh that recorded head when it is a strict Git descendant;
+            # a dirty tree or rewritten history still needs an exact live
+            # claim (or the normal checkout-rebind flow).
+            same_checkout_identity = all(
+                field in prior_identity
+                and prior_identity.get(field) == repository_identity.get(field)
+                for field in stable_identity_fields
+                if field != "manifest_identity"
+            )
+            prior_head = prior_identity.get("head")
+            current_head = repository_identity.get("head")
+            forward_head_refresh = False
+            if (
+                not changed_identity
+                and same_checkout_identity
+                and owner_authorized_checkout is not None
+                and isinstance(prior_head, str)
+                and isinstance(current_head, str)
+                and prior_head != current_head
+                and not observed.dirty
+            ):
+                ancestry = workspace_module._git(
+                    resolved_checkout, "merge-base", "--is-ancestor",
+                    prior_head, current_head,
+                )
+                forward_head_refresh = ancestry is not None and ancestry.returncode == 0
+
             live_claims = claims_module.active_claims(self.store.read_claims())
             if checkout_rebind:
                 old_path = prior_identity.get("path")
@@ -4149,7 +4204,7 @@ class Session:
             exact_claims = [item for item in overlapping if exact_grant_claim(item)]
             target_claim_invalid = (
                 (len(overlapping) != 1 or len(exact_claims) != 1)
-                if not checkout_rebind else
+                if not (checkout_rebind or forward_head_refresh) else
                 bool(overlapping) and (len(overlapping) != 1 or len(exact_claims) != 1)
             )
             if malformed or target_claim_invalid:
@@ -7120,6 +7175,24 @@ class Session:
             selected_checkouts.get(repository)
             if isinstance(selected_checkouts, dict) else None
         )
+        if (isinstance(selected, dict)
+                and selected.get("source_ref") != "authenticated-scope-grant"):
+            owner_grants = [
+                grant for grant in self.authority_scope_grants()
+                if grant.get("repository") == repository
+            ]
+            owner_identity = (
+                owner_grants[0].get("repository_identity")
+                if len(owner_grants) == 1 else None
+            )
+            if (isinstance(owner_identity, dict)
+                    and isinstance(owner_identity.get("repository_root"), str)
+                    and isinstance(owner_identity.get("path"), str)):
+                # The exact authenticated grant is the selected checkout for
+                # this repository. Let claim resolution refresh it; revalidating
+                # the session's entry-time projection here can make an
+                # unrelated default checkout block the authorized claim.
+                return
         if not isinstance(selected, dict):
             if (isinstance(scope, dict) and scope.get("kind") == "worktree"
                     and isinstance(scope.get("checkout"), str)):
@@ -7521,17 +7594,13 @@ class Session:
                 current_grants[0].get("repository_identity")
                 if len(current_grants) == 1 else None
             )
-            owner_path = (
-                owner_identity.get("path") if isinstance(owner_identity, dict) else None
-            )
-            selected_path = selected.get("path")
-            if (isinstance(owner_path, str) and isinstance(selected_path, str)
-                    and Path(os.path.abspath(owner_path))
-                    != Path(os.path.abspath(selected_path))):
+            if (isinstance(owner_identity, dict)
+                    and isinstance(owner_identity.get("repository_root"), str)
+                    and isinstance(owner_identity.get("path"), str)):
                 # An authenticated repository grant is the durable checkout
                 # selection for this repository. The session's entry-time
                 # checkout is only a default and must not route the first
-                # post-grant claim back to a different worktree.
+                # post-grant claim through its unrelated checkout projection.
                 selected = None
         owner_authorized_selection = False
         if isinstance(selected, dict) and selected.get("source_ref") == "authenticated-scope-grant":
@@ -7574,6 +7643,7 @@ class Session:
                         session_workspace or ".",
                         repository,
                         owner_authorized_checkout=current_identity,
+                        allow_forward_head=True,
                     )
                     observed_owner = workspace_module.inspect_repo(
                         Path(verified_identity["path"]), _refresh=True,
@@ -7619,11 +7689,18 @@ class Session:
                     and isinstance(owner_identity.get("repository_root"), str)
                     and isinstance(owner_identity.get("path"), str)):
                 try:
-                    owner_path = Path(owner_identity["path"])
-                    owner_repository_root = Path(owner_identity["repository_root"])
                     owner_workspace_root = owner_identity.get("workspace_root")
                     if not isinstance(owner_workspace_root, str):
-                        owner_workspace_root = str(owner_repository_root.parent)
+                        owner_workspace_root = str(
+                            Path(owner_identity["repository_root"]).parent
+                        )
+
+                    owner_path, verified_owner_identity = _verified_scope_checkout(
+                        owner_workspace_root,
+                        repository,
+                        owner_authorized_checkout=owner_identity,
+                        allow_forward_head=True,
+                    )
 
                     if explicit_scope:
                         requested_path = Path(str(scope.get("checkout", "")))
@@ -7634,9 +7711,10 @@ class Session:
                         if (not requested_path.is_absolute()
                                 and isinstance(active_workspace_root, str)):
                             requested_path = Path(active_workspace_root) / requested_path
-                        if Path(os.path.abspath(requested_path)) != Path(
-                            os.path.abspath(owner_path)
-                        ):
+                        requested_path = workspace_module.resolve_control_workspace_alias(
+                            requested_path
+                        )
+                        if requested_path != owner_path:
                             raise ValueError(
                                 "explicit claim checkout differs from the owner-authorized checkout"
                             )
@@ -7646,29 +7724,6 @@ class Session:
                     # claim was held; validate stable Git identity and require
                     # the granted revision to remain an ancestor so a reset
                     # or replacement checkout cannot inherit the grant.
-                    verified_owner_identity = workspace_module.verify_registered_checkout(
-                        owner_path,
-                        repository=repository,
-                        workspace_root=owner_workspace_root,
-                        expected_repository_root=owner_repository_root,
-                        expected_branch=(
-                            owner_identity.get("branch")
-                            if isinstance(owner_identity.get("branch"), str)
-                            else None
-                        ),
-                    )
-                    for field in (
-                        "checkout_identity", "git_common_directory_identity",
-                        "observed_path", "branch", "repository_root",
-                        "workspace_root", "git_common_directory",
-                        "manifest_identity",
-                    ):
-                        recorded = owner_identity.get(field)
-                        if (isinstance(recorded, str)
-                                and verified_owner_identity.get(field) != recorded):
-                            raise ValueError(
-                                f"owner-authorized checkout {field} changed"
-                            )
                     recorded_head = owner_identity.get("head")
                     current_head = verified_owner_identity.get("head")
                     if (isinstance(recorded_head, str)
