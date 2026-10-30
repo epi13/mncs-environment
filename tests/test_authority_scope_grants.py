@@ -1417,8 +1417,9 @@ def test_scope_grant_refresh_accepts_dirty_changes_under_exact_live_claim(
 
 
 @pytest.mark.parametrize("claim_state", ["missing", "released"])
+@pytest.mark.parametrize("advance", [False, True])
 def test_scope_grant_refresh_accepts_clean_forward_head_without_live_claim(
-    tmp_path: Path, claim_state: str,
+    tmp_path: Path, claim_state: str, advance: bool,
 ) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -1444,9 +1445,10 @@ def test_scope_grant_refresh_accepts_clean_forward_head_without_live_claim(
                 reason="test release before a refresh",
                 request_id="req_refresh_released_claim_release",
             )
-        (checkout / "README.md").write_text("advance without the session claim\n")
-        _git(checkout, "add", "README.md")
-        _git(checkout, "commit", "-m", "advance before scope refresh")
+        if advance:
+            (checkout / "README.md").write_text("advance without the session claim\n")
+            _git(checkout, "add", "README.md")
+            _git(checkout, "commit", "-m", "advance before scope refresh")
         refreshed_facts = _refresh_owner_facts(
             checkout, workspace, "mncs-control-mcp",
             f"campaign/scope-refresh-{claim_state}",
@@ -1531,8 +1533,9 @@ def test_scope_grant_refresh_rejects_a_foreign_claim_during_clean_advance(
         session.close()
 
 
-def test_scope_grant_refresh_without_claim_rejects_dirty_forward_head(
-    tmp_path: Path,
+@pytest.mark.parametrize("advance", [False, True])
+def test_scope_grant_refresh_without_claim_preserves_dirty_forward_head(
+    tmp_path: Path, advance: bool,
 ) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -1547,24 +1550,30 @@ def test_scope_grant_refresh_without_claim_rejects_dirty_forward_head(
             request_id="req_refresh_dirty_forward_initial",
             owner_authorized_checkout=facts,
         )
-        (checkout / "README.md").write_text("first clean descendant\n")
-        _git(checkout, "add", "README.md")
-        _git(checkout, "commit", "-m", "advance before dirty refresh")
+        if advance:
+            (checkout / "README.md").write_text("first clean descendant\n")
+            _git(checkout, "add", "README.md")
+            _git(checkout, "commit", "-m", "advance before dirty refresh")
         (checkout / "README.md").write_text("dirty after head advance\n")
         refreshed_facts = _refresh_owner_facts(
             checkout, workspace, "mncs-control-mcp",
             "campaign/scope-refresh-dirty-forward",
         )
 
-        with pytest.raises(sessions.AuthorityScopeConflict) as error:
-            _grant(
-                session,
-                revision=session.effective_authority()["revision"],
-                request_id="req_refresh_dirty_forward_rejected",
-                owner_authorized_checkout=refreshed_facts,
-            )
-        assert error.value.diagnostics["code"] == "authority-scope-conflict"
-        assert session.authority_scope_grants() == [first]
+        refreshed = _grant(
+            session,
+            revision=session.effective_authority()["revision"],
+            request_id="req_refresh_dirty_forward_allowed",
+            owner_authorized_checkout=refreshed_facts,
+        )
+        assert refreshed["refresh_of"] == first["identity"]
+        assert refreshed["repository_identity"]["clean"] is False
+        assert (checkout / "README.md").read_text() == "dirty after head advance\n"
+        claim = session.acquire_claim(
+            "mncs-control-mcp", reason="explicitly recover preserved work",
+            basis=claims.BASIS_RECOVERY,
+        )
+        assert claim["provenance"]["adopted_dirty"] is True
     finally:
         session.close()
 

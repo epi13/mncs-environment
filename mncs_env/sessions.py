@@ -4091,11 +4091,10 @@ class Session:
                     ),
                 )
 
-            # A clean commit advance in the same registered checkout does not
-            # change its ownership identity. Permit the authenticated owner to
-            # refresh that recorded head when it is a strict Git descendant;
-            # a dirty tree or rewritten history still needs an exact live
-            # claim (or the normal checkout-rebind flow).
+            # An authenticated refresh of the same registered checkout does
+            # not require a persistent claim. Preserve dirty proposal work;
+            # stable identity and equal/forward history establish continuity.
+            # Actual overlapping claims are still checked below.
             same_checkout_identity = all(
                 field in prior_identity
                 and prior_identity.get(field) == repository_identity.get(field)
@@ -4111,8 +4110,6 @@ class Session:
                 and owner_authorized_checkout is not None
                 and isinstance(prior_head, str)
                 and isinstance(current_head, str)
-                and prior_head != current_head
-                and not observed.dirty
             ):
                 ancestry = workspace_module._git(
                     resolved_checkout, "merge-base", "--is-ancestor",
