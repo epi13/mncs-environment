@@ -14,7 +14,8 @@
     "control": "136 passed",
     "vertical": "PASS before and after",
     "campaign_proofs": "14 passed, 2 skipped",
-    "final_small": "12 passed"
+    "final_small": "12 passed",
+    "full_baseline": "1276 passed, 46 skipped in 1080.00s; started on 01f77f7 before repair; changed paths verified separately after repair"
   },
   "acceptance": {
     "repositories": [
