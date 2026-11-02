@@ -89,7 +89,6 @@ def test_checkout_binding_routes_execution_and_survives_release_and_restart(tmp_
         assert resumed.invoke("fixture.write/1", [])["status"] == "ok"
         _git(checkout, "add", "README.md")
         _git(checkout, "commit", "-m", "bounded forward progress")
-        resumed.revalidate()
         assert resumed.invoke("fixture.write/1", [])["status"] == "ok"
         # A separate real session can acquire this released scope. Its live
         # claim must still fence the original provider operation.

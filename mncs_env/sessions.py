@@ -6491,6 +6491,12 @@ class Session:
                         "selected checkout could not be composed; inspect scope_composition on resume"
                     )
             break
+        if binding.get("provider") in self.snapshot.get("selected_checkouts", {}):
+            self._revalidate_selected_checkout(
+                str(binding["provider"]), scope=None, workspace_root=None,
+                operation="invoke",
+            )
+            binding = self._binding(binding["capability"])
         provenance = binding.get("provenance", {})
         provenance = provenance if isinstance(provenance, dict) else {}
         typed_execution = provenance.get("consumed_typed_execution_dependency")
@@ -7185,15 +7191,15 @@ class Session:
         return sorted(observed, key=lambda item: (
             str(item.get("repository", "")), str(item.get("observed_path", ""))))[:64]
 
-    def _revalidate_selected_checkout_for_claim(
+    def _revalidate_selected_checkout(
         self, repository: str, *, scope: dict[str, Any] | None,
-        workspace_root: str | None,
+        workspace_root: str | None, operation: str = "claims/acquire",
     ) -> None:
-        """Refresh stale selected-checkout bindings before an ordinary claim.
+        """Refresh stale selected-checkout bindings before a claim or invocation.
 
         A branch or HEAD change in the same registered checkout is observable
         state, not a reason to make the caller run a separate reconciliation
-        command. Revalidate capabilities and Rights before claim acquisition;
+        command. Revalidate capabilities and Rights before using the checkout;
         stable checkout identity must still match, and the ordinary claim
         checks below remain authoritative for the requested scope.
         """
@@ -7271,11 +7277,11 @@ class Session:
             request_id = "req_claim_checkout_restore_" + digest_hex({
                 "session_id": self.session_id,
                 "repository": repository,
-                "event_count": len(self._log()),
+                "event_count": len(self._log()), "operation": operation,
             }, length=24)
             self.revalidate(
                 request_id=request_id,
-                request_operation="claims/acquire/restore-selected-checkout",
+                request_operation=f"{operation}/restore-selected-checkout",
                 workspace_root=root_value,
             )
             selected_checkouts = self.snapshot.get("selected_checkouts")
@@ -7283,8 +7289,14 @@ class Session:
                 selected_checkouts.get(repository)
                 if isinstance(selected_checkouts, dict) else None
             )
-        if (not isinstance(selected, dict)
-                or selected.get("source_ref") == "authenticated-scope-grant"):
+        if not isinstance(selected, dict):
+            return
+        if (selected.get("source_ref") == "authenticated-scope-grant"
+                and not any(
+                    grant.get("repository") == repository
+                    and grant.get("authorization_basis") == "campaign-writable-checkout"
+                    for grant in self.authority_scope_grants()
+                )):
             return
         if (not isinstance(selected.get("branch"), str)
                 or not isinstance(selected.get("head"), str)):
@@ -7341,12 +7353,13 @@ class Session:
             "session_id": self.session_id,
             "repository": repository,
             "checkout_identity": identity.get("checkout_identity"),
+            "operation": operation,
             "branch": observed.branch,
             "head": observed.head,
         }, length=24)
         self.revalidate(
             request_id=request_id,
-            request_operation="claims/acquire/revalidate-selected-checkout",
+            request_operation=f"{operation}/revalidate-selected-checkout",
             workspace_root=str(root),
         )
         refreshed_checkouts = self.snapshot.get("selected_checkouts")
@@ -7579,7 +7592,7 @@ class Session:
         # knowing a repository alias must not let a session reserve another
         # campaign's scope. Preserve idempotent readback after an ambiguous
         # publication even if the session's authority has since changed.
-        self._revalidate_selected_checkout_for_claim(
+        self._revalidate_selected_checkout(
             repository, scope=scope, workspace_root=workspace_root,
         )
         prior_repository_refs = list(
