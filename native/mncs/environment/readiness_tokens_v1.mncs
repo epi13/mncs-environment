@@ -1,0 +1,363 @@
+mncs 0.18;
+
+// Resolve bounded JSON Pointer observations over provider-owned JSON bytes.
+// The host retains process transport and publishes decoded selected values;
+// this module owns strict JSON validation, pointer traversal, and token spans.
+module mncs.environment.readiness_tokens_v1;
+
+use mncs.std.application.v1;
+use mncs.std.json_cursor.v1 as json;
+
+record ReadinessByteChunkV1 {
+    bytes: [byte; up_to 1024],
+    length: u64
+}
+
+record PointerInputV1 {
+    bytes: [byte; up_to 1024]
+}
+
+record ReadinessTokenRequestV1 {
+    schema_version: [byte; up_to 64],
+    chunks: [ReadinessByteChunkV1; up_to 17],
+    document_length: u64,
+    pointers: [PointerInputV1; up_to 32]
+}
+
+record PathSegmentV1 {
+    bytes: [byte; 32],
+    length: u64
+}
+
+record PointerPathV1 {
+    segments: [PathSegmentV1; 63],
+    count: u64,
+    valid: bool,
+    pending_tilde: bool
+}
+
+record QueryV1 {
+    path: PointerPathV1,
+    prefixes: [bool; 64],
+    pending_match: bool,
+    pending_depth: u64,
+    found: bool,
+    start: u64,
+    end: u64,
+    capture_depth: u64,
+    capturing: bool,
+    supported: bool
+}
+
+record ReadinessTokenStateV1 {
+    cursor: json.StrictCursor,
+    queries: [QueryV1; 32],
+    count: u64,
+    root_is_object: bool
+}
+
+record ReadinessTokenResultV1 {
+    schema_version: [byte; up_to 64],
+    valid_json: bool,
+    root_is_object: bool,
+    query_count: u64,
+    found: [bool; 32],
+    supported: [bool; 32],
+    starts: [u64; 32],
+    ends: [u64; 32]
+}
+
+fn request_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 114, 101, 97, 100, 105, 110, 101, 115, 115, 45, 116, 111, 107, 101, 110, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49];
+}
+
+fn result_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 114, 101, 97, 100, 105, 110, 101, 115, 115, 45, 116, 111, 107, 101, 110, 115, 47, 49];
+}
+
+fn same_bytes(left: [byte; up_to 64], right: [byte; up_to 64]) -> (result: bool) {
+    if left.len != right.len { return false; }
+    iterate i over left carrying same: bool = true {
+        next same = same && left[i] == right[i];
+    }
+    return same;
+}
+
+fn empty_path() -> (result: PointerPathV1) {
+    return PointerPathV1 {
+        segments: [PathSegmentV1 { bytes: [0; 32], length: 0 }; 63], count: 0,
+        valid: true, pending_tilde: false
+    };
+}
+
+fn append_path_byte(path: PointerPathV1, value: byte) -> (result: PointerPathV1) {
+    if path.count == 0 || path.count > 63 { return PointerPathV1 { ..path, valid: false }; }
+    let index: u64 = path.count -% 1;
+    let segment: PathSegmentV1 = path.segments[index];
+    let length: u64 = segment.length;
+    if length >= 32 { return PointerPathV1 { ..path, valid: false }; }
+    let updated_segment: PathSegmentV1 = PathSegmentV1 {
+        ..segment, bytes: replace(segment.bytes, length, value), length: length +% 1
+    };
+    return PointerPathV1 { ..path, segments: replace(path.segments, index, updated_segment) };
+}
+
+fn path_step(path: PointerPathV1, value: byte, first: bool) -> (result: PointerPathV1) {
+    if !path.valid { return path; }
+    if first {
+        if value != 47 { return PointerPathV1 { ..path, valid: false }; }
+        return PointerPathV1 { ..path, count: 1 };
+    }
+    if path.pending_tilde {
+        if value == 48 { return append_path_byte(PointerPathV1 { ..path, pending_tilde: false }, 126); }
+        if value == 49 { return append_path_byte(PointerPathV1 { ..path, pending_tilde: false }, 47); }
+        return PointerPathV1 { ..path, valid: false, pending_tilde: false };
+    }
+    if value == 126 { return PointerPathV1 { ..path, pending_tilde: true }; }
+    if value == 47 {
+        if path.count >= 63 { return PointerPathV1 { ..path, valid: false }; }
+        return PointerPathV1 { ..path, count: path.count +% 1 };
+    }
+    return append_path_byte(path, value);
+}
+
+fn parse_path_actual(value: [byte; up_to 1024]) -> (result: PointerPathV1) {
+    if value.len == 0 { return PointerPathV1 { ..empty_path(), valid: false }; }
+    iterate i over value carrying parsed: PointerPathV1 = empty_path() {
+        next parsed = path_step(parsed, value[i], i == 0);
+    }
+    if parsed.pending_tilde { return PointerPathV1 { ..parsed, valid: false }; }
+    return parsed;
+}
+
+fn empty_query() -> (result: QueryV1) {
+    return QueryV1 {
+        path: empty_path(), prefixes: [false; 64], pending_match: false,
+        pending_depth: 0, found: false, start: 0, end: 0,
+        capture_depth: 0, capturing: false, supported: true
+    };
+}
+
+fn set_query_pointer(state: ReadinessTokenStateV1, index: u64, pointer: PointerInputV1) -> (result: ReadinessTokenStateV1) {
+    let query: QueryV1 = QueryV1 { ..empty_query(), path: parse_path_actual(pointer.bytes) };
+    let queries: [QueryV1; 32] = replace(state.queries, index, query);
+    return ReadinessTokenStateV1 { ..state, queries: queries };
+}
+
+fn initial_state(request: ReadinessTokenRequestV1) -> (result: ReadinessTokenStateV1) {
+    let base: ReadinessTokenStateV1 = ReadinessTokenStateV1 {
+        cursor: json.strict_init(),
+        queries: [empty_query(); 32],
+        count: request.pointers.len,
+        root_is_object: false
+    };
+    iterate i over request.pointers carrying current: ReadinessTokenStateV1 = base {
+        next current = set_query_pointer(current, i, request.pointers[i]);
+    }
+    return current;
+}
+
+fn key_matches(key: [byte; 32], key_length: u64, path: PointerPathV1, segment_index: u64) -> (result: bool) {
+    if segment_index >= path.count || segment_index >= 63 { return false; }
+    let segment: PathSegmentV1 = path.segments[segment_index];
+    let wanted_length: u64 = segment.length;
+    if key_length != wanted_length { return false; }
+    iterate i over key carrying same: bool = true {
+        next same = same && (i >= wanted_length || key[i] == segment.bytes[i]);
+    }
+    return same;
+}
+
+fn set_prefix(state: ReadinessTokenStateV1, query_index: u64, prefix_index: u64, value: bool) -> (result: ReadinessTokenStateV1) {
+    if prefix_index >= 64 { return state; }
+    let query: QueryV1 = state.queries[query_index];
+    let updated_query: QueryV1 = QueryV1 { ..query, prefixes: replace(query.prefixes, prefix_index, value) };
+    return ReadinessTokenStateV1 { ..state, queries: replace(state.queries, query_index, updated_query) };
+}
+
+fn key_event(state: ReadinessTokenStateV1, token: json.Cursor) -> (result: ReadinessTokenStateV1) {
+    let depth: u64 = token.token_depth as u64;
+    if depth == 0 || depth > 63 { return state; }
+    iterate i over state.queries[0..state.count] carrying current: ReadinessTokenStateV1 = state {
+        let query: QueryV1 = current.queries[i];
+        let path_index: u64 = depth -% 1;
+        let parent_matches: bool = query.prefixes[path_index];
+        let key_matches_path: bool = parent_matches
+            && query.supported
+            && token.key_length == token.string_length
+            && key_matches(token.key, token.key_length, query.path, path_index);
+        let unsupported: bool = query.supported && parent_matches
+            && (token.key_length != token.string_length || token.key_length > 32);
+        let updated_query: QueryV1 = QueryV1 {
+            ..query, pending_match: key_matches_path, pending_depth: depth,
+            supported: query.supported && !unsupported
+        };
+        let updated_queries: [QueryV1; 32] = replace(current.queries, i, updated_query);
+        next current = ReadinessTokenStateV1 { ..current, queries: updated_queries };
+    }
+    return current;
+}
+
+fn root_object_event(state: ReadinessTokenStateV1) -> (result: ReadinessTokenStateV1) {
+    let base: ReadinessTokenStateV1 = ReadinessTokenStateV1 { ..state, root_is_object: true };
+    iterate i over state.queries[0..state.count] carrying current: ReadinessTokenStateV1 = base {
+        next current = set_prefix(current, i, 0, true);
+    }
+    return current;
+}
+
+fn value_event(state: ReadinessTokenStateV1, token: json.Cursor) -> (result: ReadinessTokenStateV1) {
+    let depth: u64 = token.token_depth as u64;
+    if token.token_kind == 7 && depth == 0 { return root_object_event(state); }
+    let base: ReadinessTokenStateV1 = state;
+    iterate i over state.queries[0..state.count] carrying current: ReadinessTokenStateV1 = base {
+        let query: QueryV1 = current.queries[i];
+        let pending: bool = query.pending_match && query.pending_depth == depth;
+        let is_object: bool = token.token_kind == 7;
+        let is_array: bool = token.token_kind == 8;
+        let is_open: bool = is_object || is_array;
+        let is_close: bool = token.token_kind == 9 || token.token_kind == 10;
+        let is_scalar: bool = token.token_kind == 2 || token.token_kind == 3
+            || token.token_kind == 4 || token.token_kind == 5 || token.token_kind == 6;
+        let target: bool = pending && query.path.valid && query.path.count == depth;
+        let replaces_branch: bool = pending && query.path.valid && query.path.count > depth;
+        let child_prefix: bool = pending && is_object && query.path.valid && query.path.count > depth;
+        let row_index: u64 = depth;
+        let after_child: ReadinessTokenStateV1 = select(
+            is_open,
+            set_prefix(current, i, row_index, child_prefix),
+            current
+        );
+        let current_query: QueryV1 = QueryV1 { ..after_child.queries[i], pending_match: false };
+        let cleared_pending: ReadinessTokenStateV1 = ReadinessTokenStateV1 {
+            ..after_child, queries: replace(after_child.queries, i, current_query)
+        };
+        let branch_query: QueryV1 = select(
+            replaces_branch || (target && is_open),
+            QueryV1 { ..current_query, found: false, start: 0, end: 0, capturing: false },
+            current_query
+        );
+        let start_query: QueryV1 = select(
+            target && is_open,
+            QueryV1 { ..branch_query, start: token.token_start, capture_depth: depth, capturing: true },
+            branch_query
+        );
+        let scalar_query: QueryV1 = select(
+            target && is_scalar,
+            QueryV1 { ..start_query, found: true, start: token.token_start, end: token.token_end, capturing: false },
+            start_query
+        );
+        let close_target: bool = is_close && current_query.capturing && current_query.capture_depth == depth;
+        let closed_query: QueryV1 = select(
+            close_target,
+            QueryV1 { ..scalar_query, found: true, end: token.token_end, capturing: false },
+            scalar_query
+        );
+        let queries: [QueryV1; 32] = replace(cleared_pending.queries, i, closed_query);
+        let cleared_prefix: ReadinessTokenStateV1 = select(
+            is_close && depth < 64,
+            set_prefix(ReadinessTokenStateV1 { ..cleared_pending, queries: queries }, i, depth, false),
+            ReadinessTokenStateV1 { ..cleared_pending, queries: queries }
+        );
+        let updated_query: QueryV1 = cleared_prefix.queries[i];
+        let unsupported: bool = updated_query.supported && !query.path.valid;
+        let final_query: QueryV1 = QueryV1 { ..updated_query, supported: updated_query.supported && !unsupported };
+        next current = ReadinessTokenStateV1 {
+            ..cleared_prefix,
+            queries: replace(cleared_prefix.queries, i, final_query)
+        };
+    }
+    return current;
+}
+
+fn scan_byte(state: ReadinessTokenStateV1, value: byte) -> (result: ReadinessTokenStateV1) {
+    let strict: json.StrictCursor = json.strict_feed_byte(state.cursor, value);
+    let current: ReadinessTokenStateV1 = ReadinessTokenStateV1 { ..state, cursor: strict };
+    let token: json.Cursor = strict.cursor;
+    if !token.token_event { return current; }
+    if token.token_kind == 1 { return key_event(current, token); }
+    return value_event(current, token);
+}
+
+fn scan_bytes(state: ReadinessTokenStateV1, input: [byte; up_to 1024]) -> (result: ReadinessTokenStateV1) {
+    iterate i over input carrying current: ReadinessTokenStateV1 = state {
+        next current = scan_byte(current, input[i]);
+    }
+    return current;
+}
+
+fn scan_chunks(state: ReadinessTokenStateV1, chunks: [ReadinessByteChunkV1; up_to 17]) -> (result: ReadinessTokenStateV1) {
+    iterate i over chunks carrying current: ReadinessTokenStateV1 = state {
+        next current = scan_bytes(current, chunks[i].bytes);
+    }
+    return current;
+}
+
+fn valid_chunks(chunks: [ReadinessByteChunkV1; up_to 17], total_length: u64) -> (result: bool) {
+    iterate i over chunks carrying count: u64 = 0 {
+        let chunk: ReadinessByteChunkV1 = chunks[i];
+        next count = count +% chunk.length;
+    }
+    let each_valid: bool = true;
+    iterate i over chunks carrying valid: bool = each_valid {
+        let chunk: ReadinessByteChunkV1 = chunks[i];
+        next valid = valid && chunk.length > 0 && chunk.length <= 1024
+            && chunk.length == chunk.bytes.len;
+    }
+    return chunks.len > 0 && count == total_length && each_valid
+        && total_length <= 16384;
+}
+
+fn run_projection(request: ReadinessTokenRequestV1) -> (result: ReadinessTokenResultV1) {
+    let shape_valid: bool = same_bytes(request.schema_version, request_schema())
+        && request.document_length > 0
+        && request.document_length <= 16384
+        && valid_chunks(request.chunks, request.document_length)
+        && request.pointers.len <= 32;
+    if !shape_valid {
+        return ReadinessTokenResultV1 {
+            schema_version: result_schema(), valid_json: false, root_is_object: false,
+            query_count: 0, found: [false; 32], supported: [false; 32],
+            starts: [0; 32], ends: [0; 32]
+        };
+    }
+    let initial: ReadinessTokenStateV1 = initial_state(request);
+    let all: ReadinessTokenStateV1 = scan_chunks(initial, request.chunks);
+    let complete: bool = json.strict_is_complete(all.cursor);
+    let found: [bool; 32] = [false; 32];
+    let supported: [bool; 32] = [false; 32];
+    let starts: [u64; 32] = [0; 32];
+    let ends: [u64; 32] = [0; 32];
+    let output: ReadinessTokenResultV1 = ReadinessTokenResultV1 {
+        schema_version: result_schema(), valid_json: complete,
+        root_is_object: all.root_is_object, query_count: all.count,
+        found: found, supported: supported, starts: starts, ends: ends
+    };
+    iterate i over all.queries[0..all.count] carrying result: ReadinessTokenResultV1 = output {
+        let query: QueryV1 = all.queries[i];
+        let found_values: [bool; 32] = replace(result.found, i, query.found);
+        let supported_values: [bool; 32] = replace(result.supported, i, query.supported && query.path.valid);
+        let starts_values: [u64; 32] = replace(result.starts, i, query.start);
+        let ends_values: [u64; 32] = replace(result.ends, i, query.end);
+        next result = ReadinessTokenResultV1 {
+            ..result, found: found_values, supported: supported_values,
+            starts: starts_values, ends: ends_values
+        };
+    }
+    return result;
+}
+
+fn readiness_tokens_app_v1(context: ApplicationContext) -> (result: ApplicationExit)
+    capability environment_readiness
+    effect structured_read authorized_by environment_readiness
+    effect structured_write authorized_by environment_readiness
+{
+    if !context_is_bounded(context) || context.argv_count < 2 {
+        return failure([114, 101, 97, 100, 105, 110, 101, 115, 115, 32, 116, 111, 107, 101, 110, 32, 97, 112, 112, 32, 114, 101, 113, 117, 105, 114, 101, 115, 32, 116, 119, 111, 32, 97, 114, 103, 117, 109, 101, 110, 116, 32, 112, 97, 116, 104, 115], 2);
+    }
+    let request: ReadinessTokenRequestV1 = structured_read(context.argv[0], request_schema());
+    let result: ReadinessTokenResultV1 = run_projection(request);
+    let published: u64 = structured_write(context.argv[1], result_schema(), result);
+    if published == 0 { return failure([114, 101, 97, 100, 105, 110, 101, 115, 115, 32, 116, 111, 107, 101, 110, 32, 114, 101, 115, 117, 108, 116, 32, 112, 117, 98, 108, 105, 115, 104, 32, 102, 97, 105, 108, 101, 100], 3); }
+    return success([]);
+}

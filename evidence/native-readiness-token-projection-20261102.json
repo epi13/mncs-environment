@@ -1,0 +1,61 @@
+{
+  "schema_version": "mncs.environment.native-readiness-verification/1",
+  "campaign_id": "cmp_luna_max_native_environment_readiness_20261102",
+  "session_id": "ses_d8b9e2538a48516d",
+  "work_intent_id": "int_9bcac9814cef9e2c",
+  "implementation": {
+    "consumer": "mncs_env.readiness.probe_services",
+    "native_module": "mncs.environment.readiness_tokens_v1",
+    "source_profile": "0.18",
+    "shared_stdlib_module": "mncs.std.json_cursor.v1",
+    "selected_stdlib_revision": "3798a76cba62e10b68c24823100048313c475688",
+    "native_application": "native-applications/readiness-tokens.json",
+    "native_input_window_bytes": 16384,
+    "native_step_budget": 8000000,
+    "displaced_host_responsibility": "Full JSON object construction and JSON Pointer traversal for bounded provider readiness responses.",
+    "host_responsibilities_retained": [
+      "Provider process invocation and response schema policy.",
+      "Decoding selected native token spans into the existing Environment observation values.",
+      "Readiness equality and provider-specific error/result handling.",
+      "Compatibility processing when the response exceeds 16 KiB, a JSON Pointer key requires unsupported escaped or over-32-byte matching, or the session has no selected MNCS compiler."
+    ]
+  },
+  "verification": [
+    {
+      "command": "python3 -m pytest tests/test_readiness_native.py tests/test_environment.py -k 'native or readiness_probe or readiness_preserves or readiness_passes_selected' -q",
+      "outcome": "PASS",
+      "summary": "9 passed, 284 deselected; includes real run-app execution, JSON Pointer differential cases, and the probe consumer integration."
+    },
+    {
+      "command": "python3 -m pytest tests/test_entry.py tests/test_doctor.py -q",
+      "outcome": "PASS",
+      "summary": "115 passed in 96.48 seconds."
+    },
+    {
+      "command": "python3 scripts/vertical_proof.py",
+      "outcome": "PASS",
+      "summary": "Real-provider entry, protected-scope denial, checkpoint, new-process resume, handoff, and completion passed."
+    },
+    {
+      "command": "python3 -m ruff check --ignore TRY004,I001 mncs_env/readiness.py mncs_env/native_readiness.py tests/test_readiness_native.py",
+      "outcome": "PASS",
+      "summary": "Changed code passes the selected Ruff checks; TRY004 and I001 are pre-existing findings in readiness.py."
+    }
+  ],
+  "native_boundary_observation": {
+    "document_bytes": 15658,
+    "encoding": "UTF-8",
+    "outcome": "PASS",
+    "summary": "A multibyte provider document spanning 16 KiB chunk boundaries returned schema, status, and detail spans with intact UTF-8."
+  },
+  "pre_change_baseline": {
+    "command": "python3 -m pytest tests/ -q",
+    "outcome": "PASS",
+    "summary": "1258 passed, 46 skipped before source changes."
+  },
+  "limitations": [
+    "The native application is bounded to 16 KiB because larger scans exceed the selected 8,000,000-step application budget; larger existing provider responses retain the host compatibility path.",
+    "The native path uses the selected session MNCS binary and selected Stdlib checkout; it does not guess a system executable.",
+    "No reduction in aggregate agent burden is claimed from this implementation-only verification."
+  ]
+}

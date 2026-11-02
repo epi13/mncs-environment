@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import authority, capabilities
+from . import authority, capabilities, native_readiness
 
 SCHEMA = "mncs.environment.readiness/1"
 MAX_SERVICES = 16
@@ -272,14 +272,60 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                     detail = result.get("stderr") or result.get("stdout") or "provider probe timed out"
                     record["code"] = "service-probe-timeout"
                     raise ValueError(f"timeout: {detail[-1000:]}")
-                try:
-                    document = json.loads(result.get("stdout", ""))
-                except (TypeError, json.JSONDecodeError) as error:
-                    if process_failed:
-                        detail = result.get("stderr") or result.get("stdout") or str(error)
-                        raise ValueError(f"{process_status}: {detail[-1000:]}") from error
-                    raise ValueError(f"provider response is not valid JSON: {error}") from error
-                if not isinstance(document, dict) or document.get("schema_version") != service["response_schema"]:
+                document_text = result.get("stdout", "")
+                projection_pointers = list(dict.fromkeys([
+                    "/schema_version", "/status", "/reason", "/state", "/detail",
+                    "/diagnostics", "/selected", "/observed", "/components", "/recovery",
+                    *service["ready_when"].keys(),
+                ]))
+                projected = native_readiness.project_json_pointers(
+                    document_text, projection_pointers, session=session,
+                    timeout_seconds=max(0.1, deadline - time.monotonic()),
+                )
+                if projected is None:
+                    try:
+                        document = json.loads(document_text)
+                    except (TypeError, json.JSONDecodeError) as error:
+                        if process_failed:
+                            detail = result.get("stderr") or result.get("stdout") or str(error)
+                            raise ValueError(f"{process_status}: {detail[-1000:]}") from error
+                        raise ValueError(f"provider response is not valid JSON: {error}") from error
+                    if not isinstance(document, dict):
+                        if process_failed:
+                            detail = result.get("stderr") or result.get("stdout") or "no provider diagnostic"
+                            raise ValueError(f"{process_status}: {detail[-1000:]}")
+                        raise ValueError(f"expected provider schema {service['response_schema']}")
+
+                    def observed_value(pointer: str, *, _document=document) -> Any:
+                        return _pointer(_document, pointer)
+
+                    def optional_observed_value(pointer: str) -> Any:
+                        try:
+                            return observed_value(pointer)
+                        except KeyError:
+                            return native_readiness.missing_value()
+                else:
+                    if projected.get("_valid_json") is not True:
+                        if process_failed:
+                            detail = result.get("stderr") or result.get("stdout") or "no provider diagnostic"
+                            raise ValueError(f"{process_status}: {detail[-1000:]}")
+                        raise ValueError("provider response is not valid JSON: native validation failed")
+                    if projected.get("_root_is_object") is not True:
+                        if process_failed:
+                            detail = result.get("stderr") or result.get("stdout") or "no provider diagnostic"
+                            raise ValueError(f"{process_status}: {detail[-1000:]}")
+                        raise ValueError(f"expected provider schema {service['response_schema']}")
+
+                    def observed_value(pointer: str, *, _projected=projected) -> Any:
+                        value = _projected.get(pointer, native_readiness.missing_value())
+                        if value is native_readiness.missing_value():
+                            raise KeyError(pointer)
+                        return value
+
+                    def optional_observed_value(pointer: str, *, _projected=projected) -> Any:
+                        return _projected.get(pointer, native_readiness.missing_value())
+
+                if optional_observed_value("/schema_version") != service["response_schema"]:
                     if process_failed:
                         detail = result.get("stderr") or result.get("stdout") or "no provider diagnostic"
                         raise ValueError(
@@ -287,30 +333,38 @@ def probe_services(session, *, bindings: list[dict] | None = None,
                             f"{detail[-1000:]}"
                         )
                     raise ValueError(f"expected provider schema {service['response_schema']}")
+                provider_status = optional_observed_value("/status")
+                provider_reason = optional_observed_value("/reason")
+                provider_state_value = optional_observed_value("/state")
+                provider_detail_value = optional_observed_value("/detail")
+                provider_diagnostics_value = optional_observed_value("/diagnostics")
                 if process_failed:
                     # Some provider contracts deliberately emit a structured
                     # failure document and a nonzero exit code. Preserve that
                     # provider-owned diagnosis instead of reducing it to an
                     # empty stderr transport error.
                     record["provider_process_status"] = process_status
-                    if isinstance(document.get("status"), str):
-                        record["provider_status"] = document["status"]
-                    if isinstance(document.get("reason"), str) and document["reason"]:
-                        record["provider_reason"] = document["reason"][:1000]
-                if isinstance(document.get("state"), str):
-                    record["provider_state"] = document["state"][:128]
-                if isinstance(document.get("detail"), str) and document["detail"]:
-                    record["provider_detail"] = document["detail"][:1000]
+                    if isinstance(provider_status, str):
+                        record["provider_status"] = provider_status
+                    if isinstance(provider_reason, str) and provider_reason:
+                        record["provider_reason"] = provider_reason[:1000]
+                if isinstance(provider_state_value, str):
+                    record["provider_state"] = provider_state_value[:128]
+                if isinstance(provider_detail_value, str) and provider_detail_value:
+                    record["provider_detail"] = provider_detail_value[:1000]
                 # Provider diagnostics remain provider-owned. Preserve bounded
                 # structured evidence instead of replacing it with prose.
-                diagnostics = document.get("diagnostics")
+                diagnostics = provider_diagnostics_value
                 if isinstance(diagnostics, list):
                     record["provider_diagnostics"] = diagnostics[:8]
                 for field in ("selected", "observed", "components", "recovery"):
-                    if field in document:
+                    value = optional_observed_value(f"/{field}")
+                    if value is not native_readiness.missing_value():
                         name = "provider_components" if field == "components" else f"provider_{field}"
-                        record[name] = document[field]
-                actual = {pointer: _pointer(document, pointer) for pointer in service["ready_when"]}
+                        record[name] = value
+                actual = {}
+                for pointer in service["ready_when"]:
+                    actual[pointer] = observed_value(pointer)
                 ready = (not process_failed and
                          all(actual[key] == expected for key, expected in service["ready_when"].items()))
                 if process_failed:
