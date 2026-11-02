@@ -254,9 +254,7 @@ def cmd_campaign_state(args: argparse.Namespace) -> int:
                 )
                 if str(error) == "campaign has no persisted state checkpoint":
                     next_step = (
-                        "initialize campaign metadata with a checkpoint using "
-                        "campaign_base_checkpoint='none' and campaign_evidence=[], "
-                        "then retry the campaign-state read"
+                        "create an ordinary checkpoint, then retry the campaign-state read"
                     )
                 return fail(
                     str(error),

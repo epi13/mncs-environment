@@ -12422,9 +12422,7 @@ class EntryFrictionTests(unittest.TestCase):
         )
         self.assertEqual(
             diagnostic["diagnostics"]["next"],
-            "initialize campaign metadata with a checkpoint using "
-            "campaign_base_checkpoint='none' and campaign_evidence=[], "
-            "then retry the campaign-state read",
+            "create an ordinary checkpoint, then retry the campaign-state read",
         )
 
     def test_broad_campaign_root_rejected_before_state_or_git_scan(self) -> None:

@@ -117,3 +117,31 @@ def test_checkout_binding_routes_execution_and_survives_release_and_restart(tmp_
         resumed.complete(outcome="verified", summary="bounded lifecycle")
     finally:
         resumed.close()
+
+
+def test_ordinary_checkpoint_initializes_readable_campaign_state(tmp_path):
+    from test_authority_scope_grants import _session
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    state = tmp_path / "state"
+    session = _session(state, workspace, acquire_environment_claim=False)
+    session_id = session.session_id
+    try:
+        checkpoint = session.checkpoint(progress="ordinary checkpoint", request_id="req_ordinary")
+        view = session.campaign_state()
+        assert view["checkpoint_id"] == checkpoint["identity"]
+        assert view["evidence_count"] == 0
+        assert view["delivery"]["status"] == "pending"
+        assert session.checkpoint(progress="ordinary checkpoint", request_id="req_ordinary")["identity"] == checkpoint["identity"]
+    finally:
+        session.close()
+    reopened = sessions.Session.open(state_dir=state, session_id=session_id)
+    try:
+        assert reopened.campaign_state()["checkpoint_id"] == checkpoint["identity"]
+        with pytest.raises(sessions.CampaignStateConflict):
+            reopened.checkpoint(progress="stale update", campaign_evidence=[],
+                                campaign_base_checkpoint="none")
+        reopened.checkpoint(progress="later ordinary checkpoint")
+        assert reopened.campaign_state()["evidence_count"] == 0
+    finally:
+        reopened.close()

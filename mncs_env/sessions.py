@@ -9658,6 +9658,20 @@ class Session:
                 raise LifecycleError(
                     "checkpoint request identity has no durable campaign state"
                 )
+        # Ordinary checkpoints anchor the existing campaign ledger on first
+        # publication. This is empty/projected state, not a caller metadata
+        # update, so request digests retain their original idempotent meaning.
+        # Explicit evidence/delivery updates still require their exact base.
+        if (record is None and not campaign_update_requested
+                and campaign_base_checkpoint is None):
+            initial_campaign = (self.snapshot.get("campaign") or {}).get("identity")
+            if (isinstance(initial_campaign, str)
+                    and _CAMPAIGN_ID_PATTERN.fullmatch(initial_campaign)
+                    and not _validated_campaign_state_history(
+                        checkpoint_records, initial_campaign,
+                    )):
+                campaign_update_requested = True
+                campaign_base_checkpoint = "none"
         campaign_identity = None
         campaign_evidence_delta_value: list[dict[str, str]] | None = None
         campaign_evidence_history_value: list[dict[str, str]] | None = None
