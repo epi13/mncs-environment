@@ -1,0 +1,425 @@
+{
+  "date": "2026-11-02",
+  "campaign": "cmp_autonomous_readiness_20261102",
+  "baseline": {
+    "environment": "5e0ce3d",
+    "control": "f9ba41a",
+    "doctor": "aacbcbb",
+    "prior_evidence": "evidence/authority-continuity-20261102.json"
+  },
+  "defects": [
+    {
+      "owner": "mncs-environment",
+      "cause": "A first campaign-writable checkout binding conflicted with the entry-time selected checkout during composition. Provider invocation retained the original binding and composition required a persistent claim.",
+      "reproduction": "Canonical resume after successful binding and exact claim returned selected-checkout-identity-conflict. A real Store/Git execution regression deferred against the wrong checkout.",
+      "correction": "Use the authenticated binding to select the already-writable checkout without a permanent claim, refresh provider routing before invocation and retain the selection across release. Foreign conflicts and rights checks remain."
+    },
+    {
+      "owner": "mncs-environment",
+      "cause": "Ordinary provider invocation rejected the recorded HEAD after an owned checkout advanced. The stable-identity refresh routine was used only by claim acquisition.",
+      "reproduction": "Canonical Doctor verification and the real provider regression failed with declared provider checkout head changed after a legitimate commit.",
+      "correction": "Reuse the existing stable-checkout refresh before invocation, retaining repository, registry, identity and operation checks."
+    },
+    {
+      "owner": "mncs-control-mcp",
+      "cause": "Resume always returned detailed inspection, yielding a truncated 1048576-character string instead of structured context.",
+      "correction": "Select the CLI's existing --context mode on canonical resume.",
+      "acceptance": "Fresh bridge + fresh CLI returned structured entry-context/1 in 5267 JSON bytes, scope_composition ready."
+    },
+    {
+      "owner": "mncs-control-mcp",
+      "cause": "The bridge advertised typed worktree preparation but RPC did not expose the operation.",
+      "correction": "Route the existing provider through its fixed typed grammar, selected Control session and exact effect-repository request."
+    },
+    {
+      "owner": "mncs-control-mcp",
+      "cause": "Worktree preparation omitted effects and defaulted to read, skipping mutation eligibility.",
+      "reproduction": "Controlled negative probe created a clean test-owned Doctor worktree from a Control-only session. Real Store/invocation regression reproduced execution before correction.",
+      "correction": "Declare execute in both owning descriptors; the normal Environment effect gate now rejects out-of-scope requests before the provider runs.",
+      "safety": "Real positive operation still succeeds. The live corrected negative probe returned authority-denied and created no worktree. The earlier test-owned probe is included in cleanup."
+    },
+    {
+      "owner": "mncs-doctor",
+      "cause": "A standalone development project with declared tests had no development Environment definition and entered read-only orientation.",
+      "correction": "Add the normal current-checkout Doctor-only development definition."
+    },
+    {
+      "owner": "mncs-doctor",
+      "cause": "The full declared cargo suite inherited a 120-second deadline and timed out after 123 passing tests.",
+      "correction": "Declare a bounded 360-second suite budget at the provider.",
+      "acceptance": "Canonical verification succeeded with 162 passing tests."
+    },
+    {
+      "owner": "mncs-environment",
+      "cause": "Normal checkpoints did not initialize the existing campaign-state ledger. The public read failed and instructed the agent to supply private initialization fields.",
+      "reproduction": "The fresh-client acceptance exercise checkpointed normally, then campaign_state returned campaign-state-unavailable.",
+      "correction": "A first ordinary checkpoint now anchors the existing ledger, preserving projected evidence and explicit metadata CAS rules; replay digests remain caller-based.",
+      "verification": "Real Store regression covers ordinary initialization, read, reopen, same-request replay and rejection of an explicit stale base. No new campaign registry or schema."
+    }
+  ],
+  "source_commits": {
+    "environment": [
+      "449c73c",
+      "c6d8594",
+      "636bf69"
+    ],
+    "control": [
+      "86570ed",
+      "b96237e",
+      "232e4e4"
+    ],
+    "doctor": [
+      "a60c756",
+      "81bda7b",
+      "8928bb9"
+    ]
+  },
+  "tests": {
+    "scope_grants": "63 existing scope regressions passed; the final integrated real-Store lifecycle/conflict regression passed separately.",
+    "lifecycle_and_policy": "13 passed; after automatic commit refresh, 3 final lifecycle tests passed.",
+    "invocation_and_claim_refresh": "25 passed, 265 deselected",
+    "control_rpc_and_bridge": "137 passed",
+    "real_effect_gate": "1 passed with real Environment, Store, Git and provider execution",
+    "vertical": "PASS",
+    "doctor": "162 passed through canonical Environment verify; complete suite, returncode 0",
+    "campaign_ledger": "5 lifecycle/metadata-bound tests passed; 16 existing checkpoint/metadata tests passed; the updated initial-state guidance test passed separately."
+  },
+  "limitations": {
+    "stdlib": "Committed 3798a76 manifest drift remains; tools/gen_manifest.py --root mncs-stdlib --check still fails. Recorded in existing registry as prs_2dfa7aca70d1747d; no Stdlib implementation changed.",
+    "providers": "Lean project contexts still report optional unavailable/unaddressed providers as degraded; no required blocker was hidden.",
+    "process_restart": "Source publication interrupted replies from the already-running bridge. Reentry with the same selectors recovered the durable contexts. The new bounded resume was verified using fresh bridge instances."
+  },
+  "observations": {
+    "hardeningBindBefore": {
+      "ok": true,
+      "operation": "scope_grant",
+      "exit_code": 0,
+      "stderr": "",
+      "session_id": "ses_9fb8244ac4d66558"
+    },
+    "hardeningClaimBefore": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 0,
+      "stderr": "",
+      "session_id": "ses_9fb8244ac4d66558",
+      "status": "held"
+    },
+    "doctorBefore": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "stderr": "",
+      "session_id": "ses_3587e7c8c8eeec44",
+      "writable_repositories": [],
+      "authority_revision": "8c4bf0a83b2a98b0c5bc157ef8860ef33bcbb2b2a0829c32175ce0bcd3924b4e",
+      "readiness": "degraded"
+    },
+    "doctorDevelopment": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "stderr": "",
+      "session_id": "ses_29d49916d5dc0008",
+      "writable_repositories": [
+        "mncs-doctor"
+      ],
+      "authority_revision": "59693ddcd18ab33214744d5ecabf2f0d90da057774749330a21431eaa1ddc3cb",
+      "readiness": "degraded"
+    },
+    "doctorClaim": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 0,
+      "stderr": "",
+      "session_id": "ses_29d49916d5dc0008",
+      "status": "held"
+    },
+    "envVerifyAfter": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 0,
+      "stderr": "",
+      "status": "ok",
+      "returncode": 0,
+      "artifact_store_ref": null,
+      "stdout": "",
+      "provider_stderr": "test_relative_worktree_claim_matches_bound_absolute_provider_path (test_environment.SessionTests.test_relative_worktree_claim_matches_bound_absolute_provider_path) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 2.283s\n\nOK\n"
+    },
+    "controlEntry": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "stderr": "",
+      "session_id": "ses_6811256cd8645130",
+      "writable_repositories": [
+        "mncs-control-mcp"
+      ],
+      "authority_revision": "5939414b8cef343366d25227d00a3b8f9704c0cb404bb2ca7ed93c8d2b6485d8",
+      "readiness": "degraded"
+    },
+    "controlPrepare": {
+      "ok": false,
+      "operation": "invoke",
+      "error": {
+        "code": "ENVIRONMENT_OPERATION_UNAVAILABLE",
+        "message": "Control does not expose this Environment capability",
+        "details": {
+          "operation": "mncs-control-mcp:workspace.worktree.prepare",
+          "status": "unknown",
+          "next": "inspect the session capability inventory and extend the Control operation contract"
+        }
+      },
+      "result_type": "undefined"
+    },
+    "controlPrepareAfter": {
+      "ok": true,
+      "operation": "invoke",
+      "exit_code": 0,
+      "stderr": "",
+      "status": "ok",
+      "returncode": 0,
+      "artifact_store_ref": null,
+      "stdout": "{\"selected_checkouts\": [{\"authoritative_head\": \"b96237e22da59e2ebaac8fd56e16df4b782cb517\", \"branch\": \"verify/readiness-probe-20261102\", \"clean\": true, \"head\": \"b96237e22da59e2ebaac8fd56e16df4b782cb517\", \"path\": \"mncs-control-mcp/.worktrees/readiness-probe-20261102\", \"repository\": \"mncs-control-mcp\", \"source_ref\": \"origin/main\"}], \"workspace_root\": \"/home/epi13/Documents/Projects\"}\n",
+      "provider_stderr": ""
+    },
+    "doctorVerifyRetry": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 3,
+      "stderr": "{\"error\": \"capability 'mncs-doctor:test/doctor-tests' provider checkout identity is unavailable: declared provider checkout head changed\", \"diagnostics\": {\"code\": \"authority-denied\", \"publication_completed\": false}}\n",
+      "result_type": "string"
+    },
+    "doctorVerifyAfter": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 4,
+      "stderr": "",
+      "status": "timeout",
+      "returncode": null,
+      "artifact_store_ref": "mncs-store:ses_29d49916d5dc0008:capability-invocation-artifacts:9aad466662d608977c7ce011e0c8f1588cff2049fb588a9e22dfd4cf56534984",
+      "stdout": "\nrunning 85 tests\ntest diagnostics::tests::missing_header_and_module_reported ... ok\ntest diagnostics::tests::header_after_comments_is_found ... ok\ntest diagnostics::tests::healthy_current_file_is_quiet ... ok\ntest diagnostics::tests::sealed_profile_is_info_with_version ... ok\ntest architecture_knowledge::tests::missing_claims_are_explicitly_unavailable ... ok\ntest diagnostics::tests::spans_preserve_byte_offsets ... ok\ntest diagnostics::tests::trailing_whitespace_does_not_hide_module_decl ... ok\ntest architecture_knowledge::tests::stale_claims_are_reported_as_architecture_drift ... ok\ntest diagnostics::tests::unsupported_and_unknown_profiles_error ... ok\ntest diagnostics::tests::unbalanced_delimiters_reported_with_span ... ok\ntest edits::tests::adjacent_edits_do_not_conflict ... ok\ntest discovery::tests::finds_root_via_forge_marker ... ok\ntest discovery::tests::detects_manifest_kinds ... ok\ntest discovery::tests::discovers_sources_with_deterministic_order ... ok\ntest discovery::tests::newline_detection_covers_styles ... ok\ntest edits::tests::applies_multi_edit_in_stable_order ... ok\ntest discovery::tests::excludes_tool_dirs_and_records_them ... ok\ntest discovery::tests::skips_symlinked_dirs_by_default ... ok\ntest edits::tests::detects_overlapping_edits ... ok\ntest edits::tests::insertion_and_deletion_shapes ... ok\ntest edits::tests::same_point_insertions_conflict ... ok\ntest edits::tests::rejects_out_of_bounds_and_inverted ... ok\ntest edits::tests::rejects_stale_base ... ok\nt",
+      "provider_stderr": "13/mncs-language?rev=25525f0636f45b2f91a3391a37975b7a7334508e#25525f06)\n   Compiling mncs-compiler v0.1.0 (https://github.com/epi13/mncs-language?rev=25525f0636f45b2f91a3391a37975b7a7334508e#25525f06)\n   Compiling mncs-embed v0.1.0 (https://github.com/epi13/mncs-language?rev=25525f0636f45b2f91a3391a37975b7a7334508e#25525f06)\n   Compiling mncs-doctor v0.1.0 (/home/epi13/Documents/Projects/mncs-doctor/.worktrees/autonomous-readiness-20261102)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 35.99s\n     Running unittests src/lib.rs (target/debug/deps/mncs_doctor-9505ee75d5c78ec7)\n     Running unittests src/main.rs (target/debug/deps/mncs_doctor-b7ba909c73d784f2)\n     Running tests/doctor.rs (target/debug/deps/doctor-5f3d0b653362f7a8)\n     Running tests/fix.rs (target/debug/deps/fix-24a522dff65c5ef3)\n     Running tests/health_epoch.rs (target/debug/deps/health_epoch-936bed77c3c4e690)\n     Running tests/migrate.rs (target/debug/deps/migrate-be124ca038661009)\n\nexceeded 120s"
+    },
+    "doctorVerifyBudget": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 0,
+      "stderr": "",
+      "status": "ok",
+      "returncode": 0,
+      "artifact_store_ref": "mncs-store:ses_29d49916d5dc0008:capability-invocation-artifacts:e33be397169ca5188aa935868949747cfb0fbbe5e32081aed8eff81cd83a84e8",
+      "stdout": "\nrunning 85 tests\ntest diagnostics::tests::healthy_current_file_is_quiet ... ok\ntest diagnostics::tests::sealed_profile_is_info_with_version ... ok\ntest diagnostics::tests::spans_preserve_byte_offsets ... ok\ntest diagnostics::tests::header_after_comments_is_found ... ok\ntest architecture_knowledge::tests::missing_claims_are_explicitly_unavailable ... ok\ntest diagnostics::tests::unbalanced_delimiters_reported_with_span ... ok\ntest diagnostics::tests::unsupported_and_unknown_profiles_error ... ok\ntest discovery::tests::newline_detection_covers_styles ... ok\ntest discovery::tests::finds_root_via_forge_marker ... ok\ntest architecture_knowledge::tests::stale_claims_are_reported_as_architecture_drift ... ok\ntest discovery::tests::detects_manifest_kinds ... ok\ntest discovery::tests::discovers_sources_with_deterministic_order ... ok\ntest diagnostics::tests::missing_header_and_module_reported ... ok\ntest diagnostics::tests::trailing_whitespace_does_not_hide_module_decl ... ok\ntest edits::tests::adjacent_edits_do_not_conflict ... ok\ntest edits::tests::applies_multi_edit_in_stable_order ... ok\ntest discovery::tests::skips_symlinked_dirs_by_default ... ok\ntest edits::tests::detects_overlapping_edits ... ok\ntest edits::tests::rejects_stale_base ... ok\ntest discovery::tests::excludes_tool_dirs_and_records_them ... ok\ntest edits::tests::rejects_out_of_bounds_and_inverted ... ok\ntest edits::tests::same_point_insertions_conflict ... ok\ntest edits::tests::insertion_and_deletion_shapes ... ok\nt",
+      "provider_stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s\n     Running unittests src/lib.rs (target/debug/deps/mncs_doctor-9505ee75d5c78ec7)\n     Running unittests src/main.rs (target/debug/deps/mncs_doctor-b7ba909c73d784f2)\n     Running tests/doctor.rs (target/debug/deps/doctor-5f3d0b653362f7a8)\n     Running tests/fix.rs (target/debug/deps/fix-24a522dff65c5ef3)\n     Running tests/health_epoch.rs (target/debug/deps/health_epoch-936bed77c3c4e690)\n     Running tests/migrate.rs (target/debug/deps/migrate-be124ca038661009)\n     Running tests/mncs_filesystem.rs (target/debug/deps/mncs_filesystem-958f398054a98e4b)\n     Running tests/mncs_parity.rs (target/debug/deps/mncs_parity-46a6df88c5cc2df0)\n     Running tests/remediate.rs (target/debug/deps/remediate-f226d7d3a3f035b0)\n     Running tests/stdlib.rs (target/debug/deps/stdlib-1229bfc8afdef7e4)\n   Doc-tests mncs_doctor\n"
+    },
+    "liveNegativeAfter": {
+      "ok": true,
+      "operation": "invoke",
+      "exit_code": 3,
+      "stderr": "{\"error\": \"capability 'mncs-control-mcp:workspace.worktree.prepare' effect target 'mncs-doctor' is not session-observed scope\", \"diagnostics\": {\"code\": \"authority-denied\", \"publication_completed\": false}}\n",
+      "result_type": "string"
+    },
+    "controlPrepareReplay": {
+      "ok": true,
+      "operation": "invoke",
+      "exit_code": 0,
+      "stderr": "",
+      "status": "ok",
+      "returncode": 0,
+      "artifact_store_ref": null,
+      "stdout": "{\"selected_checkouts\": [{\"authoritative_head\": \"232e4e42f6d97c2468bc8afd02ba21413b4941e1\", \"branch\": \"verify/readiness-probe-20261102\", \"clean\": true, \"head\": \"232e4e42f6d97c2468bc8afd02ba21413b4941e1\", \"path\": \"mncs-control-mcp/.worktrees/readiness-probe-20261102\", \"repository\": \"mncs-control-mcp\", \"source_ref\": \"origin/main\"}], \"workspace_root\": \"/home/epi13/Documents/Projects\"}\n",
+      "provider_stderr": ""
+    }
+  },
+  "readiness": "Verified development path across independently authorized Environment, Doctor and Control intents, with fresh-client checkpoint/recovery, usable verification and callable worktree preparation. Optional provider gaps and Stdlib manifest drift remain explicit.",
+  "acceptance": {
+    "campaign_id": "cmp_autonomous_readiness_20261102",
+    "sessions": {
+      "environment": "ses_9fb8244ac4d66558",
+      "doctor": "ses_29d49916d5dc0008",
+      "control": "ses_6811256cd8645130"
+    },
+    "ordinary_operations": "Successful exact writable checkout binding, isolated provider verification, Doctor development entry/full tests, typed Control worktree create/reuse, owned dirty checkpoint/fresh-client resume, completion and claim release.",
+    "negative": "After effect declaration repair, Control-only worktree preparation targeting Doctor is rejected before execution; no after-fix probe worktree was created. Real Store competing-session regression defers and recovers after claim release."
+  },
+  "preservation": {
+    "native_environment_revision": "01f77f7 remains an ancestor of published Environment main",
+    "prior_repairs": "c1380f0 and fc5ab01 remain ancestors",
+    "original_session": "ses_5df85cca5ff2ec76",
+    "original_checkpoint": "chk_d7cd85473a05ff5d",
+    "state": "Canonical continuation reselected the original session and unchanged latest checkpoint after acceptance; no original campaign operations were resumed or restarted."
+  },
+  "closing_acceptance": [
+    {
+      "project": "mncs-environment",
+      "operation": "checkpoint",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_9fb8244ac4d66558",
+      "identity": "chk_7156ba253d5ff4eb"
+    },
+    {
+      "project": "mncs-environment",
+      "operation": "resume",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_9fb8244ac4d66558",
+      "schema": "mncs.environment.entry-context/1",
+      "context_json_bytes": 5190,
+      "scope_composition": {
+        "status": "ready",
+        "composed": [],
+        "retained": [
+          "mncs-environment"
+        ],
+        "removed": [],
+        "skipped": [],
+        "base_intent_skipped": []
+      }
+    },
+    {
+      "project": "mncs-environment",
+      "operation": "complete",
+      "ok": true,
+      "exit_code": 0,
+      "checkpoint_id": "chk_cf546a6cdf50b842",
+      "claims_released": [
+        "claim:mncs-environment:worktree:a7fa02c8e8c0"
+      ],
+      "claims_release_error": null
+    },
+    {
+      "project": "mncs-doctor",
+      "operation": "resume",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_29d49916d5dc0008",
+      "schema": "mncs.environment.entry-context/1",
+      "context_json_bytes": 1845,
+      "scope_composition": {
+        "status": "unchanged",
+        "composed": [],
+        "retained": [],
+        "removed": [],
+        "skipped": [],
+        "base_intent_skipped": [
+          {
+            "repository": "mncs-doctor",
+            "reason": "base-intent-checkout-conflict"
+          }
+        ]
+      }
+    },
+    {
+      "project": "mncs-doctor",
+      "operation": "checkpoint",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_29d49916d5dc0008",
+      "identity": "chk_906a808a4c18fbe0"
+    },
+    {
+      "project": "mncs-doctor",
+      "operation": "complete",
+      "ok": true,
+      "exit_code": 0,
+      "checkpoint_id": "chk_0fe7e8c6b2cab359",
+      "claims_released": [
+        "claim:mncs-doctor:worktree:dc9c5fe08c3e"
+      ],
+      "claims_release_error": null
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "invoke",
+      "ok": true,
+      "exit_code": 0
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "checkpoint",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_6811256cd8645130",
+      "identity": "chk_917557fac59ddcfa"
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "resume",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_6811256cd8645130",
+      "schema": "mncs.environment.entry-context/1",
+      "context_json_bytes": 4748,
+      "scope_composition": {
+        "status": "ready",
+        "composed": [],
+        "retained": [],
+        "removed": [],
+        "skipped": [],
+        "base_intent_skipped": [
+          {
+            "repository": "mncs-control-mcp",
+            "reason": "no-live-base-intent-checkout-claim"
+          }
+        ]
+      }
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "campaign_state",
+      "ok": true,
+      "exit_code": 2,
+      "stderr": "{\"error\": \"campaign has no persisted state checkpoint\", \"diagnostics\": {\"code\": \"campaign-state-unavailable\", \"next\": \"initialize campaign metadata with a checkpoint using campaign_base_checkpoint='none' and campaign_evidence=[], then retry the campaign-state read\"}}\n"
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "checkpoint",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_6811256cd8645130",
+      "identity": "chk_a1b2ff9577cd0062"
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "campaign_state",
+      "ok": true,
+      "exit_code": 0,
+      "session_id": "ses_6811256cd8645130",
+      "checkpoint_id": "chk_a1b2ff9577cd0062",
+      "evidence_count": 0
+    },
+    {
+      "project": "mncs-control-mcp",
+      "operation": "complete",
+      "ok": true,
+      "exit_code": 0,
+      "checkpoint_id": "chk_107a1d295b1417ae",
+      "claims_released": [],
+      "claims_release_error": null
+    },
+    {
+      "project": "mncs-environment",
+      "operation": "continuation",
+      "ok": true,
+      "exit_code": 0,
+      "selected_session_id": "ses_5df85cca5ff2ec76",
+      "latest_checkpoint": "chk_d7cd85473a05ff5d"
+    }
+  ],
+  "cleanup": {
+    "released_claims": [
+      "claim:mncs-environment:worktree:a7fa02c8e8c0",
+      "claim:mncs-doctor:worktree:dc9c5fe08c3e"
+    ],
+    "release_errors": null,
+    "orientation_probe_completed": "readiness-orientation-probe-completed",
+    "retired_clean_worktrees": [
+      "mncs-doctor/.worktrees/autonomous-readiness-20261102",
+      "mncs-doctor/.worktrees/unauthorized-readiness-probe-20261102",
+      "mncs-control-mcp/.worktrees/autonomous-readiness-20261102",
+      "mncs-control-mcp/.worktrees/readiness-probe-20261102"
+    ],
+    "environment_implementation_worktree": "Retire after this evidence is merged and published; it contains no foreign work."
+  }
+}
