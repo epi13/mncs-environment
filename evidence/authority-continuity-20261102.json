@@ -1,0 +1,910 @@
+{
+  "date": "2026-11-02",
+  "campaign": "cmp_authority_continuity_repair_20261102",
+  "root_cause": "Control scope_grant correctly refused expansion of the old repository-specific session, but provided no independent-intent route. Environment _validate_campaign_identity then rejected same-owner, distinct-repository entry as campaign-context-mismatch, treating one operation's definition as a campaign-wide boundary.",
+  "correction": "Permit independently resolved registered repository intents in the same workspace and authenticated campaign; retain foreign-owner, same-repository definition, workspace, exact-checkout, rights and conflict checks. Control denial now exposes next_operation project entry. No owner grants or permission configuration changed.",
+  "commits": {
+    "environment": "79e7e99",
+    "control": "f9ba41a"
+  },
+  "tests": {
+    "regression": "2 passed (file and real Store); pre-repair fails with campaign-context-mismatch",
+    "focused": "143 passed",
+    "campaign_rights": "47 passed, 243 deselected",
+    "control": "136 passed",
+    "vertical": "PASS before and after",
+    "campaign_proofs": "14 passed, 2 skipped",
+    "final_small": "12 passed"
+  },
+  "acceptance": {
+    "repositories": [
+      "mncs-environment",
+      "mncs-stdlib",
+      "mncs-control-mcp"
+    ],
+    "outcome": "Independent same-campaign intents admitted and exact isolated worktree claims acquired. Environment operation released, checkpointed and completed. Stdlib completed and entered a fresh isolated intent through normal entry, then executed integrity tests.",
+    "provider_limitation": "Stdlib at 3798a76 has committed manifest drift: bounded integrity execution 14 passed, 1 skipped, 1 failed. Initial dirty-main write-effect verification correctly deferred. Existing-session checkout binding did not retarget that verification; completing it and entering a fresh isolated intent did. These independent provider/routing limitations were not modified.",
+    "doctor": "No project-local development Environment definition exists; default entry is read-only orientation. Doctor development authority was not established. Used Control's explicit owner-controlled development definition as permitted fallback.",
+    "restart": "Checkpoint chk_e1fbd5e7649b9a0c resumed as ses_8c11822e961e8a36 through a fresh canonical CLI process. Completion released both acceptance claims."
+  },
+  "safety": "Unauthorized scope expansion denied live. Real Store regression rejects competing live claims, foreign campaign owner and cross-session repository integration. Existing same-repository definition-change and rights tests pass.",
+  "preservation": "01f77f7 and c1380f0 remain ancestors of Environment main; fc5ab01 remains ancestor of Control main. Original campaign session and checkpoint reselected unchanged. No foreign checkout was reset, cleaned, or claimed.",
+  "observations": {
+    "preEntry": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "result": {
+        "schema_version": "mncs.environment.entry-context/1",
+        "session_id": "ses_f6e6d93bd1337ab9",
+        "lifecycle": "active",
+        "environment_id": "renv_3bdb634d97df79d1",
+        "work_intent": {
+          "goal": "exercise canonical Environment persistence through the Control socket",
+          "identity": "int_8475157f281c835f"
+        },
+        "workspace_root": "/home/epi13/Documents/Projects",
+        "persistence": "store",
+        "toolchain": null,
+        "writable_repositories": [
+          "mncs-environment"
+        ],
+        "protected_repositories": [],
+        "authority": {
+          "readable": [
+            "workspace"
+          ],
+          "writable": [
+            "mncs-environment"
+          ],
+          "protected_repositories": [],
+          "escalation_required": [],
+          "revision": "70607197cd9834b69e0010d7b40b7e3ccb45fc7ae3d270e17fa307a5fcf30dc7"
+        },
+        "readiness": {
+          "status": "degraded",
+          "blocking": [],
+          "required_unavailable": [],
+          "required_unknown": [],
+          "unavailable_count": 0,
+          "unknown_count": 6
+        },
+        "doctor": {
+          "readiness": "degraded",
+          "summary": {
+            "blockers": 0,
+            "degraded": 6,
+            "reconciled": 1,
+            "repaired": 0
+          },
+          "remaining": []
+        },
+        "capabilities": {
+          "available": [
+            "mncs-environment:ambient-projection-coherence",
+            "mncs-environment:campaign-state-inspection",
+            "mncs-environment:projection-evidence-inspection",
+            "mncs-environment:test/environment-incremental-coherence",
+            "mncs-environment:test/environment-unit-tests",
+            "mncs-environment:test/environment-worktree-claim-paths",
+            "mncs-environment:test/selected-toolchain-binding",
+            "mncs-environment:workspace-discovery",
+            "mncs-environment:workspace-readiness",
+            "mncs-automation:automation-reconciliation",
+            "mncs-doc:documentation-projection",
+            "mncs-doctor:projection-health",
+            "mncs-language-service:semantic-query"
+          ],
+          "count": 13
+        }
+      },
+      "stderr": ""
+    },
+    "acceptanceClaim": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 0,
+      "result": {
+        "acquired_at": "2026-11-02T15:31:46+00:00",
+        "basis": "explicit-adoption",
+        "claim_id": "claim:mncs-environment:worktree:1dc5353f8c68",
+        "consumer_id": "local-agent",
+        "expires_at": "2026-11-03T15:31:46+00:00",
+        "identity": "clm_0acd695153464b02",
+        "provenance": {
+          "acquired_by": "local-agent",
+          "adopted_dirty": true,
+          "adopted_head": "01f77f7da39257356d9cdbb26be73bd3336e0bd7",
+          "adopted_signals": [
+            "dirty-tree"
+          ],
+          "operation_request_digest": "adee99dc7226480f",
+          "operation_request_id": "req_e161d34e09e0c1a6c59b113e89b81e39"
+        },
+        "reason": "bounded authority continuity repair in owned isolated checkout",
+        "repository": "mncs-environment",
+        "schema_version": "mncs.environment.workspace-claim/2",
+        "scope": {
+          "branch": "repair/authority-continuity-20261102",
+          "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/authority-continuity-20261102",
+          "exclusive": false,
+          "kind": "worktree",
+          "paths": null,
+          "repository": "mncs-environment"
+        },
+        "session_id": "ses_f6e6d93bd1337ab9",
+        "status": "held",
+        "version": 1
+      },
+      "stderr": ""
+    },
+    "release": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 0,
+      "result": {
+        "released": true
+      },
+      "stderr": ""
+    },
+    "checkpoint": {
+      "ok": true,
+      "operation": "checkpoint",
+      "exit_code": 0,
+      "result": {
+        "campaign_identity": "cmp_authority_continuity_repair_20261102",
+        "created_at": "2026-11-02T15:32:14+00:00",
+        "created_by": "local-agent",
+        "created_by_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+        "environment_id": "renv_3bdb634d97df79d1",
+        "event_cursor": 18,
+        "identity": "chk_7d7bb51e65f31c86",
+        "intent_id": "int_8475157f281c835f",
+        "operation_digest": "a6284164e17492bd",
+        "progress": "Continuity regression reproduced and repaired; isolated operational claim released.",
+        "remaining": [
+          "Verify independent stdlib and Doctor Work Intents under the same authenticated campaign."
+        ],
+        "request_digest": "2bec3bf70b878f11",
+        "request_id": "req_1cef7eab136b9642bd2322c89e270edb",
+        "revalidate_on_resume": [
+          "bindings",
+          "workspace-heads",
+          "claims",
+          "authority"
+        ],
+        "schema_version": "mncs.environment.checkpoint/1",
+        "sequence": 1,
+        "session_id": "ses_f6e6d93bd1337ab9",
+        "unresolved": []
+      },
+      "stderr": ""
+    },
+    "envComplete": {
+      "ok": true,
+      "operation": "complete",
+      "exit_code": 0,
+      "result": {
+        "at": "2026-11-02T15:35:15+00:00",
+        "checkpoint_id": "chk_7e7e7235654c68f0",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "verified-bounded-operation",
+        "request_digest": "0a35cc60b159b6ef",
+        "request_id": "req_7d9a8a896093b87a0bef790440ae8a2c",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Acquired and released exact isolated checkout claim, checkpointed, and established independent same-campaign Stdlib intent; implementation validation and delivery continue separately."
+      },
+      "stderr": ""
+    },
+    "stdlibCheckout": {
+      "ok": true,
+      "operation": "scope_grant",
+      "exit_code": 0,
+      "result": {
+        "admitted_at": "2026-11-02T15:33:34+00:00",
+        "admitted_by": "mncs-environment",
+        "approval_reference": "campaign-writable-checkout:cmp_authority_continuity_repair_20261102:mncs-stdlib:ses_acaa208a79977735",
+        "authority_revision_after": "0a44b1e852cf8a761074ceb4a2e19811c79c6d6df316789758f7247425105969",
+        "authority_revision_before": "e1d2442343a20cb01f16550344afcff6c478dc79ff6fc35451d9326f5798b069",
+        "authorization_basis": "campaign-writable-checkout",
+        "authorized_by_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+        "campaign_id": "cmp_authority_continuity_repair_20261102",
+        "identity": "scope_69d19fcf01ade1e4",
+        "repository": "mncs-stdlib",
+        "repository_identity": {
+          "branch": "verify/authority-continuity-20261102",
+          "checkout_identity": "checkout:724b31ea07fc0c29",
+          "clean": true,
+          "git_common_directory": "/home/epi13/Documents/Projects/mncs-stdlib/.git",
+          "git_common_directory_identity": "git-common:69607a1d181455fa",
+          "head": "3798a76cba62e10b68c24823100048313c475688",
+          "observed_path": "mncs-stdlib/.worktrees/authority-continuity-20261102",
+          "path": "/home/epi13/Documents/Projects/mncs-stdlib/.worktrees/authority-continuity-20261102",
+          "repository_root": "/home/epi13/Documents/Projects/mncs-stdlib",
+          "workspace_root": "/home/epi13/Documents/Projects"
+        },
+        "requested_by_consumer_id": "local-agent",
+        "schema_version": "mncs.environment.authority-scope-grant/1",
+        "scope": {
+          "kind": "repository",
+          "repository": "mncs-stdlib"
+        },
+        "session_id": "ses_acaa208a79977735"
+      },
+      "stderr": ""
+    },
+    "stdlibVerify": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 0,
+      "result": {
+        "action": "write",
+        "binding_id": null,
+        "capability": "mncs-stdlib:test/stdlib-integrity",
+        "coordination_status": "shared-checkout-needs-isolation-or-lease",
+        "event_reference": {
+          "identity": "evt_4d9eafcf57733ebe",
+          "sequence": 4,
+          "type": "authority.coordination-deferred"
+        },
+        "next_step": "select-or-create-an-observed-proposal-worktree",
+        "returncode": null,
+        "status": "deferred-coordination",
+        "stderr": "nothing executed: mncs-stdlib is not an isolated proposal worktree (dirty/foreign/off-branch)",
+        "stdout": "",
+        "truncated": false
+      },
+      "stderr": ""
+    },
+    "stdlibVerifyWorktree": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 0,
+      "result": {
+        "action": "write",
+        "binding_id": null,
+        "capability": "mncs-stdlib:test/stdlib-integrity",
+        "coordination_status": "shared-checkout-needs-isolation-or-lease",
+        "event_reference": {
+          "identity": "evt_1887b100bb236f5c",
+          "sequence": 10,
+          "type": "authority.coordination-deferred"
+        },
+        "next_step": "select-or-create-an-observed-proposal-worktree",
+        "returncode": null,
+        "status": "deferred-coordination",
+        "stderr": "nothing executed: mncs-stdlib is not an isolated proposal worktree (dirty/foreign/off-branch)",
+        "stdout": "",
+        "truncated": false
+      },
+      "stderr": ""
+    },
+    "stdlibBoundedVerify": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 4,
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_eba7710d0b445fc8",
+        "capability": "mncs-stdlib:verification-executor/mncs-stdlib.manifest-freshness",
+        "input_artifacts": [],
+        "returncode": 1,
+        "status": "failed",
+        "stderr": "error: /home/epi13/Documents/Projects/mncs-stdlib/stdlib-manifest.json drifts from library/+dist; run ./tools/regen.sh\n",
+        "stdout": "",
+        "truncated": false
+      },
+      "stderr": ""
+    },
+    "stdlibComplete": {
+      "ok": true,
+      "operation": "complete",
+      "exit_code": 0,
+      "result": {
+        "at": "2026-11-02T15:40:58+00:00",
+        "checkpoint_id": "chk_e92e638813c21e4f",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "bounded-verification-executed",
+        "request_digest": "7d806e19425d539a",
+        "request_id": "req_bf7fc1c04830406f144e87cd05fa2d1e",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Manifest verification executed and reported existing manifest drift; dirty main write-effect tests deferred. Complete this main-checkout intent before entering isolated worktree."
+      },
+      "stderr": ""
+    },
+    "stdlibFresh": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "result": {
+        "schema_version": "mncs.environment.entry-context/1",
+        "session_id": "ses_38e7b135eb8616e2",
+        "lifecycle": "active",
+        "environment_id": "renv_81c5b45b378a1674",
+        "work_intent": {
+          "goal": "Develop reusable MNCS library capabilities with executable consumer contracts.",
+          "identity": "int_d6f32f003a883dab"
+        },
+        "workspace_root": "/home/epi13/Documents/Projects",
+        "persistence": "store",
+        "toolchain": null,
+        "writable_repositories": [
+          "mncs-stdlib"
+        ],
+        "protected_repositories": [],
+        "authority": {
+          "readable": [
+            "workspace"
+          ],
+          "writable": [
+            "mncs-stdlib"
+          ],
+          "protected_repositories": [],
+          "escalation_required": [
+            "delete"
+          ],
+          "revision": "e1d2442343a20cb01f16550344afcff6c478dc79ff6fc35451d9326f5798b069"
+        },
+        "readiness": {
+          "status": "degraded",
+          "blocking": [],
+          "required_unavailable": [],
+          "required_unknown": [],
+          "unavailable_count": 0,
+          "unknown_count": 3
+        },
+        "doctor": {
+          "readiness": "degraded",
+          "summary": {
+            "blockers": 0,
+            "degraded": 3,
+            "reconciled": 1,
+            "repaired": 0
+          },
+          "remaining": []
+        },
+        "capabilities": {
+          "available": [
+            "mncs-stdlib:test/stdlib-integrity",
+            "mncs-stdlib:test/stdlib-toolchain",
+            "mncs-stdlib:verification-executor/mncs-stdlib.manifest-freshness",
+            "mncs.stdlib-bundle/1",
+            "mncs.stdlib-manifest/1"
+          ],
+          "count": 5
+        }
+      },
+      "stderr": ""
+    },
+    "doctorEntry": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 2,
+      "result": "",
+      "stderr": "{\n  \"diagnostics\": {\n    \"campaign_id\": \"cmp_authority_continuity_repair_20261102\",\n    \"code\": \"campaign-context-mismatch\",\n    \"continuation\": {\n      \"checkpoint_ids\": [],\n      \"claim_ids\": [],\n      \"consumer_id\": \"local-agent\",\n      \"definition_id\": \"env_a406376072f818c7\",\n      \"delivery\": {\n        \"status\": \"pending\"\n      },\n      \"lifecycle\": \"active\",\n      \"repositories\": [\n        {\n          \"branch\": \"main\",\n          \"checkout_identity\": null,\n          \"clean\": false,\n          \"git_common_directory_identity\": null,\n          \"head\": \"3798a76cba62e10b68c24823100048313c475688\",\n          \"observation\": null,\n          \"observed_path\": \"/home/epi13/Documents/Projects/mncs-stdlib\",\n          \"repository\": \"mncs-stdlib\"\n        }\n      ],\n      \"selected_checkout\": null,\n      \"session_id\": \"ses_acaa208a79977735\",\n      \"unresolved_pressures\": [],\n      \"workspace_root\": \"/home/epi13/Documents/Projects\"\n    },\n    \"continuations\": [\n      {\n        \"campaign_id\": \"cmp_authority_continuity_repair_20261102\",\n        \"campaign_statuses\": [\n          {\n            \"campaign_id\": \"cmp_authority_continuity_repair_20261102\",\n            \"status\": \"not-found\"\n          }\n        ],\n        \"campaigns_count\": 1,\n        \"continuations\": [],\n        \"continuations_count\": 0,\n        \"next\": \"verify the campaign identity and that this repository belongs to its recorded work intent\",\n        \"repository\": \"mncs-doctor\",\n        \"schema_version\": \"mncs.control.project-entry-continuation/1\",\n        \"status\": \"not-found\"\n      }\n    ],\n    \"definition_id\": \"env_a406376072f818c7\",\n    \"lifecycle\": \"active\",\n    \"next\": \"resume ses_acaa208a79977735 --revalidate in its recorded Environment, or choose a new campaign identity for work under the changed definition or workspace\",\n    \"session_id\": \"ses_acaa208a79977735\",\n    \"workspace\": \"/home/epi13/Documents/Projects\"\n  },\n  \"error\": \"campaign identity already belongs to live work in a different Environment definition or workspace\"\n}\n"
+    },
+    "doctorEntryAfter": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 2,
+      "result": "",
+      "stderr": "{\n  \"diagnostics\": {\n    \"campaign_id\": \"cmp_authority_continuity_repair_20261102\",\n    \"code\": \"campaign-context-mismatch\",\n    \"continuation\": {\n      \"checkpoint_ids\": [],\n      \"claim_ids\": [],\n      \"consumer_id\": \"local-agent\",\n      \"definition_id\": \"env_a406376072f818c7\",\n      \"delivery\": {\n        \"status\": \"pending\"\n      },\n      \"lifecycle\": \"active\",\n      \"repositories\": [\n        {\n          \"branch\": \"main\",\n          \"checkout_identity\": null,\n          \"clean\": false,\n          \"git_common_directory_identity\": null,\n          \"head\": \"3798a76cba62e10b68c24823100048313c475688\",\n          \"observation\": \"unavailable_current_namespace\",\n          \"observed_path\": \"/home/epi13/Documents/Projects/mncs-stdlib\",\n          \"repository\": \"mncs-stdlib\"\n        },\n        {\n          \"branch\": \"main\",\n          \"checkout_identity\": \"checkout:2ea8e4caf4376473\",\n          \"clean\": false,\n          \"git_common_directory_identity\": \"git-common:69607a1d181455fa\",\n          \"head\": \"3798a76cba62e10b68c24823100048313c475688\",\n          \"observation\": \"current\",\n          \"observed_path\": \"mncs-stdlib\",\n          \"repository\": \"mncs-stdlib\"\n        },\n        {\n          \"branch\": \"verify/authority-continuity-20261102\",\n          \"checkout_identity\": \"checkout:724b31ea07fc0c29\",\n          \"clean\": true,\n          \"git_common_directory_identity\": \"git-common:69607a1d181455fa\",\n          \"head\": \"3798a76cba62e10b68c24823100048313c475688\",\n          \"observation\": \"current\",\n          \"observed_path\": \"mncs-stdlib/.worktrees/authority-continuity-20261102\",\n          \"repository\": \"mncs-stdlib\"\n        },\n        {\n          \"branch\": null,\n          \"checkout_identity\": \"checkout:2ba8fdda0eac84bc\",\n          \"clean\": true,\n          \"git_common_directory_identity\": \"git-common:69607a1d181455fa\",\n          \"head\": \"3d9e0779879cba407ddde06cfbf61c837b33c984\",\n          \"observation\": \"current\",\n          \"observed_path\": \"mncs-stdlib/.worktrees/integrate-luna-max-json-token-native-20261030\",\n          \"repository\": \"mn"
+    },
+    "controlEntry": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "result": {
+        "schema_version": "mncs.environment.entry-context/1",
+        "session_id": "ses_8c11822e961e8a36",
+        "lifecycle": "active",
+        "environment_id": "renv_966d28ab755556de",
+        "work_intent": {
+          "goal": "repair authenticated Environment continuation selection for registered worktrees",
+          "identity": "int_6b1318897bb4e434"
+        },
+        "workspace_root": "/home/epi13/Documents/Projects",
+        "persistence": "store",
+        "toolchain": null,
+        "writable_repositories": [
+          "mncs-control-mcp"
+        ],
+        "protected_repositories": [],
+        "authority": {
+          "readable": [
+            "workspace"
+          ],
+          "writable": [
+            "mncs-control-mcp"
+          ],
+          "protected_repositories": [],
+          "escalation_required": [],
+          "revision": "5939414b8cef343366d25227d00a3b8f9704c0cb404bb2ca7ed93c8d2b6485d8"
+        },
+        "readiness": {
+          "status": "degraded",
+          "blocking": [],
+          "required_unavailable": [],
+          "required_unknown": [],
+          "unavailable_count": 0,
+          "unknown_count": 2
+        },
+        "doctor": {
+          "readiness": "degraded",
+          "summary": {
+            "blockers": 0,
+            "degraded": 2,
+            "reconciled": 1,
+            "repaired": 0
+          },
+          "remaining": []
+        },
+        "capabilities": {
+          "available": [
+            "mncs-control-mcp:test/control-mcp-tests",
+            "mncs-control-mcp:workspace.worktree.prepare"
+          ],
+          "count": 2
+        }
+      },
+      "stderr": ""
+    },
+    "stdlibClaimRetry": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 3,
+      "result": "",
+      "stderr": "{\"error\": \"owner-authorized repository checkout cannot be resumed safely: mncs-stdlib\", \"diagnostics\": {\"code\": \"authority-denied\", \"action\": \"claim-acquire\", \"repository\": \"mncs-stdlib\", \"publication_completed\": false, \"next\": \"enter an Environment whose effective writable scope includes this repository\"}}\n"
+    },
+    "stdlibFreshClaim": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 0,
+      "result": {
+        "acquired_at": "2026-11-02T15:42:08+00:00",
+        "basis": "explicit-claim",
+        "claim_id": "claim:mncs-stdlib:worktree:8a185b5f814d",
+        "consumer_id": "local-agent",
+        "expires_at": "2026-11-03T15:42:08+00:00",
+        "identity": "clm_bbe2ee7e994fe339",
+        "provenance": {
+          "acquired_by": "local-agent",
+          "operation_request_digest": "a6133301e5ad9fe4",
+          "operation_request_id": "req_d5f766e8e61f6a6119ea76cf51b5d6eb"
+        },
+        "reason": "verify isolated fresh-intent development eligibility",
+        "repository": "mncs-stdlib",
+        "schema_version": "mncs.environment.workspace-claim/2",
+        "scope": {
+          "branch": "verify/authority-continuity-20261102",
+          "checkout": "/home/epi13/Documents/Projects/mncs-stdlib/.worktrees/authority-continuity-20261102",
+          "exclusive": false,
+          "kind": "worktree",
+          "paths": null,
+          "repository": "mncs-stdlib"
+        },
+        "session_id": "ses_38e7b135eb8616e2",
+        "status": "held",
+        "version": 1
+      },
+      "stderr": ""
+    },
+    "stdlibFreshVerify": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 4,
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_9b3d724ec5ff4dde",
+        "capability": "mncs-stdlib:test/stdlib-integrity",
+        "input_artifacts": [],
+        "returncode": 1,
+        "status": "failed",
+        "stderr": "",
+        "stdout": "s......F........                                                         [100%]\n=================================== FAILURES ===================================\n________________________ test_gen_manifest_check_passes ________________________\n\nroot = '/home/epi13/Documents/Projects/mncs-stdlib/.worktrees/authority-continuity-20261102'\n\n    def test_gen_manifest_check_passes(root):\n        result = subprocess.run(\n            [\"python3\", \"tools/gen_manifest.py\", \"--root\", root, \"--check\"],\n            cwd=root,\n            capture_output=True,\n            text=True,\n        )\n>       assert result.returncode == 0, result.stderr\nE       AssertionError: error: /home/epi13/Documents/Projects/mncs-stdlib/.worktrees/authority-continuity-20261102/stdlib-manifest.json drifts from library/+dist; run ./tools/regen.sh\nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['python3', 'tools/gen_manifest.py', '--root', '/home/epi13/Documents/Projects/mncs-stdlib/.work...tdlib/.worktrees/authority-continuity-20261102/stdlib-manifest.json drifts from library/+dist; run ./tools/regen.sh\\n').returncode\n\ntests/test_manifest.py:97: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_manifest.py::test_gen_manifest_check_passes - AssertionErro...\n1 failed, 14 passed, 1 skipped, 10 deselected in 0.88s\n",
+        "truncated": false
+      },
+      "stderr": ""
+    },
+    "stdlibFreshComplete": {
+      "ok": true,
+      "operation": "complete",
+      "exit_code": 0,
+      "result": {
+        "at": "2026-11-02T15:45:07+00:00",
+        "checkpoint_id": "chk_aae0a13b89a25c5f",
+        "claims_release_error": null,
+        "claims_released": [
+          "claim:mncs-stdlib:worktree:8a185b5f814d"
+        ],
+        "outcome": "authority-continuity-verified-provider-drift",
+        "request_digest": "edff05ab8299e540",
+        "request_id": "req_90c5eb4305a9922bd798b6fa6b831e83",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Fresh isolated Work Intent acquired its exact claim and executed Stdlib integrity: 14 passed, 1 skipped, 1 committed-manifest-drift failure. No authority intervention. Complete and release only acceptance-owned claim."
+      },
+      "stderr": ""
+    },
+    "controlClaim": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 0,
+      "result": {
+        "acquired_at": "2026-11-02T15:42:45+00:00",
+        "basis": "explicit-claim",
+        "claim_id": "claim:mncs-control-mcp:worktree:33e52e30b3c5",
+        "consumer_id": "local-agent",
+        "expires_at": "2026-11-03T15:42:45+00:00",
+        "identity": "clm_9ea46b6938ffde25",
+        "provenance": {
+          "acquired_by": "local-agent",
+          "operation_request_digest": "820180398da1661b",
+          "operation_request_id": "req_c1abcebcf95a6e93906007c034980bc5"
+        },
+        "reason": "bounded third-repository eligibility proof",
+        "repository": "mncs-control-mcp",
+        "schema_version": "mncs.environment.workspace-claim/2",
+        "scope": {
+          "branch": "repair/authority-continuity-20261102",
+          "checkout": "/home/epi13/Documents/Projects/mncs-control-mcp/.worktrees/authority-continuity-20261102",
+          "exclusive": false,
+          "kind": "worktree",
+          "paths": null,
+          "repository": "mncs-control-mcp"
+        },
+        "session_id": "ses_8c11822e961e8a36",
+        "status": "held",
+        "version": 1
+      },
+      "stderr": ""
+    },
+    "controlHealth": {
+      "ok": true,
+      "operation": "health",
+      "exit_code": 0,
+      "result": {
+        "environment_id": "renv_966d28ab755556de",
+        "execution_stack": {
+          "compatibility": {
+            "authority": "selected provider readiness contract",
+            "state": "unproven"
+          },
+          "identity": "ec2f50c8eda21c1a",
+          "roles": {},
+          "schema_version": "mncs.environment.execution-composition/1",
+          "selection_status": "current"
+        },
+        "readiness": {
+          "available_count": 2,
+          "blocking": [],
+          "last_reconciled_at": "2026-11-02T15:40:19+00:00",
+          "observation": "live",
+          "required_unavailable": [],
+          "required_unknown": [],
+          "schema_version": "mncs.environment.readiness/1",
+          "scope": "declared requirements and discovered capabilities in the selected workspace",
+          "services": [],
+          "status": "degraded",
+          "unavailable_count": 0,
+          "unknown_count": 2,
+          "verification": "provider probes for declared services; executable substrate for other capabilities"
+        },
+        "session_id": "ses_8c11822e961e8a36",
+        "unavailable_capabilities": [],
+        "unknown_capabilities": [
+          {
+            "capability": "mncs-control-mcp:environment.campaign-continuation",
+            "code": "provider-invocation-undeclared",
+            "observed_at": "2026-11-02T15:42:58+00:00",
+            "reason": "mncs-control-mcp must publish an invocation descriptor for mncs-control-mcp:environment.campaign-continuation; source fingerprints are not commands",
+            "status": "unknown",
+            "substrate_key": "55b6cc6255a4902d",
+            "verification": "substrate"
+          },
+          {
+            "capability": "mncs-control-mcp:journal-context",
+            "code": "provider-invocation-undeclared",
+            "observed_at": "2026-11-02T15:42:58+00:00",
+            "reason": "mncs-control-mcp must publish an invocation descriptor for mncs-control-mcp:journal-context; source fingerprints are not commands",
+            "status": "unknown",
+            "substrate_key": "55b6cc6255a4902d",
+            "verification": "substrate"
+          }
+        ]
+      },
+      "stderr": ""
+    },
+    "liveNegative": {
+      "ok": false,
+      "operation": "scope_grant",
+      "error": {
+        "code": "ENVIRONMENT_AUTHORITY_DENIED",
+        "message": "expanding this session needs an exact owner grant; independent repository work uses project entry with its own Work Intent",
+        "details": {
+          "campaign_id": "cmp_authority_continuity_repair_20261102",
+          "repository": "mncs-doctor",
+          "next_operation": {
+            "operation": "enter",
+            "project": "mncs-doctor",
+            "arguments": {
+              "campaign_id": "cmp_authority_continuity_repair_20261102"
+            }
+          },
+          "next": "enter the target project's owner-controlled Environment definition; entry independently validates its authority, rights, checkout and claims"
+        }
+      }
+    },
+    "controlCheckpoint": {
+      "ok": true,
+      "operation": "checkpoint",
+      "exit_code": 0,
+      "result": {
+        "campaign_identity": "cmp_authority_continuity_repair_20261102",
+        "created_at": "2026-11-02T15:44:07+00:00",
+        "created_by": "local-agent",
+        "created_by_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+        "environment_id": "renv_966d28ab755556de",
+        "event_cursor": 7,
+        "identity": "chk_e1fbd5e7649b9a0c",
+        "intent_id": "int_6b1318897bb4e434",
+        "operation_digest": "4d30a22949e2c8cb",
+        "progress": "Same-campaign independent Control intent acquired an exact isolated claim; live health succeeded. No owner grants added.",
+        "remaining": [
+          "Resume and complete acceptance scope; preserve unrelated campaign."
+        ],
+        "request_digest": "bfa06eb7d8c2357a",
+        "request_id": "req_902bdadc2d59f20834fdd17e1f0b0c47",
+        "revalidate_on_resume": [
+          "bindings",
+          "workspace-heads",
+          "claims",
+          "authority"
+        ],
+        "schema_version": "mncs.environment.checkpoint/1",
+        "sequence": 1,
+        "session_id": "ses_8c11822e961e8a36",
+        "unresolved": []
+      },
+      "stderr": ""
+    },
+    "controlResume": {
+      "ok": true,
+      "operation": "resume",
+      "exit_code": 0,
+      "result": {
+        "session_id": "ses_8c11822e961e8a36",
+        "lifecycle": "active",
+        "environment_id": "renv_966d28ab755556de",
+        "toolchain": null,
+        "authority": {
+          "readable": [
+            "workspace"
+          ],
+          "writable": [
+            "mncs-control-mcp"
+          ],
+          "protected_repositories": [],
+          "escalation_required": [],
+          "revision": "5939414b8cef343366d25227d00a3b8f9704c0cb404bb2ca7ed93c8d2b6485d8"
+        },
+        "readiness": {
+          "status": "degraded",
+          "blocking": [],
+          "required_unavailable": [],
+          "required_unknown": [],
+          "unavailable_count": 0,
+          "unknown_count": 2
+        },
+        "revalidation": {
+          "scope_composition": {
+            "status": "unchanged",
+            "composed": [],
+            "retained": [],
+            "removed": [],
+            "skipped": [],
+            "base_intent_skipped": [
+              {
+                "repository": "mncs-control-mcp",
+                "reason": "base-intent-checkout-conflict"
+              }
+            ]
+          }
+        }
+      },
+      "stderr": ""
+    },
+    "originalPreserved": {
+      "ok": true,
+      "operation": "continuation",
+      "exit_code": 0,
+      "result": {
+        "schema_version": "mncs.control.campaign-continuation/2",
+        "status": "ready",
+        "repository": "mncs-environment",
+        "campaigns_count": 1,
+        "continuations_count": 1,
+        "continuations_truncated": false,
+        "next": "continue the selected project session with Environment revalidation; other same-campaign contexts remain visible and unchanged",
+        "campaign_statuses": [
+          {
+            "campaign_id": "cmp_luna_max_native_self_consumption_followup2_20261029",
+            "status": "ready",
+            "continuations_truncated": false
+          }
+        ],
+        "selected_session_id": "ses_5df85cca5ff2ec76",
+        "continuations": [
+          {
+            "campaign_id": "cmp_luna_max_native_self_consumption_followup2_20261029",
+            "campaign_session_ids": [
+              "ses_5df85cca5ff2ec76"
+            ],
+            "current_campaign_consumer": "local-agent",
+            "authorized_consumers": [
+              "local-agent"
+            ],
+            "lifecycle": "active",
+            "latest_checkpoint": {
+              "created_at": "2026-11-02T14:39:30+00:00",
+              "identity": "chk_d7cd85473a05ff5d",
+              "progress": "Delivered Doctor repair-delta planning in MNCS. Feature 29ddc39d73196e538a854371aa52f450ad42fb11 merged as 01f77f7da39257356d9cdbb26be73bd3336e0bd7 and pushed to origin/main. Post-push fetch confirms main equals origin and both checkouts are clean. Full Environment suite: 1240 passed, 82 skipped; vertical proof PASS; …",
+              "progress_truncated": true,
+              "remaining": [
+                "Continue meaningful native work in the current Environment-only writable scope.",
+                "Retry cross-repository migration when a specific exact owner grant is available; the canonical scope-grant path currently denies mncs-stdlib and mncs-doctor.",
+                "Do not treat this delivery or checkpoint as campaign completion."
+              ],
+              "remaining_count": 3,
+              "remaining_truncated": false,
+              "sequence": 14
+            },
+            "claim_ids": [],
+            "work_intent": {
+              "goal": "exercise canonical Environment persistence through the Control socket",
+              "identity": "int_8475157f281c835f",
+              "repositories": [
+                "mncs-environment"
+              ]
+            },
+            "evidence_count": 5,
+            "evidence_truncated": false,
+            "delivery": {
+              "status": "delivered",
+              "repositories_count": 1,
+              "repositories_truncated": false
+            },
+            "repositories": [
+              {
+                "repository": "mncs-environment",
+                "branch": "main",
+                "head": "b81da63959aff1116217e1ddfeb5c2352b2dc647"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "main",
+                "head": "9b4d131bf769b6e364b867adabff3c873d46356d"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/ambient-owner-result-integrity-20261028",
+                "head": "8f3e1446369ca572b5e19b7d204c11e1458c1f0d"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/service-admission-cause-taxonomy-20261028",
+                "head": "12f6e2ba1cf5174170b57bb239698ac44f188330"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/ambient-service-accountability-day3-20261028",
+                "head": "99da2fa0bf71d45ebee53782e5c61c3557797085"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/ambient-service-store-publication-reuse-20261028",
+                "head": "34018d191490efbe5dd17b90db23ff42b3ff7865"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/ambient-service-delivery-evidence-20261028",
+                "head": "355be1eb7f30557f93bee5f2ae07fc7aada2b3f9"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/ambient-verification-executor-20261028",
+                "head": "b8858ce9d4eca74fb7a0c2bcef57cc6f45f5eb75"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/autonomy-entry-20261014",
+                "head": "b85596cf4ed760b335b5c48a0db1fcbc7d06bc27"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/agent-observation-delivery-loop-20261025",
+                "head": "c49a1cb5c02f474d17c950d3305a49a7e07057fa"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/claim-inspection-reference-usability-20261025",
+                "head": "5630ce0ec96052c5e3b7640b61c9f3c24f102ea0"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/campaign-writable-checkout-authorization-20261025",
+                "head": "dc45fa93209c4a5fce678466ba363ff91a291264"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/native-userland-live-projection-codex-20261025",
+                "head": "34898fb0ae1ac89d2464bd2f7141e05f5ea1e651"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/cgroup-resource-headroom-20261025",
+                "head": "84f681e55ffb9511e71f5be3d39f60fa3b342a7b"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/completion-checkpoint-20261014",
+                "head": "e2e683769d883736a616f3c52b6c5686f5ccdc64"
+              },
+              {
+                "repository": "mncs-environment",
+                "branch": "campaign/control-exact-session-continuation-evidence-20261025",
+                "head": "c268eaeff925235e6808815f1e7e865ecb5827e4"
+              }
+            ],
+            "project_reference": {
+              "basis": [
+                "campaign.work_intent.repositories",
+                "campaign.repository_refs",
+                "snapshot.selected_checkouts",
+                "snapshot.repo_facts"
+              ],
+              "status": "linked"
+            }
+          }
+        ]
+      },
+      "stderr": ""
+    },
+    "controlComplete": {
+      "ok": true,
+      "operation": "complete",
+      "exit_code": 0,
+      "result": {
+        "at": "2026-11-02T15:45:51+00:00",
+        "checkpoint_id": "chk_3825fddbcca20c31",
+        "claims_release_error": null,
+        "claims_released": [
+          "claim:mncs-control-mcp:worktree:33e52e30b3c5"
+        ],
+        "outcome": "cross-repository-authority-continuity-verified",
+        "request_digest": "5de5d1a3869bc447",
+        "request_id": "req_4e53b0cf34a4fe671b5ba72f9b2bd7d9",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Third permitted repository admitted with separate intent and writable rights. Exact isolated claim, live health, negative scope expansion, checkpoint and fresh-process revalidation succeeded. Release acceptance-owned claim."
+      },
+      "stderr": ""
+    }
+  }
+}
