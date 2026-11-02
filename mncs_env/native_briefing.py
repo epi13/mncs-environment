@@ -8,6 +8,8 @@ from . import native_readiness
 from .briefing import _add_read_measurements
 
 MAX_NATIVE_EVENTS = 200
+MAX_NATIVE_OBSERVATIONS = 50
+MAX_NATIVE_CONTEXT_VALUES = 32
 MAX_NATIVE_TEXT_BYTES = 512
 
 CATEGORIES = {
@@ -52,6 +54,14 @@ RELEVANCE = {
     27: "an invocation succeeded",
 }
 
+OBSERVATION_RELEVANCE = {
+    1: "names this session",
+    2: "touches a repository in this intent",
+    3: "links work this session references",
+    4: "claim state changed somewhere in the family",
+    5: "elevated severity is family-visible",
+}
+
 SUBJECT_KEYS = ("capability", "operation", "repository", "claim_id", "action")
 COORDINATION_KEYS = (
     "action", "coordination_status", "required_coordination", "next_step",
@@ -60,7 +70,7 @@ COORDINATION_FIELD_NAMES = (
     "action_valid", "coordination_status_valid", "required_coordination_valid",
     "next_step_valid",
 )
-NATIVE_SCHEMA = "mncs.environment.update-capsule-classification-result/1"
+NATIVE_SCHEMA = "mncs.environment.update-capsule-classification-result/2"
 
 
 def _bounded_text(value: Any, *, limit: int = MAX_NATIVE_TEXT_BYTES) -> str | None:
@@ -149,6 +159,130 @@ def _event_request(event: Any) -> dict[str, Any] | None:
             payload.get("persistent_authority_required") is False
         ),
         "operation_executed_false": payload.get("operation_executed") is False,
+    }
+
+
+def _string_set_request(value: Any) -> list[dict[str, str]] | None:
+    """Encode bounded members that can match Python's string intersections."""
+    if not isinstance(value, (str, list, tuple, dict, set, frozenset)):
+        return None
+    try:
+        if len(value) > MAX_NATIVE_CONTEXT_VALUES:
+            return None
+        members = set(value)
+    except (TypeError, ValueError):
+        return None
+    if len(members) > MAX_NATIVE_CONTEXT_VALUES:
+        return None
+    strings = sorted(member for member in members if type(member) is str)
+    if any(_bounded_text(member) is None for member in strings):
+        return None
+    return [_text(member) for member in strings]
+
+
+def _relation_repositories_request(value: Any) -> list[dict[str, str]] | None:
+    """Encode the bounded iterable used by Python's repository relation test."""
+    if not value:
+        return []
+    if type(value) is str:
+        values = list(value)
+    elif isinstance(value, (list, tuple)):
+        values = value
+    elif isinstance(value, dict):
+        values = list(value)
+    else:
+        return None
+    if len(values) > MAX_NATIVE_CONTEXT_VALUES:
+        return None
+    prepared = []
+    for value_item in values:
+        text = _bounded_text(value_item)
+        if text is None:
+            return None
+        prepared.append(_text(text))
+    return prepared
+
+
+def _observation_request(event: Any) -> dict[str, Any] | None:
+    if not isinstance(event, dict):
+        return None
+    payload = event.get("payload", {})
+    if not isinstance(payload, dict):
+        return None
+    relations = payload.get("relations", {})
+    relations_valid = isinstance(relations, dict)
+    relation_session_id = ""
+    session_id_present = False
+    session_id_is_text = False
+    subject_present = [False] * 4
+    subjects = [_text("") for _ in range(4)]
+    repositories: list[dict[str, str]] = []
+    commons_work = ""
+    if relations_valid:
+        session_id_present = "session_id" in relations
+        raw_session_id = relations.get("session_id")
+        session_id_is_text = type(raw_session_id) is str
+        if session_id_present:
+            relation_session_id = _bounded_text(raw_session_id)
+            if relation_session_id is None:
+                return None
+
+        for index, key in enumerate(("session_id", "claim", "repository", "uri")):
+            value = relations.get(key)
+            if not value:
+                continue
+            subject = _bounded_text(value)
+            if subject is None:
+                return None
+            subject_present[index] = True
+            subjects[index] = _text(subject)
+
+        repositories = _relation_repositories_request(
+            relations.get("repositories", []),
+        )
+        if repositories is None:
+            return None
+        commons_work = _bounded_text(relations.get("commons_work", ""))
+        if commons_work is None:
+            return None
+
+    kind = _bounded_text(payload.get("kind", ""))
+    severity = _bounded_text(payload.get("severity", ""))
+    if kind is None or severity is None:
+        return None
+    return {
+        "relations_valid": relations_valid,
+        "session_id_present": session_id_present,
+        "session_id_is_text": session_id_is_text,
+        "relation_session_id": _text(relation_session_id),
+        "subject_present": subject_present,
+        "subjects": subjects,
+        "repositories": repositories,
+        "commons_work": _text(commons_work),
+        "kind": _text(kind),
+        "severity": _text(severity),
+    }
+
+
+def _observation_context(session) -> dict[str, Any] | None:
+    session_id = getattr(session, "session_id", None)
+    if type(session_id) is not str:
+        return None
+    bounded_session_id = _bounded_text(session_id)
+    snapshot = getattr(session, "snapshot", None)
+    if bounded_session_id is None or not isinstance(snapshot, dict):
+        return None
+    intent = snapshot.get("intent", {})
+    if not isinstance(intent, dict):
+        return None
+    repositories = _string_set_request(intent.get("repositories", []))
+    work_ids = _string_set_request(intent.get("commons_work", []))
+    if repositories is None or work_ids is None:
+        return None
+    return {
+        "session_id": _text(bounded_session_id),
+        "intent_repositories": repositories,
+        "commons_work_ids": work_ids,
     }
 
 
@@ -259,24 +393,37 @@ def _project_item(event: dict[str, Any], decision: dict[str, Any]) -> dict[str, 
     return item
 
 
-def project_events_native(
-    events: list[dict[str, Any]], session, *, timeout_seconds: float = 15.0,
-) -> list[dict[str, Any] | None] | None:
-    """Classify an in-bounds event batch natively, or return None for fallback."""
-    if not events:
-        return []
-    if len(events) > MAX_NATIVE_EVENTS:
+def project_capsule_inputs_native(
+    events: list[dict[str, Any]], observations: list[dict[str, Any]], session,
+    *, timeout_seconds: float = 15.0,
+) -> tuple[list[dict[str, Any] | None], list[str | None]] | None:
+    """Classify bounded event and reconciler windows in one native batch."""
+    if len(events) > MAX_NATIVE_EVENTS or len(observations) > MAX_NATIVE_OBSERVATIONS:
         return None
     prepared = [_event_request(event) for event in events]
-    if any(event is None for event in prepared):
+    prepared_observations = [_observation_request(event) for event in observations]
+    context = (
+        _observation_context(session) if observations else {
+            "session_id": _text(""),
+            "intent_repositories": [],
+            "commons_work_ids": [],
+        }
+    )
+    if (any(event is None for event in prepared)
+            or any(item is None for item in prepared_observations)
+            or context is None):
         return None
+    if not events and not observations:
+        return [], []
     toolchain_paths = native_readiness._toolchain_paths(session)
     if toolchain_paths is None:
         return None
     binary, stdlib = toolchain_paths
     request = {
-        "schema_version": "mncs.environment.update-capsule-classification-request/1",
+        "schema_version": "mncs.environment.update-capsule-classification-request/2",
+        **context,
         "events": prepared,
+        "observations": prepared_observations,
     }
     result = native_readiness._run_native_application(
         session=session,
@@ -289,7 +436,9 @@ def project_events_native(
     )
     if (result.get("valid") is not True
             or type(result.get("event_count")) is not int
-            or result["event_count"] != len(events)):
+            or result["event_count"] != len(events)
+            or type(result.get("observation_count")) is not int
+            or result["observation_count"] != len(observations)):
         raise native_readiness.NativeApplicationError(
             "native capsule classifier returned an incomplete batch"
         )
@@ -304,4 +453,27 @@ def project_events_native(
         items.append(
             _project_item(event, decision) if decision is not None else None
         )
-    return items
+    observation_codes = result.get("observation_relevance_codes")
+    if (not isinstance(observation_codes, list)
+            or len(observation_codes) != len(observations)):
+        raise native_readiness.NativeApplicationError(
+            "native capsule classifier returned malformed observation decisions"
+        )
+    observation_relevance = []
+    for code in observation_codes:
+        if type(code) is not int or code not in range(6):
+            raise native_readiness.NativeApplicationError(
+                "native capsule classifier returned an invalid observation relevance code"
+            )
+        observation_relevance.append(OBSERVATION_RELEVANCE.get(code))
+    return items, observation_relevance
+
+
+def project_events_native(
+    events: list[dict[str, Any]], session, *, timeout_seconds: float = 15.0,
+) -> list[dict[str, Any] | None] | None:
+    """Compatibility view for event-only callers of the combined native batch."""
+    result = project_capsule_inputs_native(
+        events, [], session, timeout_seconds=timeout_seconds,
+    )
+    return None if result is None else result[0]
