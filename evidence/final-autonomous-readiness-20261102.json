@@ -292,13 +292,13 @@
       "mncs-stdlib/.worktrees/final-readiness-20261102",
       "mncs-control-mcp/.worktrees/final-readiness-20261102",
       "mncs-test/.worktrees/final-readiness-20261102",
-      "mncs-compiler/.worktrees/final-readiness-20261102"
-    ],
-    "remaining_owned_targets": [
+      "mncs-compiler/.worktrees/final-readiness-20261102",
       "mncs-environment/.worktrees/final-readiness-20261102"
     ],
+    "remaining_owned_targets": [],
     "policy": "Complete claims through canonical lifecycle before removing only owned worktrees; no forced cleanup, foreign claims or foreign dirty files.",
-    "claims": "Stdlib, Test and Compiler completions each released their exact owned claim with claims_release_error=null."
+    "claims": "Stdlib, Test and Compiler completions each released their exact owned claim with claims_release_error=null.",
+    "retirement_verification": "After evidence publication, Git removed all five owned worktrees and deleted their merged branches without force. All three sessions completed and released their exact claims; the temporary native probe service and workspace were also retired."
   },
   "closing_lifecycle": {
     "mncs-final-stdlib-lifecycle.json": [
