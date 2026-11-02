@@ -4373,9 +4373,12 @@ class Session:
         return record.get("identity") == expected_record.get("identity")
 
     def _compose_authorized_scope_checkouts(self) -> dict[str, Any]:
-        """Compose authorized base and granted checkouts with live claims.
+        """Compose independently authorized checkout selections and claim anchors.
 
-        Scope grants and claims are the authority inputs. Workspace selection is
+        Campaign-writable checkout bindings select already authorized providers
+        without a persistent claim. Claims remain required for legacy claim-
+        anchored expansion and for operations that mutate shared scope.
+        Workspace selection is
         a projection of those records: an identical consumer label, a sibling
         directory, or a historical claim is never enough to add a provider to
         this session's capability closure. A repository already named by the
@@ -4812,6 +4815,11 @@ class Session:
                 })
                 continue
 
+            checkout_binding = (
+                grant.get("authorization_basis") == "campaign-writable-checkout"
+                and repository in intent_repositories
+                and repository in writable
+            )
             selected_for_grant = None
             if isinstance(expected_identity.get("path"), str):
                 selected_for_grant = {
@@ -4890,6 +4898,7 @@ class Session:
                         workspace_root, repository,
                         selected_for_grant,
                         owner_authorized_checkout=owner_authorized_identity,
+                        allow_forward_head=checkout_binding,
                     )
                 except (OSError, RuntimeError, ValueError,
                         workspace_module.WorkspaceResolutionError):
@@ -5006,7 +5015,7 @@ class Session:
                     else:
                         conflicting_claims.append(item)
             if (malformed_scope or conflicting_claims
-                    or not same_checkout_claims):
+                    or (not same_checkout_claims and not checkout_binding)):
                 report["skipped"].append({
                     "repository": repository,
                     "reason": (
@@ -5036,7 +5045,7 @@ class Session:
                     if pair[1].get("kind") == "repository"
                     and pair[1].get("exclusive") is True
                 ]
-            if not claim_candidates:
+            if not claim_candidates and not checkout_binding:
                 report["skipped"].append({
                     "repository": repository,
                     "reason": "claim-not-owned-matching-checkout-scope",
@@ -5044,6 +5053,7 @@ class Session:
                 continue
             claim, claim_scope = max(
                 claim_candidates,
+                default=(None, None),
                 key=lambda pair: (
                     sum(
                         pair[1].get(field) == current_identity.get(field)
@@ -5074,7 +5084,7 @@ class Session:
                 and claim_scope.get("repository") == repository
                 and claim_scope.get("exclusive") is True
             )
-            if (claim.get("session_id") != self.session_id
+            if claim is not None and (claim.get("session_id") != self.session_id
                     or claim.get("consumer_id")
                     != self.snapshot.get("consumer_id")
                     or not (same_worktree_claim or legacy_repository_claim)):
@@ -5128,7 +5138,7 @@ class Session:
                         or (isinstance(prior_identity, str)
                             and prior_identity != current_identity["checkout_identity"])):
                     grant_chain = self._authority_scope_grant_chain(repository)
-                    owner_rebind = (
+                    owner_rebind = checkout_binding or (
                         len(grant_chain) > 1
                         and grant_chain[-1].get("identity") == grant.get("identity")
                         and prior.get("source_ref") == "authenticated-scope-grant"
@@ -5158,8 +5168,8 @@ class Session:
                 "session_id": self.session_id,
                 "campaign_id": campaign_id,
                 "scope_grant_identity": grant.get("identity"),
-                "claim_id": claim.get("claim_id"),
-                "claim_version": claim.get("version"),
+                "claim_id": claim.get("claim_id") if claim is not None else None,
+                "claim_version": claim.get("version") if claim is not None else None,
                 "repository": repository,
                 "checkout_identity": current_identity["checkout_identity"],
                 "git_common_directory_identity": current_identity[
@@ -6461,6 +6471,26 @@ class Session:
         records carry both executor and effect target.
         """
         binding = self._binding(capability)
+        # Explicit checkout selection must take effect before provider execution.
+        # Rebuild the existing projection when it still describes the entry
+        # checkout; never silently execute that older provider as a fallback.
+        for grant in self.authority_scope_grants():
+            if (grant.get("authorization_basis") != "campaign-writable-checkout"
+                    or grant.get("repository") != binding.get("provider")):
+                continue
+            selected = self.snapshot.get("selected_checkouts", {}).get(
+                grant["repository"], {},
+            )
+            expected = Path(grant["repository_identity"]["path"]).resolve()
+            if (selected.get("scope_grant_identity") != grant.get("identity")
+                    or Path(binding.get("provider_root", "")).resolve() != expected):
+                self.revalidate()
+                binding = self._binding(binding["capability"])
+                if Path(binding.get("provider_root", "")).resolve() != expected:
+                    raise AuthorityDenied(
+                        "selected checkout could not be composed; inspect scope_composition on resume"
+                    )
+            break
         provenance = binding.get("provenance", {})
         provenance = provenance if isinstance(provenance, dict) else {}
         typed_execution = provenance.get("consumed_typed_execution_dependency")

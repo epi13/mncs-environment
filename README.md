@@ -259,6 +259,11 @@ it does not revoke the principal's ability to enter another permitted project.
 requirement for a new repository is separate from establishing an independent
 Work Intent through project entry.
 
+A Control-verified checkout binding in an already writable repository also
+retargets that repository's providers. Its selection survives claim release;
+provider invocation refreshes stale selection before execution. Operation
+rights and live conflicts are still checked for each invocation.
+
 ## Entering an environment
 
 The checked-in development definition selects Environment, Language,

@@ -332,5 +332,17 @@
     "title": "Exact project-session selection fails when campaign continuations conflict",
     "why_not_local": "Control owns authenticated project continuation selection and must enforce principal, campaign, definition, workspace, checkout, lifecycle, and claim invariants. Environment must not bypass those checks or create a competing selector.",
     "workaround": "Preserve the observation and existing Compiler ownership. Do not create or adopt a replacement Compiler session solely to work around the read failure."
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_2dfa7aca70d1747d",
+    "title": "Stdlib committed manifest drift blocks development integrity verification",
+    "owner": "mncs-stdlib",
+    "description": "At committed Stdlib revision 3798a76cba62e10b68c24823100048313c475688, tools/gen_manifest.py --root mncs-stdlib --check reports stdlib-manifest.json drift from library/+dist. Reproduced read-only during readiness hardening; the preceding canonical isolated integrity run had 14 passing tests and one manifest failure.",
+    "effect": "Ordinary development entry and authority work, but the existing integrity verification is not green.",
+    "evidence": "evidence/authority-continuity-20261102.json; evidence/autonomous-readiness-20261102.json",
+    "desired_contract": "Committed library, distribution and generated manifest agree and the declared integrity check passes.",
+    "why_not_local": "Stdlib owns generated distribution semantics; Environment must not regenerate or silently suppress its failure.",
+    "workaround": "Preserve this explicit provider failure for the native campaign; no authority workaround is needed."
   }
 ]
