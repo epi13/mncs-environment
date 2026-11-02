@@ -1,0 +1,274 @@
+mncs 0.18;
+
+// Bounded classification for Environment update-capsule session events.
+// Python retains transport and independently checks/serves out-of-bound inputs.
+module mncs.environment.update_capsule_classification_v1;
+
+use mncs.std.application.v1;
+
+record EventTextV1 { bytes: [byte; up_to 512] }
+
+record BriefEventInputV1 {
+    kind: EventTextV1,
+    status_present: bool,
+    status: EventTextV1,
+    outcome_status: EventTextV1,
+    subject_present: [bool; 5],
+    subjects: [EventTextV1; 5],
+    reason_present: bool,
+    reason: EventTextV1,
+    summary_present: bool,
+    summary: EventTextV1,
+    action: EventTextV1,
+    coordination_status: EventTextV1,
+    required_coordination: EventTextV1,
+    next_step: EventTextV1,
+    persistent_authority_required_false: bool,
+    operation_executed_false: bool
+}
+
+record BriefClassificationRequestV1 {
+    schema_version: [byte; up_to 64],
+    events: [BriefEventInputV1; up_to 200]
+}
+
+record BriefEventDecisionV1 {
+    relevant: bool,
+    category_code: u64,
+    priority: u64,
+    relevance_code: u64,
+    summary_mode: u64,
+    subject_source: u64,
+    action_valid: bool,
+    coordination_status_valid: bool,
+    required_coordination_valid: bool,
+    next_step_valid: bool,
+    persistent_authority_required_false: bool,
+    operation_executed_false: bool
+}
+
+record BriefClassificationStateV1 {
+    count: u64,
+    decisions: [BriefEventDecisionV1; 200]
+}
+
+record BriefClassificationOutputV1 {
+    schema_version: [byte; up_to 64],
+    valid: bool,
+    event_count: u64,
+    decisions: [BriefEventDecisionV1; up_to 200]
+}
+
+record EventKeyStateV1 {
+    valid: bool,
+    started: bool,
+    after_hyphen: bool,
+    groups: u64
+}
+
+fn request_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 117, 112, 100, 97, 116, 101, 45, 99, 97, 112, 115, 117, 108, 101, 45, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49];
+}
+
+fn result_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 117, 112, 100, 97, 116, 101, 45, 99, 97, 112, 115, 117, 108, 101, 45, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 45, 114, 101, 115, 117, 108, 116, 47, 49];
+}
+
+fn same_bytes(left: [byte; up_to 512], right: [byte; up_to 512]) -> (result: bool) {
+    if left.len != right.len { return false; }
+    iterate i over left carrying same: bool = true {
+        next same = same && left[i] == right[i];
+    }
+    return same;
+}
+
+fn event_class(kind: EventTextV1) -> (result: u64) {
+    if same_bytes(kind.bytes, [97, 117, 116, 104, 111, 114, 105, 116, 121, 46, 100, 101, 110, 105, 101, 100]) { return 1; }
+    if same_bytes(kind.bytes, [97, 117, 116, 104, 111, 114, 105, 116, 121, 46, 101, 115, 99, 97, 108, 97, 116, 101, 100]) { return 2; }
+    if same_bytes(kind.bytes, [97, 117, 116, 104, 111, 114, 105, 116, 121, 46, 99, 111, 111, 114, 100, 105, 110, 97, 116, 105, 111, 110, 45, 100, 101, 102, 101, 114, 114, 101, 100]) { return 3; }
+    if same_bytes(kind.bytes, [108, 101, 97, 115, 101, 46, 97, 99, 113, 117, 105, 114, 101, 100]) { return 4; }
+    if same_bytes(kind.bytes, [108, 101, 97, 115, 101, 46, 97, 99, 113, 117, 105, 115, 105, 116, 105, 111, 110, 45, 114, 101, 106, 101, 99, 116, 101, 100]) { return 5; }
+    if same_bytes(kind.bytes, [108, 101, 97, 115, 101, 46, 114, 101, 99, 111, 118, 101, 114, 101, 100, 45, 97, 110, 100, 45, 97, 99, 113, 117, 105, 114, 101, 100]) { return 6; }
+    if same_bytes(kind.bytes, [108, 101, 97, 115, 101, 46, 114, 101, 108, 101, 97, 115, 101, 100]) { return 7; }
+    if same_bytes(kind.bytes, [108, 101, 97, 115, 101, 46, 116, 114, 97, 110, 115, 102, 101, 114, 114, 101, 100]) { return 8; }
+    if same_bytes(kind.bytes, [105, 110, 118, 111, 99, 97, 116, 105, 111, 110, 46, 99, 111, 109, 112, 108, 101, 116, 101, 100]) { return 9; }
+    if same_bytes(kind.bytes, [101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 114, 112, 99, 46, 114, 101, 97, 100, 95, 111, 98, 115, 101, 114, 118, 101, 100]) { return 10; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 105, 110, 118, 111, 107, 101, 100]) { return 11; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 98, 111, 117, 110, 100]) { return 12; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 99, 104, 97, 110, 103, 101, 100]) { return 13; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 117, 110, 98, 111, 117, 110, 100]) { return 14; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 97, 118, 97, 105, 108, 97, 98, 108, 101]) { return 15; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 117, 110, 97, 118, 97, 105, 108, 97, 98, 108, 101]) { return 16; }
+    if same_bytes(kind.bytes, [99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 46, 117, 110, 107, 110, 111, 119, 110]) { return 17; }
+    if same_bytes(kind.bytes, [115, 101, 115, 115, 105, 111, 110, 46, 99, 104, 101, 99, 107, 112, 111, 105, 110, 116, 101, 100]) { return 18; }
+    if same_bytes(kind.bytes, [104, 97, 110, 100, 111, 102, 102, 46, 99, 114, 101, 97, 116, 101, 100]) { return 19; }
+    if same_bytes(kind.bytes, [115, 101, 115, 115, 105, 111, 110, 46, 114, 101, 115, 117, 109, 101, 100]) { return 20; }
+    if same_bytes(kind.bytes, [115, 101, 115, 115, 105, 111, 110, 46, 99, 111, 109, 112, 108, 101, 116, 101, 100]) { return 21; }
+    if same_bytes(kind.bytes, [115, 101, 115, 115, 105, 111, 110, 46, 102, 97, 105, 108, 101, 100]) { return 22; }
+    if same_bytes(kind.bytes, [115, 101, 115, 115, 105, 111, 110, 46, 99, 114, 101, 97, 116, 101, 100]) { return 23; }
+    if same_bytes(kind.bytes, [97, 100, 97, 112, 116, 101, 114, 46, 111, 98, 115, 101, 114, 118, 101, 100]) { return 24; }
+    if same_bytes(kind.bytes, [114, 101, 99, 111, 110, 99, 105, 108, 101, 114, 46, 111, 98, 115, 101, 114, 118, 101, 100]) { return 25; }
+    if same_bytes(kind.bytes, [114, 101, 99, 111, 110, 99, 105, 108, 101, 114, 46, 115, 111, 117, 114, 99, 101, 45, 114, 101, 115, 101, 116]) { return 26; }
+    return 0;
+}
+
+fn is_status_ok(status: EventTextV1) -> (result: bool) {
+    return same_bytes(status.bytes, [111, 107]);
+}
+
+fn category_code(class_code: u64, status: EventTextV1) -> (result: u64) {
+    if class_code == 1 || class_code == 2 { return 1; }
+    if class_code == 3 || class_code == 5 || class_code == 19 || class_code == 24 || class_code == 25 { return 6; }
+    if class_code == 4 || class_code == 6 || class_code == 7 || class_code == 8 { return 2; }
+    if class_code == 9 && is_status_ok(status) { return 9; }
+    if class_code == 9 { return 5; }
+    if class_code == 10 || class_code == 11 || class_code == 18 || class_code == 20 || class_code == 21 || class_code == 23 { return 9; }
+    if class_code == 12 || class_code == 15 || class_code == 16 || class_code == 17 { return 7; }
+    if class_code == 13 || class_code == 14 || class_code == 22 || class_code == 26 { return 4; }
+    return 0;
+}
+
+fn priority_code(category: u64) -> (result: u64) {
+    if category == 1 { return 1; }
+    if category == 2 { return 2; }
+    if category == 3 { return 3; }
+    if category == 4 { return 4; }
+    if category == 5 { return 5; }
+    if category == 6 { return 6; }
+    if category == 7 { return 7; }
+    if category == 8 { return 8; }
+    if category == 9 { return 9; }
+    return 0;
+}
+
+fn key_is_valid(value: EventTextV1) -> (result: bool) {
+    if value.bytes.len == 0 || value.bytes.len > 160 { return false; }
+    let initial: EventKeyStateV1 = EventKeyStateV1 {
+        valid: true, started: false, after_hyphen: false, groups: 0
+    };
+    let parsed: EventKeyStateV1 = parse_key(value, initial);
+    return parsed.valid && parsed.started && !parsed.after_hyphen && parsed.groups <= 32;
+}
+
+fn parse_key(value: EventTextV1, initial: EventKeyStateV1) -> (result: EventKeyStateV1) {
+    iterate i over value.bytes carrying state: EventKeyStateV1 = initial {
+        let byte_value: byte = value.bytes[i];
+        let alpha: bool = byte_value >= 97 && byte_value <= 122;
+        let digit: bool = byte_value >= 48 && byte_value <= 57;
+        let alphanumeric: bool = alpha || digit;
+        let hyphen: bool = byte_value == 45 && state.started && !state.after_hyphen;
+        let begins_group: bool = alphanumeric && (!state.started || state.after_hyphen);
+        let increment: u64 = match begins_group { true => 1, false => 0 };
+        let groups: u64 = state.groups +% increment;
+        next state = EventKeyStateV1 {
+            valid: state.valid && (alphanumeric || hyphen) && groups <= 32,
+            started: state.started || alphanumeric,
+            after_hyphen: hyphen,
+            groups: groups
+        };
+    }
+    return state;
+}
+
+fn subject_source(event: BriefEventInputV1) -> (result: u64) {
+    iterate i over event.subject_present carrying selected: u64 = 5 {
+        let use_current: bool = selected == 5 && event.subject_present[i];
+        let next_selected: u64 = match use_current { true => i, false => selected };
+        next selected = next_selected;
+    }
+    return selected;
+}
+
+fn classify_event(event: BriefEventInputV1) -> (result: BriefEventDecisionV1) {
+    let class_code: u64 = event_class(event.kind);
+    let status: EventTextV1 = match event.status_present {
+        true => event.status,
+        false => event.outcome_status
+    };
+    let base_category: u64 = category_code(class_code, status);
+    let status_failed: bool = same_bytes(status.bytes, [102, 97, 105, 108, 101, 100]);
+    let category: u64 = match class_code == 1 {
+        true => 1,
+        false => match class_code == 22 || status_failed {
+            true => 4,
+            false => base_category
+        }
+    };
+    let priority: u64 = priority_code(category);
+    let relevance: u64 = relevance_code(class_code, status);
+    let summary_mode: u64 = summary_mode(event, class_code);
+    let is_coordination: bool = class_code == 3;
+    return BriefEventDecisionV1 {
+        relevant: class_code != 0,
+        category_code: category,
+        priority: priority,
+        relevance_code: relevance,
+        summary_mode: summary_mode,
+        subject_source: subject_source(event),
+        action_valid: is_coordination && key_is_valid(event.action),
+        coordination_status_valid: is_coordination && key_is_valid(event.coordination_status),
+        required_coordination_valid: is_coordination && key_is_valid(event.required_coordination),
+        next_step_valid: is_coordination && key_is_valid(event.next_step),
+        persistent_authority_required_false: is_coordination && event.persistent_authority_required_false,
+        operation_executed_false: is_coordination && event.operation_executed_false
+    };
+}
+
+fn summary_mode(event: BriefEventInputV1, class_code: u64) -> (result: u64) {
+    if class_code == 3 {
+        if key_is_valid(event.next_step) { return 6; }
+        return 5;
+    }
+    if class_code == 10 &&
+        same_bytes(event.outcome_status.bytes, [115, 117, 99, 99, 101, 101, 100, 101, 100]) { return 3; }
+    if class_code == 10 &&
+        same_bytes(event.outcome_status.bytes, [102, 97, 105, 108, 101, 100]) { return 4; }
+    if event.reason_present { return 0; }
+    if event.summary_present { return 1; }
+    return 2;
+}
+
+fn relevance_code(class_code: u64, status: EventTextV1) -> (result: u64) {
+    if class_code == 9 && is_status_ok(status) { return 27; }
+    return class_code;
+}
+
+fn update_capsule_classification_app_v1(context: ApplicationContext) -> (result: ApplicationExit)
+    capability environment_readiness
+    effect structured_read authorized_by environment_readiness
+    effect structured_write authorized_by environment_readiness
+{
+    if !context_is_bounded(context) || context.argv_count != 2 {
+        return failure([105, 110, 118, 97, 108, 105, 100, 32, 117, 112, 100, 97, 116, 101, 32, 99, 97, 112, 115, 117, 108, 101, 32, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 32, 114, 101, 113, 117, 101, 115, 116], 2);
+    }
+    let request: BriefClassificationRequestV1 = structured_read(context.argv[0], request_schema());
+    let initial: BriefClassificationStateV1 = BriefClassificationStateV1 {
+        count: 0,
+        decisions: [BriefEventDecisionV1 {
+            relevant: false, category_code: 0, priority: 0, relevance_code: 0,
+            summary_mode: 0, subject_source: 5, action_valid: false,
+            coordination_status_valid: false, required_coordination_valid: false,
+            next_step_valid: false, persistent_authority_required_false: false,
+            operation_executed_false: false
+        }; 200]
+    };
+    iterate i over request.events carrying state: BriefClassificationStateV1 = initial {
+        let decision: BriefEventDecisionV1 = classify_event(request.events[i]);
+        next state = BriefClassificationStateV1 {
+            ..state,
+            count: i +% 1,
+            decisions: replace(state.decisions, i, decision)
+        };
+    }
+    let output: BriefClassificationOutputV1 = BriefClassificationOutputV1 {
+        schema_version: result_schema(),
+        valid: true,
+        event_count: state.count,
+        decisions: state.decisions[0..state.count]
+    };
+    let published: u64 = structured_write(context.argv[1], result_schema(), output);
+    if published == 0 {
+        return failure([117, 112, 100, 97, 116, 101, 32, 99, 97, 112, 115, 117, 108, 101, 32, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 32, 112, 117, 98, 108, 105, 115, 104, 32, 102, 97, 105, 108, 101, 100], 3);
+    }
+    return success([]);
+}

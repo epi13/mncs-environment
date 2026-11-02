@@ -115,31 +115,7 @@ def classify_event(event: dict[str, Any]) -> dict[str, Any] | None:
         outcome = payload.get("outcome_status")
         if outcome in ("succeeded", "failed"):
             item["summary"] = f"Environment read operation {outcome}"
-        availability = payload.get("measurement_availability")
-        measurements = payload.get("measurements")
-        if isinstance(availability, dict):
-            elapsed_status = availability.get("control_dispatch_elapsed_ms")
-            if elapsed_status in ("measured", "unavailable"):
-                item["measurement_availability"] = {
-                    "control_dispatch_elapsed_ms": elapsed_status,
-                }
-            elapsed = (measurements.get("control_dispatch_elapsed_ms")
-                       if isinstance(measurements, dict) else None)
-            elapsed_value = None
-            if type(elapsed) in (int, float):
-                try:
-                    elapsed_value = float(elapsed)
-                except OverflowError:
-                    pass
-            if (elapsed_status == "measured"
-                    and elapsed_value is not None
-                    and math.isfinite(elapsed_value) and elapsed_value >= 0):
-                item["measurements"] = {
-                    "control_dispatch_elapsed_ms": round(elapsed_value, 3),
-                }
-                item["measurement_scope"] = (
-                    "includes Environment session queue wait; not total agent execution duration"
-                )
+        _add_read_measurements(item, payload)
     if kind == "authority.coordination-deferred":
         # Deferral reasons can contain raw targets. Keep the capsule actionable
         # by exposing only bounded machine-readable coordination guidance.
@@ -166,6 +142,36 @@ def classify_event(event: dict[str, Any]) -> dict[str, Any] | None:
         item["priority"] = PRIORITY["safety"] if kind == "authority.denied" else PRIORITY["diagnostics"]
         item["category"] = "safety" if kind == "authority.denied" else "diagnostics"
     return item
+
+
+def _add_read_measurements(item: dict[str, Any], payload: dict[str, Any]) -> None:
+    """Keep timing projection at the host measurement boundary."""
+    availability = payload.get("measurement_availability")
+    measurements = payload.get("measurements")
+    if not isinstance(availability, dict):
+        return
+    elapsed_status = availability.get("control_dispatch_elapsed_ms")
+    if elapsed_status in ("measured", "unavailable"):
+        item["measurement_availability"] = {
+            "control_dispatch_elapsed_ms": elapsed_status,
+        }
+    elapsed = (measurements.get("control_dispatch_elapsed_ms")
+               if isinstance(measurements, dict) else None)
+    elapsed_value = None
+    if type(elapsed) in (int, float):
+        try:
+            elapsed_value = float(elapsed)
+        except OverflowError:
+            pass
+    if (elapsed_status == "measured"
+            and elapsed_value is not None
+            and math.isfinite(elapsed_value) and elapsed_value >= 0):
+        item["measurements"] = {
+            "control_dispatch_elapsed_ms": round(elapsed_value, 3),
+        }
+        item["measurement_scope"] = (
+            "includes Environment session queue wait; not total agent execution duration"
+        )
 
 
 def _relevant_observation(payload: dict[str, Any], session) -> str | None:
@@ -233,13 +239,22 @@ def build_capsule(session, store, *,
     index = int(cursor.get("index", 0)) if isinstance(cursor, dict) else 0
     index = max(0, min(index, total))
     own_items: list[dict[str, Any]] = []
+    candidate_events = []
     for event in log[max(0, total - MAX_SCAN_EVENTS):]:
         sequence = event.get("sequence")
         if not isinstance(sequence, int) or sequence <= index:
             continue
-        item = classify_event(event)
-        if item is not None:
-            own_items.append(item)
+        candidate_events.append(event)
+    from .native_briefing import project_events_native
+
+    native_items = project_events_native(candidate_events, session)
+    if native_items is None:
+        for event in candidate_events:
+            item = classify_event(event)
+            if item is not None:
+                own_items.append(item)
+    else:
+        own_items.extend(item for item in native_items if item is not None)
     cross_items: list[dict[str, Any]] = []
     for event in (reconciler_log or [])[-MAX_RECONCILER_ITEMS:]:
         payload = event.get("payload", {})

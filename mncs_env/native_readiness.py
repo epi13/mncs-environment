@@ -27,8 +27,12 @@ NATIVE_STEP_BUDGET = 8_000_000
 _MISSING = object()
 
 
-class NativeReadinessError(ValueError):
-    """The selected native readiness application did not return a valid result."""
+class NativeApplicationError(ValueError):
+    """A selected Environment native application did not return a valid result."""
+
+
+# Kept as a compatibility name for existing readiness projection callers.
+NativeReadinessError = NativeApplicationError
 
 
 def _toolchain_paths(session) -> tuple[Path, Path] | None:
@@ -94,7 +98,7 @@ def _descriptor(repository_root: Path, stdlib: Path, name: str) -> dict[str, Any
     try:
         descriptor = json.loads(descriptor_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise NativeReadinessError(f"native readiness descriptor is unavailable: {error}") from error
+        raise NativeApplicationError(f"native application descriptor is unavailable: {error}") from error
     source = (descriptor_path.parent / descriptor.get("source", "")).resolve(strict=True)
     local_library = (descriptor_path.parent / "../native").resolve(strict=True)
     descriptor["source"] = str(source)
@@ -119,7 +123,9 @@ def _run_native_application(
     cache_directory = state_root / "native-applications" / f"{Path(descriptor_name).stem}-{binary_identity}"
     try:
         cache_directory.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="mncs-env-readiness-") as temporary:
+        with tempfile.TemporaryDirectory(
+            prefix=f"mncs-env-{Path(descriptor_name).stem}-",
+        ) as temporary:
             root = Path(temporary)
             descriptor_path = root / "native-application.json"
             descriptor_path.write_text(
@@ -150,20 +156,20 @@ def _run_native_application(
                     timeout=max(0.1, timeout_seconds),
                 )
             except subprocess.TimeoutExpired as error:
-                raise NativeReadinessError("native readiness application timed out") from error
+                raise NativeApplicationError("native application timed out") from error
             if completed.returncode != 0:
                 detail = completed.stderr.strip() or completed.stdout.strip() or "native application failed"
-                raise NativeReadinessError(detail[-1000:])
+                raise NativeApplicationError(detail[-1000:])
             try:
                 result = json.loads((root / "result.json").read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-                raise NativeReadinessError(f"native readiness application returned no result: {error}") from error
+                raise NativeApplicationError(f"native application returned no result: {error}") from error
     except NativeReadinessError:
         raise
     except OSError as error:
-        raise NativeReadinessError(f"native readiness application could not run: {error}") from error
+        raise NativeApplicationError(f"native application could not run: {error}") from error
     if not isinstance(result, dict) or result.get("schema_version") != expected_schema:
-        raise NativeReadinessError("native readiness application returned an incompatible result schema")
+        raise NativeApplicationError("native application returned an incompatible result schema")
     return result
 
 
