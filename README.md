@@ -244,6 +244,21 @@ state, not prose. The hardening campaign added:
   the environmental-capability projection links a later observation to an
   exact prior preflight without asserting causation.
 
+## Moving to the next repository
+
+A campaign groups independently scoped Work Intents. To start work in another
+permitted repository, enter that project's owner-controlled Environment with
+the same campaign identity. Entry resolves a new session and its own rights;
+it does not copy the previous session's writable set. Same-owner contexts in
+distinct repositories may coexist in the same workspace after a checkpoint or
+claim release. Exact-context resume, foreign-owner fencing, rights checks and
+checkout conflict checks still apply. Completion releases operational claims;
+it does not revoke the principal's ability to enter another permitted project.
+
+`scope-grant` expands or rebinds the current session. Its exact-owner-approval
+requirement for a new repository is separate from establishing an independent
+Work Intent through project entry.
+
 ## Entering an environment
 
 The checked-in development definition selects Environment, Language,

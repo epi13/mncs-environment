@@ -1439,12 +1439,13 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                                 selected_session_id: str | None,
                                 pending_handoff: tuple | None,
                                 working_checkout: dict[str, str] | None = None) -> None:
-    """Refuse parallel campaign sessions unless entry selected one exact context.
+    """Select exact operational contexts without making one repository a ceiling.
 
-    A campaign identity is durable across consumer restarts. If it already
-    names live work in another Environment definition or workspace, silently
-    creating a new session would split its ownership record and can resume the
-    wrong authority. A unique session already selected by the authenticated
+    A campaign identity is durable across consumer restarts. Same-repository
+    definition changes and workspace changes must not silently split an
+    operational context. Distinct repositories resolve independent intents
+    under the same owner; campaign membership supplies no operation rights.
+    A unique session already selected by the authenticated
     principal, campaign, definition, workspace, and registered checkout
     remains resumable when
     unrelated same-principal sessions use other contexts. Duplicate exact
@@ -1558,6 +1559,25 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             sessions=sorted(foreign),
             next="request an explicit owner-issued handoff; Environment will not adopt another principal's campaign",
         )
+    # Campaign identity groups work; it is not a repository authorization.
+    # A verified checkout may establish its own intent alongside same-owner
+    # contexts in other repositories. Resolution below still derives rights
+    # solely from the new definition, never from another campaign session.
+    # Keep same-repository/unknown contexts subject to the exact-context guard.
+    repository = (working_checkout or {}).get("repository")
+    if isinstance(repository, str) and repository:
+        live = [
+            session_id for session_id in live
+            if not (
+                snapshots[session_id].get("workspace", {}).get("root")
+                == str(workspace_root)
+                and snapshots[session_id].get("intent", {}).get("repositories")
+                and repository not in snapshots[session_id]["intent"]["repositories"]
+                and repository not in snapshots[session_id].get("selected_checkouts", {})
+            )
+        ]
+        if not live:
+            return
     if len(live) > 1:
         exact_context = [
             session_id for session_id, snapshot in snapshots.items()

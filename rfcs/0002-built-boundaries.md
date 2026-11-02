@@ -57,8 +57,11 @@ verified; an explicit scope retains its branch constraint. Explicit scopes
 remain available for a separate integration target. An already-writable repository may bind a different
 Control-verified registered checkout without a second owner token. This
 changes the checkout selected for existing repository authority, not the
-repository set. New repository scope still requires an exact owner-approved
-grant. Overlapping foreign claims continue to block ordinary shared-scope
+repository set. Adding repository scope to the same session still requires an exact owner-approved
+grant. A separate Work Intent enters through its own owner-controlled project
+definition under the same authenticated campaign; the previous session does
+not cap independently resolved repository authority. Same-workspace, distinct
+repository contexts do not constitute duplicate continuations. Overlapping foreign claims continue to block ordinary shared-scope
 mutations.
 When an isolated campaign needs a destination outside its checkout directory,
 Environment accepts only a registered worktree anchored to the selected
