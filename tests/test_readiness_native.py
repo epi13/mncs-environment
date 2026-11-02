@@ -329,3 +329,47 @@ def test_native_policy_runs_with_read_only_optional_cache(tmp_path, monkeypatch)
         assert cache.is_dir()
     finally:
         state.chmod(0o755)
+
+
+def test_native_policy_does_not_inherit_live_consumer_stdin(tmp_path):
+    """A real native request must finish while its consumer pipe stays open."""
+    import subprocess
+    import sys
+    import pytest
+    selected = _native_toolchain()
+    if selected is None:
+        pytest.skip("selected native toolchain unavailable")
+    binary, stdlib = selected
+    source = Path(__file__).resolve().parents[1]
+    script = '''
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+sys.path.insert(0, sys.argv[1])
+from mncs_env import native_readiness
+binary, stdlib, state = map(Path, sys.argv[2:])
+session = SimpleNamespace(
+    store=SimpleNamespace(state_dir=state),
+    snapshot={"workspace": {"root": str(stdlib.parent)},
+              "selected_checkouts": {"mncs-stdlib": {"path": str(stdlib)}}},
+    _selected_runtime_environment=lambda _: {"MNCS_BIN": str(binary)},
+)
+assert native_readiness.project_json_pointers(
+    '{"status":"pass"}', ["/status"], session=session, timeout_seconds=8,
+)["/status"] == "pass"
+'''
+    process = subprocess.Popen(
+        [sys.executable, "-c", script, str(source), str(binary), str(stdlib), str(tmp_path)],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    try:
+        # communicate() would close stdin and conceal the inherited-pipe bug.
+        process.wait(timeout=12)
+        assert process.returncode == 0, process.stderr.read().decode()
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        process.stdin.close()
+        process.stdout.close()
+        process.stderr.close()

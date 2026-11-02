@@ -164,6 +164,7 @@ def _run_native_application(
                     cwd=root,
                     env=environment,
                     capture_output=True,
+                    stdin=subprocess.DEVNULL,
                     text=True,
                     check=False,
                     timeout=max(0.1, timeout_seconds),
