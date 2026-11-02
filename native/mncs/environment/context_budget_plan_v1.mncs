@@ -1,0 +1,148 @@
+mncs 0.18;
+
+// Select bounded entry-context compaction in MNCS. Python measures canonical
+// bytes and writes content-addressed evidence after applying this plan.
+module mncs.environment.context_budget_plan_v1;
+
+use mncs.std.application.v1;
+
+record ContextBudgetBlockV1 {
+    expanded_bytes: u64,
+    full_handle_bytes: u64,
+    minimal_handle_bytes: u64,
+    attention_count: u64,
+    degraded: bool
+}
+
+record ContextBudgetRequestV1 {
+    schema_version: [byte; up_to 64],
+    healthy_limit: u64,
+    degraded_limit: u64,
+    total_limit: u64,
+    attention_limit: u64,
+    blocks: [ContextBudgetBlockV1; up_to 7]
+}
+
+record ContextBudgetPlanStateV1 {
+    total_bytes: u64,
+    modes: [u64; 7],
+    planned_bytes: [u64; 7]
+}
+
+record ContextBudgetPlanOutputV1 {
+    schema_version: [byte; up_to 64],
+    valid: bool,
+    block_count: u64,
+    modes: [u64; up_to 7],
+    planned_bytes: [u64; up_to 7],
+    final_total_bytes: u64
+}
+
+fn request_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 99, 111, 110, 116, 101, 120, 116, 45, 98, 117, 100, 103, 101, 116, 45, 112, 108, 97, 110, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49];
+}
+
+fn result_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 99, 111, 110, 116, 101, 120, 116, 45, 98, 117, 100, 103, 101, 116, 45, 112, 108, 97, 110, 45, 114, 101, 115, 117, 108, 116, 47, 49];
+}
+
+fn request_is_valid(request: ContextBudgetRequestV1) -> (result: bool) {
+    if request.healthy_limit < 512 || request.healthy_limit > 16384 { return false; }
+    if request.degraded_limit < request.healthy_limit || request.degraded_limit > 16384 { return false; }
+    if request.total_limit < 4096 || request.total_limit > 16384 { return false; }
+    if request.attention_limit > 8 { return false; }
+    iterate i over request.blocks carrying valid: bool = true {
+        let block: ContextBudgetBlockV1 = request.blocks[i];
+        let bounded: bool = block.expanded_bytes <= 1073741824 &&
+            block.full_handle_bytes <= 1073741824 &&
+            block.minimal_handle_bytes <= 1073741824 &&
+            block.attention_count <= 1073741824;
+        next valid = valid && bounded;
+    }
+    return valid;
+}
+
+fn initial_total(blocks: [ContextBudgetBlockV1; up_to 7]) -> (result: u64) {
+    iterate i over blocks carrying total: u64 = 0 {
+        next total = total +% blocks[i].expanded_bytes;
+    }
+    return total;
+}
+
+fn selected_mode(
+    block: ContextBudgetBlockV1,
+    total_bytes: u64,
+    healthy_limit: u64,
+    degraded_limit: u64,
+    total_limit: u64,
+    attention_limit: u64
+) -> (result: u64) {
+    let layer_limit: u64 = match block.degraded {
+        true => degraded_limit,
+        false => healthy_limit
+    };
+    let needs_compaction: bool = block.expanded_bytes > layer_limit ||
+        block.attention_count > attention_limit || total_bytes > total_limit;
+    if !needs_compaction { return 0; }
+    if block.full_handle_bytes <= layer_limit { return 1; }
+    return 2;
+}
+
+fn selected_size(block: ContextBudgetBlockV1, mode: u64) -> (result: u64) {
+    if mode == 1 { return block.full_handle_bytes; }
+    if mode == 2 { return block.minimal_handle_bytes; }
+    return block.expanded_bytes;
+}
+
+fn context_budget_plan_app_v1(context: ApplicationContext) -> (result: ApplicationExit)
+    capability environment_readiness
+    effect structured_read authorized_by environment_readiness
+    effect structured_write authorized_by environment_readiness
+{
+    if !context_is_bounded(context) || context.argv_count != 2 {
+        return failure([105, 110, 118, 97, 108, 105, 100, 32, 99, 111, 110, 116, 101, 120, 116, 32, 98, 117, 100, 103, 101, 116, 32, 112, 108, 97, 110, 32, 114, 101, 113, 117, 101, 115, 116], 2);
+    }
+    let request: ContextBudgetRequestV1 = structured_read(context.argv[0], request_schema());
+    if !request_is_valid(request) {
+        return failure([105, 110, 118, 97, 108, 105, 100, 32, 99, 111, 110, 116, 101, 120, 116, 32, 98, 117, 100, 103, 101, 116, 32, 112, 108, 97, 110, 32, 118, 97, 108, 117, 101, 115], 2);
+    }
+    let initial: ContextBudgetPlanStateV1 = ContextBudgetPlanStateV1 {
+        total_bytes: initial_total(request.blocks),
+        modes: [0; 7],
+        planned_bytes: [0; 7]
+    };
+    iterate i over request.blocks carrying state: ContextBudgetPlanStateV1 = initial {
+        let block: ContextBudgetBlockV1 = request.blocks[i];
+        let mode: u64 = selected_mode(
+            block, state.total_bytes, request.healthy_limit,
+            request.degraded_limit, request.total_limit,
+            request.attention_limit
+        );
+        let size: u64 = selected_size(block, mode);
+        let next_total: u64 = match mode == 0 {
+            true => state.total_bytes,
+            false => match size >= block.expanded_bytes {
+                true => state.total_bytes +% (size -% block.expanded_bytes),
+                false => state.total_bytes -% (block.expanded_bytes -% size)
+            }
+        };
+        next state = ContextBudgetPlanStateV1 {
+            total_bytes: next_total,
+            modes: replace(state.modes, i, mode),
+            planned_bytes: replace(state.planned_bytes, i, size)
+        };
+    }
+    let output: ContextBudgetPlanOutputV1 = ContextBudgetPlanOutputV1 {
+        schema_version: result_schema(),
+        valid: true,
+        block_count: request.blocks.len,
+        modes: state.modes[0..request.blocks.len],
+        planned_bytes: state.planned_bytes[0..request.blocks.len],
+        final_total_bytes: state.total_bytes
+    };
+    let published: u64 = structured_write(context.argv[1], result_schema(), output);
+    if published == 0 {
+        return failure([99, 111, 110, 116, 101, 120, 116, 32, 98, 117, 100, 103, 101, 116, 32, 112, 108, 97, 110, 32, 112, 117, 98, 108, 105, 115, 104, 32, 102, 97, 105, 108, 101, 100], 3);
+    }
+    return success([]);
+}
