@@ -197,5 +197,168 @@ class NativeDoctorClassificationTests(unittest.TestCase):
             doctor.classify_unavailable(_bindings(), session=Session())
 
 
+class NativeDoctorRepairDeltaTests(unittest.TestCase):
+    @staticmethod
+    def _inputs() -> tuple[list[dict], list[dict], list[dict], list[dict]]:
+        previous = [
+            {"capability": "cap-duplicate", "availability": {"status": "unknown"}},
+            {"capability": "cap-duplicate", "availability": {"status": "available"}},
+            {"capability": "cap-lost", "availability": {"status": "unavailable"}},
+            {"capability": None, "availability": {"status": "unknown"}},
+        ]
+        current = [
+            {"capability": "cap-duplicate", "provider": "mncs-test",
+             "availability": {"status": "available"}},
+            {"capability": "cap-lost", "provider": "mncs-language",
+             "availability": {"status": "available"}},
+            {"capability": "cap-new", "provider": None,
+             "availability": {"status": "available"}},
+            {"capability": "cap-still-down", "provider": "mncs-control",
+             "availability": {"status": "unknown"}},
+            {"capability": None, "provider": "mncs-store",
+             "availability": {"status": "available"}},
+            {"capability": "", "provider": "mncs-fabric",
+             "availability": {"status": "available"}},
+        ]
+        previous_services = [
+            {"identity": "svc-duplicate", "status": "unknown"},
+            {"identity": "svc-duplicate", "status": "ready"},
+            {"identity": "svc-failed", "status": "degraded"},
+            {"identity": None, "status": "ready"},
+        ]
+        current_services = [
+            {"identity": "svc-duplicate", "status": "ready"},
+            {"identity": "svc-failed", "status": "ready"},
+            {"identity": "svc-new", "status": "ready"},
+            {"identity": None, "status": "ready"},
+            {"identity": "", "status": "ready"},
+            {"identity": "svc-still-down", "status": "degraded"},
+        ]
+        return previous, current, previous_services, current_services
+
+    def test_native_repair_delta_matches_reference_and_is_used(self) -> None:
+        toolchain = _native_toolchain()
+        if toolchain is None:
+            self.skipTest("selected MNCS release toolchain is unavailable")
+        binary, stdlib = toolchain
+        workspace = next(
+            parent for parent in Path(__file__).resolve().parents
+            if (parent / "mncs-language").is_dir()
+            and (parent / "mncs-stdlib").is_dir()
+        )
+
+        class Session:
+            snapshot: ClassVar[dict] = {
+                "workspace": {"root": str(workspace)},
+                "selected_checkouts": {
+                    "mncs-stdlib": {"path": str(stdlib)},
+                },
+            }
+
+            def __init__(self, state_dir: Path) -> None:
+                self.store = SimpleNamespace(state_dir=state_dir)
+
+            def _selected_runtime_environment(self, _binding: dict) -> dict[str, str]:
+                return {"MNCS_BIN": str(binary)}
+
+        previous, current, previous_services, current_services = self._inputs()
+        expected = doctor._repair_delta_python(
+            previous, current, previous_services, current_services,
+        )
+        from mncs_env import native_doctor
+
+        with TemporaryDirectory(prefix="mncs-env-doctor-delta-") as root:
+            session = Session(Path(root))
+            with mock.patch(
+                "mncs_env.native_doctor.native_readiness._run_native_application",
+                wraps=native_readiness._run_native_application,
+            ) as native_call:
+                actual = doctor.repair_delta(
+                    previous, current, previous_services, current_services,
+                    session=session,
+                )
+            native_plan = native_doctor.project_repair_delta_native(
+                previous, current, previous_services, current_services, session,
+            )
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            [item["id"] for item in actual],
+            [
+                "binding:available:cap-lost",
+                "binding:available:cap-new",
+                "binding:available:None",
+                "binding:available:",
+                "service:ready:svc-failed",
+                "service:ready:svc-new",
+                "service:ready:",
+            ],
+        )
+        self.assertEqual(native_call.call_count, 1)
+        self.assertEqual(
+            native_call.call_args.kwargs["descriptor_name"],
+            "doctor-repair-delta.json",
+        )
+        self.assertEqual(
+            native_plan,
+            {
+                "binding_recovered": [False, True, True, False, True, True],
+                "service_recovered": [False, True, True, False, True, False],
+            },
+        )
+
+    def test_missing_toolchain_uses_python_repair_delta(self) -> None:
+        previous, current, previous_services, current_services = self._inputs()
+        expected = doctor._repair_delta_python(
+            previous, current, previous_services, current_services,
+        )
+        with mock.patch(
+            "mncs_env.native_doctor.native_readiness._toolchain_paths",
+            return_value=None,
+        ), mock.patch(
+            "mncs_env.native_doctor.native_readiness._run_native_application",
+            side_effect=AssertionError("native runner should not be selected"),
+        ):
+            actual = doctor.repair_delta(
+                previous, current, previous_services, current_services,
+                session=SimpleNamespace(snapshot={}, store=SimpleNamespace(state_dir="/tmp")),
+            )
+        self.assertEqual(actual, expected)
+
+    def test_selected_native_repair_failure_does_not_fall_back(self) -> None:
+        toolchain = _native_toolchain()
+        if toolchain is None:
+            self.skipTest("selected MNCS release toolchain is unavailable")
+        binary, stdlib = toolchain
+        workspace = next(
+            parent for parent in Path(__file__).resolve().parents
+            if (parent / "mncs-language").is_dir()
+            and (parent / "mncs-stdlib").is_dir()
+        )
+
+        class Session:
+            snapshot: ClassVar[dict] = {
+                "workspace": {"root": str(workspace)},
+                "selected_checkouts": {
+                    "mncs-stdlib": {"path": str(stdlib)},
+                },
+            }
+            store = SimpleNamespace(state_dir=Path("/tmp"))
+
+            def _selected_runtime_environment(self, _binding: dict) -> dict[str, str]:
+                return {"MNCS_BIN": str(binary)}
+
+        previous, current, previous_services, current_services = self._inputs()
+        with mock.patch(
+            "mncs_env.native_doctor.native_readiness._run_native_application",
+            side_effect=NativeApplicationError("selected native repair run failed"),
+        ), self.assertRaisesRegex(
+            NativeApplicationError, "selected native repair run failed",
+        ):
+            doctor.repair_delta(
+                previous, current, previous_services, current_services,
+                session=Session(),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
