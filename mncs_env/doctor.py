@@ -439,10 +439,9 @@ def summarize(snapshot: dict[str, Any], *, repairs: list[dict[str, Any]],
 
 # -- epoch recording -----------------------------------------------------
 
-def repair_delta(previous: list[dict[str, Any]], current: list[dict[str, Any]],
-                  previous_services: list[dict[str, Any]],
-                  current_services: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Safe-automatic repairs evidenced by before/after availability."""
+def _repair_delta_python(previous: list[dict[str, Any]], current: list[dict[str, Any]],
+                         previous_services: list[dict[str, Any]],
+                         current_services: list[dict[str, Any]]) -> list[dict[str, Any]]:
     repairs = []
     before = {item.get("capability"): item.get("availability", {}).get("status")
               for item in previous}
@@ -462,6 +461,48 @@ def repair_delta(previous: list[dict[str, Any]], current: list[dict[str, Any]],
                             "detail": "declared service reconciled to ready and re-probed",
                             "validated": True})
     return repairs
+
+
+def repair_delta(previous: list[dict[str, Any]], current: list[dict[str, Any]],
+                 previous_services: list[dict[str, Any]],
+                 current_services: list[dict[str, Any]], *, session=None) -> list[dict[str, Any]]:
+    """Safe-automatic repairs evidenced by before/after availability."""
+    if session is not None:
+        from .native_doctor import project_repair_delta_native
+
+        plan = project_repair_delta_native(
+            previous, current, previous_services, current_services, session,
+        )
+        if plan is not None:
+            repairs = []
+            for item, recovered in zip(
+                current, plan["binding_recovered"], strict=True,
+            ):
+                if recovered:
+                    capability = item.get("capability")
+                    repairs.append({
+                        "id": f"binding:available:{capability}",
+                        "class": "safe_automatic",
+                        "provider": str(item.get("provider")),
+                        "detail": "capability substrate recovered; re-probe confirms availability",
+                        "validated": True,
+                    })
+            for item, recovered in zip(
+                current_services, plan["service_recovered"], strict=True,
+            ):
+                if recovered:
+                    identity = item.get("identity")
+                    repairs.append({
+                        "id": f"service:ready:{identity}",
+                        "class": "safe_automatic",
+                        "provider": "mncs-environment",
+                        "detail": "declared service reconciled to ready and re-probed",
+                        "validated": True,
+                    })
+            return repairs
+    return _repair_delta_python(
+        previous, current, previous_services, current_services,
+    )
 
 
 def record_epoch(session, *, repairs: list[dict[str, Any]],
@@ -639,7 +680,8 @@ def ambient_pass(session, *, force_full: bool = False, fresh: bool = False,
                 result = readiness_module.reconcile_services(session)
                 repairs = repair_delta(previous_bindings, session.snapshot.get("bindings", []),
                                         previous_services,
-                                        session.snapshot.get("service_observations", []))
+                                        session.snapshot.get("service_observations", []),
+                                        session=session)
                 reconciliations.append({"id": "services:reconciled",
                                         "class": "bounded_reconciliation",
                                         "provider": "mncs-environment",
@@ -687,7 +729,8 @@ def ambient_pass(session, *, force_full: bool = False, fresh: bool = False,
         revalidation = session.revalidate()
     result = readiness_module.reconcile_services(session)
     repairs = repair_delta(previous_bindings, session.snapshot.get("bindings", []),
-                            previous_services, session.snapshot.get("service_observations", []))
+                            previous_services, session.snapshot.get("service_observations", []),
+                            session=session)
     for entry in reconciliations:
         if entry["id"] == "revalidate:full":
             entry["validated"] = True

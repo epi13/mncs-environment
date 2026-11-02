@@ -1,0 +1,131 @@
+mncs 0.18;
+
+// Detect bounded before/after transitions that Doctor may report as repairs.
+// Python materializes the repair records and retains provider-facing policy.
+module mncs.environment.doctor_repair_delta_v1;
+
+use mncs.std.application.v1;
+
+record DoctorTransitionV1 {
+    has_identity: bool,
+    identity: [byte; up_to 256],
+    status: [byte; up_to 32]
+}
+
+record DoctorRepairDeltaRequestV1 {
+    schema_version: [byte; up_to 64],
+    previous_bindings: [DoctorTransitionV1; up_to 64],
+    current_bindings: [DoctorTransitionV1; up_to 64],
+    previous_services: [DoctorTransitionV1; up_to 64],
+    current_services: [DoctorTransitionV1; up_to 64]
+}
+
+record DoctorRepairDeltaResultV1 {
+    schema_version: [byte; up_to 64],
+    valid: bool,
+    binding_count: u64,
+    binding_recovered: [bool; up_to 64],
+    service_count: u64,
+    service_recovered: [bool; up_to 64]
+}
+
+fn request_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 100, 111, 99, 116, 111, 114, 45, 114, 101, 112, 97, 105, 114, 45, 100, 101, 108, 116, 97, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49];
+}
+
+fn result_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 100, 111, 99, 116, 111, 114, 45, 114, 101, 112, 97, 105, 114, 45, 100, 101, 108, 116, 97, 47, 49];
+}
+
+fn empty_status() -> (result: [byte; up_to 32]) { return [0; 1]; }
+
+fn available_status() -> (result: [byte; up_to 32]) {
+    return [97, 118, 97, 105, 108, 97, 98, 108, 101];
+}
+
+fn ready_status() -> (result: [byte; up_to 32]) {
+    return [114, 101, 97, 100, 121];
+}
+
+fn same_identity(left: DoctorTransitionV1, right: DoctorTransitionV1) -> (result: bool) {
+    if left.has_identity != right.has_identity { return false; }
+    if !left.has_identity { return true; }
+    if left.identity.len != right.identity.len { return false; }
+    iterate i over left.identity carrying equal: bool = true {
+        next equal = equal && left.identity[i] == right.identity[i];
+    }
+    return equal;
+}
+
+fn same_status(left: [byte; up_to 32], right: [byte; up_to 32]) -> (result: bool) {
+    if left.len != right.len { return false; }
+    iterate i over left carrying equal: bool = true {
+        next equal = equal && left[i] == right[i];
+    }
+    return equal;
+}
+
+fn prior_status(
+    previous: [DoctorTransitionV1; up_to 64],
+    current: DoctorTransitionV1
+) -> (result: [byte; up_to 32]) {
+    iterate i over previous carrying status: [byte; up_to 32] = empty_status() {
+        let prior: DoctorTransitionV1 = previous[i];
+        next status = select(same_identity(prior, current), prior.status, status);
+    }
+    return status;
+}
+
+fn binding_recovered(
+    previous: [DoctorTransitionV1; up_to 64],
+    current: DoctorTransitionV1
+) -> (result: bool) {
+    return !same_status(prior_status(previous, current), available_status()) &&
+        same_status(current.status, available_status());
+}
+
+fn service_recovered(
+    previous: [DoctorTransitionV1; up_to 64],
+    current: DoctorTransitionV1
+) -> (result: bool) {
+    return !same_status(prior_status(previous, current), ready_status()) &&
+        same_status(current.status, ready_status());
+}
+
+fn doctor_repair_delta_app_v1(context: ApplicationContext) -> (result: ApplicationExit)
+    capability environment_readiness
+    effect structured_read authorized_by environment_readiness
+    effect structured_write authorized_by environment_readiness
+{
+    if !context_is_bounded(context) || context.argv_count != 2 {
+        return failure([105, 110, 118, 97, 108, 105, 100, 32, 68, 111, 99, 116, 111, 114, 32, 114, 101, 112, 97, 105, 114, 32, 100, 101, 108, 116, 97, 32, 114, 101, 113, 117, 101, 115, 116], 2);
+    }
+    let request: DoctorRepairDeltaRequestV1 = structured_read(context.argv[0], request_schema());
+    let binding_flags: [bool; 64] = [false; 64];
+    iterate i over request.current_bindings carrying binding_recovered_flags: [bool; 64] = binding_flags {
+        next binding_recovered_flags = replace(
+            binding_recovered_flags, i,
+            binding_recovered(request.previous_bindings, request.current_bindings[i])
+        );
+    }
+    let service_flags: [bool; 64] = [false; 64];
+    iterate i over request.current_services carrying service_recovered_flags: [bool; 64] = service_flags {
+        next service_recovered_flags = replace(
+            service_recovered_flags, i,
+            service_recovered(request.previous_services, request.current_services[i])
+        );
+    }
+    let output: DoctorRepairDeltaResultV1 = DoctorRepairDeltaResultV1 {
+        schema_version: result_schema(),
+        valid: true,
+        binding_count: request.current_bindings.len,
+        binding_recovered: binding_recovered_flags[0..request.current_bindings.len],
+        service_count: request.current_services.len,
+        service_recovered: service_recovered_flags[0..request.current_services.len]
+    };
+    let published: u64 = structured_write(context.argv[1], result_schema(), output);
+    if published == 0 {
+        return failure([68, 111, 99, 116, 111, 114, 32, 114, 101, 112, 97, 105, 114, 32, 100, 101, 108, 116, 97, 32, 112, 117, 98, 108, 105, 115, 104, 32, 102, 97, 105, 108, 101, 100], 3);
+    }
+    return success([]);
+}
