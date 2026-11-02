@@ -1,0 +1,663 @@
+{
+  "date": "2026-11-02",
+  "campaign": "cmp_final_readiness_20261102",
+  "prior_evidence": "evidence/autonomous-readiness-20261102.json",
+  "baseline": {
+    "environment": "5bbd354",
+    "control": "232e4e4",
+    "doctor": "8928bb9",
+    "stdlib": "3798a76",
+    "compiler": "9454315",
+    "test": "15d80f1"
+  },
+  "implementation_revisions": {
+    "mncs-environment": "92894bea3d3d04e89b772d23bb5d25593995e531",
+    "mncs-control-mcp": "37a326a96e7c7f13e5a75c48b701e0855697b3fb",
+    "mncs-stdlib": "c6012b8b313502eddf2a30de0d2ac75e635b07fe",
+    "mncs-compiler": "44bc55a97c2ccb85b1d3b2c60b0fcf3a72c6ee18",
+    "mncs-test": "15d80f1dcade8892e4f0987325ef9b5e09415998",
+    "mncs-doctor": "8928bb9d4bac754cfb3819e90a778fb60d246b96"
+  },
+  "corrections": [
+    {
+      "owner": "mncs-stdlib",
+      "commits": [
+        "c6012b8"
+      ],
+      "cause": "Manifest generation used the current checkout HEAD as provenance, making every subsequent commit invalidate an otherwise identical verified distribution.",
+      "repair": "Use source_commit from the content-verified bundle pin. Keep all source/module/bundle checks and generated files intact."
+    },
+    {
+      "owner": "mncs-stdlib",
+      "commits": [
+        "c6012b8"
+      ],
+      "cause": "The native toolchain test descriptor omitted its Language binary selection, so linked checkout verification skipped compiler-backed tests.",
+      "repair": "Declare the selected release binary through the existing toolchain contract; resolve the optional capability-index source from that selected binary for linked checkouts."
+    },
+    {
+      "owner": "mncs-environment / mncs-control-mcp",
+      "commits": [
+        "ae93c20",
+        "62865fd",
+        "2f8beb5"
+      ],
+      "cause": "Native Environment policies tried to create a disposable compiled cache in the protected canonical state parent, outside the Control service writable Store subdirectory.",
+      "repair": "Use the existing owner runtime cache selector. When an optional cache is read-only, run the exact same native program with a private disposable request cache; retain native validation and failure semantics."
+    },
+    {
+      "owner": "mncs-control-mcp / mncs-compiler",
+      "commits": [
+        "9680a6f",
+        "2f8beb5",
+        "44bc55a"
+      ],
+      "cause": "A declared Compiler bootstrap lacked the canonical bridge/RPC route; its existing 1800-second owner budget was replaced by the default 120-second provider and shorter IPC deadlines.",
+      "repair": "Add the fixed selected-session Compiler route, declare the existing budget, and align its bounded transport deadline. No arbitrary commands, permissions, or caller timeout controls added."
+    },
+    {
+      "owner": "mncs-control-mcp",
+      "commits": [
+        "deefeab"
+      ],
+      "cause": "A second 128-read scope-grant quota rejected valid task continuation after same-context historical work accumulated, despite an already bounded canonical inventory.",
+      "repair": "Remove the redundant smaller quota; preserve the inventory bound and exact principal/project/campaign/checkout/grant/conflict validation."
+    },
+    {
+      "owner": "mncs-environment / mncs-control-mcp",
+      "commits": [
+        "92894be",
+        "37a326a"
+      ],
+      "cause": "File-based native requests inherited the live MCP transport stdin. A runtime input worker waited for EOF, so Test entry Doctor classification timed out and native Test subprocesses hung. Live strace showed a worker blocked in read(0) while the runtime waited on a futex.",
+      "repair": "Close stdin with DEVNULL at both noninteractive execution boundaries. Requests still use their exact declared files/arguments and normal authority/effect gates."
+    }
+  ],
+  "verification": {
+    "full_environment": {
+      "result": "1280 passed, 46 skipped",
+      "seconds": 1120.72,
+      "source_at_start": "5bbd354",
+      "scope": "One bounded full run started before this pass\u2019s implementation changes. Final narrow patches were verified with targeted tests; the full suite was not repeated."
+    },
+    "final_native_policy_regressions": "15 passed in 27.46s; real selected Language binary, Stdlib, read-only cache, owner-selected cache and live consumer stdin coverage.",
+    "stdin_counterfactual": "The new live-stdin regression fails in 8.29s when only the DEVNULL fix is removed, then passes with the fix.",
+    "control_rpc_and_bridge": "139 passed after final stdin change; fixed routing, authority, recovery and negative grammar tests retained.",
+    "control_continuation": "40 passed, 1 skipped in test_environment_sessions.py; scope-grant exact-checkout regression also passes with 129 unrelated sessions (2 parameter cases).",
+    "control_initial_inventory_observation": "One earlier run of the RPC/bridge files had 6 process-inventory failures while concurrent live compiler processes were present. The same 6 passed on unchanged baseline; the full files subsequently passed unchanged inventory code. No conflict/recovery guard was weakened.",
+    "vertical": "PASS: durable checkpoint, fresh process resume, handoff and completion.",
+    "stdlib_native": {
+      "ok": true,
+      "exit_code": 0,
+      "stderr": "",
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_6a04e530bcb69d72",
+        "capability": "mncs-stdlib:test/stdlib-toolchain",
+        "input_artifacts": [],
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "...........................                                              [100%]\n27 passed in 30.17s\n",
+        "truncated": false
+      }
+    },
+    "stdlib_manifest": {
+      "ok": true,
+      "exit_code": 0,
+      "stderr": "",
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_eba7710d0b445fc8",
+        "capability": "mncs-stdlib:verification-executor/mncs-stdlib.manifest-freshness",
+        "input_artifacts": [],
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "manifest current: 62 modules, profiles 0.5..0.18, mncs:stdlib-bundle:9e1469f832080...\n",
+        "truncated": false
+      }
+    },
+    "compiler_bootstrap": {
+      "ok": true,
+      "operation": "invoke",
+      "exit_code": 0,
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_60d867b97a7ad753",
+        "capability": "mncs-compiler:compiler-build",
+        "input_artifacts": [],
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "{\"build_command\": [\"bash\", \"tools/bootstrap.sh\"], \"build_stderr_tail\": \"    Finished `release` profile [optimized] target(s) in 0.04s\\n   Compiling cranelift-codegen v0.136.2\\n   Compiling cranelift-module v0.136.2\\n   Compiling cranelift-native v0.136.2\\n   Compiling cranelift-frontend v0.136.2\\n   Compiling cranelift-jit v0.136.2\\n   Compiling cranelift-object v0.136.2\\n   Compiling mncs-codegen v0.1.0 (/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102/.bootstrap/crates/mncs-codegen)\\n   Compiling mncs-compiler v0.1.0 (/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102/.bootstrap/crates/mncs-compiler)\\n   Compiling mncs-compiler-stage0-probe v0.1.0 (/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102/tools/stage0-probe)\\n    Finished `release` profile [optimized] target(s) in 2m 19s\\n\", \"executable\": \"/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102/.bootstrap/target/release/mncs-compiler-stage0-probe\", \"executable_sha256\": \"ac5ec4646e7e5da675da2a9983c421aa76bbe598623fbe6ef340642774fd7e66\", \"producer_identity\": \"sha256:ff04513774c6128fd7b26e44d0da6caf7ce2bc44ae3b7f797b2b4cc389533a36\", \"schema_version\": \"mncs.compiler-build-operation/1\", \"source_revision\": \"44bc55a97c2ccb85b1d3b2c60b0fcf3a72c6ee18\", \"stage0_revision\": \"6a3f6907e4acd4a98afd4a9421548a978ff266e6\", \"status\": \"built-and-verified-locally\"}\n",
+        "truncated": false
+      },
+      "stderr": ""
+    },
+    "compiler_application_build": {
+      "ok": true,
+      "exit_code": 0,
+      "stderr": "",
+      "result": {
+        "artifact_byte_count": 645161,
+        "artifact_file_count": 1,
+        "artifact_store_ref": "mncs-store:ses_1d85d4495b86b021:capability-invocation-artifacts:053a7cbbbe5ab30a81758e36e78073e6358d07d9d6658070392b73227147acfc",
+        "binding_id": "cap_83cc273859d444cb",
+        "capability": "mncs-compiler:native-application-build",
+        "input_artifacts": [],
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "{\"artifact_identity\":\"sha256:6f60a508c6a102afd1dd6f41a6ee221b14b6eef0f199003907beb63855d706dc\",\"build_status\":\"verified\",\"callable_root_count\":0,\"callable_roots\":[],\"capability_dispatch\":{\"binding_count\":0,\"status\":\"verified\",\"unresolved_obligation_count\":0},\"dependency_graph_identity\":\"sha256:a93008dbbd8a7e50ec1b8cefef1f2748ae8fbd7f2807bfed298b606fdaceabe7\",\"entry\":{\"function\":\"run\",\"interface\":{\"identity\":\"sha256:d7ed229eb483665ef4441d6ac97534850fb54d63d9df51a41ef736407c08477b\",\"signature\":{\"capabilities\":[],\"contracts\":[],\"effects\":[],\"failure\":\"isolated\",\"function_identity\":\"mncs:0.2:function:tests.native_readiness::run\",\"inputs\":[{\"name\":\"request\",\"type\":\"ReadinessRequest\"}],\"module\":\"tests.native_readiness\",\"name\":\"run\",\"outputs\":[{\"name\":\"result\",\"type\":\"ReadinessOutcome\"}]},\"status\":\"verified\"},\"module\":\"tests.native_readiness\",\"status\":\"verified\"},\"response_schema\":\"mncs.compiler.application-build/4\",\"result_file\":\"native-application-build.json\",\"schema_version\":\"mncs.compiler.application-build-invocation/1\",\"source_snapshot_identity\":\"sha256:cf9b5f63aaf16fc87dc9f96b14dceb50f7492253f980abdc1ae75adf28e04ff2\",\"status\":\"stored\"}\n",
+        "truncated": false
+      }
+    },
+    "test_vm_provider": {
+      "ok": true,
+      "exit_code": 0,
+      "stderr": "",
+      "result": {
+        "artifact_byte_count": 436097,
+        "artifact_file_count": 2,
+        "artifact_store_ref": "mncs-store:ses_79cecb5481c9d2a8:capability-invocation-artifacts:1c0e074ae9eff3d37d60eb85a58f7e15d6d6c745e0019e3f6e6e8b3ebd1d20ac",
+        "binding_id": "cap_008e497698a17ab7",
+        "capability": "mncs-test:verification-executor/mncs-test.native-application-build-vm",
+        "input_artifacts": [],
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "{\"compiler_artifact_identity\": \"sha256:d308c2afb24054ec0adfbb42e218709d4eefba4d488b5af6a7afb1491f02d1c6\", \"compiler_response_schema\": \"mncs.compiler.application-build/4\", \"compiler_response_sha256\": \"6ca2bed248326f80ceaf979a4920e0c474e4269203dda4b6f4a27179f4beb648\", \"entry_interface_identity\": \"sha256:2478737761eb500b077fc5ddc924858cb8494b57813be41a5200e15ab55967d2\", \"kind\": \"mncs-test.compiler-application-build-vm-integration\", \"result_artifact\": {\"byte_count\": 1305, \"name\": \"native-application-build-vm/native-application-build-vm-result.json\", \"sha256\": \"c2050a3de0ee611a29a7ac2b960ea4ac0b1410de81ad250a9c8ba8ab664ebb3c\"}, \"retained_session\": {\"batch_calls\": 1, \"calls\": 2, \"runtime\": {\"build_origin_status\": \"stale-inputs\", \"build_receipt_identity\": \"sha256:f2fedefa850c356949e8f8bbe5fc43ce64324a326ddd360a85765fe9d60af5b6\", \"executable_sha256\": \"64bb0b785c678471d9aa57ccfdc51fc57b4a56edeb5927427a3de4d76b7004cb\", \"vm_contract\": \"mncs.vm/0.1\"}}, \"schema_version\": 1, \"status\": \"pass\", \"suite\": {\"assertion_count\": 2, \"assertion_failures\": 0, \"compile_failures\": 0, \"failed\": 0, \"failure_count\": 0, \"infrastructure_failures\": 0, \"passed\": 2, \"runtime_failures\": 0, \"setup_failures\": 0, \"skipped\": 0, \"timeout_failures\": 0, \"total\": 2, \"unsupported\": 0, \"verdict\": \"PASS\", \"verdict_code\": 0}, \"test_cases\": [{\"id\": \"application-build-suite-call-1\", \"status\": \"passed\", \"verdict\": \"PASS\"}, {\"id\": \"application-build-suite-call-2\", \"status\": \"passed\", \"verdict\": \"PASS\"}], \"vm_artifact_identity\": \"sha256:d308c2afb24054ec0adfbb42e218709d4eefba4d488b5af6a7afb1491f02d1c6\"}\n",
+        "truncated": false
+      }
+    },
+    "test_vm_notes": "Two test calls passed, none skipped; retained-session and batch paths used real Compiler application-build/4 and canonical VM. VM receipt reported build_origin_status=stale-inputs; successful execution does not certify a fresh VM source build.",
+    "test_entry_after_stdin": {
+      "ok": true,
+      "operation": "enter",
+      "exit_code": 0,
+      "stderr": ""
+    },
+    "broad_test_probe": {
+      "ok": true,
+      "operation": "verify",
+      "exit_code": 4,
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_6ebacedf8be7bc65",
+        "capability": "mncs-test:test/native-test-provider",
+        "input_artifacts": [],
+        "returncode": -15,
+        "status": "failed",
+        "stderr": "..........E.....",
+        "stdout": "",
+        "truncated": false
+      },
+      "stderr": ""
+    },
+    "broad_test_probe_scope": "Deliberately interrupted to bound this pass, returncode -15. Partial stderr included errors; no complete traceback or full-suite result was obtained. It is not green.",
+    "forge_execution": {
+      "ok": true,
+      "exit_code": 4,
+      "stderr": "",
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_07ea8bcfb58ff902",
+        "capability": "mncs-forge:native-application-execution",
+        "input_artifacts": [
+          {
+            "binding_id": "cap_83cc273859d444cb",
+            "byte_count": 645161,
+            "capability": "mncs-compiler:native-application-build",
+            "name": "native-application-build",
+            "path": "native-application-build.json",
+            "sha256": "09903ab0246c89e622b972668bfe5698240685486c0bccb86f37d9addb9559db",
+            "store_reference": "mncs-store:ses_1d85d4495b86b021:capability-invocation-artifacts:053a7cbbbe5ab30a81758e36e78073e6358d07d9d6658070392b73227147acfc"
+          }
+        ],
+        "returncode": 1,
+        "status": "failed",
+        "stderr": "Traceback (most recent call last):\n  File \"/home/epi13/Documents/Projects/mncs-forge/.worktrees/luna-max-rights-provenance-20261021/scripts/native_application_execution_provider.py\", line 937, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/home/epi13/Documents/Projects/mncs-forge/.worktrees/luna-max-rights-provenance-20261021/scripts/native_application_execution_provider.py\", line 731, in main\n    envelope = SystemdCgroupEnvelope(\n        RESOURCE_ENVELOPE, required=True, lock_path=lock_path,\n        environment_dir=cache_root, resource_semantics=forge._resource_semantics,\n    )\n  File \"/home/epi13/Documents/Projects/mncs-forge/.worktrees/luna-max-rights-provenance-20261021/src/mncs_forge/resource_envelope.py\", line 228, in __init__\n    self._budget_decision = resource_semantics.resource_budget_select(\n                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        {\n        ^\n    ...<3 lines>...\n        settings,\n        ^^^^^^^^^\n    )\n    ^\n  File \"/home/epi13/Documents/Projects/mncs-forge/.worktrees/luna-max-rights-provenance-20261021/src/mncs_forge/mncs_native.py\", line 1986, in resource_budget_select\n    self.ensure_available()\n    ~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/epi13/Documents/Projects/mncs-forge/.worktrees/luna-max-rights-provenance-20261021/src/mncs_forge/mncs_native.py\", line 880, in ensure_available\n    raise ForgeError(\"NATIVE_UNAVAILABLE\", \"mncs-language checkout is unavailable\")\nmncs_forge.errors.ForgeError: mncs-language checkout is unavailable\n",
+        "stdout": "",
+        "truncated": false
+      }
+    },
+    "compiler_digest_verification": {
+      "ok": true,
+      "exit_code": 4,
+      "stderr": "",
+      "result": {
+        "artifact_byte_count": 0,
+        "artifact_file_count": 0,
+        "artifact_store_ref": null,
+        "binding_id": "cap_6765a78611903552",
+        "capability": "mncs-compiler:verification-executor/mncs-compiler.native-test-digest-effectful-app-canonical-vm",
+        "input_artifacts": [],
+        "returncode": 1,
+        "status": "failed",
+        "stderr": "Traceback (most recent call last):\n  File \"/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102/tools/test_vm_test_digest_app.py\", line 1011, in <module>\n    main()\n    ~~~~^^\n  File \"/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102/tools/test_vm_test_digest_app.py\", line 466, in main\n    raise AssertionError(json.dumps({\n    ...<4 lines>...\n    }, indent=2)[:9000])\nAssertionError: {\n  \"status\": \"rejected\",\n  \"entry\": {\n    \"function\": \"digest_app\",\n    \"module\": \"mncs.test.digest\"\n  },\n  \"unresolved_obligations\": [],\n  \"diagnostics\": [\n    {\n      \"code\": \"MNE173\",\n      \"expected\": [],\n      \"found\": null,\n      \"message\": \"imported module 'mncs.core.sequences.v1' is unavailable to the resolver\",\n      \"severity\": \"error\",\n      \"span\": {\n        \"column\": 5,\n        \"end\": 926,\n        \"line\": 20,\n        \"start\": 904\n      },\n      \"stage\": \"elaboration\"\n    }\n  ]\n}\n",
+        "stdout": "",
+        "truncated": false
+      }
+    }
+  },
+  "remaining_pressures": [
+    {
+      "identity": "prs_f2a4217b89a37fa1",
+      "owner": "mncs-forge",
+      "status": "open",
+      "impact": "Optional typed Forge executor lacks its native Language runtime dependency when the normal clean same-HEAD registered provider worktree is selected; fails NATIVE_UNAVAILABLE. Existing dirty main README was preserved. No Forge development definition was invented or foreign checkout modified."
+    },
+    {
+      "identity": "prs_9ae3906509ef67c7",
+      "owner": "mncs-compiler",
+      "status": "open",
+      "impact": "Specific digest application integration fixture fails MNE173 on imported mncs.core.sequences.v1; current module closure is not supplied. This independent fixture was not changed as part of administrative hardening."
+    },
+    {
+      "identity": "prs_fbb8403ac2f9240b",
+      "owner": "mncs-test",
+      "status": "open",
+      "impact": "Broad host provider suite remains unverified; focused native VM integration passed."
+    }
+  ],
+  "stdlib_pressure": {
+    "identity": "prs_2dfa7aca70d1747d",
+    "status": "resolved",
+    "evidence": "Canonical manifest freshness and all 27 toolchain tests pass after commit; no generated-state patch."
+  },
+  "preservation": {
+    "ok": true,
+    "exit_code": 0,
+    "selected_session_id": "ses_5df85cca5ff2ec76",
+    "latest_checkpoint": "chk_d7cd85473a05ff5d",
+    "claim_ids": [],
+    "lifecycle": "active"
+  },
+  "safety": "No grants were fabricated or widened. Protected Language remains read-only. Exact conflict, provenance, checkout and rights regressions passed. Live protected claim rejection and owned dirty adoption are preserved in lifecycle evidence.",
+  "limitations": "Independent Language/LSP repository development was not exercised: no applicable independent Environment definition was forced into this run. Optional unknown provider declarations remain explicit degraded health; no required-unavailable provider was hidden.",
+  "readiness": "The exercised Stdlib development and Test/Compiler/VM native build/execution path is usable. This is not a claim that every provider or the broad Test suite is green.",
+  "cleanup": {
+    "completed_worktrees": [
+      "mncs-stdlib/.worktrees/final-readiness-20261102",
+      "mncs-control-mcp/.worktrees/final-readiness-20261102",
+      "mncs-test/.worktrees/final-readiness-20261102",
+      "mncs-compiler/.worktrees/final-readiness-20261102"
+    ],
+    "remaining_owned_targets": [
+      "mncs-environment/.worktrees/final-readiness-20261102"
+    ],
+    "policy": "Complete claims through canonical lifecycle before removing only owned worktrees; no forced cleanup, foreign claims or foreign dirty files.",
+    "claims": "Stdlib, Test and Compiler completions each released their exact owned claim with claims_release_error=null."
+  },
+  "closing_lifecycle": {
+    "mncs-final-stdlib-lifecycle.json": [
+      {
+        "operation": "claims",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 2,
+        "error": null,
+        "stderr": "{\"error\": \"declared provider checkout is unavailable\", \"diagnostics\": {\"code\": \"environment-command-failed\", \"command\": \"claims\", \"state_dir\": \"/home/epi13/.local/share/mncs-environment\", \"next\": \"check configuration and session state; retry entry\"}}\n",
+        "session_id": null,
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      },
+      {
+        "operation": "checkpoint",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_c363cac6e1738518",
+        "identity": "chk_a6a5e628fb0289da",
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      }
+    ],
+    "mncs-final-stdlib-closing.json": [
+      {
+        "operation": "resume",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_c363cac6e1738518",
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": "active",
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": {
+          "scope_composition": {
+            "status": "ready",
+            "composed": [],
+            "retained": [
+              "mncs-stdlib"
+            ],
+            "removed": [],
+            "skipped": [],
+            "base_intent_skipped": []
+          }
+        }
+      },
+      {
+        "operation": "complete",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": null,
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": "chk_f52e4138c325fa3b",
+        "claims_released": [
+          "claim:mncs-stdlib:worktree:25026d434739"
+        ],
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      }
+    ],
+    "mncs-final-test-lifecycle.json": [
+      {
+        "operation": "claims",
+        "arguments": {
+          "mode": "acquire",
+          "repository": "mncs-test",
+          "worktree": "/home/epi13/Documents/Projects/mncs-test/.worktrees/final-readiness-20261102",
+          "branch": "verify/final-readiness-20261102",
+          "reason": "Checkpoint and resume of owned isolated development"
+        },
+        "ok": true,
+        "exit_code": 4,
+        "error": null,
+        "stderr": "{\"error\": \"adoption required: mncs-test checkout shows unknown work (dirty=True, signals=['dirty-tree']); acquire with explicit-adoption or recovery basis\"}\n",
+        "session_id": null,
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      },
+      {
+        "operation": "claims",
+        "arguments": {
+          "mode": "acquire",
+          "repository": "mncs-language",
+          "worktree": "/home/epi13/Documents/Projects/mncs-language",
+          "branch": "main",
+          "reason": "Controlled negative protected-toolchain probe"
+        },
+        "ok": true,
+        "exit_code": 3,
+        "error": null,
+        "stderr": "{\"error\": \"claim denied: mncs-language is protected in this Environment session\", \"diagnostics\": {\"code\": \"authority-denied\", \"action\": \"claim-acquire\", \"repository\": \"mncs-language\", \"publication_completed\": false, \"next\": \"enter an Environment whose effective writable scope includes this repository\"}}\n",
+        "session_id": null,
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      },
+      {
+        "operation": "checkpoint",
+        "arguments": {
+          "progress": "Native application-build/4 plus canonical Test VM retained-session/batch integration passed 2/2. Owned dirty continuation marker remains for fresh-process recovery."
+        },
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_79cecb5481c9d2a8",
+        "identity": "chk_23097c4ed95fffc0",
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      }
+    ],
+    "mncs-final-test-closing.json": [
+      {
+        "operation": "claims",
+        "arguments": {
+          "mode": "acquire",
+          "repository": "mncs-test",
+          "worktree": "/home/epi13/Documents/Projects/mncs-test/.worktrees/final-readiness-20261102",
+          "branch": "verify/final-readiness-20261102",
+          "basis": "explicit-adoption",
+          "reason": "Recover the continuation marker created by this readiness session"
+        },
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_79cecb5481c9d2a8",
+        "identity": "clm_daba074471e8b523",
+        "claim_id": "claim:mncs-test:worktree:7aa298d19441",
+        "status": "held",
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": {
+          "branch": "verify/final-readiness-20261102",
+          "checkout": "/home/epi13/Documents/Projects/mncs-test/.worktrees/final-readiness-20261102",
+          "checkout_identity": "checkout:ce35c2d6360fee24",
+          "exclusive": false,
+          "git_common_directory_identity": "git-common:edc46f1a6583a8c5",
+          "kind": "worktree",
+          "manifest_identity": "baffee48d63d6fa0",
+          "paths": null,
+          "repository": "mncs-test"
+        },
+        "revalidation": null
+      },
+      {
+        "operation": "resume",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_79cecb5481c9d2a8",
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": "active",
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": {
+          "scope_composition": {
+            "status": "ready",
+            "composed": [],
+            "retained": [
+              "mncs-test"
+            ],
+            "removed": [],
+            "skipped": [],
+            "base_intent_skipped": []
+          }
+        }
+      },
+      {
+        "operation": "complete",
+        "arguments": {
+          "outcome": "final-readiness-verified",
+          "summary": "Canonical Test/Compiler/VM integration passed 2/2; fresh-process dirty continuation and protected Language rejection verified. Full host Test suite was bounded and interrupted, not certified green."
+        },
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": null,
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": "chk_1eadb886c047ce3a",
+        "claims_released": [
+          "claim:mncs-test:worktree:7aa298d19441"
+        ],
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      }
+    ],
+    "mncs-final-compiler-closing.json": [
+      {
+        "operation": "claims",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_1d85d4495b86b021",
+        "identity": "clm_248dd261a581da78",
+        "claim_id": "claim:mncs-compiler:worktree:fc0504675ab9",
+        "status": "held",
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": {
+          "branch": "verify/final-readiness-20261102",
+          "checkout": "/home/epi13/Documents/Projects/mncs-compiler/.worktrees/final-readiness-20261102",
+          "checkout_identity": "checkout:9d27edc77db97c81",
+          "exclusive": false,
+          "git_common_directory_identity": "git-common:0356dd87cca2a0c0",
+          "kind": "worktree",
+          "manifest_identity": "4e5287fad8ae35d6",
+          "paths": null,
+          "repository": "mncs-compiler"
+        },
+        "revalidation": null
+      },
+      {
+        "operation": "checkpoint",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": "ses_1d85d4495b86b021",
+        "identity": "chk_35afbd7045d8b81b",
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": null,
+        "claims_released": null,
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      },
+      {
+        "operation": "complete",
+        "arguments": {},
+        "ok": true,
+        "exit_code": 0,
+        "error": null,
+        "stderr": "",
+        "session_id": null,
+        "identity": null,
+        "claim_id": null,
+        "status": null,
+        "lifecycle": null,
+        "checkpoint_id": "chk_d8366b39a43bc765",
+        "claims_released": [
+          "claim:mncs-compiler:worktree:fc0504675ab9"
+        ],
+        "claims_release_error": null,
+        "scope": null,
+        "revalidation": null
+      }
+    ],
+    "stdlib_exact_claim": {
+      "ok": true,
+      "exit_code": 0,
+      "stderr": "",
+      "result": {
+        "acquired_at": "2026-11-02T23:43:28+00:00",
+        "basis": "explicit-claim",
+        "claim_id": "claim:mncs-stdlib:worktree:25026d434739",
+        "consumer_id": "local-agent",
+        "expires_at": "2026-11-03T23:43:28+00:00",
+        "identity": "clm_af70eebc9ec34db2",
+        "provenance": {
+          "acquired_by": "local-agent",
+          "operation_request_digest": "39eaf180ffce1f03",
+          "operation_request_id": "req_0049e431c00175a933d36db36d53cea2"
+        },
+        "reason": "Final isolated development lifecycle acceptance",
+        "repository": "mncs-stdlib",
+        "schema_version": "mncs.environment.workspace-claim/2",
+        "scope": {
+          "branch": "repair/final-readiness-20261102",
+          "checkout": "/home/epi13/Documents/Projects/mncs-stdlib/.worktrees/final-readiness-20261102",
+          "checkout_identity": "checkout:cfaa8bc28ffbca5e",
+          "exclusive": false,
+          "git_common_directory_identity": "git-common:69607a1d181455fa",
+          "kind": "worktree",
+          "manifest_identity": "e86037aae3a45980",
+          "paths": null,
+          "repository": "mncs-stdlib"
+        },
+        "session_id": "ses_c363cac6e1738518",
+        "status": "held",
+        "version": 1
+      }
+    },
+    "notes": "Two initial caller-relative Stdlib claim targets were invalid; the exact absolute registered checkout succeeded. A newly created unclaimed Test marker was correctly rejected as unknown dirty work until this owner used the supported explicit-adoption basis. Fresh-process resume retained the marker contents; all three terminal completions reported zero release errors. Session identities and repository scopes remained independent.",
+    "sessions": {
+      "stdlib": "ses_c363cac6e1738518",
+      "test": "ses_79cecb5481c9d2a8",
+      "compiler": "ses_1d85d4495b86b021"
+    },
+    "transitions": "Fresh clients entered and operated in independently scoped Stdlib, Test and Compiler contexts under cmp_final_readiness_20261102. Completion/release, Test fresh-process dirty recovery, and the protected Language negative probe were exercised; the real Test capability built and executed a native application through Compiler and VM."
+  }
+}

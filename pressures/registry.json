@@ -343,6 +343,48 @@
     "evidence": "evidence/authority-continuity-20261102.json; evidence/autonomous-readiness-20261102.json",
     "desired_contract": "Committed library, distribution and generated manifest agree and the declared integrity check passes.",
     "why_not_local": "Stdlib owns generated distribution semantics; Environment must not regenerate or silently suppress its failure.",
-    "workaround": "Preserve this explicit provider failure for the native campaign; no authority workaround is needed."
+    "workaround": "No workaround required for manifest freshness; use the declared Stdlib verification capabilities.",
+    "status": "resolved",
+    "resolution": "Stdlib c6012b8 generates manifest provenance from its content-verified bundle pin instead of the checkout HEAD. Canonical manifest-freshness passes after commit; declared native toolchain verification passes all 27 tests with no skips. No generated files or expectations were patched.",
+    "resolution_evidence": "evidence/final-autonomous-readiness-20261102.json"
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_f2a4217b89a37fa1",
+    "title": "Forge typed native application execution omits its Language runtime dependency",
+    "owner": "mncs-forge",
+    "status": "open",
+    "description": "Canonical Compiler session built application-build/4, then the declared optional Forge executor failed in resource_budget_select: NATIVE_UNAVAILABLE, mncs-language checkout is unavailable. A dirty canonical Forge checkout was correctly displaced by a clean same-HEAD registered worktree; the execution descriptor declares Compiler/VM only, while Forge native policy discovers Language from MNCS_LANGUAGE_ROOT or a literal sibling. The linked provider has neither.",
+    "effect": "Compilation and Test/VM execution remain usable. Optional Forge-enveloped native application execution is not ready.",
+    "evidence": "evidence/final-autonomous-readiness-20261102.json",
+    "desired_contract": "Declare and resolve the existing native Language/Stdlib inputs for the Forge executor; preserve source checkout and effect-target identity.",
+    "why_not_local": "Bounded final readiness pass preserves the exact provider-owned blocker without broadening into a native development campaign.",
+    "workaround": "Use the separately verified declared Test native-application-build-vm path where applicable; do not report these failed executors as passing."
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_9ae3906509ef67c7",
+    "title": "Compiler digest application verification fixture omits a current imported module",
+    "owner": "mncs-compiler",
+    "status": "open",
+    "description": "Canonical mncs-compiler.native-test-digest-effectful-app-canonical-vm verification at 44bc55a failed MNE173: imported module mncs.core.sequences.v1 is unavailable to the resolver while building mncs.test.digest::digest_app. The integration request MODULE_PATHS explicitly supplies assertions, suite and application but does not supply the current digest import closure.",
+    "effect": "This specific digest verification is blocked; the separate native application-build/4 and canonical Test/VM retained-session integration pass. No compiler semantics or Test native migration was changed.",
+    "evidence": "evidence/final-autonomous-readiness-20261102.json",
+    "desired_contract": "Update the owning existing integration fixture/provider module closure against current Stdlib/Test imports and verify through its declared executor.",
+    "why_not_local": "Bounded final readiness pass preserves the exact provider-owned blocker without broadening into a native development campaign.",
+    "workaround": "Use the separately verified declared Test native-application-build-vm path where applicable; do not report these failed executors as passing."
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_fbb8403ac2f9240b",
+    "title": "Broad Test provider verification remains unverified after bounded readiness probe",
+    "owner": "mncs-test",
+    "status": "open",
+    "description": "Canonical mncs-test:test/native-test-provider invoked unittest discover in the isolated checkout after the transport-stdin repair. The bounded probe was deliberately stopped while a live compile-expectation test was still running; its partial stderr was ..........E..... and returncode -15. It is not a full-suite pass; an earlier E was observed but no final traceback was emitted before interruption. The separate canonical native-application-build-vm executor passed 2/2 with no skips.",
+    "effect": "General Test host-suite readiness is unverified. The exercised native Test/Compiler/VM path works.",
+    "evidence": "evidence/final-autonomous-readiness-20261102.json",
+    "desired_contract": "Obtain a complete owner-side verbose outcome for the broad suite and diagnose any actual errors without treating the interrupted probe as green.",
+    "why_not_local": "Final preparation remains bounded; no Test native implementation or unrelated test policy is changed to conceal this incomplete run.",
+    "workaround": "Use the separately verified declared native-application-build-vm obligation for the specific tested workflow; retain this broader verification gap."
   }
 ]
