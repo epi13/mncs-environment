@@ -27,9 +27,26 @@ record BriefEventInputV1 {
     operation_executed_false: bool
 }
 
+record BriefObservationInputV1 {
+    relations_valid: bool,
+    session_id_present: bool,
+    session_id_is_text: bool,
+    relation_session_id: EventTextV1,
+    subject_present: [bool; 4],
+    subjects: [EventTextV1; 4],
+    repositories: [EventTextV1; up_to 32],
+    commons_work: EventTextV1,
+    kind: EventTextV1,
+    severity: EventTextV1
+}
+
 record BriefClassificationRequestV1 {
     schema_version: [byte; up_to 64],
-    events: [BriefEventInputV1; up_to 200]
+    session_id: EventTextV1,
+    intent_repositories: [EventTextV1; up_to 32],
+    commons_work_ids: [EventTextV1; up_to 32],
+    events: [BriefEventInputV1; up_to 200],
+    observations: [BriefObservationInputV1; up_to 50]
 }
 
 record BriefEventDecisionV1 {
@@ -56,7 +73,14 @@ record BriefClassificationOutputV1 {
     schema_version: [byte; up_to 64],
     valid: bool,
     event_count: u64,
-    decisions: [BriefEventDecisionV1; up_to 200]
+    decisions: [BriefEventDecisionV1; up_to 200],
+    observation_count: u64,
+    observation_relevance_codes: [u64; up_to 50]
+}
+
+record BriefObservationStateV1 {
+    count: u64,
+    relevance_codes: [u64; 50]
 }
 
 record EventKeyStateV1 {
@@ -67,11 +91,11 @@ record EventKeyStateV1 {
 }
 
 fn request_schema() -> (result: [byte; up_to 64]) {
-    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 117, 112, 100, 97, 116, 101, 45, 99, 97, 112, 115, 117, 108, 101, 45, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49];
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 117, 112, 100, 97, 116, 101, 45, 99, 97, 112, 115, 117, 108, 101, 45, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 45, 114, 101, 113, 117, 101, 115, 116, 47, 50];
 }
 
 fn result_schema() -> (result: [byte; up_to 64]) {
-    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 117, 112, 100, 97, 116, 101, 45, 99, 97, 112, 115, 117, 108, 101, 45, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 45, 114, 101, 115, 117, 108, 116, 47, 49];
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 117, 112, 100, 97, 116, 101, 45, 99, 97, 112, 115, 117, 108, 101, 45, 99, 108, 97, 115, 115, 105, 102, 105, 99, 97, 116, 105, 111, 110, 45, 114, 101, 115, 117, 108, 116, 47, 50];
 }
 
 fn same_bytes(left: [byte; up_to 512], right: [byte; up_to 512]) -> (result: bool) {
@@ -80,6 +104,42 @@ fn same_bytes(left: [byte; up_to 512], right: [byte; up_to 512]) -> (result: boo
         next same = same && left[i] == right[i];
     }
     return same;
+}
+
+fn contains_text(value: EventTextV1, candidates: [EventTextV1; up_to 32]) -> (result: bool) {
+    iterate i over candidates carrying found: bool = false {
+        next found = found || same_bytes(value.bytes, candidates[i].bytes);
+    }
+    return found;
+}
+
+fn observation_relevance_code(
+    observation: BriefObservationInputV1,
+    session_id: EventTextV1,
+    intent_repositories: [EventTextV1; up_to 32],
+    commons_work_ids: [EventTextV1; up_to 32]
+) -> (result: u64) {
+    if !observation.relations_valid { return 0; }
+    let names_session: bool = observation.session_id_present &&
+        observation.session_id_is_text &&
+        same_bytes(observation.relation_session_id.bytes, session_id.bytes);
+    if names_session { return 1; }
+
+    iterate i over observation.subject_present carrying subject_match: bool = false {
+        let matches: bool = observation.subject_present[i] &&
+            contains_text(observation.subjects[i], intent_repositories);
+        next subject_match = subject_match || matches;
+    }
+    iterate i over observation.repositories carrying repository_match: bool = false {
+        let matches: bool = contains_text(observation.repositories[i], intent_repositories);
+        next repository_match = repository_match || matches;
+    }
+    if intent_repositories.len > 0 && (subject_match || repository_match) { return 2; }
+    if commons_work_ids.len > 0 && contains_text(observation.commons_work, commons_work_ids) { return 3; }
+    if same_bytes(observation.kind.bytes, [99, 108, 97, 105, 109, 46, 99, 104, 97, 110, 103, 101, 100]) { return 4; }
+    if same_bytes(observation.severity.bytes, [119, 97, 114, 110, 105, 110, 103]) ||
+        same_bytes(observation.severity.bytes, [99, 114, 105, 116, 105, 99, 97, 108]) { return 5; }
+    return 0;
 }
 
 fn event_class(kind: EventTextV1) -> (result: u64) {
@@ -260,11 +320,28 @@ fn update_capsule_classification_app_v1(context: ApplicationContext) -> (result:
             decisions: replace(state.decisions, i, decision)
         };
     }
+    let observation_initial: BriefObservationStateV1 = BriefObservationStateV1 {
+        count: 0,
+        relevance_codes: [0; 50]
+    };
+    iterate i over request.observations carrying observation_state: BriefObservationStateV1 = observation_initial {
+        let relevance: u64 = observation_relevance_code(
+            request.observations[i], request.session_id,
+            request.intent_repositories, request.commons_work_ids
+        );
+        next observation_state = BriefObservationStateV1 {
+            ..observation_state,
+            count: i +% 1,
+            relevance_codes: replace(observation_state.relevance_codes, i, relevance)
+        };
+    }
     let output: BriefClassificationOutputV1 = BriefClassificationOutputV1 {
         schema_version: result_schema(),
         valid: true,
         event_count: state.count,
-        decisions: state.decisions[0..state.count]
+        decisions: state.decisions[0..state.count],
+        observation_count: observation_state.count,
+        observation_relevance_codes: observation_state.relevance_codes[0..observation_state.count]
     };
     let published: u64 = structured_write(context.argv[1], result_schema(), output);
     if published == 0 {

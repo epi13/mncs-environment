@@ -245,22 +245,30 @@ def build_capsule(session, store, *,
         if not isinstance(sequence, int) or sequence <= index:
             continue
         candidate_events.append(event)
-    from .native_briefing import project_events_native
+    candidate_observations = []
+    for event in (reconciler_log or [])[-MAX_RECONCILER_ITEMS:]:
+        if isinstance(event.get("payload", {}), dict):
+            candidate_observations.append(event)
+    from .native_briefing import project_capsule_inputs_native
 
-    native_items = project_events_native(candidate_events, session)
-    if native_items is None:
+    native_projection = project_capsule_inputs_native(
+        candidate_events, candidate_observations, session,
+    )
+    if native_projection is None:
         for event in candidate_events:
             item = classify_event(event)
             if item is not None:
                 own_items.append(item)
+        observation_relevance = [
+            _relevant_observation(event.get("payload", {}), session)
+            for event in candidate_observations
+        ]
     else:
+        native_items, observation_relevance = native_projection
         own_items.extend(item for item in native_items if item is not None)
     cross_items: list[dict[str, Any]] = []
-    for event in (reconciler_log or [])[-MAX_RECONCILER_ITEMS:]:
+    for event, reason in zip(candidate_observations, observation_relevance, strict=True):
         payload = event.get("payload", {})
-        if not isinstance(payload, dict):
-            continue
-        reason = _relevant_observation(payload, session)
         if reason is None:
             continue
         observation = str(payload.get("observation", ""))

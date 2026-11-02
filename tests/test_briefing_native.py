@@ -8,8 +8,16 @@ from types import SimpleNamespace
 from typing import ClassVar
 from unittest import mock
 
-from mncs_env.briefing import EVENT_CLASSES, build_capsule, classify_event
-from mncs_env.native_briefing import project_events_native
+from mncs_env.briefing import (
+    EVENT_CLASSES,
+    _relevant_observation,
+    build_capsule,
+    classify_event,
+)
+from mncs_env.native_briefing import (
+    project_capsule_inputs_native,
+    project_events_native,
+)
 
 
 def _native_toolchain() -> tuple[Path, Path] | None:
@@ -165,11 +173,25 @@ class NativeBriefingClassificationTests(unittest.TestCase):
             "type": "authority.denied", "observed_at": "2026-11-02T12:00:00+00:00",
             "payload": {"reason": "denied", "repository": "mncs-environment"},
         }]
+        observations = [{
+            "session_id": "ses_reconciler_native", "sequence": 1,
+            "observed_at": "2026-11-02T12:00:01+00:00",
+            "payload": {
+                "kind": "claim.changed",
+                "relations": {"repositories": ["mncs-environment"]},
+                "observation": "obs_native",
+                "subject": "mncs-environment",
+                "summary": "repository claim changed",
+            },
+        }]
 
         class Session:
             snapshot: ClassVar[dict] = {
                 "lifecycle": "active",
-                "intent": {"goal": "native capsule proof"},
+                "intent": {
+                    "goal": "native capsule proof",
+                    "repositories": ["mncs-environment"],
+                },
                 "workspace": {"root": str(workspace)},
                 "selected_checkouts": {
                     "mncs-stdlib": {"path": str(stdlib)},
@@ -187,26 +209,144 @@ class NativeBriefingClassificationTests(unittest.TestCase):
                 return events
 
         observed: list[object] = []
-        projector = project_events_native
+        projector = project_capsule_inputs_native
 
-        def project_and_record(batch, session):
-            result = projector(batch, session)
+        def project_and_record(batch, observation_batch, session):
+            result = projector(batch, observation_batch, session)
             observed.append(result)
             return result
 
         with TemporaryDirectory(prefix="mncs-env-native-capsule-") as temporary:
             session = Session(Path(temporary))
             with mock.patch(
-                "mncs_env.native_briefing.project_events_native",
+                "mncs_env.native_briefing.project_capsule_inputs_native",
                 side_effect=project_and_record,
             ) as native_call:
-                capsule = build_capsule(session, store=None)
+                capsule = build_capsule(
+                    session, store=None, reconciler_log=observations,
+                )
 
         native_call.assert_called_once()
         self.assertIsNotNone(observed[0])
-        self.assertEqual(len(capsule["items"]), 1)
+        self.assertEqual(len(capsule["items"]), 2)
         self.assertEqual(capsule["items"][0]["category"], "safety")
         self.assertEqual(capsule["items"][0]["priority"], 1)
+        self.assertEqual(
+            capsule["items"][1]["relevance"],
+            "touches a repository in this intent",
+        )
+        self.assertEqual(
+            observed[0][1], ["touches a repository in this intent"],
+        )
+
+    def test_native_observation_relevance_matches_python_precedence(self) -> None:
+        toolchain = _native_toolchain()
+        if toolchain is None:
+            self.skipTest("selected MNCS release toolchain is unavailable")
+        binary, stdlib = toolchain
+        workspace = next(
+            parent for parent in Path(__file__).resolve().parents
+            if (parent / "mncs-language").is_dir()
+            and (parent / "mncs-stdlib").is_dir()
+        )
+
+        class Session:
+            snapshot: ClassVar[dict] = {
+                "intent": {
+                    "repositories": ["mncs-environment", "mncs-stdlib"],
+                    "commons_work": ["work-7"],
+                },
+                "workspace": {"root": str(workspace)},
+                "selected_checkouts": {
+                    "mncs-stdlib": {"path": str(stdlib)},
+                },
+            }
+            session_id = "ses_native_observation"
+
+            def __init__(self, state_dir: Path) -> None:
+                self.store = SimpleNamespace(state_dir=state_dir)
+
+            def _selected_runtime_environment(self, _binding: dict) -> dict[str, str]:
+                return {"MNCS_BIN": str(binary)}
+
+        payloads = [
+            {
+                "kind": "claim.changed", "severity": "critical",
+                "relations": {
+                    "session_id": "ses_native_observation",
+                    "repositories": ["mncs-environment"],
+                    "commons_work": "work-7",
+                },
+            },
+            {"relations": {"repository": "mncs-environment"}},
+            {"relations": {"repositories": ["mncs-stdlib"]}},
+            {"relations": {"commons_work": "work-7"}},
+            {"kind": "claim.changed", "relations": {}},
+            {"severity": "warning", "relations": {}},
+            {"severity": "critical", "relations": {}},
+            {"severity": "info", "relations": {}},
+            {"severity": "critical", "relations": None},
+            {
+                "kind": "claim.changed", "severity": "critical",
+                "relations": {
+                    "session_id": 8,
+                    "uri": "mncs-environment",
+                    "commons_work": "work-7",
+                },
+            },
+        ]
+        payloads.extend({"relations": {}} for _ in range(40))
+        observations = [
+            {"payload": payload, "sequence": index + 1}
+            for index, payload in enumerate(payloads)
+        ]
+        with TemporaryDirectory(prefix="mncs-env-native-observation-") as temporary:
+            session = Session(Path(temporary))
+            actual = project_capsule_inputs_native([], observations, session)
+
+        self.assertIsNotNone(actual)
+        assert actual is not None
+        self.assertEqual(actual[0], [])
+        self.assertEqual(actual[1], [
+            _relevant_observation(payload, session) for payload in payloads
+        ])
+        self.assertEqual(actual[1], [
+            "names this session",
+            "touches a repository in this intent",
+            "touches a repository in this intent",
+            "links work this session references",
+            "claim state changed somewhere in the family",
+            "elevated severity is family-visible",
+            "elevated severity is family-visible",
+            None,
+            None,
+            "touches a repository in this intent",
+            *([None] * 40),
+        ])
+
+    def test_native_observation_batch_falls_back_when_bounds_are_exceeded(self) -> None:
+        observations = [{"payload": {"relations": {}}} for _ in range(51)]
+        self.assertIsNone(
+            project_capsule_inputs_native(
+                [], observations, SimpleNamespace(snapshot={}, session_id="ses_bounds"),
+            ),
+        )
+        single_observation = [{"payload": {"relations": {}}}]
+        self.assertIsNone(
+            project_capsule_inputs_native(
+                [], single_observation,
+                SimpleNamespace(
+                    snapshot={"intent": {"repositories": ["repo"] * 33}},
+                    session_id="ses_bounds",
+                ),
+            ),
+        )
+        self.assertIsNone(
+            project_capsule_inputs_native(
+                [], [{"payload": {"relations": {"repository": "x" * 513}}}],
+                SimpleNamespace(snapshot={"intent": {}}, session_id="ses_bounds"),
+            ),
+        )
 
     def test_out_of_bounds_event_uses_the_established_python_fallback(self) -> None:
         toolchain = _native_toolchain()
