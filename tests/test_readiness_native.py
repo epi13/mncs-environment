@@ -296,3 +296,28 @@ class NativeReadinessProjectionTests(TestCase):
                     self.assertEqual(actual, reference)
                     for field, value in expected.items():
                         self.assertEqual(actual[field], value, field)
+
+
+def test_native_policy_runs_with_read_only_optional_cache(tmp_path):
+    import pytest
+    selected = _native_toolchain()
+    if selected is None:
+        pytest.skip("selected native toolchain unavailable")
+    binary, stdlib = selected
+    state = tmp_path / "state"
+    state.mkdir()
+    session = SimpleNamespace(
+        store=SimpleNamespace(state_dir=state),
+        snapshot={"workspace": {"root": str(stdlib.parent)},
+                  "selected_checkouts": {"mncs-stdlib": {"path": str(stdlib)}}},
+        _selected_runtime_environment=lambda _: {"MNCS_BIN": str(binary)},
+    )
+    state.chmod(0o555)
+    try:
+        result = native_readiness.project_json_pointers(
+            '{"status":"pass"}', ["/status"], session=session, timeout_seconds=30,
+        )
+        assert result["/status"] == "pass"
+        assert not (state / "native-applications").exists()
+    finally:
+        state.chmod(0o755)

@@ -9,6 +9,7 @@ tree for the common small readiness response.
 from __future__ import annotations
 
 import hashlib
+import errno
 import json
 import os
 import subprocess
@@ -122,11 +123,20 @@ def _run_native_application(
     binary_identity = hashlib.sha256(str(binary).encode("utf-8")).hexdigest()[:16]
     cache_directory = state_root / "native-applications" / f"{Path(descriptor_name).stem}-{binary_identity}"
     try:
-        cache_directory.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(
             prefix=f"mncs-env-{Path(descriptor_name).stem}-",
         ) as temporary:
             root = Path(temporary)
+            try:
+                cache_directory.mkdir(parents=True, exist_ok=True)
+            except OSError as error:
+                if error.errno not in {errno.EROFS, errno.EACCES, errno.EPERM}:
+                    raise
+                # Compiled cache is disposable. A protected service can still
+                # execute the exact selected native program using its existing
+                # private request workspace; no host-semantic fallback occurs.
+                cache_directory = root / "cache"
+                cache_directory.mkdir()
             descriptor_path = root / "native-application.json"
             descriptor_path.write_text(
                 json.dumps(descriptor, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
