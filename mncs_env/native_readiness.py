@@ -121,7 +121,10 @@ def _run_native_application(
     descriptor = _descriptor(repository_root, stdlib, descriptor_name)
     state_root = Path(session.store.state_dir).resolve()
     binary_identity = hashlib.sha256(str(binary).encode("utf-8")).hexdigest()[:16]
-    cache_directory = state_root / "native-applications" / f"{Path(descriptor_name).stem}-{binary_identity}"
+    cache_root = Path(os.environ.get(
+        "MNCS_NATIVE_APPLICATION_CACHE_DIR", state_root / "native-applications",
+    ))
+    cache_directory = cache_root / f"{Path(descriptor_name).stem}-{binary_identity}"
     try:
         with tempfile.TemporaryDirectory(
             prefix=f"mncs-env-{Path(descriptor_name).stem}-",
@@ -166,7 +169,9 @@ def _run_native_application(
                     timeout=max(0.1, timeout_seconds),
                 )
             except subprocess.TimeoutExpired as error:
-                raise NativeApplicationError("native application timed out") from error
+                raise NativeApplicationError(
+                    f"native application timed out ({descriptor_name}, {timeout_seconds}s)"
+                ) from error
             if completed.returncode != 0:
                 detail = completed.stderr.strip() or completed.stdout.strip() or "native application failed"
                 raise NativeApplicationError(detail[-1000:])

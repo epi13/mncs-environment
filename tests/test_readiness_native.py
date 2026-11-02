@@ -298,8 +298,9 @@ class NativeReadinessProjectionTests(TestCase):
                         self.assertEqual(actual[field], value, field)
 
 
-def test_native_policy_runs_with_read_only_optional_cache(tmp_path):
+def test_native_policy_runs_with_read_only_optional_cache(tmp_path, monkeypatch):
     import pytest
+    monkeypatch.delenv("MNCS_NATIVE_APPLICATION_CACHE_DIR", raising=False)
     selected = _native_toolchain()
     if selected is None:
         pytest.skip("selected native toolchain unavailable")
@@ -319,5 +320,12 @@ def test_native_policy_runs_with_read_only_optional_cache(tmp_path):
         )
         assert result["/status"] == "pass"
         assert not (state / "native-applications").exists()
+        cache = tmp_path / "owner-runtime-cache"
+        monkeypatch.setenv("MNCS_NATIVE_APPLICATION_CACHE_DIR", str(cache))
+        result = native_readiness.project_json_pointers(
+            '{"status":"pass"}', ["/status"], session=session, timeout_seconds=30,
+        )
+        assert result["/status"] == "pass"
+        assert cache.is_dir()
     finally:
         state.chmod(0o755)
