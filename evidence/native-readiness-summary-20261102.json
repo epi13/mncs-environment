@@ -1,0 +1,67 @@
+{
+  "schema_version": "mncs.environment.native-readiness-summary-evidence/1",
+  "identity": "ev_native_readiness_summary_20261102",
+  "campaign_id": "cmp_luna_max_native_environment_readiness_20261102",
+  "session_id": "ses_ae903d3305814caa",
+  "work_intent_identity": "int_8475157f281c835f",
+  "repository": "mncs-environment",
+  "branch": "campaign/native-environment-readiness-classifier-20261102",
+  "implementation": {
+    "native_module": "native/mncs/environment/readiness_summary_v1.mncs",
+    "application_descriptor": "native-applications/readiness-summary.json",
+    "host_adapter": "mncs_env/native_readiness.py",
+    "consumer": "mncs_env/sessions.py -> readiness.summarize",
+    "contract_preserved": "mncs.environment.readiness/1",
+    "displaced_host_responsibility": [
+      "available, unavailable, and unknown capability counts",
+      "required capability missing and unknown lists",
+      "required service and workspace scan blockers",
+      "ready, degraded, and blocked classification"
+    ],
+    "native_input_bounds": {
+      "rows_per_collection": 256,
+      "identity_bytes": 256,
+      "status_bytes": 32
+    },
+    "retained_host_responsibility": [
+      "provider process invocation and transport",
+      "selected-field normalization and provider diagnostic preservation",
+      "compatibility classification when the selected native toolchain is unavailable or the input exceeds native bounds"
+    ],
+    "failure_behavior": "A selected native application failure is surfaced; the Python classifier is not silently retried."
+  },
+  "native_execution": {
+    "toolchain": "selected MNCS release binary with selected mncs-stdlib",
+    "application_command": "mncs run-app using readiness-summary.json and the bounded environment_readiness structured effect",
+    "compiler_profile": "MNCS 0.18",
+    "differential_cases": [
+      "blocked readiness with unavailable, unknown, absent, and duplicate capabilities",
+      "degraded readiness with no discovered bindings",
+      "ready readiness with an available required capability",
+      "degraded optional service with no blocking requirement"
+    ]
+  },
+  "verification": {
+    "command": "python3 -m pytest tests/test_readiness_native.py tests/test_entry.py::EntryContractTests::test_clean_entry_reports_identity_project_config_and_probe tests/test_environment.py::CapabilityTests::test_unresolvable_invocation_names_its_cause -q",
+    "result": "6 passed in 15.43s",
+    "focused_ruff": {
+      "command": "ruff check mncs_env/native_readiness.py tests/test_readiness_native.py",
+      "result": "passed"
+    },
+    "file_wide_ruff": {
+      "command": "ruff check mncs_env/native_readiness.py mncs_env/readiness.py mncs_env/sessions.py tests/test_readiness_native.py",
+      "result": "26 existing findings in untouched lines of readiness.py and sessions.py; no finding intersects the changed lines"
+    },
+    "diff_check": "passed",
+    "full_environment_suite": "not run"
+  },
+  "effectiveness": {
+    "host_tree_classifier_calls_on_selected_bounded_path": 0,
+    "agent_burden_reduction": "not measured",
+    "runtime_comparison": "not measured"
+  },
+  "limitations": [
+    "Native classification applies to bounded inputs with a selected native toolchain; unsupported or larger inputs use the established Python path.",
+    "Provider policy, process execution, diagnostics, and workspace discovery remain owned by their existing Environment and provider components."
+  ]
+}

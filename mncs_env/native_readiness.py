@@ -22,6 +22,7 @@ MAX_NATIVE_DOCUMENT_BYTES = 16 * 1024
 MAX_NATIVE_POINTERS = 32
 MAX_NATIVE_POINTER_BYTES = 1024
 MAX_NATIVE_CHUNK_BYTES = 1024
+MAX_SUMMARY_ITEMS = 256
 NATIVE_STEP_BUDGET = 8_000_000
 _MISSING = object()
 
@@ -88,8 +89,8 @@ def _can_project(document: bytes, pointers: list[str]) -> bool:
     )
 
 
-def _descriptor(repository_root: Path, stdlib: Path) -> dict[str, Any]:
-    descriptor_path = repository_root / "native-applications" / "readiness-tokens.json"
+def _descriptor(repository_root: Path, stdlib: Path, name: str) -> dict[str, Any]:
+    descriptor_path = repository_root / "native-applications" / name
     try:
         descriptor = json.loads(descriptor_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
@@ -101,43 +102,23 @@ def _descriptor(repository_root: Path, stdlib: Path) -> dict[str, Any]:
     return descriptor
 
 
-def project_json_pointers(
-    document_text: str,
-    pointers: list[str],
+def _run_native_application(
     *,
     session,
+    binary: Path,
+    stdlib: Path,
+    descriptor_name: str,
+    request: dict[str, Any],
+    expected_schema: str,
     timeout_seconds: float,
-) -> dict[str, Any] | None:
-    """Return selected JSON values from native spans, or ``None`` if out of scope.
-
-    Oversized documents and pointer counts beyond the native app's bounded
-    window remain on the established compatibility path. Once selected, a
-    native toolchain or application failure is surfaced instead of silently
-    dropping back to Python semantics.
-    """
-    if not isinstance(document_text, str):
-        return None
-    document = document_text.encode("utf-8")
-    unique_pointers = list(dict.fromkeys(pointers))
-    if not _can_project(document, unique_pointers):
-        return None
-    paths = _toolchain_paths(session)
-    if paths is None:
-        return None
-    binary, stdlib = paths
+) -> dict[str, Any]:
     repository_root = Path(__file__).resolve().parents[1]
-    descriptor = _descriptor(repository_root, stdlib)
-    request = {
-        "schema_version": "mncs.environment.readiness-token-request/1",
-        "chunks": _chunks(document),
-        "document_length": len(document),
-        "pointers": [{"bytes": pointer} for pointer in unique_pointers],
-    }
+    descriptor = _descriptor(repository_root, stdlib, descriptor_name)
     state_root = Path(session.store.state_dir).resolve()
     binary_identity = hashlib.sha256(str(binary).encode("utf-8")).hexdigest()[:16]
-    cache_directory = state_root / "native-applications" / f"readiness-tokens-{binary_identity}"
-    cache_directory.mkdir(parents=True, exist_ok=True)
+    cache_directory = state_root / "native-applications" / f"{Path(descriptor_name).stem}-{binary_identity}"
     try:
+        cache_directory.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="mncs-env-readiness-") as temporary:
             root = Path(temporary)
             descriptor_path = root / "native-application.json"
@@ -169,7 +150,7 @@ def project_json_pointers(
                     timeout=max(0.1, timeout_seconds),
                 )
             except subprocess.TimeoutExpired as error:
-                raise NativeReadinessError("native readiness projection timed out") from error
+                raise NativeReadinessError("native readiness application timed out") from error
             if completed.returncode != 0:
                 detail = completed.stderr.strip() or completed.stdout.strip() or "native application failed"
                 raise NativeReadinessError(detail[-1000:])
@@ -181,9 +162,50 @@ def project_json_pointers(
         raise
     except OSError as error:
         raise NativeReadinessError(f"native readiness application could not run: {error}") from error
-
-    if not isinstance(result, dict) or result.get("schema_version") != "mncs.environment.readiness-tokens/1":
+    if not isinstance(result, dict) or result.get("schema_version") != expected_schema:
         raise NativeReadinessError("native readiness application returned an incompatible result schema")
+    return result
+
+
+def project_json_pointers(
+    document_text: str,
+    pointers: list[str],
+    *,
+    session,
+    timeout_seconds: float,
+) -> dict[str, Any] | None:
+    """Return selected JSON values from native spans, or ``None`` if out of scope.
+
+    Oversized documents and pointer counts beyond the native app's bounded
+    window remain on the established compatibility path. Once selected, a
+    native toolchain or application failure is surfaced instead of silently
+    dropping back to Python semantics.
+    """
+    if not isinstance(document_text, str):
+        return None
+    document = document_text.encode("utf-8")
+    unique_pointers = list(dict.fromkeys(pointers))
+    if not _can_project(document, unique_pointers):
+        return None
+    paths = _toolchain_paths(session)
+    if paths is None:
+        return None
+    binary, stdlib = paths
+    request = {
+        "schema_version": "mncs.environment.readiness-token-request/1",
+        "chunks": _chunks(document),
+        "document_length": len(document),
+        "pointers": [{"bytes": pointer} for pointer in unique_pointers],
+    }
+    result = _run_native_application(
+        session=session,
+        binary=binary,
+        stdlib=stdlib,
+        descriptor_name="readiness-tokens.json",
+        request=request,
+        expected_schema="mncs.environment.readiness-tokens/1",
+        timeout_seconds=timeout_seconds,
+    )
     if result.get("query_count") != len(unique_pointers):
         raise NativeReadinessError("native readiness application returned an incomplete projection")
     if result.get("valid_json") is not True:
@@ -221,3 +243,153 @@ def project_json_pointers(
 
 def missing_value() -> Any:
     return _MISSING
+
+
+def project_readiness_summary(
+    snapshot: dict[str, Any],
+    bindings: list[dict[str, Any]],
+    services: list[dict[str, Any]],
+    *,
+    session,
+    timeout_seconds: float = 30,
+) -> dict[str, Any] | None:
+    """Classify a bounded readiness projection in MNCS, or return ``None``.
+
+    ``None`` is limited to missing toolchain or input outside the native shape.
+    Once a native application has been selected, execution and result failures
+    surface instead of silently retrying the host classifier.
+    """
+    if not isinstance(snapshot, dict) or not isinstance(bindings, list) or not isinstance(services, list):
+        return None
+    requirements = snapshot.get("requirements", {})
+    if not isinstance(requirements, dict):
+        return None
+    required = requirements.get("required_capabilities", [])
+    declared_services = requirements.get("services", [])
+    workspace = snapshot.get("workspace", {})
+    if not isinstance(workspace, dict):
+        return None
+    scan = workspace.get("scan", {})
+    if not isinstance(scan, dict):
+        return None
+    if not all(isinstance(rows, list) and len(rows) <= MAX_SUMMARY_ITEMS
+               for rows in (bindings, required, services, declared_services)):
+        return None
+
+    binding_rows: list[dict[str, str]] = []
+    for item in bindings:
+        if not isinstance(item, dict) or not isinstance(item.get("capability"), str):
+            return None
+        availability = item.get("availability", {})
+        if not isinstance(availability, dict):
+            return None
+        status = availability.get("status")
+        if status is None:
+            status = "unknown"
+        if not isinstance(status, str):
+            return None
+        identity = item["capability"]
+        if len(identity.encode("utf-8")) > 256 or len(status.encode("utf-8")) > 32:
+            return None
+        binding_rows.append({"identity": identity, "status": status})
+
+    required_rows: list[dict[str, str]] = []
+    for identity in required:
+        if not isinstance(identity, str) or len(identity.encode("utf-8")) > 256:
+            return None
+        required_rows.append({"identity": identity})
+
+    service_rows: list[dict[str, Any]] = []
+    for item in services:
+        if not isinstance(item, dict):
+            return None
+        identity = item.get("identity")
+        status = item.get("status")
+        if not isinstance(identity, str) or not isinstance(status, str):
+            return None
+        if len(identity.encode("utf-8")) > 256 or len(status.encode("utf-8")) > 32:
+            return None
+        service_rows.append({
+            "identity": identity,
+            "status": status,
+            "required": bool(item.get("required")),
+        })
+
+    requirement_rows: list[dict[str, Any]] = []
+    for item in declared_services:
+        if not isinstance(item, dict):
+            return None
+        identity = item.get("identity")
+        if not isinstance(identity, str) or len(identity.encode("utf-8")) > 256:
+            return None
+        requirement_rows.append({
+            "identity": identity,
+            "required": bool(item.get("required", True)),
+        })
+
+    scan_status = scan.get("status")
+    if scan_status is None:
+        scan_status = "unknown"
+    if not isinstance(scan_status, str) or len(scan_status.encode("utf-8")) > 32:
+        return None
+    paths = _toolchain_paths(session)
+    if paths is None:
+        return None
+    binary, stdlib = paths
+    request = {
+        "schema_version": "mncs.environment.readiness-summary-request/1",
+        "bindings": binding_rows,
+        "required_capabilities": required_rows,
+        "services": service_rows,
+        "required_services": requirement_rows,
+        "workspace_scan_status": scan_status,
+    }
+    result = _run_native_application(
+        session=session,
+        binary=binary,
+        stdlib=stdlib,
+        descriptor_name="readiness-summary.json",
+        request=request,
+        expected_schema="mncs.environment.readiness-summary-result/1",
+        timeout_seconds=timeout_seconds,
+    )
+    if result.get("valid") is not True:
+        raise NativeReadinessError("native readiness summary rejected a bounded request")
+    status = result.get("status")
+    if not isinstance(status, str) or status not in {"ready", "degraded", "blocked"}:
+        raise NativeReadinessError("native readiness summary returned an invalid status")
+
+    def count(name: str, maximum: int) -> int:
+        value = result.get(name)
+        if type(value) is not int or not 0 <= value <= maximum:
+            raise NativeReadinessError(f"native readiness summary returned an invalid {name}")
+        return value
+
+    def text_rows(name: str, row_count: int) -> list[str]:
+        rows = result.get(name)
+        if not isinstance(rows, list) or len(rows) < row_count:
+            raise NativeReadinessError(f"native readiness summary returned incomplete {name}")
+        values = []
+        for row in rows[:row_count]:
+            if not isinstance(row, dict) or not isinstance(row.get("bytes"), str):
+                raise NativeReadinessError(f"native readiness summary returned malformed {name}")
+            values.append(row["bytes"])
+        return values
+
+    unavailable_count = count("unavailable_count", len(bindings))
+    unknown_count = count("unknown_count", len(bindings))
+    return {
+        "status": status,
+        "available_count": count("available_count", len(bindings)),
+        "unavailable_count": unavailable_count,
+        "unknown_count": unknown_count,
+        "required_unavailable": text_rows(
+            "required_unavailable", count("required_unavailable_count", len(required)),
+        ),
+        "required_unknown": text_rows(
+            "required_unknown", count("required_unknown_count", len(required)),
+        ),
+        "blocking": text_rows(
+            "blocking", count("blocking_count", len(required) + len(services) + len(declared_services) + 1),
+        ),
+    }

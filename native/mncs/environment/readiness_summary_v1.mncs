@@ -1,0 +1,381 @@
+mncs 0.18;
+
+// Classify a bounded Environment readiness projection without rebuilding the
+// contract in the host language. The host prepares selected fields and keeps
+// provider-owned diagnostics; this module owns status classification.
+module mncs.environment.readiness_summary_v1;
+
+use mncs.std.application.v1;
+
+record BindingReadinessV1 {
+    identity: [byte; up_to 256],
+    status: [byte; up_to 32]
+}
+
+record RequiredCapabilityV1 {
+    identity: [byte; up_to 256]
+}
+
+record ServiceReadinessV1 {
+    identity: [byte; up_to 256],
+    status: [byte; up_to 32],
+    required: bool
+}
+
+record ServiceRequirementV1 {
+    identity: [byte; up_to 256],
+    required: bool
+}
+
+record ReadinessSummaryRequestV1 {
+    schema_version: [byte; up_to 64],
+    bindings: [BindingReadinessV1; up_to 256],
+    required_capabilities: [RequiredCapabilityV1; up_to 256],
+    services: [ServiceReadinessV1; up_to 256],
+    required_services: [ServiceRequirementV1; up_to 256],
+    workspace_scan_status: [byte; up_to 32]
+}
+
+record ReadinessTextV1 {
+    bytes: [byte; up_to 256]
+}
+
+record ReadinessSummaryResultV1 {
+    schema_version: [byte; up_to 64],
+    valid: bool,
+    status: [byte; up_to 16],
+    available_count: u64,
+    unavailable_count: u64,
+    unknown_count: u64,
+    required_unavailable: [ReadinessTextV1; 256],
+    required_unavailable_count: u64,
+    required_unknown: [ReadinessTextV1; 256],
+    required_unknown_count: u64,
+    blocking: [ReadinessTextV1; 769],
+    blocking_count: u64
+}
+
+record ReadinessSummaryOutputV1 {
+    schema_version: [byte; up_to 64],
+    valid: bool,
+    status: [byte; up_to 16],
+    available_count: u64,
+    unavailable_count: u64,
+    unknown_count: u64,
+    required_unavailable: [ReadinessTextV1; up_to 256],
+    required_unavailable_count: u64,
+    required_unknown: [ReadinessTextV1; up_to 256],
+    required_unknown_count: u64,
+    blocking: [ReadinessTextV1; up_to 769],
+    blocking_count: u64
+}
+
+record BindingLookupV1 {
+    found: bool,
+    status: [byte; up_to 32]
+}
+
+fn request_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 114, 101, 97, 100, 105, 110, 101, 115, 115, 45, 115, 117, 109, 109, 97, 114, 121, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49];
+}
+
+fn result_schema() -> (result: [byte; up_to 64]) {
+    return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 114, 101, 97, 100, 105, 110, 101, 115, 115, 45, 115, 117, 109, 109, 97, 114, 121, 45, 114, 101, 115, 117, 108, 116, 47, 49];
+}
+
+fn status_available() -> (result: [byte; up_to 32]) { return [97, 118, 97, 105, 108, 97, 98, 108, 101]; }
+fn status_unavailable() -> (result: [byte; up_to 32]) { return [117, 110, 97, 118, 97, 105, 108, 97, 98, 108, 101]; }
+fn status_unknown() -> (result: [byte; up_to 32]) { return [117, 110, 107, 110, 111, 119, 110]; }
+fn status_ready() -> (result: [byte; up_to 32]) { return [114, 101, 97, 100, 121]; }
+fn status_complete() -> (result: [byte; up_to 32]) { return [99, 111, 109, 112, 108, 101, 116, 101]; }
+fn output_ready() -> (result: [byte; up_to 16]) { return [114, 101, 97, 100, 121]; }
+fn output_degraded() -> (result: [byte; up_to 16]) { return [100, 101, 103, 114, 97, 100, 101, 100]; }
+fn output_blocked() -> (result: [byte; up_to 16]) { return [98, 108, 111, 99, 107, 101, 100]; }
+
+fn same_schema(left: [byte; up_to 64], right: [byte; up_to 64]) -> (result: bool) {
+    if left.len != right.len { return false; }
+    iterate i over left carrying equal: bool = true {
+        next equal = equal && left[i] == right[i];
+    }
+    return equal;
+}
+
+fn same_identity(left: [byte; up_to 256], right: [byte; up_to 256]) -> (result: bool) {
+    if left.len != right.len { return false; }
+    iterate i over left carrying equal: bool = true {
+        next equal = equal && left[i] == right[i];
+    }
+    return equal;
+}
+
+fn same_status(left: [byte; up_to 32], right: [byte; up_to 32]) -> (result: bool) {
+    if left.len != right.len { return false; }
+    iterate i over left carrying equal: bool = true {
+        next equal = equal && left[i] == right[i];
+    }
+    return equal;
+}
+
+fn empty_text() -> (result: ReadinessTextV1) {
+    return ReadinessTextV1 { bytes: [0; 1] };
+}
+
+fn empty_result() -> (result: ReadinessSummaryResultV1) {
+    return ReadinessSummaryResultV1 {
+        schema_version: result_schema(), valid: false, status: output_blocked(),
+        available_count: 0, unavailable_count: 0, unknown_count: 0,
+        required_unavailable: [empty_text(); 256], required_unavailable_count: 0,
+        required_unknown: [empty_text(); 256], required_unknown_count: 0,
+        blocking: [empty_text(); 769], blocking_count: 0
+    };
+}
+
+fn lookup_binding(
+    bindings: [BindingReadinessV1; up_to 256],
+    identity: [byte; up_to 256]
+) -> (result: BindingLookupV1) {
+    let initial: BindingLookupV1 = BindingLookupV1 { found: false, status: status_unknown() };
+    iterate i over bindings carrying latest: BindingLookupV1 = initial {
+        let item: BindingReadinessV1 = bindings[i];
+        let matches: bool = same_identity(item.identity, identity);
+        next latest = select(
+            matches,
+            BindingLookupV1 { found: true, status: item.status },
+            latest
+        );
+    }
+    return latest;
+}
+
+fn has_service_observation(
+    services: [ServiceReadinessV1; up_to 256],
+    identity: [byte; up_to 256]
+) -> (result: bool) {
+    iterate i over services carrying found: bool = false {
+        next found = found || same_identity(services[i].identity, identity);
+    }
+    return found;
+}
+
+fn append_blocking(
+    summary: ReadinessSummaryResultV1,
+    identity: [byte; up_to 256]
+) -> (result: ReadinessSummaryResultV1) {
+    let index: u64 = summary.blocking_count;
+    if index >= 769 { return summary; }
+    let values: [ReadinessTextV1; 769] = replace(
+        summary.blocking, index, ReadinessTextV1 { bytes: identity }
+    );
+    return ReadinessSummaryResultV1 {
+        schema_version: summary.schema_version,
+        valid: summary.valid,
+        status: summary.status,
+        available_count: summary.available_count,
+        unavailable_count: summary.unavailable_count,
+        unknown_count: summary.unknown_count,
+        required_unavailable: summary.required_unavailable,
+        required_unavailable_count: summary.required_unavailable_count,
+        required_unknown: summary.required_unknown,
+        required_unknown_count: summary.required_unknown_count,
+        blocking: values,
+        blocking_count: index +% 1
+    };
+}
+
+fn append_required_unavailable(
+    summary: ReadinessSummaryResultV1,
+    identity: [byte; up_to 256]
+) -> (result: ReadinessSummaryResultV1) {
+    let index: u64 = summary.required_unavailable_count;
+    if index >= 256 { return summary; }
+    let values: [ReadinessTextV1; 256] = replace(
+        summary.required_unavailable, index, ReadinessTextV1 { bytes: identity }
+    );
+    return ReadinessSummaryResultV1 {
+        schema_version: summary.schema_version,
+        valid: summary.valid,
+        status: summary.status,
+        available_count: summary.available_count,
+        unavailable_count: summary.unavailable_count,
+        unknown_count: summary.unknown_count,
+        required_unavailable: values,
+        required_unavailable_count: index +% 1,
+        required_unknown: summary.required_unknown,
+        required_unknown_count: summary.required_unknown_count,
+        blocking: summary.blocking,
+        blocking_count: summary.blocking_count
+    };
+}
+
+fn append_required_unknown(
+    summary: ReadinessSummaryResultV1,
+    identity: [byte; up_to 256]
+) -> (result: ReadinessSummaryResultV1) {
+    let index: u64 = summary.required_unknown_count;
+    if index >= 256 { return summary; }
+    let values: [ReadinessTextV1; 256] = replace(
+        summary.required_unknown, index, ReadinessTextV1 { bytes: identity }
+    );
+    return ReadinessSummaryResultV1 {
+        schema_version: summary.schema_version,
+        valid: summary.valid,
+        status: summary.status,
+        available_count: summary.available_count,
+        unavailable_count: summary.unavailable_count,
+        unknown_count: summary.unknown_count,
+        required_unavailable: summary.required_unavailable,
+        required_unavailable_count: summary.required_unavailable_count,
+        required_unknown: values,
+        required_unknown_count: index +% 1,
+        blocking: summary.blocking,
+        blocking_count: summary.blocking_count
+    };
+}
+
+fn summarize(request: ReadinessSummaryRequestV1) -> (result: ReadinessSummaryResultV1) {
+    let shape_valid: bool = same_schema(request.schema_version, request_schema())
+        && request.bindings.len <= 256
+        && request.required_capabilities.len <= 256
+        && request.services.len <= 256
+        && request.required_services.len <= 256;
+    if !shape_valid { return empty_result(); }
+
+    let initial: ReadinessSummaryResultV1 = ReadinessSummaryResultV1 {
+        schema_version: result_schema(), valid: true, status: output_ready(),
+        available_count: 0, unavailable_count: 0, unknown_count: 0,
+        required_unavailable: [empty_text(); 256], required_unavailable_count: 0,
+        required_unknown: [empty_text(); 256], required_unknown_count: 0,
+        blocking: [empty_text(); 769], blocking_count: 0
+    };
+    iterate i over request.bindings carrying counted: ReadinessSummaryResultV1 = initial {
+        let item: BindingReadinessV1 = request.bindings[i];
+        let available: bool = same_status(item.status, status_available());
+        let unavailable: bool = same_status(item.status, status_unavailable());
+        let unknown: bool = same_status(item.status, status_unknown());
+        next counted = ReadinessSummaryResultV1 {
+            schema_version: counted.schema_version,
+            valid: counted.valid,
+            status: counted.status,
+            available_count: counted.available_count +% (select(available, 1, 0) as u64),
+            unavailable_count: counted.unavailable_count +% (select(unavailable, 1, 0) as u64),
+            unknown_count: counted.unknown_count +% (select(unknown, 1, 0) as u64),
+            required_unavailable: counted.required_unavailable,
+            required_unavailable_count: counted.required_unavailable_count,
+            required_unknown: counted.required_unknown,
+            required_unknown_count: counted.required_unknown_count,
+            blocking: counted.blocking,
+            blocking_count: counted.blocking_count
+        };
+    }
+
+    iterate i over request.required_capabilities
+        carrying required: ReadinessSummaryResultV1 = counted {
+        let item: RequiredCapabilityV1 = request.required_capabilities[i];
+        let binding: BindingLookupV1 = lookup_binding(request.bindings, item.identity);
+        let available: bool = binding.found && same_status(binding.status, status_available());
+        let unknown: bool = !binding.found || same_status(binding.status, status_unknown());
+        let add_missing: ReadinessSummaryResultV1 = select(
+            available, required, append_required_unavailable(required, item.identity)
+        );
+        let with_blocker: ReadinessSummaryResultV1 = select(
+            available, add_missing, append_blocking(add_missing, item.identity)
+        );
+        next required = select(
+            unknown, append_required_unknown(with_blocker, item.identity), with_blocker
+        );
+    }
+
+    iterate i over request.services
+        carrying observed_services: ReadinessSummaryResultV1 = required {
+        let item: ServiceReadinessV1 = request.services[i];
+        let ready: bool = same_status(item.status, status_ready());
+        next observed_services = select(
+            item.required && !ready,
+            append_blocking(observed_services, item.identity),
+            observed_services
+        );
+    }
+
+    iterate i over request.required_services
+        carrying declared_services: ReadinessSummaryResultV1 = observed_services {
+        let item: ServiceRequirementV1 = request.required_services[i];
+        let observed: bool = has_service_observation(request.services, item.identity);
+        next declared_services = select(
+            item.required && !observed,
+            append_blocking(declared_services, item.identity),
+            declared_services
+        );
+    }
+
+    let with_workspace_blocker: ReadinessSummaryResultV1 = select(
+        same_status(request.workspace_scan_status, status_complete()),
+        declared_services,
+        append_blocking(
+            declared_services,
+            [119, 111, 114, 107, 115, 112, 97, 99, 101, 45, 115, 99, 97, 110, 45, 105, 110, 99, 111, 109, 112, 108, 101, 116, 101]
+        )
+    );
+
+    iterate i over request.services carrying any_service_not_ready: bool = false {
+        next any_service_not_ready = any_service_not_ready
+            || !same_status(request.services[i].status, status_ready());
+    }
+    let degraded: bool = request.bindings.len == 0
+        || with_workspace_blocker.unavailable_count > 0
+        || with_workspace_blocker.unknown_count > 0
+        || any_service_not_ready;
+    let final_status: [byte; up_to 16] = select(
+        with_workspace_blocker.blocking_count > 0,
+        output_blocked(),
+        select(degraded, output_degraded(), output_ready())
+    );
+    return ReadinessSummaryResultV1 {
+        schema_version: with_workspace_blocker.schema_version,
+        valid: with_workspace_blocker.valid,
+        status: final_status,
+        available_count: with_workspace_blocker.available_count,
+        unavailable_count: with_workspace_blocker.unavailable_count,
+        unknown_count: with_workspace_blocker.unknown_count,
+        required_unavailable: with_workspace_blocker.required_unavailable,
+        required_unavailable_count: with_workspace_blocker.required_unavailable_count,
+        required_unknown: with_workspace_blocker.required_unknown,
+        required_unknown_count: with_workspace_blocker.required_unknown_count,
+        blocking: with_workspace_blocker.blocking,
+        blocking_count: with_workspace_blocker.blocking_count
+    };
+}
+
+fn output_projection(state: ReadinessSummaryResultV1) -> (result: ReadinessSummaryOutputV1) {
+    return ReadinessSummaryOutputV1 {
+        schema_version: state.schema_version,
+        valid: state.valid,
+        status: state.status,
+        available_count: state.available_count,
+        unavailable_count: state.unavailable_count,
+        unknown_count: state.unknown_count,
+        required_unavailable: state.required_unavailable[0..state.required_unavailable_count],
+        required_unavailable_count: state.required_unavailable_count,
+        required_unknown: state.required_unknown[0..state.required_unknown_count],
+        required_unknown_count: state.required_unknown_count,
+        blocking: state.blocking[0..state.blocking_count],
+        blocking_count: state.blocking_count
+    };
+}
+
+fn readiness_summary_app_v1(context: ApplicationContext) -> (result: ApplicationExit)
+    capability environment_readiness
+    effect structured_read authorized_by environment_readiness
+    effect structured_write authorized_by environment_readiness
+{
+    if !context_is_bounded(context) || context.argv_count != 2 {
+        return failure([105, 110, 118, 97, 108, 105, 100, 32, 114, 101, 97, 100, 105, 110, 101, 115, 115, 32, 115, 117, 109, 109, 97, 114, 121, 32, 114, 101, 113, 117, 101, 115, 116], 2);
+    }
+    let request: ReadinessSummaryRequestV1 = structured_read(context.argv[0], request_schema());
+    let state: ReadinessSummaryResultV1 = summarize(request);
+    let result: ReadinessSummaryOutputV1 = output_projection(state);
+    let published: u64 = structured_write(context.argv[1], result_schema(), result);
+    if published == 0 {
+        return failure([114, 101, 97, 100, 105, 110, 101, 115, 115, 32, 115, 117, 109, 109, 97, 114, 121, 32, 112, 117, 98, 108, 105, 115, 104, 32, 102, 97, 105, 108, 101, 100], 3);
+    }
+    return success([]);
+}

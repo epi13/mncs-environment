@@ -1,0 +1,15 @@
+{
+  "schema_version": "mncs.native-application/1",
+  "application_identity": "mncs-environment.readiness-summary",
+  "source": "../native/mncs/environment/readiness_summary_v1.mncs",
+  "module": "mncs.environment.readiness_summary_v1",
+  "entry_function": "readiness_summary_app_v1",
+  "profile": "0.18",
+  "libraries": [
+    "../native"
+  ],
+  "environment_keys": [],
+  "required_capabilities": [
+    "environment_readiness"
+  ]
+}

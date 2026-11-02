@@ -10983,7 +10983,9 @@ class Session:
         snapshot["workspace"] = workspace_module.discover_workspace(
             self.snapshot.get("workspace", {}).get("root", "."),
             repositories=self.snapshot.get("workspace", {}).get("selection"))
-        summary = readiness_module.summarize(snapshot, bindings=fresh, services=services, live=True)
+        summary = readiness_module.summarize(
+            snapshot, bindings=fresh, services=services, live=True, session=self,
+        )
         summary, execution_stack = _apply_checkout_drift(
             summary, execution_stack, selected_checkout_drift)
         return {"session_id": self.session_id, "environment_id": self.snapshot.get("environment_id"),

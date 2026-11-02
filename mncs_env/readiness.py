@@ -390,10 +390,25 @@ def probe_services(session, *, bindings: list[dict] | None = None,
 
 
 def summarize(snapshot: dict[str, Any], *, bindings: list[dict] | None = None,
-              services: list[dict] | None = None, live: bool = False) -> dict[str, Any]:
+              services: list[dict] | None = None, live: bool = False,
+              session=None) -> dict[str, Any]:
     """Project readiness independently of the session lifecycle."""
     bindings = bindings if bindings is not None else snapshot.get("bindings", [])
     services = services if services is not None else snapshot.get("service_observations", [])
+    if session is not None:
+        native_summary = native_readiness.project_readiness_summary(
+            snapshot, bindings, services, session=session,
+        )
+        if native_summary is not None:
+            return {
+                "schema_version": SCHEMA,
+                **native_summary,
+                "observation": "live" if live else "snapshot",
+                "scope": "declared requirements and discovered capabilities in the selected workspace",
+                "services": services,
+                "verification": "provider probes for declared services; executable substrate for other capabilities",
+                "last_reconciled_at": snapshot.get("last_reconciled_at"),
+            }
     by_id = {item["capability"]: item for item in bindings}
     required = snapshot.get("requirements", {}).get("required_capabilities", [])
     missing = [name for name in required if by_id.get(name, {}).get("availability", {}).get("status") != "available"]

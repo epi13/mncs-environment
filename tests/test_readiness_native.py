@@ -177,3 +177,122 @@ class NativeReadinessProjectionTests(TestCase):
                 timeout_seconds=30,
             )
         self.assertIsNone(result)
+
+    def test_native_readiness_summary_matches_host_reference(self) -> None:
+        toolchain_paths = _native_toolchain()
+        if toolchain_paths is None:
+            self.skipTest("selected MNCS release toolchain is unavailable")
+        binary, stdlib = toolchain_paths
+        workspace = _workspace_root()
+        assert workspace is not None
+
+        class Session:
+            session_id = "native-readiness-summary-proof"
+
+            def __init__(self, state_dir: Path) -> None:
+                self.snapshot = {
+                    "workspace": {"root": str(workspace)},
+                    "selected_checkouts": {"mncs-stdlib": {"path": str(stdlib)}},
+                }
+                self.store = SimpleNamespace(state_dir=state_dir)
+
+            def _selected_runtime_environment(self, _binding: dict) -> dict[str, str]:
+                return {"MNCS_BIN": str(binary)}
+
+        cases = [
+            (
+                {
+                    "requirements": {
+                        "required_capabilities": [
+                            "cap.ready", "cap.unavailable", "cap.unknown", "cap.absent", "cap.duplicate",
+                        ],
+                        "services": [
+                            {"identity": "required-missing", "required": True},
+                            {"identity": "optional-missing", "required": False},
+                            {"identity": "required-present", "required": True},
+                        ],
+                    },
+                    "workspace": {"scan": {"status": "incomplete"}},
+                    "last_reconciled_at": "2026-11-02T10:00:00Z",
+                },
+                [
+                    {"capability": "cap.ready", "availability": {"status": "available"}},
+                    {"capability": "cap.unavailable", "availability": {"status": "unavailable"}},
+                    {"capability": "cap.unknown", "availability": {"status": "unknown"}},
+                    {"capability": "cap.duplicate", "availability": {"status": "available"}},
+                    {"capability": "cap.duplicate", "availability": {"status": "unavailable"}},
+                ],
+                [
+                    {"identity": "required-present", "required": True, "status": "ready"},
+                    {"identity": "optional-status", "required": False, "status": "degraded"},
+                ],
+                {
+                    "status": "blocked",
+                    "available_count": 2,
+                    "unavailable_count": 2,
+                    "unknown_count": 1,
+                    "required_unavailable": [
+                        "cap.unavailable", "cap.unknown", "cap.absent", "cap.duplicate",
+                    ],
+                    "required_unknown": ["cap.unknown", "cap.absent"],
+                    "blocking": [
+                        "cap.unavailable", "cap.unknown", "cap.absent", "cap.duplicate",
+                        "required-missing", "workspace-scan-incomplete",
+                    ],
+                },
+            ),
+            (
+                {
+                    "requirements": {"required_capabilities": [], "services": []},
+                    "workspace": {"scan": {"status": "complete"}},
+                },
+                [],
+                [],
+                {
+                    "status": "degraded", "available_count": 0,
+                    "unavailable_count": 0, "unknown_count": 0,
+                    "required_unavailable": [], "required_unknown": [], "blocking": [],
+                },
+            ),
+            (
+                {
+                    "requirements": {"required_capabilities": ["cap.ready"], "services": []},
+                    "workspace": {"scan": {"status": "complete"}},
+                },
+                [{"capability": "cap.ready", "availability": {"status": "available"}}],
+                [],
+                {
+                    "status": "ready", "available_count": 1,
+                    "unavailable_count": 0, "unknown_count": 0,
+                    "required_unavailable": [], "required_unknown": [], "blocking": [],
+                },
+            ),
+            (
+                {
+                    "requirements": {"required_capabilities": [], "services": []},
+                    "workspace": {"scan": {"status": "complete"}},
+                },
+                [{"capability": "cap.ready", "availability": {"status": "available"}}],
+                [{"identity": "optional-service", "required": False, "status": "degraded"}],
+                {
+                    "status": "degraded", "available_count": 1,
+                    "unavailable_count": 0, "unknown_count": 0,
+                    "required_unavailable": [], "required_unknown": [], "blocking": [],
+                },
+            ),
+        ]
+
+        with TemporaryDirectory(prefix="mncs-env-readiness-summary-test-") as temporary:
+            session = Session(Path(temporary))
+            for snapshot, bindings, services, expected in cases:
+                with self.subTest(expected_status=expected["status"]):
+                    reference = readiness.summarize(
+                        snapshot, bindings=bindings, services=services, live=True,
+                    )
+                    actual = readiness.summarize(
+                        snapshot, bindings=bindings, services=services,
+                        live=True, session=session,
+                    )
+                    self.assertEqual(actual, reference)
+                    for field, value in expected.items():
+                        self.assertEqual(actual[field], value, field)
