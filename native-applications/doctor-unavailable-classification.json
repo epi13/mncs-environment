@@ -1,0 +1,15 @@
+{
+  "schema_version": "mncs.native-application/1",
+  "application_identity": "mncs-environment.doctor-unavailable-classification",
+  "source": "../native/mncs/environment/doctor_unavailable_classification_v1.mncs",
+  "module": "mncs.environment.doctor_unavailable_classification_v1",
+  "entry_function": "doctor_unavailable_classification_app_v1",
+  "profile": "0.18",
+  "libraries": [
+    "../native"
+  ],
+  "environment_keys": [],
+  "required_capabilities": [
+    "environment_readiness"
+  ]
+}

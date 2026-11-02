@@ -340,47 +340,71 @@ def live_services_match(session) -> tuple[bool, list[dict[str, Any]]]:
 
 # -- classification ------------------------------------------------------
 
-def classify_unavailable(bindings: list[dict[str, Any]]) -> dict[str, Any]:
-    """Split unavailable bindings into transient and provider-gap classes.
+def _unavailable_entry(binding: dict[str, Any], availability: dict[str, Any]) -> dict[str, Any]:
+    entry = {"capability": binding.get("capability"),
+             "code": availability.get("code"), "reason": availability.get("reason")}
+    provider = binding.get("provider")
+    if (isinstance(provider, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", provider)):
+        entry["provider"] = provider
+    provenance = binding.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    provider_kind = provenance.get("kind")
+    if (isinstance(provider_kind, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", provider_kind)):
+        entry["provider_kind"] = provider_kind
+    provider_source = provenance.get("source")
+    if (isinstance(provider_source, str) and provider_source
+            and len(provider_source) <= 256
+            and not provider_source.startswith("/")
+            and "\\" not in provider_source
+            and "\x00" not in provider_source
+            and ".." not in provider_source.split("/")):
+        entry["provider_source"] = provider_source
+    declared_invocation = provenance.get("declared_invocation")
+    if type(declared_invocation) is bool:
+        entry["declared_invocation"] = declared_invocation
+    return entry
 
-    `executable-unavailable` / `toolchain-missing` may be transient
-    substrate loss (worth one targeted re-probe); anything else names a
-    provider declaration gap the session cannot repair.
-    """
+
+def _classify_unavailable_python(bindings: list[dict[str, Any]]) -> dict[str, Any]:
     transient = []
     gaps = []
     for binding in bindings:
         availability = binding.get("availability", {})
         if availability.get("status") == "available":
             continue
-        entry = {"capability": binding.get("capability"),
-                 "code": availability.get("code"), "reason": availability.get("reason")}
-        provider = binding.get("provider")
-        if (isinstance(provider, str)
-                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", provider)):
-            entry["provider"] = provider
-        provenance = binding.get("provenance")
-        provenance = provenance if isinstance(provenance, dict) else {}
-        provider_kind = provenance.get("kind")
-        if (isinstance(provider_kind, str)
-                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}", provider_kind)):
-            entry["provider_kind"] = provider_kind
-        provider_source = provenance.get("source")
-        if (isinstance(provider_source, str) and provider_source
-                and len(provider_source) <= 256
-                and not provider_source.startswith("/")
-                and "\\" not in provider_source
-                and "\x00" not in provider_source
-                and ".." not in provider_source.split("/")):
-            entry["provider_source"] = provider_source
-        declared_invocation = provenance.get("declared_invocation")
-        if type(declared_invocation) is bool:
-            entry["declared_invocation"] = declared_invocation
+        entry = _unavailable_entry(binding, availability)
         if availability.get("code") in ("executable-unavailable", "toolchain-missing"):
             transient.append(entry)
         else:
             gaps.append(entry)
     return {"transient": transient, "gaps": gaps}
+
+
+def classify_unavailable(
+    bindings: list[dict[str, Any]], *, session=None,
+) -> dict[str, Any]:
+    """Split unavailable bindings into transient and provider-gap classes.
+
+    MNCS owns the bounded status/code classification when a selected toolchain
+    is available. Python keeps evidence sanitization and the compatibility path.
+    """
+    if session is not None:
+        from .native_doctor import classify_unavailable_native
+
+        classes = classify_unavailable_native(bindings, session)
+        if classes is not None:
+            transient = []
+            gaps = []
+            for binding, classification in zip(bindings, classes, strict=True):
+                if classification == 0:
+                    continue
+                availability = binding.get("availability", {})
+                entry = _unavailable_entry(binding, availability)
+                (transient if classification == 1 else gaps).append(entry)
+            return {"transient": transient, "gaps": gaps}
+    return _classify_unavailable_python(bindings)
 
 
 def summarize(snapshot: dict[str, Any], *, repairs: list[dict[str, Any]],
@@ -492,7 +516,9 @@ def record_epoch(session, *, repairs: list[dict[str, Any]],
                 "digest": digest, "validated_at": now, "reused": reused,
                 "summary": terse["summary"], "remaining": terse["remaining"],
                 "repairs": repairs, "reconciliations": reconciliations,
-                "classification": classify_unavailable(session.snapshot.get("bindings", [])),
+                "classification": classify_unavailable(
+                    session.snapshot.get("bindings", []), session=session,
+                ),
                 "operations": operations or [], "revalidation": revalidation or {},
                 "readiness": readiness_module.summarize(session.snapshot)}
     store = session.store
