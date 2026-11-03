@@ -113,6 +113,42 @@ class ControlWorkspaceAliasTests(unittest.TestCase):
             campaign_facts["git_common_directory_identity"],
         )
 
+    def test_registered_worktree_accepts_manifest_case_variant_directory(self) -> None:
+        commons = self.mount / "MNCS-Commons"
+        (commons / ".mncs").mkdir(parents=True)
+        (commons / ".mncs" / "project.json").write_text(
+            json.dumps({
+                "schema_version": "mncs.project/1",
+                "repository": "mncs-commons",
+            }) + "\n",
+            encoding="utf-8",
+        )
+        (commons / "README.md").write_text("case-variant checkout\n", encoding="utf-8")
+        self._git(commons, "init", "-b", "main")
+        self._git(commons, "config", "user.name", "MNCS Environment Test")
+        self._git(
+            commons, "config", "user.email", "environment-test@example.invalid"
+        )
+        self._git(commons, "add", ".mncs/project.json", "README.md")
+        self._git(commons, "commit", "-m", "Create case-variant checkout")
+        checkout = commons / ".worktrees" / "campaign"
+        checkout.parent.mkdir()
+        self._git(
+            commons, "worktree", "add", "-b", "campaign/case-variant",
+            str(checkout),
+        )
+
+        facts = workspace.verify_registered_checkout(
+            checkout,
+            repository="mncs-commons",
+            workspace_root=self.mount,
+            expected_repository_root=commons,
+            expected_branch="campaign/case-variant",
+        )
+
+        self.assertEqual(facts["repository_root"], str(commons))
+        self.assertEqual(facts["branch"], "campaign/case-variant")
+
     def test_session_claim_can_target_registered_main_through_mount_alias(self) -> None:
         state = self.base / "state"
         store = open_store(state, "store", verify_on_open=False)

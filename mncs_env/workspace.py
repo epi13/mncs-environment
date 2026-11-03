@@ -541,14 +541,15 @@ def verify_registered_checkout(
             root_manifest.get("repository") if isinstance(root_manifest, dict) else None
         )
     if (not isinstance(actual_repository, str) or not actual_repository
-            or repository_root.name != actual_repository
+            or repository_root.name.casefold() != actual_repository.casefold()
             or not isinstance(root_manifest, dict)
             or not isinstance(checkout_manifest, dict)
             or root_manifest.get("repository") != actual_repository
             or checkout_manifest.get("repository") != actual_repository):
         reject("Git checkout and repository manifest identities do not match")
     if (not repository_root_ancestor
-            and resolved_workspace / actual_repository != repository_root):
+            and (repository_root.parent != resolved_workspace
+                 or repository_root.name.casefold() != actual_repository.casefold())):
         reject("repository manifest identity does not name the selected workspace checkout")
 
     try:
