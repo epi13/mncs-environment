@@ -58,8 +58,15 @@
     "three_acceptance_worktrees_and_branches_removed": true,
     "temporary_campaign_definition_removed": true,
     "foreign_worktrees_preserved": true,
-    "repair_worktrees": "remove after this evidence commit is merged and pushed",
     "audit": "cross-workspace-continuity-20261103/cleanup-audit.json"
   },
-  "evidence": "cross-workspace-continuity-20261103/canonical-mcp-transcript.json"
+  "evidence": "cross-workspace-continuity-20261103/canonical-mcp-transcript.json",
+  "same_workspace_transition": {
+    "campaign_id": "cmp_cross_workspace_repair_20261103",
+    "from": "mncs-environment",
+    "to": "mncs-control-mcp",
+    "workspace": "/home/epi13/Documents/Projects",
+    "method": "Actual ordinary canonical MCP entry and independently claimed isolated repair worktrees; authoritative session records read back after completion. No test fixture or session record modification.",
+    "evidence": "cross-workspace-continuity-20261103/same-workspace-canonical-records.json"
+  }
 }

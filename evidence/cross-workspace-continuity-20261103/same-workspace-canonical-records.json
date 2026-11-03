@@ -1,0 +1,24 @@
+[
+  {
+    "session_id": "ses_e3bc51e6ce1056b8",
+    "campaign_id": "cmp_cross_workspace_repair_20261103",
+    "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "workspace_root": "/home/epi13/Documents/Projects",
+    "intent_repositories": [
+      "mncs-environment"
+    ],
+    "created_at": "2026-11-03T17:55:34+00:00",
+    "lifecycle": "completed"
+  },
+  {
+    "session_id": "ses_60b7776c553fa74c",
+    "campaign_id": "cmp_cross_workspace_repair_20261103",
+    "authenticated_principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927",
+    "workspace_root": "/home/epi13/Documents/Projects",
+    "intent_repositories": [
+      "mncs-control-mcp"
+    ],
+    "created_at": "2026-11-03T17:58:27+00:00",
+    "lifecycle": "completed"
+  }
+]
