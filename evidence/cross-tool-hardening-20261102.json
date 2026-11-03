@@ -1,0 +1,604 @@
+{
+  "schema_version": "mncs.environment.cross-tool-readiness-evidence/1",
+  "date": "2026-11-02",
+  "campaign_id": "cmp_cross_tool_hardening_20261102",
+  "scope": "Bounded cross-tool readiness; no native migration begun.",
+  "baseline": {
+    "environment": "86b9276",
+    "control": "37a326a",
+    "stdlib": "c6012b8",
+    "compiler": "44bc55a",
+    "environment_full_suite": "1280 passed, 46 skipped (previous verified baseline; not rerun this pass)"
+  },
+  "implementation_revisions": {
+    "mncs-environment": "d91e907028e14dadbc8c2a9a1297b24b7ab961fd",
+    "mncs-control-mcp": "9fcf38c04092d906c01ff6649dfd6f38eb104918",
+    "mncs-test": "1b2f27d950fdaaaaa1fde4a21cd3a4fb48f734c8",
+    "mncs-compiler": "98845d1fd10e9612a961cbb4314db50588f84353",
+    "mncs-vm": "ac22e2fc952179c670f1a3d36d4996ef96854e65",
+    "mncs-language": "8192930bd23ebbaaff8a45504838e5f17f032b6d",
+    "mncs-language-service": "8914f98cc177b17d06b049ca909d61fdb6583343",
+    "mncs-forge": "be19664df8d9943b8d96d69820c8e041183f84f1"
+  },
+  "corrections": [
+    {
+      "owner": "mncs-environment",
+      "cause": "Generated bootstrap output changes availability without changing repository HEAD; prior unavailable binding was reused. Logical read-only toolchain IDs were also assumed to match directory spelling.",
+      "change": "One normal revalidation before unavailable-provider rejection; reuse bounded canonical workspace identity resolution, retaining ambiguous/symlink/dirty and effect-scope checks."
+    },
+    {
+      "owner": "mncs-control-mcp",
+      "cause": "VM/Language builds and runtime inspections lacked fixed routes; protected entry dependencies in test contracts were ignored; transport could expire before owner-declared execution budget.",
+      "change": "Fixed selected-project routes, include declared test toolchains in protected entry validation, honor bounded owning invocation timeout."
+    },
+    {
+      "owner": "mncs-test",
+      "cause": "Invalid-manifest error handler read uninitialized result fragments. Broad unittest discovery omitted pytest functions. Linked-checkout VM test ignored selected provider paths.",
+      "change": "Initialize fragments before parsing; declare pytest mixed inventory and explicit read-only toolchains; use selected Compiler/VM/Stdlib paths."
+    },
+    {
+      "owner": "mncs-compiler",
+      "cause": "Exact module snapshot omitted the current digest import mncs.core.sequences.v1.",
+      "change": "Supply actual existing Stdlib module in the integration owner fixture. Build now verifies; independent stale typed request fixture remains rejected."
+    },
+    {
+      "owner": "mncs-vm",
+      "cause": "Revision/dirty-status observations were treated as compiled-content invalidation, including unrelated Language badge commits.",
+      "change": "New receipts declare complete input selectors. Check exact current file set, input hashes, toolchain identity and containment; preserve original/current Git observations. Legacy receipts stay conservative. Cargo watches selected directories and absent selectors."
+    },
+    {
+      "owner": "mncs-language",
+      "cause": "No independent local development definition; cold reference build required its missing executable and produced no embedding library.",
+      "change": "Independent scoped definition; existing provider builds CLI plus embed, with explicit Stdlib toolchain selection."
+    },
+    {
+      "owner": "mncs-language-service",
+      "cause": "No independent local development definition; canonical Unix socket path exceeded platform path limit in legitimate isolated checkouts.",
+      "change": "Independent own-write/protected-input definition and selected toolchains; bind/connect through an open parent directory descriptor for long Linux paths while retaining actual workspace socket and lease identity."
+    },
+    {
+      "owner": "mncs-forge",
+      "cause": "Selected linked provider lacked explicit Language/Stdlib roots and its own venv.",
+      "change": "Declare existing read-only dependency roots; resolve shared common-Git runtime while executing the selected worktree provider source."
+    }
+  ],
+  "verification": {
+    "environment": {
+      "targeted": "177 passed, 115 deselected in 309.97s",
+      "additional_selection": "17 passed, 274 deselected",
+      "new_generated_toolchain_and_identity_cases": "2 passed; generated-toolchain regression failed against pre-fix invoke implementation",
+      "vertical": "PASS: real provider, checkpoint, fresh-process resume, handoff and completion",
+      "rights_claim_recovery": "42 passed in 23.92s"
+    },
+    "control": "144 RPC/bridge cases passed; six inventory cases initially observed active-client ambiguity, passed quiescent rerun with unchanged guard.",
+    "language_service": {
+      "rust": "152 passed, 0 failed, 0 ignored across crate suites",
+      "provider_lifecycle": "29 passed in 18.228s",
+      "lsp": "Actual initialize, didOpen and documentSymbol returned current records fixture symbols. Null-param shutdown returned -32602; omitted-param shutdown is covered by the existing Rust protocol suite.",
+      "family_context": "Partial: Language capability identity and Commons queries available; independent Standard schema rejects current manifest fields.",
+      "semantic_capsule": "Unsupported: 24 resident documents lack current cached analysis; not reported as complete."
+    },
+    "vm": "5 provenance regressions passed; counterfactual old client fails three cases; real canonical rebuild succeeded.",
+    "forge": {
+      "focused_tests": "12 passed",
+      "canonical_execution": {
+        "ok": true,
+        "operation": "invoke",
+        "exit_code": 3,
+        "result": "",
+        "stderr": "{\"error\": \"capability 'mncs-forge:native-application-execution' is not available: mncs-forge declares invocation for mncs-forge:native-application-execution but it cannot resolve: composition toolchain unresolvable in authorized checkout closure: {'repository': 'mncs-stdlib', 'path': '.'}\", \"diagnostics\": {\"code\": \"authority-denied\", \"publication_completed\": false}}\n"
+      },
+      "outcome": "Not executed: declared Stdlib read-only toolchain is dirty; guard preserved. Linked runtime/dependency corrections published, optional readiness remains degraded."
+    },
+    "language": {
+      "canonical_build": "built-and-verified-locally",
+      "build_command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "--release",
+        "-p",
+        "mncs-cli",
+        "-p",
+        "mncs-embed"
+      ],
+      "native_call": {
+        "call": {
+          "artifact_identity": "mncs:compiler:backend-artifact:b8f391eb80be4110af87b8cb4e522a357f44d7cac92891f412ca13c9a1a0c9b2",
+          "artifact_sha256": "a3fc3853a7a33b7e17fde0173470764760b0fb6a41afa46476fbd5afcbd17e0d",
+          "backend": "mncs-research-bytecode",
+          "returned": [
+            {
+              "integer": {
+                "type": {
+                  "bits": 32,
+                  "signed": true
+                },
+                "value": 21
+              }
+            }
+          ],
+          "reused_session": true,
+          "status": "returned",
+          "steps": 5
+        },
+        "canonical_arguments_sha256": "2477b7c4005064e7dfa5a9f79a38e6470b7c0c7bd4a07c5ebf71a7ac08eea702",
+        "function": "adjust",
+        "module": "examples.records",
+        "schema_version": "mncs.application-call/1",
+        "status": "returned"
+      },
+      "embedding_library_materialized": true
+    },
+    "test": {
+      "original_declared_inventory": 51,
+      "covered": 51,
+      "details": "31 passed in first 1200-second bounded partition; 15 remaining Runner cases passed; 4 policy cases passed with selected dependencies; 1 VM membrane case passed with the fresh selected Compiler. Initial partition timeout and provider-selection skips are not passes.",
+      "focused_native_manifest": "13 pytest cases passed; 10 original manifest policy cases passed",
+      "expanded_inventory": 391,
+      "expanded_inventory_full_run": "NOT VERIFIED; no weakened or reduced declaration used to claim broad success.",
+      "cause_of_expensive_calls": "Sampled native SSA execution and native ArtifactStore/hash serialization work, not inherited stdin wait.",
+      "canonical_integration": {
+        "ok": true,
+        "operation": "verify",
+        "exit_code": 3,
+        "result": "",
+        "stderr": "{\"error\": \"capability 'mncs-test:verification-executor/mncs-test.native-application-build-vm' provider checkout identity is unavailable: declared provider checkout head changed\", \"diagnostics\": {\"code\": \"authority-denied\", \"publication_completed\": false}}\n"
+      },
+      "advanced_session_failure": "Old Test session still had an outdated declared provider HEAD after this pass published Test changes. Fresh entry acceptance underway. Ordinary isolated Git/Store commit+observe+invoke experiment did not reproduce this variant; no speculative refresh implementation was added.",
+      "fresh_canonical_acceptance": {
+        "status": "ok",
+        "receipt": {
+          "compiler_artifact_identity": "sha256:d308c2afb24054ec0adfbb42e218709d4eefba4d488b5af6a7afb1491f02d1c6",
+          "compiler_response_schema": "mncs.compiler.application-build/4",
+          "compiler_response_sha256": "6ca2bed248326f80ceaf979a4920e0c474e4269203dda4b6f4a27179f4beb648",
+          "entry_interface_identity": "sha256:2478737761eb500b077fc5ddc924858cb8494b57813be41a5200e15ab55967d2",
+          "kind": "mncs-test.compiler-application-build-vm-integration",
+          "result_artifact": {
+            "byte_count": 1316,
+            "name": "native-application-build-vm/native-application-build-vm-result.json",
+            "sha256": "ab0a5e57c848c4d26577f6fef69804212f59fe998505ba0207a4825353901d36"
+          },
+          "retained_session": {
+            "batch_calls": 1,
+            "calls": 2,
+            "runtime": {
+              "build_origin_status": "matches-embedded-inputs",
+              "build_receipt_identity": "sha256:638d91c9c7be8200ff3eb006bded2194d08b1c84eafc26aeb115a47b2e7bfe8e",
+              "executable_sha256": "d584c5d8cf0ea4a8c7376e15afbc20f76c8f3fe235517c92f7d01d2b649592c2",
+              "vm_contract": "mncs.vm/0.1"
+            }
+          },
+          "schema_version": 1,
+          "status": "pass",
+          "suite": {
+            "assertion_count": 2,
+            "assertion_failures": 0,
+            "compile_failures": 0,
+            "failed": 0,
+            "failure_count": 0,
+            "infrastructure_failures": 0,
+            "passed": 2,
+            "runtime_failures": 0,
+            "setup_failures": 0,
+            "skipped": 0,
+            "timeout_failures": 0,
+            "total": 2,
+            "unsupported": 0,
+            "verdict": "PASS",
+            "verdict_code": 0
+          },
+          "test_cases": [
+            {
+              "id": "application-build-suite-call-1",
+              "status": "passed",
+              "verdict": "PASS"
+            },
+            {
+              "id": "application-build-suite-call-2",
+              "status": "passed",
+              "verdict": "PASS"
+            }
+          ],
+          "vm_artifact_identity": "sha256:d308c2afb24054ec0adfbb42e218709d4eefba4d488b5af6a7afb1491f02d1c6"
+        },
+        "artifact_store_ref": "mncs-store:ses_05dafe9a05bc605c:capability-invocation-artifacts:8be0f729e3ee6ce50581170d7d36788d00d8e3f8f6c299bc0b3f87a8ab32ef6b",
+        "binding_id": "cap_008e497698a17ab7"
+      },
+      "fresh_entry_session_id": "ses_05dafe9a05bc605c",
+      "fresh_entry_completed": {
+        "at": "2026-11-03T01:02:48+00:00",
+        "checkpoint_id": "chk_0e50cd82b7d61994",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "completed",
+        "request_digest": "c81debbffaa80cfd",
+        "request_id": "req_caaa870e216f0f0a2eb729ab76477da5",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Fresh-consumer Test verification acceptance attempted through canonical route; exact result preserved in cross-tool hardening evidence. Release any owned operation resources."
+      }
+    },
+    "compiler_digest": {
+      "closure_status": "verified after supplying actual imported module",
+      "executor_status": "failed independently at SSA typed request validation, zero execution steps",
+      "cause": "Historical DigestRequest fixture has run/tests; current source expects result: DigestInputDocument. Existing generator also constructs the obsolete shape.",
+      "failure": "ty=\\\"mncs:0.2:record-type:mncs.test.digest::DigestRequest::max_failures%3Au64%3Brun%3ADigestRun%3Bschema_version%3A%5Bbyte%3B%20up_to%2064%5D%3Btests%3A%5BDigestTest%3B%20up_to%20256%5D%3B\\\")\"\n      },\n      \"hir_fingerprint\": \"a3a199a517bc3c305bc895817bc4cdb168a30541428f0ad341c6609af2ed2972\",\n      \"returned\": [],\n      \"schema_version\": \"0.1\",\n      \"semantic_function_identity\": \"mncs:0.2:function:mncs.test.digest::build_digest\",\n      \"semantic_program_identity\": \"mncs:0.2:program:mncs.test.digest\",\n      \"ssa_module_fingerprint\": \"29b94ac78de6ac8f8f23e8a362199aede6836efb139853230cd3c1e5b56340b2\",\n      \"ssa_module_identity\": \"mncs:0.4:ssa:module:b48a425c21da39f6332086c8a46956c8fe4216d4d8ae0466b4f992c96b55b0b1\",\n      \"status\": \"invalid_request\",\n      \"steps\": 0,\n      \"target\": {\n        \"function\": \"build_digest\",\n        \"module\": \"mncs.test.digest\"\n      },\n      \"trace\": [],\n      \"trace_truncated\": false\n    },\n    {\n      \"effects\": [],\n      \"failure\": {\n        \"identity\": \"mncs:0.2:value:mncs.test.digest::build_digest::parameter::request\",\n        \"reason\": \"argument does not match SSA input type: function mncs.test.digest::build_digest (ssa function mncs:0.4:ssa:function:f4f68b15d14b019a2716213e0fe5e858cf28658449c600b0bf6c0e6168495800), argument index 0, expected DigestRequest (record:mncs:0.2:record-type:mncs.test.digest::DigestRequest::max_failures%3Au64%3Bresult%3ADigestInputDocument%3Bschema_version%3A%5Bbyte%3B%20up_to%2064%5D%3B) but received record(name=\\\"DigestRequest\\\", type_identity=\\\"mncs:0.2:record-type:mncs.test.digest::DigestRequest::max_failures%3Au64%3Brun%3ADigestRun%3Bschema_version%3A%5Bbyte%3B%20up_to%2064%5D%3Btests%3A%5BDigestTest%3B%20up_to%20256%5D%3B\\\")\"\n      },\n      \"hir_fingerprint\": \"a3a199a517bc3c305bc895817bc4cdb168a30541428f0ad341c6609af2ed2972\",\n      \"returned\": [],\n      \"schema_version\": \"0.1\",\n      \"semantic_function_identity\": \"mncs:0.2:function:mncs.test.digest::build_digest\",\n      \"semantic_program_identity\": \"mncs:0.2:program:mncs.test.digest\",\n      \"ssa_module_fingerprint\": \"29b94ac78de6ac8f8f23e8a362199aede6836efb139853230cd3c1e5b56340b2\",\n      \"ssa_module_identity\": \"mncs:0.4:ssa:module:b48a425c21da39f6332086c8a46956c8fe4216d4d8ae0466b4f992c96b55b0b1\",\n      \"status\": \"invalid_request\",\n      \"steps\": 0,\n      \"target\": {\n        \"function\": \"build_digest\",\n        \"module\": \"mncs.test.digest\"\n      },\n      \"trace\": [],\n      \"trace_truncated\": false\n    },\n    {\n      \"effects\": [],\n      \"failure\": {\n        \"identity\": \"mncs:0.2:value:mncs.test.digest::build_digest::parameter::request\",\n        \"reason\": \"argument does not match SSA input type: function mncs.test.digest::build_digest (ssa function mncs:0.4:ssa:function:f4f68b15d14b019a2716213e0fe5e858cf28658449c600b0bf6c0e6168495800), argument index 0, expected DigestRequest (record:mncs:0.2:record-type:mncs.test.digest::DigestRequest::max_failures%3Au64%3Bresult%3ADigestInputDocument%3Bschema_version%3A%5Bbyte%3B%20up_to%2064%5D%3B) but received record(name=\\\"DigestRequest\\\", type_identity=\\\"mncs:0.2:record-type:mncs.test.digest::DigestRequest::max_failures%3Au64%3Brun%3ADigestRun%3Bschema_version%3A%5Bbyte%3B%20up_to%2064%5D%3Btests%3A%5BDigestTest%3B%20up_to%20256%5D%3B\\\")\"\n      },\n      \"hir_fingerprint\": \"a3a199a517bc3c305bc895817bc4cdb168a30541428f0ad341c6609af2ed2972\",\n      \"returned\": [],\n      \"schema_version\": \"0.1\",\n      \"semantic_function_identity\": \"mncs:0.2:function:mncs.test.digest::build_digest\",\n      \"semantic_program_identity\": \"mncs:0.2:program:mncs.test.digest\",\n      \"ssa_module_fingerprint\": \"29b94ac78de6ac8f8f23e8a362199aede6836efb139853230cd3c1e5b56340b2\",\n      \"ssa_module_identity\": \"mncs:0.4:ssa:module:b48a425c21da39f6332086c8a46956c8fe4216d4d8ae0466b4f992c96b55b0b1\",\n      \"status\": \"invalid_request\",\n      \"steps\": 0,\n      \"target\": {\n        \"function\": \"build_digest\",\n        \"module\": \"mncs.test.digest\"\n      },\n      \"trace\": [],\n      \"trace_truncated\": false\n    }\n  ]\n}\n"
+    },
+    "vm_revision_only_live_proof": {
+      "status": "matches-embedded-inputs",
+      "mismatches": [],
+      "source_revisions": {
+        "mncs-compiler": "98845d1fd10e9612a961cbb4314db50588f84353",
+        "mncs-language": "56d62c5562b1af3cb9170c3fe88cb4abae145989",
+        "mncs-vm": "bd05870a9389825e58f58607ef7e2f754cf381f5"
+      },
+      "current_source_revisions": {
+        "mncs-compiler": "98845d1fd10e9612a961cbb4314db50588f84353",
+        "mncs-language": "56d62c5562b1af3cb9170c3fe88cb4abae145989",
+        "mncs-vm": "f6051f09fad987db2d2bb601e5dcac375784d53e"
+      },
+      "unchanged_executable_sha256": "99c3cbe5f5a5694d4222a6be269f293d4eddf344a32f7f003c20307a13a51dfc"
+    },
+    "compiler_application_build": {
+      "route": "canonical Environment invoke in existing Compiler session after bootstrap; no manual resume",
+      "status": "ok",
+      "receipt": {
+        "artifact_identity": "sha256:0506cc3863229352283a84fc49ae40fd5a655b30ab9628830ff427a363db873e",
+        "build_status": "verified",
+        "callable_root_count": 0,
+        "callable_roots": [],
+        "capability_dispatch": {
+          "binding_count": 0,
+          "status": "verified",
+          "unresolved_obligation_count": 0
+        },
+        "dependency_graph_identity": "sha256:a93008dbbd8a7e50ec1b8cefef1f2748ae8fbd7f2807bfed298b606fdaceabe7",
+        "entry": {
+          "function": "run",
+          "interface": {
+            "identity": "sha256:d7ed229eb483665ef4441d6ac97534850fb54d63d9df51a41ef736407c08477b",
+            "signature": {
+              "capabilities": [],
+              "contracts": [],
+              "effects": [],
+              "failure": "isolated",
+              "function_identity": "mncs:0.2:function:tests.native_readiness::run",
+              "inputs": [
+                {
+                  "name": "request",
+                  "type": "ReadinessRequest"
+                }
+              ],
+              "module": "tests.native_readiness",
+              "name": "run",
+              "outputs": [
+                {
+                  "name": "result",
+                  "type": "ReadinessOutcome"
+                }
+              ]
+            },
+            "status": "verified"
+          },
+          "module": "tests.native_readiness",
+          "status": "verified"
+        },
+        "response_schema": "mncs.compiler.application-build/4",
+        "result_file": "native-application-build.json",
+        "schema_version": "mncs.compiler.application-build-invocation/1",
+        "source_snapshot_identity": "sha256:cf9b5f63aaf16fc87dc9f96b14dceb50f7492253f980abdc1ae75adf28e04ff2",
+        "status": "stored"
+      },
+      "artifact_store_ref": "mncs-store:ses_6b5786773094f3ba:capability-invocation-artifacts:9430f7112725099fa235dbf85c7d44aa9db5c148741e7a96dbd43b6676430c9c",
+      "binding_id": "cap_83cc273859d444cb"
+    },
+    "vm_final_canonical_inspection": {
+      "build_origin": {
+        "assurance": "local build observation; not independent attestation",
+        "current_dirty_content_identity": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "current_dirty_input_count": 0,
+        "current_source_revisions": {
+          "mncs-compiler": "98845d1fd10e9612a961cbb4314db50588f84353",
+          "mncs-language": "8192930bd23ebbaaff8a45504838e5f17f032b6d",
+          "mncs-vm": "ac22e2fc952179c670f1a3d36d4996ef96854e65"
+        },
+        "dependency_closure": [
+          {
+            "checkout": "/home/epi13/Documents/Projects/mncs-vm",
+            "repository": "mncs-vm",
+            "revision": "1c47ee143e2d670ed6e17c99f49bacc5e5ff324d",
+            "source_input_count": 16,
+            "source_inputs_identity": "b0a374a44b9f95b2f83f8761fe74633a11d1693b398482408efa299b0c4422b0"
+          },
+          {
+            "checkout": "/home/epi13/Documents/Projects/mncs-language",
+            "repository": "mncs-language",
+            "revision": "8192930bd23ebbaaff8a45504838e5f17f032b6d",
+            "source_input_count": 70,
+            "source_inputs_identity": "7866a1d13aca995d55b237610202dc783ac612e01d6ee56fff6bc55b00554a53"
+          },
+          {
+            "checkout": "/home/epi13/Documents/Projects/mncs-compiler",
+            "repository": "mncs-compiler",
+            "revision": "98845d1fd10e9612a961cbb4314db50588f84353",
+            "source_input_count": 2,
+            "source_inputs_identity": "e7396894b68974055cab3d1a3bcd7afe09f2d1bb7f506845e3ce802ee7ce3d6a"
+          }
+        ],
+        "dirty_content_identity": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "dirty_input_count": 0,
+        "executable_sha256": "d584c5d8cf0ea4a8c7376e15afbc20f76c8f3fe235517c92f7d01d2b649592c2",
+        "mismatch_count": 0,
+        "mismatches": [],
+        "receipt_identity": "sha256:638d91c9c7be8200ff3eb006bded2194d08b1c84eafc26aeb115a47b2e7bfe8e",
+        "receipt_schema": "mncs.vm-build-receipt/1",
+        "runtime_build_identity": "6faf19cd5d42bfe0c0c397f927b0d1e6e0e7b7b9ad3ef80b8c8769b658824c5e",
+        "source_input_count": 88,
+        "source_inputs_identity": "e3439c4f911d5a61781f84d42a53946543e3ecf62c8502caa4372273011be2e3",
+        "source_revisions": {
+          "mncs-compiler": "98845d1fd10e9612a961cbb4314db50588f84353",
+          "mncs-language": "8192930bd23ebbaaff8a45504838e5f17f032b6d",
+          "mncs-vm": "1c47ee143e2d670ed6e17c99f49bacc5e5ff324d"
+        },
+        "status": "matches-embedded-inputs"
+      },
+      "executable": "/home/epi13/Documents/Projects/mncs-vm/target/debug/mncs-vm",
+      "executable_sha256": "d584c5d8cf0ea4a8c7376e15afbc20f76c8f3fe235517c92f7d01d2b649592c2",
+      "schema_version": "mncs.vm.selected-runtime/1"
+    }
+  },
+  "lifecycle": {
+    "sessions": {
+      "mncs-test": "ses_41e87d587cd31c78",
+      "mncs-compiler": "ses_6b5786773094f3ba",
+      "mncs-language": "ses_8f3bdaab355d37b2",
+      "mncs-language-service": "ses_0a91c8c7c6336b8a",
+      "mncs-vm": "ses_5b8df16ad04f0f30"
+    },
+    "fresh_lsp_resume": {
+      "exit_code": 0,
+      "session_id": "ses_0a91c8c7c6336b8a",
+      "writable": [
+        "mncs-language-service"
+      ],
+      "protected": [
+        "mncs-language",
+        "mncs-stdlib"
+      ]
+    },
+    "negative_live_authorization": {
+      "ok": true,
+      "operation": "claims",
+      "exit_code": 3,
+      "result": "",
+      "stderr": "{\"error\": \"claim denied: mncs-language is protected in this Environment session\", \"diagnostics\": {\"code\": \"authority-denied\", \"action\": \"claim-acquire\", \"repository\": \"mncs-language\", \"publication_completed\": false, \"next\": \"enter an Environment whose effective writable scope includes this repository\"}}\n"
+    },
+    "owned_resident_stop": {
+      "detail": "provider-owned lease stopped",
+      "state": "stopped"
+    },
+    "concurrent_final_calls": {
+      "status": "failed before verified provider result",
+      "errors": [
+        "ENVIRONMENT_CAMPAIGN_LOOKUP_FAILED: STALE_GENERATION",
+        "ENVIRONMENT_PUBLICATION_AMBIGUOUS: response window exceeded"
+      ],
+      "observations": "Two own Environment CLI processes waited on Store flock and used approximately 0.5 GiB RSS each. Canonical Store occupies 28 GiB. Both ended through the configured response deadline; no forced termination or state repair was used. Sequential recovery underway.",
+      "result": "No successful compilation/execution inferred from timed-out requests."
+    },
+    "sequential_recovery": "Compiler application build and canonical artifact read succeeded; VM runtime inspection succeeded; five primary tool sessions checkpointed/completed. The exact VM main-checkout claim was released by normal completion.",
+    "completed_sessions": {
+      "mncs-vm": {
+        "at": "2026-11-03T00:57:41+00:00",
+        "checkpoint_id": "chk_a93e619f2e8209e2",
+        "claims_release_error": null,
+        "claims_released": [
+          "claim:mncs-vm:worktree:da94afb9da46"
+        ],
+        "outcome": "completed",
+        "request_digest": "cf78b6d98a288a0c",
+        "request_id": "req_9476d4308caf6112d72328ccfdafe4c9",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Published and canonically rebuilt VM input-closure freshness repair; preserve current input provenance, release only owned main build claim."
+      },
+      "mncs-language-service": {
+        "at": "2026-11-03T00:58:21+00:00",
+        "checkpoint_id": "chk_e717529d1e33b235",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "completed",
+        "request_digest": "3a5747ba8ff38c7e",
+        "request_id": "req_447e28c6a17c0f131b7ce18179983278",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Published and verified independent LSP development, long socket paths, source symbols, checkpoint and fresh-process dirty-checkout resume. Owned resident stopped through its provider."
+      },
+      "mncs-language": {
+        "at": "2026-11-03T00:58:59+00:00",
+        "checkpoint_id": "chk_947a5a2560b2cd02",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "completed",
+        "request_digest": "de5b432028683ab8",
+        "request_id": "req_933f38a83d25646555d8a62817991dd0",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Published independent Language development and complete CLI/embed bootstrap; harmless existing fixture returned native i32 21. Temporary fixture ready for retirement."
+      },
+      "mncs-test": {
+        "at": "2026-11-03T00:59:27+00:00",
+        "checkpoint_id": "chk_738fc977c9f072da",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "completed",
+        "request_digest": "142fb8225f21c5bd",
+        "request_id": "req_d14213a5a7ad65cd3db6af1d13030822",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Published invalid-manifest, mixed discovery and selected toolchain repairs. Original 51 cases covered in bounded partitions; expanded 391 inventory remains uncertified. Exact final provider outcome saved in evidence."
+      },
+      "mncs-compiler": {
+        "at": "2026-11-03T00:59:55+00:00",
+        "checkpoint_id": "chk_e96a37bfa012a0de",
+        "claims_release_error": null,
+        "claims_released": [],
+        "outcome": "completed",
+        "request_digest": "29dfb46a8aeeb8d5",
+        "request_id": "req_34d330255324bff096e83b53ba3c7171",
+        "requested_by": {
+          "consumer_id": "local-agent",
+          "principal_id": "ctrl_239c9b758998589eb0fb1d069f8b5927"
+        },
+        "summary": "Published actual digest module closure fix. Verified canonical application build after bootstrap without manual refresh. Obsolete digest typed request fixture remains a strict failing pressure; no requirements relaxed."
+      }
+    }
+  },
+  "remaining_pressures": [
+    {
+      "identity": "prs_fbb8403ac2f9240b",
+      "owner": "mncs-test",
+      "status": "open",
+      "impact": "All original 51 cases covered through bounded partitions; fresh canonical integration passed two native calls. Expanded mixed 391-case inventory is not fully verified. Older pre-publication Test session rejected an outdated declared provider HEAD; fresh independent Work Intent succeeds. That older projection variant is not claimed fixed."
+    },
+    {
+      "identity": "prs_9ae3906509ef67c7",
+      "owner": "mncs-compiler",
+      "status": "open, narrowed",
+      "impact": "Module closure fixed and verified; digest producer evidence/generator uses obsolete typed request shape and strict SSA rejects it."
+    },
+    {
+      "identity": "prs_f2a4217b89a37fa1",
+      "owner": "mncs-forge",
+      "status": "open, narrowed",
+      "impact": "Linked runtime and Language dependency declarations corrected. Live typed executor is refused before execution because its declared Stdlib read-only toolchain checkout is dirty; no optional Forge success claimed."
+    },
+    {
+      "description": "cargo check --offline --locked --bin mncs-vm from the registered isolated VM checkout fails loading ../mncs-language/crates/mncs-compiler/Cargo.toml. The canonical main-checkout vm-build succeeds with an exact owned claim.",
+      "desired_contract": "Declared selected read-only dependency roots work for registered isolated VM development builds.",
+      "effect": "Isolated VM compilation remains unavailable; the independently authorized claimed main-checkout build path works.",
+      "evidence": "mncs-environment/evidence/cross-tool-hardening-20261102.json; VM isolated check stderr: failed to read .worktrees/mncs-language/crates/mncs-compiler/Cargo.toml",
+      "identity": "prs_e47a4fe042653468",
+      "owner": "mncs-vm",
+      "schema_version": "mncs.environment.pressure/1",
+      "title": "VM isolated Cargo build resolves sibling dependencies beneath the worktree container",
+      "why_not_local": "Cargo dependency layout is owned by VM; Environment must not fabricate sibling symlinks or expand write authority.",
+      "workaround": "Use the normal canonical VM main build only with an exact eligible claim; preserve foreign work."
+    },
+    {
+      "description": "Canonical family-agent context is partial because Standard repository-manifest-validation rejects existing effects/invocation, projection_inventory, structure_profile, and selected test toolchains. Language capability index and Commons architecture/pressure queries remain available.",
+      "desired_contract": "Authoritative validation accepts the current agreed family manifest contract while retaining structural validation.",
+      "effect": "Family semantic context reports partial accurately; independent development entry and LSP source symbols work.",
+      "evidence": "mncs-environment/evidence/cross-tool-hardening-20261102.json; independent Standard validation valid=false with schema Additional properties errors",
+      "identity": "prs_146911d1352a4b1e",
+      "owner": "mncs-standard",
+      "schema_version": "mncs.environment.pressure/1",
+      "title": "Standard repository schema rejects current Language-Service capability contracts",
+      "why_not_local": "Manifest schema semantics belong to Standard, not Environment or Language-Service.",
+      "workaround": null
+    }
+  ],
+  "preservation": {
+    "luna_checkpoint": "chk_d7cd85473a05ff5d",
+    "luna_session": "ses_5df85cca5ff2ec76",
+    "native_environment_revision_01f77f7_is_ancestor": true,
+    "forge_foreign_readme_sha256": "8891f051bbebe18a95026d1b57df7d6ee14520cb2130c7ed4373becccec213df",
+    "stdlib_and_doctor_unchanged": true,
+    "unrelated_worktrees_and_untracked_compiler_evidence_preserved": true,
+    "canonical_luna_continuation": {
+      "status": "ready",
+      "selected_session_id": "ses_5df85cca5ff2ec76",
+      "lifecycle": "active",
+      "latest_checkpoint": {
+        "created_at": "2026-11-02T14:39:30+00:00",
+        "identity": "chk_d7cd85473a05ff5d",
+        "progress": "Delivered Doctor repair-delta planning in MNCS. Feature 29ddc39d73196e538a854371aa52f450ad42fb11 merged as 01f77f7da39257356d9cdbb26be73bd3336e0bd7 and pushed to origin/main. Post-push fetch confirms main equals origin and both checkouts are clean. Full Environment suite: 1240 passed, 82 skipped; vertical proof PASS; \u2026",
+        "progress_truncated": true,
+        "remaining": [
+          "Continue meaningful native work in the current Environment-only writable scope.",
+          "Retry cross-repository migration when a specific exact owner grant is available; the canonical scope-grant path currently denies mncs-stdlib and mncs-doctor.",
+          "Do not treat this delivery or checkpoint as campaign completion."
+        ],
+        "remaining_count": 3,
+        "remaining_truncated": false,
+        "sequence": 14
+      },
+      "claim_ids": []
+    }
+  },
+  "cleanup": {
+    "owned_service": "PID 2226877 stopped via provider-owned lease; no owned startup lease remained in Environment worktree.",
+    "completed_sessions": "All five initial tool sessions plus fresh Test acceptance session completed; their normal completion reported no claim-release error.",
+    "vm_claim_released": "claim:mncs-vm:worktree:da94afb9da46",
+    "retired_worktrees": {
+      "mncs-control-mcp": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      },
+      "mncs-test": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      },
+      "mncs-compiler": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      },
+      "mncs-vm": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      },
+      "mncs-language": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      },
+      "mncs-language-service": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      },
+      "mncs-forge": {
+        "worktree_retired": true,
+        "branch_retired": true,
+        "foreign_registry_unchanged": true
+      }
+    },
+    "environment_worktree": "Held only until this evidence is published and its session completes; retire through normal Git worktree lifecycle afterward."
+  },
+  "delivery": {
+    "source_revisions_verified_against_remote_main": {
+      "mncs-environment": "d91e907028e14dadbc8c2a9a1297b24b7ab961fd",
+      "mncs-control-mcp": "9fcf38c04092d906c01ff6649dfd6f38eb104918",
+      "mncs-test": "1b2f27d950fdaaaaa1fde4a21cd3a4fb48f734c8",
+      "mncs-compiler": "98845d1fd10e9612a961cbb4314db50588f84353",
+      "mncs-vm": "ac22e2fc952179c670f1a3d36d4996ef96854e65",
+      "mncs-language": "8192930bd23ebbaaff8a45504838e5f17f032b6d",
+      "mncs-language-service": "8914f98cc177b17d06b049ca909d61fdb6583343",
+      "mncs-forge": "be19664df8d9943b8d96d69820c8e041183f84f1"
+    },
+    "all_source_main_refs_matched_remote": true,
+    "environment_evidence_publication": "This evidence is delivered in a follow-up main commit; source repair is d91e907028e14dadbc8c2a9a1297b24b7ab961fd.",
+    "no_force_push_or_reset": true
+  },
+  "readiness": {
+    "tested": "Sequential authorized Language native execution, LSP source-symbol development and fresh-process dirty-checkout resume, Compiler bootstrap/application-build/Store artifact read, VM complete-input provenance and post-publication freshness, and fresh Test->Compiler->VM two-call execution.",
+    "not_certified": "Full 391-case Test verification; obsolete digest generator/request fixture; optional Forge execution with dirty Stdlib; complete family schema/semantic capsule; isolated VM Cargo topology; concurrent canonical Store throughput; old Test session binding after publication.",
+    "existing_safety_preserved": "Protected Language claim rejected live; 42 authority/claim recovery cases and 177 Environment authority/session/toolchain cases passed; provider dirty/identity checks remain enforced."
+  }
+}
