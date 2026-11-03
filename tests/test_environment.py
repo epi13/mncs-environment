@@ -5722,6 +5722,127 @@ class CapabilityTests(unittest.TestCase):
                 for item in unavailable
             ))
 
+    def test_manifest_test_binds_and_executes_multiple_selected_toolchains(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = self._git_checkout(
+                root / "mncs-commons", "mncs-commons", {"contracts": {}}
+            )
+            language = self._git_checkout(
+                root / "selected-language", "mncs-language", {"contracts": {}}
+            )
+            stdlib = self._git_checkout(
+                root / "selected-stdlib", "mncs-stdlib", {"contracts": {}}
+            )
+            (stdlib / "library").mkdir()
+            (provider / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-commons",
+                "contracts": {"provides": [], "tests": [{
+                    "test": "uses-selected-language-and-stdlib",
+                    "command": {
+                        "argv": [
+                            "python3", "-c",
+                            ("import json, os; print(json.dumps({key: os.environ[key] "
+                             "for key in ('MNCS_LANGUAGE_ROOT', 'MNCS_STDLIB_ROOT', "
+                             "'MNCS_LIBRARY_PATH')}, sort_keys=True))"),
+                        ],
+                        "environment": {"MNCS_STDLIB_ROOT": "/stale/stdlib"},
+                        "toolchains": {
+                            "MNCS_LANGUAGE_ROOT": {
+                                "repository": "mncs-language", "path": ".",
+                            },
+                            "MNCS_STDLIB_ROOT": {
+                                "repository": "mncs-stdlib", "path": ".",
+                            },
+                            "MNCS_LIBRARY_PATH": {
+                                "repository": "mncs-stdlib", "path": "library",
+                            },
+                        },
+                    },
+                }]},
+            }), encoding="utf-8")
+            toolchain_facts = {
+                "mncs-language": {
+                    "repository": "mncs-language", "path": str(language.resolve()),
+                    "observed_path": str(language.resolve()), "branch": "main",
+                    "head": "language-head", "clean": True,
+                    "checkout_identity": "checkout:language",
+                    "git_common_directory_identity": "git-common:language",
+                    "source_ref": "declared-consumed-provider-dependency",
+                    "read_only": True,
+                },
+                "mncs-stdlib": {
+                    "repository": "mncs-stdlib", "path": str(stdlib.resolve()),
+                    "observed_path": str(stdlib.resolve()), "branch": "main",
+                    "head": "stdlib-head", "clean": True,
+                    "checkout_identity": "checkout:stdlib",
+                    "git_common_directory_identity": "git-common:stdlib",
+                    "source_ref": "declared-consumed-provider-dependency",
+                    "read_only": True,
+                },
+            }
+            bindings = capabilities.discover_capabilities(
+                root,
+                repository_roots={"mncs-commons": provider},
+                runtime_toolchain_roots={
+                    "mncs-language": language, "mncs-stdlib": stdlib,
+                },
+                runtime_toolchain_facts=toolchain_facts,
+            )
+
+            binding = next(
+                item for item in bindings
+                if item["capability"] == (
+                    "mncs-commons:test/uses-selected-language-and-stdlib"
+                )
+            )
+            expected_env = {
+                "MNCS_LANGUAGE_ROOT": str(language.resolve()),
+                "MNCS_STDLIB_ROOT": str(stdlib.resolve()),
+                "MNCS_LIBRARY_PATH": str((stdlib / "library").resolve()),
+            }
+            self.assertEqual(binding["fixed_env"], expected_env)
+            self.assertEqual(
+                {item["repository"] for item in
+                 binding["provenance"]["toolchain_checkouts"]},
+                {"mncs-language", "mncs-stdlib"},
+            )
+            result = capabilities.invoke(binding, [])
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual(json.loads(result["stdout"]), expected_env)
+
+    def test_manifest_test_rejects_invalid_or_unavailable_multi_toolchains(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = root / "provider"
+            (provider / ".mncs").mkdir(parents=True)
+            (provider / ".mncs" / "project.json").write_text(json.dumps({
+                "repository": "mncs-commons",
+                "contracts": {"provides": [], "tests": [
+                    {
+                        "test": "missing-toolchain",
+                        "command": {"argv": ["python3", "-c", "pass"],
+                                    "toolchains": {"MNCS_LANGUAGE_ROOT": {
+                                        "repository": "mncs-language", "path": ".",
+                                    }}},
+                    },
+                    {
+                        "test": "protected-toolchain-name",
+                        "command": {"argv": ["python3", "-c", "pass"],
+                                    "toolchains": {"PATH": {
+                                        "repository": "mncs-language", "path": ".",
+                                    }}},
+                    },
+                ]},
+            }), encoding="utf-8")
+            bindings = capabilities.discover_capabilities(
+                root, repository_roots={"mncs-commons": provider},
+            )
+            self.assertFalse(any(
+                item["capability"].startswith("mncs-commons:test/")
+                for item in bindings
+            ))
+
     def test_external_provider_root_requires_exact_grant_backed_checkout_facts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

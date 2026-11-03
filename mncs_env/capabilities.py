@@ -1441,6 +1441,32 @@ def _manifest_test_bindings(
             for key, value in fixed_env.items()
         ):
             continue
+        declared_toolchains = command.get("toolchains", {})
+        if not isinstance(declared_toolchains, dict) or len(declared_toolchains) > 32:
+            continue
+        roots = (
+            {name: Path(selected) for name, selected in repository_roots.items()}
+            if repository_roots is not None else None
+        )
+        resolved_toolchains: dict[str, str] = {}
+        for variable, selection in declared_toolchains.items():
+            if (not isinstance(variable, str)
+                    or not re.fullmatch(r"[A-Z][A-Z0-9_]*", variable)
+                    or variable in _PROTECTED_TOOLCHAIN_ENV):
+                resolved_toolchains = {}
+                break
+            selected = _selected_repository_toolchain(selection, workspace, roots)
+            if selected is None:
+                resolved_toolchains = {}
+                break
+            resolved_toolchains[variable] = selected
+        if declared_toolchains and not resolved_toolchains:
+            continue
+        # A selected repository toolchain is authoritative over a fixed
+        # manifest value for the same variable, matching provider invocation
+        # bindings and preventing stale paths from shadowing selected roots.
+        fixed_env = {str(key): str(value) for key, value in fixed_env.items()}
+        fixed_env.update(resolved_toolchains)
         toolchain = command.get("toolchain")
         toolchain_address: str | None = None
         toolchain_env: str | None = None
@@ -1453,10 +1479,6 @@ def _manifest_test_bindings(
                 or declared_env in protected_env
             ):
                 continue
-            roots = (
-                {name: Path(selected) for name, selected in repository_roots.items()}
-                if repository_roots is not None else None
-            )
             toolchain_address = _selected_repository_toolchain(
                 toolchain, workspace, roots
             )
@@ -1487,7 +1509,7 @@ def _manifest_test_bindings(
             },
             provider_root=str(repo.resolve()),
             fixed_argv=[str(item) for item in argv[1:]],
-            fixed_env={str(key): str(value) for key, value in fixed_env.items()},
+            fixed_env=fixed_env,
             toolchain_address=toolchain_address,
             toolchain_env=toolchain_env,
             timeout_seconds=timeout,

@@ -14,7 +14,11 @@ selected checkouts. Explicit invocation descriptors and the small documented
 bootstrap spelling table provide addressing. Source fingerprints are evidence,
 never a guessed command. Unaddressed capabilities remain discoverable with a
 provider-owned recovery diagnostic. Test and verification inventory commands
-are bound with their declared effects and exact toolchain paths.
+are bound with their declared effects and exact toolchain paths. Manifest test
+commands may bind multiple `command.toolchains` variables; Environment
+resolves each against the selected checkout closure, passes those paths to the
+test process, and retains the read-only checkout provenance. Missing or
+unsafe toolchain declarations leave that test capability unavailable.
 
 Definitions may compose read-only JSON status capabilities and mutating
 reconciliation capabilities using the [entry contract](ENTRY.md). Environment
