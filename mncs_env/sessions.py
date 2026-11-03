@@ -2655,11 +2655,19 @@ def resolve_environment(
                              "workspace_root": str(working_checkout.get("workspace_root", "")),
                              "expected_workspace_root": str(resolved_root)},
             )
+        repository_root = selected_roots.get(repository)
+        if not isinstance(repository_root, Path):
+            raise workspace_module.WorkspaceResolutionError(
+                "current checkout repository root is absent from the selected workspace",
+                diagnostics={"code": "working-checkout-unavailable",
+                             "repository": repository,
+                             "workspace_root": str(resolved_root)},
+            )
         verified_checkout = workspace_module.verify_registered_checkout(
             str(working_checkout.get("path", "")),
             repository=repository,
             workspace_root=resolved_root,
-            expected_repository_root=resolved_root / repository,
+            expected_repository_root=repository_root,
             expected_branch=working_checkout.get("branch"),
             expected_head=working_checkout.get("head"),
         )

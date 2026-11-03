@@ -995,6 +995,57 @@ class EntryContractTests(unittest.TestCase):
             checkout.resolve(),
         )
 
+    def test_current_checkout_entry_uses_manifest_resolved_case_variant_root(self):
+        project = self.base / "MNCS-Commons"
+        metadata = project / ".mncs"
+        metadata.mkdir(parents=True)
+        (metadata / "project.json").write_text(json.dumps({
+            "schema_version": "mncs-family.repository-manifest/v0alpha1",
+            "repository": "mncs-commons",
+        }) + "\n")
+        definition = metadata / "project-environment.json"
+        definition.write_text(json.dumps({
+            "name": "commons-case-variant-entry",
+            "working_checkout": "current",
+            "workspace_scope": {
+                "kind": "workspace", "repositories": ["mncs-commons"],
+            },
+            "intent": {
+                "goal": "enter the manifest-identified case-variant project worktree",
+                "repositories": ["mncs-commons"],
+            },
+        }) + "\n")
+        subprocess.run(["git", "init", "--quiet", "-b", "main", str(project)], check=True)
+        subprocess.run(["git", "-C", str(project), "add", ".mncs"], check=True)
+        subprocess.run(
+            ["git", "-C", str(project), "-c", "user.name=MNCS Test",
+             "-c", "user.email=mncs-test@example.invalid", "commit", "--quiet", "-m", "fixture"],
+            check=True,
+        )
+        checkout = project / ".worktrees" / "case-variant"
+        checkout.parent.mkdir(parents=True)
+        subprocess.run(
+            ["git", "-C", str(project), "worktree", "add", "--quiet", "-b",
+             "campaign/case-variant", str(checkout), "HEAD"],
+            check=True,
+        )
+
+        code, context = self.run_cli(
+            "enter", "--definition", str(checkout / ".mncs" / "project-environment.json"),
+            "--workspace", str(self.base), "--campaign-id", "cmp_case_variant_entry",
+            cwd=checkout,
+        )
+        self.assertEqual(code, 0, context)
+        self.assertEqual(context["workspace_root"], str(self.base.resolve()))
+        inspect_code, inspected = self.run_cli(
+            "inspect", context["session_id"], cwd=checkout,
+        )
+        self.assertEqual(inspect_code, 0, inspected)
+        self.assertEqual(
+            Path(inspected["selected_checkouts"]["mncs-commons"]["path"]),
+            checkout.resolve(),
+        )
+
     def test_legacy_campaign_reference_matches_only_exact_verified_checkout(self):
         checkout = {
             "repository": "fixture",
