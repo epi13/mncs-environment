@@ -3214,16 +3214,18 @@ class Session:
                 "resolution_inputs_digest": environment.get("resolution_inputs_digest"),
             },
         }
-        # A standalone workspace may have no selected checkout or writable
-        # intent. Its observed root repository still identifies continuation.
+        # Entry without a selected checkout still has observed repository
+        # context. Persist it before returning, including a standalone root.
         if not snapshot["campaign"]["repository_refs"]:
             snapshot["campaign"]["repository_refs"] = [
-                {"repository": repo["manifest_repository"], "observed_path": ".",
+                {"repository": repo["manifest_repository"],
+                 "observed_path": ("." if repo.get("path") == snapshot["workspace"].get("root")
+                                   else repo["path"]),
                  "branch": repo.get("branch"), "head": repo.get("head"),
                  "clean": not repo.get("dirty", True)}
                 for repo in snapshot["workspace"].get("repositories", [])
                 if isinstance(repo, dict) and repo.get("manifest_repository")
-                and repo.get("path") == snapshot["workspace"].get("root")
+                and isinstance(repo.get("path"), str) and repo["path"]
             ]
         store.save_snapshot(session_id, snapshot)
         instance = cls(store, session_id)

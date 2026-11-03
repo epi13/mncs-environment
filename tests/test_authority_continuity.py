@@ -131,6 +131,23 @@ def test_campaign_continues_across_standalone_workspaces(tmp_path, backend):
     assert third["session_id"] != second["session_id"]
     assert enter(orientation, None, other_family / "actions")["session_id"] == second["session_id"]
     assert enter(definition, path, family)["session_id"] == first["session_id"]
+    # A separately defined writable workspace needs its checkout references
+    # durably indexed on creation, even without working_checkout=current.
+    development = {"name": "debug-development", "workspace_scope": {"repositories": ["debug"]},
+                   "intent": {"goal": "independent debug operation", "repositories": ["debug"]}}
+    development_path = other_family / "debug/.mncs/development.json"
+    development_path.write_text(json.dumps(development))
+    fourth = enter(development, development_path, other_family)
+    session = sessions.Session.open(state_dir=state, session_id=fourth["session_id"], backend=backend)
+    try:
+        assert session.effective_authority()["writable"] == ["debug"]
+        assert entry._working_checkout_matches_snapshot(
+            session.snapshot, entry.workspace.verify_registered_checkout(other_family / "debug"))
+        session.acquire_claim("debug", reason="independent writable workspace operation",
+                              basis="explicit-adoption")
+        session.release_claim("debug", reason="isolated operation done")
+    finally:
+        session.close()
     with pytest.raises(entry.EntryError) as denied:
         enter(debug, None, other_family / "debug", principal="foreign")
     assert denied.value.diagnostics["code"] == "campaign-owner-conflict"
