@@ -1251,6 +1251,19 @@ def _legacy_repository_reference_matches(
     same_workspace = str(snapshot_root) == os.path.abspath(workspace_root)
     matches = [item for item in references
                if isinstance(item, dict) and item.get("repository") == repository]
+    if not matches and str(snapshot_root) == os.path.abspath(working_checkout.get("path", "")):
+        # Older standalone sessions omitted the workspace root itself from
+        # campaign refs (relative path "."). Recover their persisted observation
+        # against the already verified exact Git checkout, without adding rights
+        # or accepting another directory or an unobserved repository.
+        matches = [
+            {"repository": repository, "observed_path": item.get("path"),
+             "branch": item.get("branch"), "head": item.get("head")}
+            for item in snapshot_workspace.get("repositories", [])
+            if isinstance(item, dict)
+            and item.get("manifest_repository") == repository
+            and item.get("path") == str(snapshot_root)
+        ]
     if not matches:
         return False
     current_branch = working_checkout.get("branch")
@@ -1441,9 +1454,9 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                                 working_checkout: dict[str, str] | None = None) -> None:
     """Select exact operational contexts without making one repository a ceiling.
 
-    A campaign identity is durable across consumer restarts. Same-repository
-    definition changes and workspace changes must not silently split an
-    operational context. Distinct repositories resolve independent intents
+    A campaign identity is durable across consumer restarts. Same-workspace,
+    same-repository definition changes must not silently split an operational
+    context. Distinct workspaces and repositories resolve independent intents
     under the same owner; campaign membership supplies no operation rights.
     A unique session already selected by the authenticated
     principal, campaign, definition, workspace, and registered checkout
@@ -1559,6 +1572,15 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             sessions=sorted(foreign),
             next="request an explicit owner-issued handoff; Environment will not adopt another principal's campaign",
         )
+    # Each validated workspace resolves its own operational context and rights.
+    # Campaign membership neither restricts later workspace entry nor transfers
+    # authority between those sessions. Check ownership globally above, then
+    # enforce exact-context and duplicate selection inside this workspace.
+    live = [session_id for session_id in live
+            if not (isinstance(snapshots[session_id].get("workspace", {}).get("root"), str)
+                    and snapshots[session_id]["workspace"]["root"] != str(workspace_root))]
+    if not live:
+        return
     # Campaign identity groups work; it is not a repository authorization.
     # A verified checkout may establish its own intent alongside same-owner
     # contexts in other repositories. Resolution below still derives rights
@@ -1580,8 +1602,8 @@ def _validate_campaign_identity(store, *, campaign_id: str,
             return
     if len(live) > 1:
         exact_context = [
-            session_id for session_id, snapshot in snapshots.items()
-            if snapshot.get("provenance", {}).get("definition_id") == definition_id
+            session_id for session_id in live
+            if (snapshot := snapshots[session_id]).get("provenance", {}).get("definition_id") == definition_id
             and snapshot.get("workspace", {}).get("root") == str(workspace_root)
             and (
                 _working_checkout_matches_snapshot(snapshot, working_checkout)

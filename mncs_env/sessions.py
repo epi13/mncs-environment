@@ -3214,6 +3214,17 @@ class Session:
                 "resolution_inputs_digest": environment.get("resolution_inputs_digest"),
             },
         }
+        # A standalone workspace may have no selected checkout or writable
+        # intent. Its observed root repository still identifies continuation.
+        if not snapshot["campaign"]["repository_refs"]:
+            snapshot["campaign"]["repository_refs"] = [
+                {"repository": repo["manifest_repository"], "observed_path": ".",
+                 "branch": repo.get("branch"), "head": repo.get("head"),
+                 "clean": not repo.get("dirty", True)}
+                for repo in snapshot["workspace"].get("repositories", [])
+                if isinstance(repo, dict) and repo.get("manifest_repository")
+                and repo.get("path") == snapshot["workspace"].get("root")
+            ]
         store.save_snapshot(session_id, snapshot)
         instance = cls(store, session_id)
         instance._emit("session.created", "environment", {"consumer_id": consumer_id})
@@ -7131,7 +7142,7 @@ class Session:
                 relative = resolved.relative_to(root).as_posix()
             except (OSError, ValueError):
                 return
-            if path.is_symlink() or not relative or relative == ".":
+            if path.is_symlink() or not relative:
                 return
             candidates[(repository, relative)] = resolved
 
@@ -10867,6 +10878,14 @@ class Session:
             "environment_id": self.snapshot.get("environment_id"),
             "consumer_id": self.snapshot.get("consumer_id"),
             "configuration": self.snapshot.get("configuration", {}),
+            **({"development_entry": {
+                "status": "orientation-only",
+                "reason": "project-development-definition-missing",
+                "next": "Select an owner-controlled project development definition before writing. "
+                        "Enter another authorized project with the same campaign_id for an independent Work Intent.",
+            }} if (not writable
+                   and self.snapshot.get("configuration", {}).get("source") == "orientation-default"
+                   and self.snapshot.get("configuration", {}).get("name") == "mncs-orientation") else {}),
             "state_dir": str(self.state_dir.expanduser().resolve()),
             "persistence": "store" if hasattr(self.store, "backend") else "file",
             "readiness": readiness_module.summarize(self.snapshot),

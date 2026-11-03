@@ -258,12 +258,22 @@ changing a prior session's authority. An authenticated campaign identity is
 checked against all live sessions before creation. When no campaign identity
 is supplied, a unique live campaign with the same authenticated principal,
 work-intent identity, and workspace is discovered even if its definition
-changed. If that campaign belongs to a different definition or workspace,
-entry returns `campaign-context-mismatch` with a compact continuation capsule
-instead of creating a second session under the same campaign. Resume it in its
-recorded Environment, or choose a distinct campaign identity for independent
-work. Another principal's live campaign remains protected unless its owner
-issues a handoff.
+changed. A campaign may group independently scoped sessions in different validated
+workspaces, as well as distinct repository intents in the same workspace.
+Each entry resolves its own definition and rights; no authority is copied from
+the previous session. Same-workspace, same-repository definition changes still
+return `campaign-context-mismatch` with the recorded continuation. Duplicate
+exact contexts remain ambiguous. Another principal's live campaign remains
+protected across every workspace unless its owner issues a handoff.
+
+A standalone Git repository is also a workspace. Its campaign checkout reference
+uses the relative path `.` and remains selectable by exact session identity
+from a fresh authenticated client. Older snapshots that omitted that reference
+can be matched through their persisted root-repository observation against the
+freshly verified registered checkout. This read selection adds no write rights.
+Projects without a development definition enter read-only orientation; to develop,
+select an owner-controlled project definition declaring the intended repository.
+Orientation does not restrict later independently authorized campaign entry.
 
 For routine agent continuation, `resume <session> --context` returns the
 existing agent-facing context plus the bounded catchup capsule. It avoids

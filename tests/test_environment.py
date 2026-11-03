@@ -3460,6 +3460,9 @@ class CampaignContinuityTests(unittest.TestCase):
                         "branch": "main", "clean": True,
                     },
                 }
+                # This fixture replaces its original workspace with an isolated
+                # repository; discard references to the fixture's former root.
+                session.snapshot["campaign"]["repository_refs"] = []
                 campaign = dict(session.snapshot.get("campaign") or {})
                 campaign["repository_refs"] = session._campaign_repository_refs({})
                 session.snapshot["campaign"] = campaign

@@ -60,9 +60,12 @@ changes the checkout selected for existing repository authority, not the
 repository set. Adding repository scope to the same session still requires an exact owner-approved
 grant. A separate Work Intent enters through its own owner-controlled project
 definition under the same authenticated campaign; the previous session does
-not cap independently resolved repository authority. Same-workspace, distinct
-repository contexts do not constitute duplicate continuations. Overlapping foreign claims continue to block ordinary shared-scope
-mutations.
+not cap independently resolved repository authority. Distinct validated workspaces
+and same-workspace, distinct repository contexts do not constitute duplicate continuations. Session workspace identity
+scopes operational context and selection, while campaign identity groups those
+independently authorized intents. Standalone root-repository references use `.`;
+older omitted references remain recoverable from exact persisted observations.
+Overlapping foreign claims continue to block ordinary shared-scope mutations.
 When an isolated campaign needs a destination outside its checkout directory,
 Environment accepts only a registered worktree anchored to the selected
 checkout's same Git common directory and repository manifest identity; it does
