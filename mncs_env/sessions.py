@@ -1960,8 +1960,12 @@ def _resolve_declared_runtime_toolchain_checkouts(
     for repository, declared_by in sorted(references.items()):
         selected_root = provider_roots.get(repository)
         read_only = selected_root is None
-        candidate = Path(selected_root) if selected_root is not None else root / repository
         try:
+            # Match ordinary workspace selection (for example mncs-commons
+            # lives at MNCS-Commons). Keep its bounded, unambiguous identity
+            # checks rather than assuming the logical ID is a directory name.
+            candidate = (Path(selected_root) if selected_root is not None
+                         else workspace_module._selected_directories(root, [repository])[0])
             if candidate.is_symlink():
                 raise ValueError("toolchain checkout is a symbolic link")
             resolved = candidate.resolve(strict=True)
@@ -6471,6 +6475,12 @@ class Session:
         records carry both executor and effect target.
         """
         binding = self._binding(capability)
+        if binding.get("availability", {}).get("status") != "available":
+            # A successful bootstrap can create an executable without changing
+            # Git HEAD. Refresh the existing projection once before rejecting a
+            # previously unavailable provider; all admission checks still run.
+            self.revalidate()
+            binding = self._binding(capability)
         # Explicit checkout selection must take effect before provider execution.
         # Rebuild the existing projection when it still describes the entry
         # checkout; never silently execute that older provider as a fallback.

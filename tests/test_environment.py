@@ -4701,6 +4701,29 @@ class CapabilityTests(unittest.TestCase):
                  "test:automation:tests:toolchain:MNCS"},
             )
 
+    def test_declared_runtime_toolchain_reuses_case_variant_workspace_selection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            commons = self._git_checkout(root / "MNCS-Commons", "mncs-commons", {"contracts": {}})
+            provider = self._git_checkout(root / "mncs-test", "mncs-test", {
+                "contracts": {"tests": [{"test": "native-tests", "command": {
+                    "argv": ["python3", "-m", "pytest"],
+                    "toolchains": {"MNCS_COMMONS_ROOT": {"repository": "mncs-commons", "path": "."}},
+                }}]},
+            })
+            roots, facts, diagnostics = sessions._resolve_declared_runtime_toolchain_checkouts(
+                root, {"mncs-test": provider}, {"mncs-test": {"path": str(provider)}},
+            )
+            self.assertEqual(diagnostics, {})
+            self.assertEqual(roots["mncs-commons"], commons)
+            self.assertTrue(facts["mncs-commons"]["read_only"])
+            self._git_checkout(root / "Mncs-Commons", "mncs-commons", {"contracts": {}})
+            roots, _, diagnostics = sessions._resolve_declared_runtime_toolchain_checkouts(
+                root, {"mncs-test": provider}, {"mncs-test": {"path": str(provider)}},
+            )
+            self.assertNotIn("mncs-commons", roots)
+            self.assertIn("mncs-commons", diagnostics)
+
     def test_declared_external_toolchain_is_readonly_and_does_not_add_provider_or_effect_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace_root = Path(directory)
@@ -6321,6 +6344,42 @@ TEST_NATIVE_LIB = FAMILY / "mncs-test" / "native"
                      and LANGUAGE_LIB.is_dir() and TEST_NATIVE_LIB.is_dir(),
                      "family toolchain checkout required")
 class ToolchainTests(unittest.TestCase):
+    def test_generated_toolchain_recovers_without_manual_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            provider = CapabilityTests._git_checkout(root / "demo", "demo", {
+                "contracts": {"provides": [{"contract": "run", "version": "1",
+                    "effects": ["read"], "invocation": {"kind": "executable",
+                    "path": "run.sh", "toolchain": {"repository": "demo", "path": "toolchain/mncs"}}}]},
+            })
+            (provider / "run.sh").write_text("#!/bin/sh\necho current-toolchain\n")
+            (provider / "run.sh").chmod(0o755)
+            (provider / ".gitignore").write_text("toolchain/\n")
+            subprocess.run(["git", "-C", str(provider), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(provider), "-c", "user.name=Test",
+                            "-c", "user.email=test@example.invalid", "commit", "-qm", "provider"], check=True)
+            state = Path(directory) / "state"
+            store = open_store(state, "store", verify_on_open=False)
+            environment = sessions.resolve_environment(definition=definition(),
+                workspace_root=root, state_dir=state, consumer_id="tester", store=store)
+            session = sessions.Session.create(state_dir=state, environment=environment,
+                consumer_id="tester", store=store)
+            try:
+                for lifecycle in ("resolving", "ready", "active"):
+                    session.transition(lifecycle, "test")
+                self.assertNotEqual(session._binding("demo:run")["availability"]["status"], "available")
+                with self.assertRaises(sessions.AuthorityDenied):
+                    session.invoke("demo:run", [])
+                toolchain = provider / "toolchain" / "mncs"
+                toolchain.parent.mkdir()
+                toolchain.write_text("#!/bin/sh\nexit 0\n")
+                toolchain.chmod(0o755)
+                result = session.invoke("demo:run", [])
+                self.assertEqual(result["returncode"], 0)
+                self.assertIn("current-toolchain", result["stdout"])
+            finally:
+                session.close()
+
     def test_mncs_test_binding_is_descriptor_addressed(self) -> None:
         bindings = [capabilities.probe_availability(binding)
                     for binding in capabilities.discover_capabilities(FAMILY, repository_roots={"mncs-test": FAMILY / "mncs-test", "mncs-language": FAMILY / "mncs-language"})]
