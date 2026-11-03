@@ -5722,7 +5722,7 @@ class CapabilityTests(unittest.TestCase):
                 for item in unavailable
             ))
 
-    def test_manifest_test_binds_and_executes_multiple_selected_toolchains(self) -> None:
+    def test_manifest_test_toolchain_binds_and_executes_multiple_selected_roots(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             provider = self._git_checkout(
@@ -5811,7 +5811,7 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok", result)
             self.assertEqual(json.loads(result["stdout"]), expected_env)
 
-    def test_manifest_test_rejects_invalid_or_unavailable_multi_toolchains(self) -> None:
+    def test_manifest_test_toolchain_rejects_invalid_or_unavailable_multi_roots(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             provider = root / "provider"
