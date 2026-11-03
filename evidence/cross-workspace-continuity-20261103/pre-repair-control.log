@@ -1,0 +1,46 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______________ test_standalone_orientation_exact_session_recovery ______________
+
+tmp_path = PosixPath('/home/epi13/tmp_opencode/pytest-of-epi13/pytest-5465/test_standalone_orientation_ex0')
+
+    def test_standalone_orientation_exact_session_recovery(tmp_path):
+        config = _config(tmp_path)
+        root = config.workspace_root / "mncs-actions"
+        root.mkdir()
+        def git(*args):
+            return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
+        git("init", "-b", "main")
+        git("config", "user.name", "Continuation proof")
+        git("config", "user.email", "proof@example.invalid")
+        (root / ".mncs").mkdir()
+        (root / ".mncs/project.json").write_text(json.dumps({"repository": "mncs-actions"}))
+        git("add", ".mncs/project.json")
+        git("commit", "-m", "isolated identity")
+        service = EnvironmentService(config)
+        service.authenticated_principal_id = "principal-standalone"
+        pkg = service._pkg()
+        definition, _ = pkg.entry.select_definition(None, str(root))
+        context = service.enter(definition, "consumer", workspace="mncs-actions",
+                                campaign_id="cmp_standalone")
+        session_id = context["session_id"]
+        checkout = pkg.workspace.verify_registered_checkout(root)
+        # Model the exact historical incident record: root refs were discarded.
+        store = service._store(pkg)
+        session = pkg.sessions.Session(store, session_id)
+        session.snapshot["campaign"]["repository_refs"] = []
+        session._save()
+        store.close()
+        fresh = EnvironmentService(config)
+        fresh.authenticated_principal_id = "principal-standalone"
+        capsule = fresh.campaign_continuation("mncs-actions", session_id=session_id,
+                                              working_checkout=checkout)
+>       assert capsule["status"] == "ready"
+E       AssertionError: assert 'not-found' == 'ready'
+E         
+E         - ready
+E         + not-found
+
+tests/test_standalone_continuation.py:44: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_standalone_continuation.py::test_standalone_orientation_exact_session_recovery

@@ -1,0 +1,30 @@
+[
+  {
+    "acquired_at": "2026-11-03T18:23:49+00:00",
+    "basis": "explicit-claim",
+    "claim_id": "claim:mncs-environment:worktree:443a332b5637",
+    "consumer_id": "local-agent",
+    "expires_at": "2026-11-04T18:23:49+00:00",
+    "identity": "clm_b204c5ea1c342507",
+    "live": true,
+    "provenance": {
+      "acquired_by": "local-agent",
+      "operation_request_digest": "f888075a2e4b1f3a",
+      "operation_request_id": "req_84fb03e8bec46f0db6cb6ccf27575333"
+    },
+    "reason": "Live conflict protection acceptance in an isolated checkout",
+    "repository": "mncs-environment",
+    "schema_version": "mncs.environment.workspace-claim/2",
+    "scope": {
+      "branch": "verify/cross-workspace-same-20261103",
+      "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/cross-workspace-same-20261103",
+      "exclusive": false,
+      "kind": "worktree",
+      "paths": null,
+      "repository": "mncs-environment"
+    },
+    "session_id": "ses_9a451a4cc910a4bd",
+    "status": "held",
+    "version": 1
+  }
+]

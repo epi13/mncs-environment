@@ -1,0 +1,8 @@
+{
+  "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+  "session_id": "ses_8091963e56bdabc2",
+  "claim_id": "claim:mncs-environment:worktree:e58fb066142a",
+  "operation": "write-read-remove",
+  "sha256": "071112e496875e30d5db74c38155599d2c8ec72bd821c27e8c450d402035f361",
+  "removed": true
+}

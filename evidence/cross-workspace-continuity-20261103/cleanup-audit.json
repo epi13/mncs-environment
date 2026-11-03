@@ -1,0 +1,90 @@
+{
+  "sessions": [
+    {
+      "session_id": "ses_d8d959d16c552968",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_42809503fd17c849",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_7a4e977c567304cc",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_9a451a4cc910a4bd",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_8091963e56bdabc2",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_e97ebc619dadf947",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_e3bc51e6ce1056b8",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    },
+    {
+      "session_id": "ses_60b7776c553fa74c",
+      "lifecycle": "completed",
+      "checkpoint_ids": []
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "claim:mncs-environment:worktree:264344100282",
+      "session_id": "ses_e3bc51e6ce1056b8",
+      "status": "superseded",
+      "version": 2,
+      "live": false
+    },
+    {
+      "claim_id": "claim:mncs-control-mcp:worktree:5142aabaae14",
+      "session_id": "ses_60b7776c553fa74c",
+      "status": "released",
+      "version": 2,
+      "live": false
+    },
+    {
+      "claim_id": "claim:mncs-environment:worktree:443a332b5637",
+      "session_id": "ses_9a451a4cc910a4bd",
+      "status": "released",
+      "version": 2,
+      "live": false
+    },
+    {
+      "claim_id": "claim:mncs-environment",
+      "session_id": "ses_8091963e56bdabc2",
+      "status": "released",
+      "version": 38,
+      "live": false
+    },
+    {
+      "claim_id": "claim:mncs-environment:worktree:e58fb066142a",
+      "session_id": "ses_8091963e56bdabc2",
+      "status": "released",
+      "version": 2,
+      "live": false
+    },
+    {
+      "claim_id": "claim:mncs-forge:worktree:043c7b59d30b",
+      "session_id": "ses_d8d959d16c552968",
+      "status": "released",
+      "version": 2,
+      "live": false
+    }
+  ],
+  "all_task_sessions_completed": true,
+  "no_task_claims_held": true
+}

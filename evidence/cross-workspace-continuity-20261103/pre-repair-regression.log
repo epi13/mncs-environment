@@ -1,0 +1,546 @@
+..FF                                                                     [100%]
+=================================== FAILURES ===================================
+__________ test_campaign_continues_across_standalone_workspaces[file] __________
+
+tmp_path = PosixPath('/home/epi13/tmp_opencode/pytest-of-epi13/pytest-5462/test_campaign_continues_across0')
+backend = 'file'
+
+    @pytest.mark.parametrize("backend", ["file", "store"])
+    def test_campaign_continues_across_standalone_workspaces(tmp_path, backend):
+        """The incident: development -> standalone orientation -> development."""
+        state = tmp_path / "state"
+        family = tmp_path / "family"
+        other_family = tmp_path / "other-family"
+        for root, name in ((family, "first"), (other_family, "actions"),
+                           (other_family, "debug")):
+            _checkout(root, name)
+        definition = {
+            "name": "first-development", "working_checkout": "current",
+            "workspace_scope": {"repositories": ["first"]},
+            "intent": {"goal": "first operation", "repositories": ["first"]},
+        }
+        path = family / "first/.mncs/environment.json"
+        path.write_text(json.dumps(definition))
+        _git(family / "first", "add", ".mncs/environment.json")
+        _git(family / "first", "commit", "-m", "development entry")
+    
+        def enter(d, p, root, principal="owner"):
+            return entry.enter(
+                definition=d, definition_path=p, workspace_root=str(root),
+                state_dir=state, backend=backend, consumer_id="agent", consumer_kind="agent",
+                authenticated_principal_id=principal, campaign_id="cmp_cross_workspace",
+            )
+    
+        first = enter(definition, path, family)
+        session = sessions.Session.open(state_dir=state, session_id=first["session_id"], backend=backend)
+        try:
+            session.acquire_claim("first", reason="isolated first operation")
+            session.release_claim("first", reason="operation done")
+            session.checkpoint(progress="first operation done")
+        finally:
+            session.close()
+        orientation, _ = entry.select_definition(None, str(other_family / "actions"))
+>       second = enter(orientation, None, other_family / "actions")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_authority_continuity.py:108: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_authority_continuity.py:93: in enter
+    return entry.enter(
+mncs_env/entry.py:2206: in enter
+    _validate_campaign_identity(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+store = <mncs_env.session_store.FileSessionStore object at 0x7fb2d0f97c50>
+
+    def _validate_campaign_identity(store, *, campaign_id: str,
+                                    authenticated_principal_id: str | None,
+                                    definition_id: str, workspace_root: Path,
+                                    selected_session_id: str | None,
+                                    pending_handoff: tuple | None,
+                                    working_checkout: dict[str, str] | None = None) -> None:
+        """Select exact operational contexts without making one repository a ceiling.
+    
+        A campaign identity is durable across consumer restarts. Same-repository
+        definition changes and workspace changes must not silently split an
+        operational context. Distinct repositories resolve independent intents
+        under the same owner; campaign membership supplies no operation rights.
+        A unique session already selected by the authenticated
+        principal, campaign, definition, workspace, and registered checkout
+        remains resumable when
+        unrelated same-principal sessions use other contexts. Duplicate exact
+        contexts remain ambiguous, and the existing session id and context are
+        returned so the caller can choose the intended continuation.
+        """
+        if authenticated_principal_id is None:
+            return
+        from . import selection
+    
+        live = selection.select(
+            store,
+            {"campaign_identity": campaign_id, "campaign_continuation": True},
+            lambda snapshot: (
+                (snapshot.get("campaign") or {}).get("identity") == campaign_id
+                and snapshot.get("lifecycle") not in ("completed", "failed")
+            ),
+        )
+        if not live:
+            return
+        snapshots = {session_id: store.load_snapshot(session_id) or {}
+                     for session_id in live}
+        checkout_claim_sessions = _active_checkout_claim_sessions(
+            store, working_checkout,
+        )
+    
+        def continuation(session_id: str) -> dict:
+            snapshot = snapshots[session_id]
+            campaign = snapshot.get("campaign") or {}
+            observations = sessions.continuation_observations(
+                store, snapshot, session_id
+            )
+            repositories = []
+            repository_refs = campaign.get("repository_refs", [])
+            if not isinstance(repository_refs, list):
+                repository_refs = []
+            for item in repository_refs[:16]:
+                if isinstance(item, dict):
+                    repositories.append({key: item.get(key) for key in (
+                        "repository", "observed_path", "checkout_identity",
+                        "git_common_directory_identity", "branch", "head", "clean",
+                        "observation",
+                    )})
+            checkpoint_ids = snapshot.get("checkpoints", [])
+            claim_ids = observations["claim_ids"]
+            pressures = campaign.get("unresolved_pressures", [])
+            if not isinstance(checkpoint_ids, list):
+                checkpoint_ids = []
+            if not isinstance(claim_ids, list):
+                claim_ids = []
+            if not isinstance(pressures, list):
+                pressures = []
+            persisted_campaign_state = observations.get("campaign_state")
+            delivery = (
+                persisted_campaign_state.get("delivery")
+                if isinstance(persisted_campaign_state, dict)
+                else campaign.get("delivery", {"status": "pending"})
+            )
+            if not isinstance(delivery, dict):
+                delivery = {"status": "unknown"}
+            result = {
+                "session_id": session_id,
+                "lifecycle": snapshot.get("lifecycle"),
+                "consumer_id": snapshot.get("consumer_id"),
+                "definition_id": snapshot.get("provenance", {}).get("definition_id"),
+                "workspace_root": snapshot.get("workspace", {}).get("root"),
+                "checkpoint_ids": checkpoint_ids[-4:],
+                "claim_ids": claim_ids[-16:],
+                "repositories": repositories,
+                "delivery": delivery,
+                "unresolved_pressures": pressures[:8],
+                "selected_checkout": _session_selection_details(
+                    session_id, snapshot, working_checkout,
+                )["selected_checkout"],
+            }
+            if observations["latest_checkpoint"] is not None:
+                result["latest_checkpoint"] = observations["latest_checkpoint"]
+            if isinstance(persisted_campaign_state, dict):
+                result["campaign_state_checkpoint_id"] = persisted_campaign_state.get(
+                    "checkpoint_id"
+                )
+                result["evidence"] = persisted_campaign_state.get("evidence", [])
+                result["evidence_count"] = persisted_campaign_state.get(
+                    "evidence_count", len(result["evidence"])
+                )
+                result["evidence_truncated"] = persisted_campaign_state.get(
+                    "evidence_truncated", False
+                )
+            if observations["foreign_claims_count"]:
+                result.update({
+                    "foreign_claims": observations["foreign_claims"],
+                    "foreign_claims_count": observations["foreign_claims_count"],
+                    "foreign_claims_truncated": observations["foreign_claims_truncated"],
+                    "foreign_claim_owner_liveness": observations[
+                        "foreign_claim_owner_liveness"
+                    ],
+                })
+            return result
+    
+        handoff_session = pending_handoff[0] if pending_handoff is not None else None
+        foreign = [
+            session_id for session_id, snapshot in snapshots.items()
+            if snapshot.get("authenticated_principal_id") != authenticated_principal_id
+            and session_id != handoff_session
+        ]
+        if foreign:
+            raise EntryError(
+                "campaign identity has live work owned by another authenticated principal",
+                "campaign-owner-conflict",
+                campaign_id=campaign_id,
+                sessions=sorted(foreign),
+                next="request an explicit owner-issued handoff; Environment will not adopt another principal's campaign",
+            )
+        # Campaign identity groups work; it is not a repository authorization.
+        # A verified checkout may establish its own intent alongside same-owner
+        # contexts in other repositories. Resolution below still derives rights
+        # solely from the new definition, never from another campaign session.
+        # Keep same-repository/unknown contexts subject to the exact-context guard.
+        repository = (working_checkout or {}).get("repository")
+        if isinstance(repository, str) and repository:
+            live = [
+                session_id for session_id in live
+                if not (
+                    snapshots[session_id].get("workspace", {}).get("root")
+                    == str(workspace_root)
+                    and snapshots[session_id].get("intent", {}).get("repositories")
+                    and repository not in snapshots[session_id]["intent"]["repositories"]
+                    and repository not in snapshots[session_id].get("selected_checkouts", {})
+                )
+            ]
+            if not live:
+                return
+        if len(live) > 1:
+            exact_context = [
+                session_id for session_id, snapshot in snapshots.items()
+                if snapshot.get("provenance", {}).get("definition_id") == definition_id
+                and snapshot.get("workspace", {}).get("root") == str(workspace_root)
+                and (
+                    _working_checkout_matches_snapshot(snapshot, working_checkout)
+                    or _working_checkout_identity_matches_snapshot(snapshot, working_checkout)
+                    or session_id in checkout_claim_sessions
+                )
+            ]
+            authoritative_session, selection_evidence = (
+                _authoritative_duplicate_session(
+                    store,
+                    exact_context,
+                    working_checkout,
+                )
+                if exact_context else (None, {"basis": "no_exact_context"})
+            )
+            if (authoritative_session is not None
+                    and selected_session_id == authoritative_session):
+                return
+            raise EntryError(
+                "multiple live Environment sessions share this campaign identity",
+                "campaign-continuation-ambiguous",
+                campaign_id=campaign_id,
+                sessions=live,
+                continuations=[continuation(session_id) for session_id in live],
+                conflicting_contexts=[
+                    _session_selection_details(session_id, snapshots[session_id], working_checkout)
+                    for session_id in live
+                ],
+                selection_evidence=selection_evidence,
+                next="resume the intended recorded session or assign a distinct campaign identity to independent work",
+            )
+        only = live[0]
+        if selected_session_id == only or handoff_session == only:
+            return
+        prior = snapshots[only]
+        prior_definition = prior.get("provenance", {}).get("definition_id")
+        prior_workspace = prior.get("workspace", {}).get("root")
+        if (prior_definition == definition_id
+                and prior_workspace == str(workspace_root)
+                and not _working_checkout_matches_snapshot(prior, working_checkout)):
+            raise EntryError(
+                "campaign identity is already attached to a different or unknown registered checkout",
+                "campaign-checkout-mismatch",
+                campaign_id=campaign_id,
+                session_id=only,
+                current_checkout=working_checkout,
+                prior_checkout=_session_selection_details(only, prior, working_checkout)[
+                    "selected_checkout"
+                ],
+                continuation=continuation(only),
+                next="resume from the recorded checkout or start an independent campaign for this registered worktree",
+            )
+        if prior_definition != definition_id or prior_workspace != str(workspace_root):
+>           raise EntryError(
+                "campaign identity already belongs to live work in a different Environment definition or workspace",
+                "campaign-context-mismatch",
+                campaign_id=campaign_id,
+                session_id=only,
+                lifecycle=prior.get("lifecycle"),
+                definition_id=prior_definition,
+                workspace=prior_workspace,
+                continuation=continuation(only),
+                next=(f"resume {only} --revalidate in its recorded Environment, or choose a new campaign identity "
+                      "for work under the changed definition or workspace"),
+            )
+E           mncs_env.entry.EntryError: campaign identity already belongs to live work in a different Environment definition or workspace
+
+mncs_env/entry.py:1638: EntryError
+_________ test_campaign_continues_across_standalone_workspaces[store] __________
+
+tmp_path = PosixPath('/home/epi13/tmp_opencode/pytest-of-epi13/pytest-5462/test_campaign_continues_across1')
+backend = 'store'
+
+    @pytest.mark.parametrize("backend", ["file", "store"])
+    def test_campaign_continues_across_standalone_workspaces(tmp_path, backend):
+        """The incident: development -> standalone orientation -> development."""
+        state = tmp_path / "state"
+        family = tmp_path / "family"
+        other_family = tmp_path / "other-family"
+        for root, name in ((family, "first"), (other_family, "actions"),
+                           (other_family, "debug")):
+            _checkout(root, name)
+        definition = {
+            "name": "first-development", "working_checkout": "current",
+            "workspace_scope": {"repositories": ["first"]},
+            "intent": {"goal": "first operation", "repositories": ["first"]},
+        }
+        path = family / "first/.mncs/environment.json"
+        path.write_text(json.dumps(definition))
+        _git(family / "first", "add", ".mncs/environment.json")
+        _git(family / "first", "commit", "-m", "development entry")
+    
+        def enter(d, p, root, principal="owner"):
+            return entry.enter(
+                definition=d, definition_path=p, workspace_root=str(root),
+                state_dir=state, backend=backend, consumer_id="agent", consumer_kind="agent",
+                authenticated_principal_id=principal, campaign_id="cmp_cross_workspace",
+            )
+    
+        first = enter(definition, path, family)
+        session = sessions.Session.open(state_dir=state, session_id=first["session_id"], backend=backend)
+        try:
+            session.acquire_claim("first", reason="isolated first operation")
+            session.release_claim("first", reason="operation done")
+            session.checkpoint(progress="first operation done")
+        finally:
+            session.close()
+        orientation, _ = entry.select_definition(None, str(other_family / "actions"))
+>       second = enter(orientation, None, other_family / "actions")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_authority_continuity.py:108: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_authority_continuity.py:93: in enter
+    return entry.enter(
+mncs_env/entry.py:2206: in enter
+    _validate_campaign_identity(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+store = <mncs_env.session_store.StoreSessionStore object at 0x7fb2d2182e40>
+
+    def _validate_campaign_identity(store, *, campaign_id: str,
+                                    authenticated_principal_id: str | None,
+                                    definition_id: str, workspace_root: Path,
+                                    selected_session_id: str | None,
+                                    pending_handoff: tuple | None,
+                                    working_checkout: dict[str, str] | None = None) -> None:
+        """Select exact operational contexts without making one repository a ceiling.
+    
+        A campaign identity is durable across consumer restarts. Same-repository
+        definition changes and workspace changes must not silently split an
+        operational context. Distinct repositories resolve independent intents
+        under the same owner; campaign membership supplies no operation rights.
+        A unique session already selected by the authenticated
+        principal, campaign, definition, workspace, and registered checkout
+        remains resumable when
+        unrelated same-principal sessions use other contexts. Duplicate exact
+        contexts remain ambiguous, and the existing session id and context are
+        returned so the caller can choose the intended continuation.
+        """
+        if authenticated_principal_id is None:
+            return
+        from . import selection
+    
+        live = selection.select(
+            store,
+            {"campaign_identity": campaign_id, "campaign_continuation": True},
+            lambda snapshot: (
+                (snapshot.get("campaign") or {}).get("identity") == campaign_id
+                and snapshot.get("lifecycle") not in ("completed", "failed")
+            ),
+        )
+        if not live:
+            return
+        snapshots = {session_id: store.load_snapshot(session_id) or {}
+                     for session_id in live}
+        checkout_claim_sessions = _active_checkout_claim_sessions(
+            store, working_checkout,
+        )
+    
+        def continuation(session_id: str) -> dict:
+            snapshot = snapshots[session_id]
+            campaign = snapshot.get("campaign") or {}
+            observations = sessions.continuation_observations(
+                store, snapshot, session_id
+            )
+            repositories = []
+            repository_refs = campaign.get("repository_refs", [])
+            if not isinstance(repository_refs, list):
+                repository_refs = []
+            for item in repository_refs[:16]:
+                if isinstance(item, dict):
+                    repositories.append({key: item.get(key) for key in (
+                        "repository", "observed_path", "checkout_identity",
+                        "git_common_directory_identity", "branch", "head", "clean",
+                        "observation",
+                    )})
+            checkpoint_ids = snapshot.get("checkpoints", [])
+            claim_ids = observations["claim_ids"]
+            pressures = campaign.get("unresolved_pressures", [])
+            if not isinstance(checkpoint_ids, list):
+                checkpoint_ids = []
+            if not isinstance(claim_ids, list):
+                claim_ids = []
+            if not isinstance(pressures, list):
+                pressures = []
+            persisted_campaign_state = observations.get("campaign_state")
+            delivery = (
+                persisted_campaign_state.get("delivery")
+                if isinstance(persisted_campaign_state, dict)
+                else campaign.get("delivery", {"status": "pending"})
+            )
+            if not isinstance(delivery, dict):
+                delivery = {"status": "unknown"}
+            result = {
+                "session_id": session_id,
+                "lifecycle": snapshot.get("lifecycle"),
+                "consumer_id": snapshot.get("consumer_id"),
+                "definition_id": snapshot.get("provenance", {}).get("definition_id"),
+                "workspace_root": snapshot.get("workspace", {}).get("root"),
+                "checkpoint_ids": checkpoint_ids[-4:],
+                "claim_ids": claim_ids[-16:],
+                "repositories": repositories,
+                "delivery": delivery,
+                "unresolved_pressures": pressures[:8],
+                "selected_checkout": _session_selection_details(
+                    session_id, snapshot, working_checkout,
+                )["selected_checkout"],
+            }
+            if observations["latest_checkpoint"] is not None:
+                result["latest_checkpoint"] = observations["latest_checkpoint"]
+            if isinstance(persisted_campaign_state, dict):
+                result["campaign_state_checkpoint_id"] = persisted_campaign_state.get(
+                    "checkpoint_id"
+                )
+                result["evidence"] = persisted_campaign_state.get("evidence", [])
+                result["evidence_count"] = persisted_campaign_state.get(
+                    "evidence_count", len(result["evidence"])
+                )
+                result["evidence_truncated"] = persisted_campaign_state.get(
+                    "evidence_truncated", False
+                )
+            if observations["foreign_claims_count"]:
+                result.update({
+                    "foreign_claims": observations["foreign_claims"],
+                    "foreign_claims_count": observations["foreign_claims_count"],
+                    "foreign_claims_truncated": observations["foreign_claims_truncated"],
+                    "foreign_claim_owner_liveness": observations[
+                        "foreign_claim_owner_liveness"
+                    ],
+                })
+            return result
+    
+        handoff_session = pending_handoff[0] if pending_handoff is not None else None
+        foreign = [
+            session_id for session_id, snapshot in snapshots.items()
+            if snapshot.get("authenticated_principal_id") != authenticated_principal_id
+            and session_id != handoff_session
+        ]
+        if foreign:
+            raise EntryError(
+                "campaign identity has live work owned by another authenticated principal",
+                "campaign-owner-conflict",
+                campaign_id=campaign_id,
+                sessions=sorted(foreign),
+                next="request an explicit owner-issued handoff; Environment will not adopt another principal's campaign",
+            )
+        # Campaign identity groups work; it is not a repository authorization.
+        # A verified checkout may establish its own intent alongside same-owner
+        # contexts in other repositories. Resolution below still derives rights
+        # solely from the new definition, never from another campaign session.
+        # Keep same-repository/unknown contexts subject to the exact-context guard.
+        repository = (working_checkout or {}).get("repository")
+        if isinstance(repository, str) and repository:
+            live = [
+                session_id for session_id in live
+                if not (
+                    snapshots[session_id].get("workspace", {}).get("root")
+                    == str(workspace_root)
+                    and snapshots[session_id].get("intent", {}).get("repositories")
+                    and repository not in snapshots[session_id]["intent"]["repositories"]
+                    and repository not in snapshots[session_id].get("selected_checkouts", {})
+                )
+            ]
+            if not live:
+                return
+        if len(live) > 1:
+            exact_context = [
+                session_id for session_id, snapshot in snapshots.items()
+                if snapshot.get("provenance", {}).get("definition_id") == definition_id
+                and snapshot.get("workspace", {}).get("root") == str(workspace_root)
+                and (
+                    _working_checkout_matches_snapshot(snapshot, working_checkout)
+                    or _working_checkout_identity_matches_snapshot(snapshot, working_checkout)
+                    or session_id in checkout_claim_sessions
+                )
+            ]
+            authoritative_session, selection_evidence = (
+                _authoritative_duplicate_session(
+                    store,
+                    exact_context,
+                    working_checkout,
+                )
+                if exact_context else (None, {"basis": "no_exact_context"})
+            )
+            if (authoritative_session is not None
+                    and selected_session_id == authoritative_session):
+                return
+            raise EntryError(
+                "multiple live Environment sessions share this campaign identity",
+                "campaign-continuation-ambiguous",
+                campaign_id=campaign_id,
+                sessions=live,
+                continuations=[continuation(session_id) for session_id in live],
+                conflicting_contexts=[
+                    _session_selection_details(session_id, snapshots[session_id], working_checkout)
+                    for session_id in live
+                ],
+                selection_evidence=selection_evidence,
+                next="resume the intended recorded session or assign a distinct campaign identity to independent work",
+            )
+        only = live[0]
+        if selected_session_id == only or handoff_session == only:
+            return
+        prior = snapshots[only]
+        prior_definition = prior.get("provenance", {}).get("definition_id")
+        prior_workspace = prior.get("workspace", {}).get("root")
+        if (prior_definition == definition_id
+                and prior_workspace == str(workspace_root)
+                and not _working_checkout_matches_snapshot(prior, working_checkout)):
+            raise EntryError(
+                "campaign identity is already attached to a different or unknown registered checkout",
+                "campaign-checkout-mismatch",
+                campaign_id=campaign_id,
+                session_id=only,
+                current_checkout=working_checkout,
+                prior_checkout=_session_selection_details(only, prior, working_checkout)[
+                    "selected_checkout"
+                ],
+                continuation=continuation(only),
+                next="resume from the recorded checkout or start an independent campaign for this registered worktree",
+            )
+        if prior_definition != definition_id or prior_workspace != str(workspace_root):
+>           raise EntryError(
+                "campaign identity already belongs to live work in a different Environment definition or workspace",
+                "campaign-context-mismatch",
+                campaign_id=campaign_id,
+                session_id=only,
+                lifecycle=prior.get("lifecycle"),
+                definition_id=prior_definition,
+                workspace=prior_workspace,
+                continuation=continuation(only),
+                next=(f"resume {only} --revalidate in its recorded Environment, or choose a new campaign identity "
+                      "for work under the changed definition or workspace"),
+            )
+E           mncs_env.entry.EntryError: campaign identity already belongs to live work in a different Environment definition or workspace
+
+mncs_env/entry.py:1638: EntryError
+=========================== short test summary info ============================
+FAILED tests/test_authority_continuity.py::test_campaign_continues_across_standalone_workspaces[file]
+FAILED tests/test_authority_continuity.py::test_campaign_continues_across_standalone_workspaces[store]
+2 failed, 2 passed in 32.78s

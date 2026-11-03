@@ -1,0 +1,547 @@
+[
+  {
+    "label": "fabric-rejection",
+    "request": {
+      "project": "mncs-fabric",
+      "operation": "continuation"
+    }
+  },
+  {
+    "label": "forge-ordinary-entry",
+    "request": {
+      "project": "mncs-forge",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "forge-claim",
+    "request": {
+      "project": "mncs-forge",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_d8d959d16c552968",
+        "mode": "acquire",
+        "repository": "mncs-forge",
+        "reason": "Harmless isolated development continuity acceptance"
+      }
+    }
+  },
+  {
+    "label": "forge-release",
+    "request": {
+      "project": "mncs-forge",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_d8d959d16c552968",
+        "mode": "release",
+        "repository": "mncs-forge",
+        "claim_id": "claim:mncs-forge:worktree:043c7b59d30b"
+      }
+    }
+  },
+  {
+    "label": "forge-checkpoint",
+    "request": {
+      "project": "mncs-forge",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103",
+      "operation": "checkpoint",
+      "arguments": {
+        "session_id": "ses_d8d959d16c552968",
+        "progress": "Completed a harmless claimed isolated write/read/remove operation; SHA-256 50e2f0185e01f0dfe3226799a8362ebc9496948f4f147efcd3547e6ca504595a. Released claim before changing workspaces.",
+        "remaining": [
+          "Continue through Actions and Debug; recover exact sessions from fresh MCP processes."
+        ]
+      }
+    }
+  },
+  {
+    "label": "actions-cross-workspace-pre-repair",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "actions-entry",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "luna-actions-fresh-selection",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "campaign_state",
+      "arguments": {
+        "session_id": "ses_6ed56d7bef19a8bc"
+      }
+    }
+  },
+  {
+    "label": "actions-fresh-resume",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "resume",
+      "arguments": {
+        "session_id": "ses_42809503fd17c849"
+      }
+    }
+  },
+  {
+    "label": "luna-actions-fresh-selection-after-update",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "campaign_state",
+      "arguments": {
+        "session_id": "ses_6ed56d7bef19a8bc"
+      }
+    }
+  },
+  {
+    "label": "actions-checkpoint",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "checkpoint",
+      "arguments": {
+        "session_id": "ses_42809503fd17c849",
+        "progress": "Recovered the exact standalone read-only session from a fresh MCP process.",
+        "remaining": [
+          "Enter Debug without changing campaign identity."
+        ]
+      }
+    }
+  },
+  {
+    "label": "debug-entry",
+    "request": {
+      "project": "mncs-debug",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "luna-actions-fresh-continuation",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "continuation",
+      "arguments": {
+        "session_id": "ses_6ed56d7bef19a8bc"
+      }
+    }
+  },
+  {
+    "label": "debug-entry-outcome-inspection",
+    "request": {
+      "project": "mncs-debug",
+      "operation": "continuation",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "actions-durable-state",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "campaign_state",
+      "arguments": {
+        "session_id": "ses_42809503fd17c849"
+      }
+    }
+  },
+  {
+    "label": "debug-entry-after-outcome-inspection",
+    "request": {
+      "project": "mncs-debug",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "debug-fresh-resume",
+    "request": {
+      "project": "mncs-debug",
+      "operation": "resume",
+      "arguments": {
+        "session_id": "ses_7a4e977c567304cc"
+      }
+    }
+  },
+  {
+    "label": "debug-checkpoint",
+    "request": {
+      "project": "mncs-debug",
+      "operation": "checkpoint",
+      "arguments": {
+        "session_id": "ses_7a4e977c567304cc",
+        "progress": "Forge -> Actions -> Debug preserved one authenticated campaign across distinct standalone workspaces.",
+        "remaining": [
+          "Exercise writable Work Intent in a separate isolated campaign workspace."
+        ]
+      }
+    }
+  },
+  {
+    "label": "environment-same-workspace-entry",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103"
+      }
+    }
+  },
+  {
+    "label": "environment-live-claim",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_9a451a4cc910a4bd",
+        "mode": "acquire",
+        "repository": "mncs-environment",
+        "reason": "Live conflict protection acceptance in an isolated checkout"
+      }
+    }
+  },
+  {
+    "label": "contender-entry",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_conflict_20261103"
+      }
+    }
+  },
+  {
+    "label": "live-conflict-rejection",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_e97ebc619dadf947",
+        "mode": "acquire",
+        "repository": "mncs-environment",
+        "reason": "Must preserve the live isolated operation"
+      }
+    }
+  },
+  {
+    "label": "conflict-owner-preserved",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_9a451a4cc910a4bd",
+        "mode": "list",
+        "repository": "mncs-environment"
+      }
+    }
+  },
+  {
+    "label": "environment-nested-workspace-entry",
+    "request": {
+      "project": "mncs-environment",
+      "operation": "enter",
+      "arguments": {
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103",
+        "definition": ".worktrees/cross-workspace-acceptance-20261103/environment.json"
+      }
+    }
+  },
+  {
+    "label": "nested-fresh-resume",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "resume",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2"
+      }
+    }
+  },
+  {
+    "label": "nested-claim",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "mode": "acquire",
+        "repository": "mncs-environment",
+        "reason": "Harmless operation after authenticated cross-workspace recovery"
+      }
+    }
+  },
+  {
+    "label": "nested-default-claim-release",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "mode": "release",
+        "repository": "mncs-environment",
+        "claim_id": "claim:mncs-environment"
+      }
+    }
+  },
+  {
+    "label": "nested-exact-worktree-claim",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "mode": "acquire",
+        "repository": "mncs-environment",
+        "worktree": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+        "reason": "Exact isolated checkout scope for the cross-workspace operation"
+      }
+    }
+  },
+  {
+    "label": "forge-complete",
+    "request": {
+      "project": "mncs-forge",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_d8d959d16c552968",
+        "outcome": "success",
+        "summary": "Isolated continuity acceptance complete; claims released or never acquired."
+      },
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103"
+    }
+  },
+  {
+    "label": "actions-complete",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_42809503fd17c849",
+        "outcome": "success",
+        "summary": "Isolated continuity acceptance complete; claims released or never acquired."
+      }
+    }
+  },
+  {
+    "label": "debug-complete",
+    "request": {
+      "project": "mncs-debug",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_7a4e977c567304cc",
+        "outcome": "success",
+        "summary": "Isolated continuity acceptance complete; claims released or never acquired."
+      }
+    }
+  },
+  {
+    "label": "contender-complete",
+    "request": {
+      "project": "mncs-environment",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_e97ebc619dadf947",
+        "outcome": "success",
+        "summary": "Isolated continuity acceptance complete; claims released or never acquired."
+      },
+      "cwd": ".worktrees/cross-workspace-same-20261103"
+    }
+  },
+  {
+    "label": "nested-exact-release",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "mode": "release",
+        "repository": "mncs-environment",
+        "claim_id": "claim:mncs-environment:worktree:e58fb066142a"
+      }
+    }
+  },
+  {
+    "label": "nested-operation-checkpoint",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "checkpoint",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "progress": "Fresh authenticated MCP process recovered this independently writable workspace; completed and removed an exact-worktree write/read probe. SHA-256 071112e496875e30d5db74c38155599d2c8ec72bd821c27e8c450d402035f361",
+        "remaining": []
+      }
+    }
+  },
+  {
+    "label": "nested-fresh-durable-state",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "campaign_state",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2"
+      }
+    }
+  },
+  {
+    "label": "control-repair-claim-release",
+    "request": {
+      "project": "mncs-control-mcp",
+      "cwd": ".worktrees/cross-workspace-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_60b7776c553fa74c",
+        "mode": "release",
+        "repository": "mncs-control-mcp",
+        "claim_id": "claim:mncs-control-mcp:worktree:5142aabaae14"
+      }
+    }
+  },
+  {
+    "label": "nested-complete",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "outcome": "success",
+        "summary": "Writable cross-workspace development and exact fresh-process campaign recovery verified; worktree claim released."
+      }
+    }
+  },
+  {
+    "label": "control-repair-complete",
+    "request": {
+      "project": "mncs-control-mcp",
+      "cwd": ".worktrees/cross-workspace-20261103",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_60b7776c553fa74c",
+        "outcome": "success",
+        "summary": "Standalone continuation regression and orientation diagnostic published to main f5915e6; focused checks passed."
+      }
+    }
+  },
+  {
+    "label": "environment-repair-complete",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-20261103",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_e3bc51e6ce1056b8",
+        "outcome": "success",
+        "summary": "Cross-workspace and standalone session repair published to main b77e886. Regressions, live canonical transitions, fresh-client recovery and safety checks passed. Own repair claim was recovered and released during isolated acceptance; no foreign scope changed."
+      }
+    }
+  },
+  {
+    "label": "environment-same-workspace-complete",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_9a451a4cc910a4bd",
+        "outcome": "success",
+        "summary": "Same-workspace repository continuity, unauthorized scope denial, and overlapping claim rejection verified; claim released."
+      }
+    }
+  },
+  {
+    "label": "environment-repair-complete-original-context",
+    "request": {
+      "project": "mncs-environment",
+      "operation": "complete",
+      "arguments": {
+        "session_id": "ses_e3bc51e6ce1056b8",
+        "outcome": "success",
+        "summary": "Published cross-workspace continuation repair and verified authentic fresh-process canonical recovery. Repair entered at repository root; its temporary direct worktree claim was superseded and released during acceptance."
+      }
+    }
+  },
+  {
+    "label": "ordinary-luna-actions-recovery",
+    "request": {
+      "project": "mncs-actions",
+      "operation": "continuation",
+      "arguments": {
+        "session_id": "ses_6ed56d7bef19a8bc"
+      }
+    }
+  },
+  {
+    "label": "environment-claim-release",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_9a451a4cc910a4bd",
+        "mode": "release",
+        "repository": "mncs-environment",
+        "claim_id": "claim:mncs-environment:worktree:443a332b5637"
+      }
+    }
+  },
+  {
+    "label": "incorrect-release-identity-no-op",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "operation": "claims",
+      "arguments": {
+        "session_id": "ses_8091963e56bdabc2",
+        "mode": "release",
+        "repository": "mncs-environment",
+        "claim_id": "claim:mncs-environment:worktree:32a9466355fd"
+      }
+    }
+  },
+  {
+    "label": "unauthorized-scope-expansion-rejected",
+    "request": {
+      "project": "mncs-environment",
+      "cwd": ".worktrees/cross-workspace-same-20261103",
+      "operation": "scope_grant",
+      "arguments": {
+        "session_id": "ses_9a451a4cc910a4bd",
+        "campaign_id": "cmp_cross_workspace_acceptance_20261103",
+        "repository": "mncs-actions",
+        "expected_authority_revision": "70607197cd9834b69e0010d7b40b7e3ccb45fc7ae3d270e17fa307a5fcf30dc7"
+      }
+    }
+  }
+]

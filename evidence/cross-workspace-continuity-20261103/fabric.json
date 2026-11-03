@@ -1,0 +1,22 @@
+{
+  "path": "/home/epi13/Documents/Projects/mncs-fabric",
+  "manifest_present": false,
+  "git_worktrees": [
+    {
+      "path": "/home/epi13/Documents/Projects/mncs-fabric",
+      "head": "c4648634fdcfde9c29891358017ee3722b5aa789",
+      "branch": "refs/heads/main"
+    },
+    {
+      "path": "/home/epi13/Documents/Projects/mncs-fabric-lazy-bundle",
+      "head": "d8931196ef9bf779209168bd490658a189ed5fea",
+      "branch": "refs/heads/agent/lazy-bundle-transfer"
+    }
+  ],
+  "head": "c4648634fdcfde9c29891358017ee3722b5aa789",
+  "reason": "Git checkout and repository manifest identities do not match",
+  "diagnostics": {
+    "code": "working-checkout-unavailable",
+    "path": "/home/epi13/Documents/Projects/mncs-fabric"
+  }
+}

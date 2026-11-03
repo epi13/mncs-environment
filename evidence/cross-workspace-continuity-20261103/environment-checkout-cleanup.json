@@ -1,0 +1,13 @@
+{
+  "removed": [
+    [
+      ".worktrees/cross-workspace-acceptance-20261103/mncs-environment",
+      "verify/cross-workspace-nested-20261103"
+    ],
+    [
+      ".worktrees/cross-workspace-same-20261103",
+      "verify/cross-workspace-same-20261103"
+    ]
+  ],
+  "definition_removed": true
+}

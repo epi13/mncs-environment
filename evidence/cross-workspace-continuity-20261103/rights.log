@@ -1,0 +1,111 @@
+..FF.................................................................... [ 93%]
+.....                                                                    [100%]
+=================================== FAILURES ===================================
+__________ test_campaign_continues_across_standalone_workspaces[file] __________
+
+tmp_path = PosixPath('/home/epi13/tmp_opencode/pytest-of-epi13/pytest-5464/test_campaign_continues_across0')
+backend = 'file'
+
+    @pytest.mark.parametrize("backend", ["file", "store"])
+    def test_campaign_continues_across_standalone_workspaces(tmp_path, backend):
+        """The incident: development -> standalone orientation -> development."""
+        state = tmp_path / "state"
+        family = tmp_path / "family"
+        other_family = tmp_path / "other-family"
+        for root, name in ((family, "first"), (other_family, "actions"),
+                           (other_family, "debug")):
+            _checkout(root, name)
+        definition = {
+            "name": "first-development", "working_checkout": "current",
+            "workspace_scope": {"repositories": ["first"]},
+            "intent": {"goal": "first operation", "repositories": ["first"]},
+        }
+        path = family / "first/.mncs/environment.json"
+        path.write_text(json.dumps(definition))
+        _git(family / "first", "add", ".mncs/environment.json")
+        _git(family / "first", "commit", "-m", "development entry")
+    
+        def enter(d, p, root, principal="owner"):
+            return entry.enter(
+                definition=d, definition_path=p, workspace_root=str(root),
+                state_dir=state, backend=backend, consumer_id="agent", consumer_kind="agent",
+                authenticated_principal_id=principal, campaign_id="cmp_cross_workspace",
+            )
+    
+        first = enter(definition, path, family)
+        session = sessions.Session.open(state_dir=state, session_id=first["session_id"], backend=backend)
+        try:
+            session.acquire_claim("first", reason="isolated first operation")
+            session.release_claim("first", reason="operation done")
+            session.checkpoint(progress="first operation done")
+        finally:
+            session.close()
+        orientation, _ = entry.select_definition(None, str(other_family / "actions"))
+        second = enter(orientation, None, other_family / "actions")
+        assert second["writable_repositories"] == []
+        observed = entry.workspace.verify_registered_checkout(other_family / "actions")
+        session = sessions.Session.open(state_dir=state, session_id=second["session_id"], backend=backend)
+        try:
+            assert entry._working_checkout_matches_snapshot(session.snapshot, observed)
+            refs = session.snapshot["campaign"]["repository_refs"]
+>           assert len(refs) == 1
+E           assert 0 == 1
+E            +  where 0 = len([])
+
+tests/test_authority_continuity.py:115: AssertionError
+_________ test_campaign_continues_across_standalone_workspaces[store] __________
+
+tmp_path = PosixPath('/home/epi13/tmp_opencode/pytest-of-epi13/pytest-5464/test_campaign_continues_across1')
+backend = 'store'
+
+    @pytest.mark.parametrize("backend", ["file", "store"])
+    def test_campaign_continues_across_standalone_workspaces(tmp_path, backend):
+        """The incident: development -> standalone orientation -> development."""
+        state = tmp_path / "state"
+        family = tmp_path / "family"
+        other_family = tmp_path / "other-family"
+        for root, name in ((family, "first"), (other_family, "actions"),
+                           (other_family, "debug")):
+            _checkout(root, name)
+        definition = {
+            "name": "first-development", "working_checkout": "current",
+            "workspace_scope": {"repositories": ["first"]},
+            "intent": {"goal": "first operation", "repositories": ["first"]},
+        }
+        path = family / "first/.mncs/environment.json"
+        path.write_text(json.dumps(definition))
+        _git(family / "first", "add", ".mncs/environment.json")
+        _git(family / "first", "commit", "-m", "development entry")
+    
+        def enter(d, p, root, principal="owner"):
+            return entry.enter(
+                definition=d, definition_path=p, workspace_root=str(root),
+                state_dir=state, backend=backend, consumer_id="agent", consumer_kind="agent",
+                authenticated_principal_id=principal, campaign_id="cmp_cross_workspace",
+            )
+    
+        first = enter(definition, path, family)
+        session = sessions.Session.open(state_dir=state, session_id=first["session_id"], backend=backend)
+        try:
+            session.acquire_claim("first", reason="isolated first operation")
+            session.release_claim("first", reason="operation done")
+            session.checkpoint(progress="first operation done")
+        finally:
+            session.close()
+        orientation, _ = entry.select_definition(None, str(other_family / "actions"))
+        second = enter(orientation, None, other_family / "actions")
+        assert second["writable_repositories"] == []
+        observed = entry.workspace.verify_registered_checkout(other_family / "actions")
+        session = sessions.Session.open(state_dir=state, session_id=second["session_id"], backend=backend)
+        try:
+            assert entry._working_checkout_matches_snapshot(session.snapshot, observed)
+            refs = session.snapshot["campaign"]["repository_refs"]
+>           assert len(refs) == 1
+E           assert 0 == 1
+E            +  where 0 = len([])
+
+tests/test_authority_continuity.py:115: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_authority_continuity.py::test_campaign_continues_across_standalone_workspaces[file]
+FAILED tests/test_authority_continuity.py::test_campaign_continues_across_standalone_workspaces[store]
+2 failed, 75 passed in 262.99s (0:04:22)

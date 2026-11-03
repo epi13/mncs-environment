@@ -1,0 +1,9 @@
+{
+  "removed": [
+    [
+      ".worktrees/cross-workspace-acceptance-20261103",
+      "verify/cross-workspace-20261103"
+    ]
+  ],
+  "main_status": " M README.md\n"
+}

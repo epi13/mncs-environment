@@ -1,0 +1,65 @@
+{
+  "status": "complete-with-preserved-eligibility-limits",
+  "code_revisions": {
+    "environment": [
+      "5ac0942987a9c91317872aaf9deae07446f27960",
+      "b77e88668b25d126608f142c00477fe58407faa8"
+    ],
+    "control": "f5915e679e9af969770aa23f4947225525422175"
+  },
+  "root_causes": {
+    "fabric": "Git-registered checkout lacks .mncs/project.json. Correct MNCS verified-checkout rejection, not a stale registry. No authority metadata was invented.",
+    "actions_entry": "No project development definition exists. Standalone read-only orientation was correct.",
+    "actions_selection": "Session creation omitted unselected observed checkout references; reconciliation discarded the standalone root relative path dot. Exact checkout filtering therefore hid the durable session. Store and session inventory were intact.",
+    "debug": "Campaign validation treated a prior live session in another workspace as campaign-context-mismatch, conflating campaign membership with one operational workspace."
+  },
+  "architecture": "One unchanged canonical Store contains sessions. Authenticated campaign ownership is checked globally; exact operational selection is scoped to the validated workspace. Each independent entry resolves its own definition, rights and checkout. Observed repository references enable read selection and confer no write authority. Older omitted root references recover through persisted exact checkout observations and fresh Git verification.",
+  "scope": "Only Environment composition and Control diagnostic projection/regression changed. No permission registry, rights grants, campaign owner layer, new Store, session subsystem or native migration.",
+  "tests": {
+    "baseline": "1288 passed, 46 skipped; pre-change main",
+    "selection_final": "73 passed",
+    "entry_workspace_final": "62 passed, 236 deselected",
+    "rights": "75 passed; two earlier new regressions failed before initial-reference seeding and pass in final runs",
+    "control_sessions": "44 passed, 1 skipped",
+    "control_routing": "104 passed",
+    "control_bridge_and_recovery_client": "48 passed",
+    "control_final_standalone": "1 passed",
+    "vertical": "PASS before and after",
+    "campaign_proofs": "14 passed, 2 skipped"
+  },
+  "acceptance_campaign": "cmp_cross_workspace_acceptance_20261103",
+  "transitions": [
+    "Forge in Projects -> Actions standalone -> Debug standalone -> Environment in Projects -> isolated Environment campaign workspace"
+  ],
+  "fresh_processes": "Every acceptance-consumer call launches the supported recovery client and a fresh canonical MCP provider. Ordinary MCP entry/selection and claims were also exercised. Exact IDs, authenticated project grants and verified registered checkouts are used; no Store records or private session objects were edited.",
+  "original_actions_recovery": "ses_6ed56d7bef19a8bc selected ready through ordinary and fresh MCP. campaign_state now reaches campaign-state-unavailable because that orientation session has no checkpoint. No lifecycle, Work Intent or checkpoint was changed; normal read provenance may be appended.",
+  "safety": {
+    "live_conflict": "Overlapping claim rejected with ENVIRONMENT_CLAIM_RECOVERY_FAILED exact-overlap diagnostic; original holder, claim identity, version 1 and live status remained unchanged. See conflict-owner-unchanged.json.",
+    "scope_expansion": "Live addition of Actions to Environment session rejected with ENVIRONMENT_AUTHORITY_DENIED.",
+    "unit_guards": "Foreign campaign owner, wrong checkout, cross-repository rights, duplicate selection and live claim conflicts remain protected."
+  },
+  "acceptance_corrections": [
+    "Configured Control source-update reload closed one read and one entry connection during publication. Durable Debug continuation was inspected (not-found) before entry was repeated after the update. No client-owned provider was terminated or mutation blindly replayed.",
+    "The temporary nested definition has no selected checkout; a default repository claim recovered only this repair campaign own idle claim. It was released before any write, then an explicit exact worktree claim was used for the isolated operation. No foreign claim changed.",
+    "A mistyped release identity returned released:false and had no effect. The recorded exact claim was subsequently released.",
+    "Repair-session completion was first requested from its temporary direct-claim checkout after that claim had been recovered. The session was originally entered at repository root; cleanup uses that original recorded context. Exact session identity does not authorize a different checkout."
+  ],
+  "eligibility": "Forge and Environment definitions provide their independently resolved writable scopes. Actions and Debug remain explicit orientation-only because development definitions are absent. Fabric remains unverifiable because its MNCS identity manifest is absent. These are genuine configuration boundaries; no broader authority was inferred.",
+  "readiness": "Workspace/session continuity is ready for eligible project definitions. Unrestricted native development in Fabric, Actions or Debug is not claimed; their owner-controlled metadata prerequisites remain.",
+  "native_main_preserved": {
+    "stdlib": "db7b17ddc4e5bfa98bef1350a649abdddbfc01f9",
+    "forge": "5bda29b99bfc2ed84686b059c6e8dbcd2cc5abe4",
+    "language_service": "9ac1929c51239ce0ebc12a51b4e17318ea3854a6"
+  },
+  "preservation": "Both reported Luna checkpoints have identical before/after hashes. VM review and native implementations were untouched. Unrelated Forge README change was preserved.",
+  "cleanup": {
+    "all_eight_task_sessions_completed": true,
+    "no_task_claims_held": true,
+    "three_acceptance_worktrees_and_branches_removed": true,
+    "temporary_campaign_definition_removed": true,
+    "foreign_worktrees_preserved": true,
+    "repair_worktrees": "remove after this evidence commit is merged and pushed",
+    "audit": "cross-workspace-continuity-20261103/cleanup-audit.json"
+  },
+  "evidence": "cross-workspace-continuity-20261103/canonical-mcp-transcript.json"
+}

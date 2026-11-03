@@ -1,0 +1,16 @@
+[
+  {
+    "session_id": "ses_1e03af048fb1acd8",
+    "checkpoint_id": "chk_596b1971add13f10",
+    "sha256_before": "0abf3e6ab79efb48d2b6a5d8b98aca99e2704d7162b32408f4bb4740cbfbbecd",
+    "sha256_after": "0abf3e6ab79efb48d2b6a5d8b98aca99e2704d7162b32408f4bb4740cbfbbecd",
+    "unchanged": true
+  },
+  {
+    "session_id": "ses_1e03af048fb1acd8",
+    "checkpoint_id": "chk_f950d48c56069233",
+    "sha256_before": "762f5841501217545fd84ac8b6603da05106e9a6b6f5d4b9f521515b9e2cf224",
+    "sha256_after": "762f5841501217545fd84ac8b6603da05106e9a6b6f5d4b9f521515b9e2cf224",
+    "unchanged": true
+  }
+]
