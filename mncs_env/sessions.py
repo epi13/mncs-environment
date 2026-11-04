@@ -36,6 +36,7 @@ from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
 from . import rights as rights_module
+from . import scratch as scratch_module
 from . import workspace as workspace_module
 from .identity import (
     digest_hex,
@@ -10355,6 +10356,97 @@ class Session:
             str(record.get("claim_id", "")) for record in released
         }), "error": error}
 
+    def _authorize_scratch(self, principal_id: str | None) -> None:
+        if principal_id is not None and (
+            not principal_id or principal_id != self.snapshot.get("authenticated_principal_id")
+        ):
+            raise LifecycleError("scratch requester does not match the authenticated session owner")
+
+    def scratch_workspaces(self) -> dict[str, Any]:
+        """Project registered local disposable paths without scanning or creating them."""
+        records = self.snapshot.get("scratch_workspaces", {})
+        rows = []
+        for record in records.values():
+            row = {key: value for key, value in record.items() if key != "token"}
+            resource_id = record.get("resource_id", "")
+            if isinstance(resource_id, str) and scratch_module.RESOURCE.fullmatch(resource_id):
+                row["path"] = str(self.state_dir.expanduser().resolve() / "scratch"
+                                  / self.session_id / resource_id)
+            rows.append(row)
+        return {"schema_version": "mncs.environment.scratch-workspaces/1",
+                "session_id": self.session_id, "workspaces": rows,
+                "pending": sum(row.get("status") != "released" for row in rows)}
+
+    def allocate_scratch(
+        self, label: str, *, authenticated_principal_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Allocate a private, recorded disposable workspace for this live session."""
+        self._authorize_scratch(authenticated_principal_id)
+        if not isinstance(label, str) or not scratch_module.LABEL.fullmatch(label):
+            raise ValueError("scratch label must be 1..64 lowercase letters, digits or hyphens")
+        with scratch_module.lock(self.state_dir, self.session_id):
+            self._reload_snapshot()
+            self._authorize_scratch(authenticated_principal_id)
+            if (self.snapshot.get("lifecycle") not in ("active", "checkpointed", "waiting", "blocked")
+                    or self.snapshot.get("completion_pending")
+                    or self.snapshot.get("termination_pending")):
+                raise LifecycleError("only a live session without pending termination can allocate scratch")
+            records = self.snapshot.setdefault("scratch_workspaces", {})
+            record = records.get(label)
+            if record is None or record.get("status") == "released":
+                if record is None and len(records) >= scratch_module.MAX_WORKSPACES:
+                    raise LifecycleError("session scratch workspace label limit reached")
+                record = scratch_module.plan(self.session_id, label)
+                records[label] = record
+                # Persist the exact ownership intent before creating a path.
+                # A killed publisher remains visible and can be reconciled.
+                self._save()
+            if record.get("status") == "allocating":
+                record = scratch_module.allocate(self.state_dir, self.session_id, record)
+                records[label] = record
+                self._save()
+                self._emit("scratch.allocated", self.snapshot.get("consumer_id", "unknown"),
+                           {"resource_id": record["resource_id"], "label": label})
+            else:
+                scratch_module.verify(self.state_dir, self.session_id, record)
+            return next(row for row in self.scratch_workspaces()["workspaces"] if row["label"] == label)
+
+    def cleanup_scratch(
+        self, *, authenticated_principal_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Retry owned scratch cleanup, including after a terminal transition."""
+        self._authorize_scratch(authenticated_principal_id)
+        if not self.snapshot.get("scratch_workspaces"):
+            return {"released": [], "pending": []}
+        try:
+            with scratch_module.lock(self.state_dir, self.session_id):
+                self._reload_snapshot()
+                self._authorize_scratch(authenticated_principal_id)
+                records = self.snapshot.get("scratch_workspaces", {})
+                changed = False
+                for label, record in list(records.items()):
+                    if record.get("status") != "released":
+                        updated = scratch_module.release(self.state_dir, self.session_id, record)
+                        changed = changed or updated != record
+                        records[label] = updated
+                if changed:
+                    self._save()
+                report = {
+                    "released": sorted(row["resource_id"] for row in records.values()
+                                       if row.get("status") == "released"),
+                    "pending": [row for row in self.scratch_workspaces()["workspaces"]
+                                if row.get("status") != "released"],
+                }
+                if changed:
+                    self._emit("scratch.cleanup", self.snapshot.get("consumer_id", "unknown"), {
+                        "released": report["released"],
+                        "pending": [row["resource_id"] for row in report["pending"]],
+                    })
+                return report
+        except (OSError, ValueError) as error:
+            return {"released": [], "pending": self.scratch_workspaces()["workspaces"],
+                    "error": str(error)[:256]}
+
     def complete(
         self,
         *,
@@ -10530,6 +10622,10 @@ class Session:
                     existing_completion["claims_reconciled_at"] = utcnow()
                     self.snapshot["completion"] = existing_completion
                     self._save()
+            if existing_completion.get("scratch_cleanup", {}).get("pending"):
+                existing_completion["scratch_cleanup"] = self.cleanup_scratch()
+                self.snapshot["completion"] = existing_completion
+                self._save()
             return dict(existing_completion)
 
         live_lifecycles = ("active", "checkpointed", "waiting", "blocked")
@@ -10566,6 +10662,7 @@ class Session:
         self.snapshot["completion_pending"] = pending
         self._save()
 
+        scratch_report = self.cleanup_scratch()
         if self.snapshot.get("lifecycle") in live_lifecycles:
             self.transition("completed", outcome)
         elif self.snapshot.get("lifecycle") != "completed":
@@ -10586,6 +10683,8 @@ class Session:
             "claims_released": claims_report["released"],
             "claims_release_error": claims_report["error"],
         }
+        if self.snapshot.get("scratch_workspaces"):
+            completion["scratch_cleanup"] = scratch_report
         self.snapshot["completion"] = completion
         self.snapshot.pop("completion_pending", None)
         events = self._log()
@@ -10614,13 +10713,20 @@ class Session:
             "active", "resolving", "ready", "blocked", "waiting", "checkpointed"
         ):
             raise LifecycleError("session cannot fail from its current state")
+        if self.snapshot.get("scratch_workspaces"):
+            self.snapshot["termination_pending"] = {"reason": reason}
+            self._save()
+        scratch_report = self.cleanup_scratch()
         self.transition("failed", reason)
         claims_report = self._release_own_claims(f"session failed: {reason}")
         self._emit("session.failed", self.snapshot.get("consumer_id", "unknown"),
                    {"reason": reason, "claims_released": claims_report["released"]})
         self._save()
-        return {"reason": reason, "claims_released": claims_report["released"],
-                "claims_release_error": claims_report["error"]}
+        result = {"reason": reason, "claims_released": claims_report["released"],
+                  "claims_release_error": claims_report["error"]}
+        if self.snapshot.get("scratch_workspaces"):
+            result["scratch_cleanup"] = scratch_report
+        return result
 
     # -- inspection ------------------------------------------------------------
 
@@ -10974,6 +11080,8 @@ class Session:
         actions = {name: {"argv": [*prefix, name, self.session_id]} for name in
                    ("health", "reconcile", "inspect", "capabilities")}
         actions["resources"] = {"argv": [*prefix, "resources"]}
+        actions["scratch"] = {"argv": [*prefix, "scratch", self.session_id],
+                              "cleanup": "on-complete-or-fail"}
         actions["environmental_capability_projection"] = {
             "argv": [
                 *prefix, "projections", self.session_id,

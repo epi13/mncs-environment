@@ -124,7 +124,9 @@ def _run_native_application(
     cache_root = Path(os.environ.get(
         "MNCS_NATIVE_APPLICATION_CACHE_DIR", state_root / "native-applications",
     ))
-    cache_directory = cache_root / f"{Path(descriptor_name).stem}-{binary_identity}"
+    # Admission keys already bind source, libraries and interface. Keep one
+    # bounded storage pool across descriptors and toolchain namespaces.
+    cache_directory = cache_root / binary_identity
     try:
         with tempfile.TemporaryDirectory(
             prefix=f"mncs-env-{Path(descriptor_name).stem}-",
@@ -151,6 +153,7 @@ def _run_native_application(
             )
             environment = os.environ.copy()
             environment.update(session._selected_runtime_environment({}))
+            environment["MNCS_NATIVE_APPLICATION_CACHE_STORAGE_ROOT"] = str(cache_directory.parent)
             command = [
                 str(binary), "run-app", str(descriptor_path),
                 "--cache-dir", str(cache_directory),

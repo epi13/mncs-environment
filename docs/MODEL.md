@@ -59,6 +59,14 @@ Suggested fields:
 
 A session is not a chat transcript, process ID, shell session, or model context window.
 
+Sessions may own explicitly disposable local workspaces. The snapshot records
+allocation intent, owner marker identity, filesystem identity and cleanup state;
+the directory contains a matching ownership marker. These are local addresses,
+not durable compiler artifacts. Checkpoint/handoff retain them. Completion and
+failure settle cleanup and record deferred or preserved paths for retry. The
+interface allocates private paths and cannot register arbitrary directories for
+deletion. Durable evidence must be published outside these workspaces.
+
 ## WorkIntent
 
 Declares what outcome is desired without embedding the implementation plan.

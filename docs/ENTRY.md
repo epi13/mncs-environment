@@ -925,3 +925,33 @@ source claim's lease start and deadline instead of restarting the lease; the
 owning session event records when the transfer was observed. This keeps the
 immutable claim batch identical when the same request is retried after an
 interrupted Store publication.
+
+## Session-owned disposable workspaces
+
+Use `mncs-env scratch <session> --allocate <label>` for temporary experiment
+builds. It returns a private path under the selected Environment state directory.
+For example, pass that path as `CARGO_TARGET_DIR` to a build. Repeating the label
+reuses its registered workspace; reopening the session preserves the allocation.
+The entry context exposes the exact command through `actions.scratch`.
+
+These directories are explicitly disposable. Publish logs, receipts and other
+durable results outside scratch before completing or failing the session.
+Checkpoint and handoff preserve scratch. Completion and failure automatically
+remove matching owned workspaces, including allocations interrupted between
+filesystem creation and snapshot publication. `mncs-env scratch <session>` lists
+the recorded paths, and `--clean` retries cleanup, including for terminal sessions.
+A completion retry also retries deferred scratch cleanup.
+
+Environment allocates the paths itself; this interface cannot adopt arbitrary
+existing directories. It checks private directory ownership, the allocation
+marker and recorded filesystem identity, and preserves replaced paths, symlinks,
+unrecognized state and workspaces still used by observable Linux processes.
+Process inspection is an additional observation, not a process fence: callers
+must stop owned jobs before ending the session. A deferred/preserved cleanup is
+returned as `scratch_cleanup.pending` and remains recorded for retry.
+
+Scratch allocation does not schedule builds or define compiler/cache semantics.
+It owns the lifetime of local disposable storage. Forge and other producers
+continue to own their execution and artifact contracts. Historical unregistered
+build directories require a separate audited cleanup; the allocator never
+silently classifies them as disposable.

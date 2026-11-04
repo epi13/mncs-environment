@@ -21,6 +21,12 @@ Semantic sources and ownership: `.mncs/projections.json`.
 
 Canonical machine-native development environment for assembling work intent, repository state, services, capabilities, triggers, memory, authority, provenance, and execution context into a coherent entry point for agents and other MNCS consumers.
 
+Temporary experiment outputs can use `mncs-env scratch <session> --allocate <label>`.
+Environment records the private workspace and cleans it on completion or failure;
+checkpoint and handoff retain it. The context exposes `actions.scratch`, and
+`scratch <session> --clean` retries deferred cleanup. See
+[disposable workspace lifecycle](docs/ENTRY.md#session-owned-disposable-workspaces).
+
 Enter from this checkout (or a subdirectory):
 
 ```bash

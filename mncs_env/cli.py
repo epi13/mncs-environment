@@ -1367,6 +1367,26 @@ def cmd_complete(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_scratch(args: argparse.Namespace) -> int:
+    with closing(sessions_module.Session.open(
+        state_dir=args.state_dir, session_id=args.session, backend=args.persistence,
+    )) as session:
+        try:
+            principal = os.environ.get("MNCS_ENV_AUTH_PRINCIPAL_ID")
+            session._authorize_scratch(principal)
+            if args.allocate is not None:
+                out(session.allocate_scratch(args.allocate, authenticated_principal_id=principal))
+            elif args.clean:
+                report = session.cleanup_scratch(authenticated_principal_id=principal)
+                out(report)
+                return 3 if report["pending"] else 0
+            else:
+                out(session.scratch_workspaces())
+        except (sessions_module.LifecycleError, OSError, ValueError) as error:
+            return fail(str(error), code=3)
+    return 0
+
+
 def cmd_fail(args: argparse.Namespace) -> int:
     try:
         session = _resume_session(args)
@@ -3108,6 +3128,14 @@ def build_parser() -> argparse.ArgumentParser:
     retire.add_argument("--dry-run", action="store_true",
                         help="assess only; change nothing")
     retire.set_defaults(func=cmd_retire)
+
+    scratch = sub.add_parser("scratch", help="allocate or clean session-owned disposable workspaces")
+    scratch.add_argument("session")
+    scratch_mode = scratch.add_mutually_exclusive_group()
+    scratch_mode.add_argument("--allocate", metavar="LABEL")
+    scratch_mode.add_argument("--clean", action="store_true",
+                              help="retry cleanup of this session's registered scratch paths")
+    scratch.set_defaults(func=cmd_scratch)
 
     resources = sub.add_parser("resources", help="live bounded Linux resource observations (no Store open)")
     resources.add_argument("--pid", type=int, action="append", default=None,
