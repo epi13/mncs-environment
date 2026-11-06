@@ -85,10 +85,19 @@ def verify(state_dir: Path, session_id: str, record: dict[str, Any]) -> Path:
     if (not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.getuid()
             or metadata.st_mode & 0o077):
         raise ValueError("scratch workspace is no longer a private, owned real directory")
-    if record.get("device") is not None and (
-        record.get("device") != metadata.st_dev or record.get("inode") != metadata.st_ino
-    ):
-        raise ValueError("scratch workspace filesystem identity changed")
+    if record.get("device") is not None:
+        if record.get("inode") != metadata.st_ino:
+            raise ValueError("scratch workspace filesystem identity changed")
+        if record.get("device") != metadata.st_dev:
+            # st_dev can be namespace-relative: the same mounted filesystem
+            # may receive a different device number in the Environment
+            # service and in the cleanup CLI. Accept that view only when the
+            # recorded inode still matches and the workspace remains on the
+            # private session-root filesystem in this namespace.
+            parent = selected.parent.lstat()
+            if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.getuid()
+                    or parent.st_mode & 0o077 or metadata.st_dev != parent.st_dev):
+                raise ValueError("scratch workspace filesystem identity changed")
     descriptor = os.open(selected / MARKER, os.O_RDONLY | os.O_NOFOLLOW)
     with os.fdopen(descriptor) as stream:
         if os.fstat(stream.fileno()).st_size > 1024 or json.load(stream) != _marker(record):

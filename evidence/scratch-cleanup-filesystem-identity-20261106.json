@@ -1,0 +1,35 @@
+{
+  "schema_version": "mncs.environment.scratch-filesystem-identity/1",
+  "identity": "environment-scratch-filesystem-identity-20261106",
+  "campaign_identity": "cmp_luna_max_native_ecosystem_20261105_0400z",
+  "work_intent_id": "int_8475157f281c835f",
+  "environment_session_id": "ses_403159f758c61dc7",
+  "repository": "mncs-environment",
+  "base_revision": "7726dcaf33b3b90265f792d0695f02371a6bd46e",
+  "change": {
+    "source": "mncs_env/scratch.py",
+    "consumer": "Session.cleanup_scratch and terminal session completion",
+    "behavior": "When st_dev differs across mount namespaces, accept the recorded inode only if the workspace still resides on the private session-root filesystem and its exact ownership marker matches. Replaced inodes, foreign filesystems, symlinks, and changed markers remain preserved."
+  },
+  "observed_resource": {
+    "session_id": "ses_3b9cd8f90acc5d85",
+    "resource_id": "scratch_c8669ed85ac5b33e7181ae5183ce3de1",
+    "registered_device": 36,
+    "observed_device": 49,
+    "inode": 44210379,
+    "recovery": "The canonical mncs-env scratch --clean operation released the exact registered directory after the patched identity and owner-marker checks passed."
+  },
+  "verification": [
+    {
+      "command": "python3 -m unittest tests.test_scratch",
+      "result": "passed",
+      "tests": 12
+    },
+    {
+      "command": "python3 -m unittest tests.test_session_completion",
+      "result": "passed",
+      "tests": 18
+    }
+  ],
+  "related_service_issue": "Control MCP completion initially could not open the Environment scratch lock because its read-write systemd allowlist includes the Environment store but not the sibling scratch directory. The exact cleanup was recovered through the supported Environment CLI; a separate Control Work Intent is needed to correct the service sandbox."
+}

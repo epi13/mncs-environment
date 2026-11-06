@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import tempfile
@@ -95,6 +96,39 @@ class ScratchTests(unittest.TestCase):
         marker.write_text("{}")
         report = self.session.cleanup_scratch()
         self.assertTrue(any("ownership marker" in row["reason"] for row in report["pending"]))
+
+    def test_device_number_alias_keeps_inode_and_private_root_checks(self):
+        allocated = self.session.allocate_scratch("device-alias")
+        selected = Path(allocated["path"])
+        record = self.session.snapshot["scratch_workspaces"]["device-alias"]
+        record["device"] += 1000
+        self.session._save()
+
+        report = self.session.cleanup_scratch()
+        self.assertEqual(report["pending"], [])
+        self.assertIn(record["resource_id"], report["released"])
+        self.assertFalse(selected.exists())
+
+    def test_device_number_alias_rejects_a_different_session_root_filesystem(self):
+        allocated = self.session.allocate_scratch("device-mount")
+        selected = Path(allocated["path"])
+        record = self.session.snapshot["scratch_workspaces"]["device-mount"]
+        record["device"] += 1000
+        real_lstat = Path.lstat
+        alternate_parent = SimpleNamespace(
+            st_mode=stat.S_IFDIR | 0o700,
+            st_uid=os.getuid(),
+            st_dev=record["device"],
+        )
+
+        def lstat(path):
+            if path == selected.parent:
+                return alternate_parent
+            return real_lstat(path)
+
+        with mock.patch.object(Path, "lstat", autospec=True, side_effect=lstat):
+            with self.assertRaisesRegex(ValueError, "filesystem identity changed"):
+                scratch.verify(self.state, "ses_test", record)
 
     def test_symlink_workspace_does_not_delete_its_target(self):
         selected = Path(self.session.allocate_scratch("linked")["path"])
