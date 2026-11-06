@@ -1585,6 +1585,8 @@ def _validate_campaign_identity(store, *, campaign_id: str,
     # A verified checkout may establish its own intent alongside same-owner
     # contexts in other repositories. Resolution below still derives rights
     # solely from the new definition, never from another campaign session.
+    # `selected_checkouts` can include protected toolchain providers; the prior
+    # Work Intent's writable repository list determines same-repository scope.
     # Keep same-repository/unknown contexts subject to the exact-context guard.
     repository = (working_checkout or {}).get("repository")
     if isinstance(repository, str) and repository:
@@ -1595,7 +1597,6 @@ def _validate_campaign_identity(store, *, campaign_id: str,
                 == str(workspace_root)
                 and snapshots[session_id].get("intent", {}).get("repositories")
                 and repository not in snapshots[session_id]["intent"]["repositories"]
-                and repository not in snapshots[session_id].get("selected_checkouts", {})
             )
         ]
         if not live:

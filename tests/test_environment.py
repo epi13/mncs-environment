@@ -11793,6 +11793,50 @@ class EntryFrictionTests(unittest.TestCase):
             "campaign_state": None, "foreign_claims_count": 0,
         }
 
+    def test_protected_selected_checkout_does_not_block_new_repository_intent(self) -> None:
+        from mncs_env import entry as entry_module
+
+        root = Path("/workspace")
+        store = self._campaign_identity_store({
+            "ses_language_service": (
+                "principal-test", "env-language-service", str(root),
+            ),
+        })
+        prior = store.load_snapshot("ses_language_service")
+        prior["intent"] = {
+            "repositories": ["mncs-language-service"],
+            "protected_repositories": ["mncs-stdlib"],
+        }
+        prior["selected_checkouts"] = {
+            "mncs-stdlib": {
+                "repository": "mncs-stdlib",
+                "path": str(root / "mncs-stdlib"),
+                "branch": "main",
+            },
+        }
+        current = {
+            "repository": "mncs-stdlib",
+            "path": str(root / "mncs-stdlib"),
+            "workspace_root": str(root),
+            "branch": "main",
+            "head": "a" * 40,
+        }
+
+        with mock.patch.object(
+            entry_module.sessions, "continuation_observations",
+            side_effect=self._campaign_observations,
+        ):
+            entry_module._validate_campaign_identity(
+                store,
+                campaign_id="cmp_exact-context-test",
+                authenticated_principal_id="principal-test",
+                definition_id="env-stdlib",
+                workspace_root=root,
+                selected_session_id=None,
+                pending_handoff=None,
+                working_checkout=current,
+            )
+
     def test_campaign_checkout_recovers_one_worktree_from_duplicate_sessions(self) -> None:
         from mncs_env import entry as entry_module, selection as selection_module
 

@@ -261,8 +261,10 @@ work-intent identity, and workspace is discovered even if its definition
 changed. A campaign may group independently scoped sessions in different validated
 workspaces, as well as distinct repository intents in the same workspace.
 Each entry resolves its own definition and rights; no authority is copied from
-the previous session. Same-workspace, same-repository definition changes still
-return `campaign-context-mismatch` with the recorded continuation. Duplicate
+the previous session. A protected or otherwise read-only sibling checkout
+selected as a toolchain input does not make that repository part of the prior
+session's writable intent. Same-workspace, same-repository definition changes
+still return `campaign-context-mismatch` with the recorded continuation. Duplicate
 exact contexts remain ambiguous. Another principal's live campaign remains
 protected across every workspace unless its owner issues a handoff.
 
