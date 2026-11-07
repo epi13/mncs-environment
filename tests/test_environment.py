@@ -10152,7 +10152,25 @@ class SessionTests(unittest.TestCase):
                 "checkout": str(checkout),
                 "branch": branch,
             }
-            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=provider):
+            # Synchronize on observed checkout-lock contention, not an assumed
+            # 100ms admission speed. Observation/Store work may precede the lease.
+            import fcntl
+            waiting_for_lease = threading.Event()
+            real_flock = fcntl.flock
+            checkout_stat = checkout.stat()
+
+            def observed_flock(descriptor, operation):
+                try:
+                    return real_flock(descriptor, operation)
+                except BlockingIOError:
+                    item = os.fstat(descriptor)
+                    if (item.st_dev, item.st_ino) == (checkout_stat.st_dev, checkout_stat.st_ino):
+                        waiting_for_lease.set()
+                    raise
+
+            with mock.patch.object(sessions.capabilities_module, "invoke", side_effect=provider), mock.patch.object(
+                fcntl, "flock", side_effect=observed_flock,
+            ):
                 with ThreadPoolExecutor(max_workers=2) as pool:
                     first_result = pool.submit(
                         first.invoke, "campaign-writer", ["first"],
@@ -10163,7 +10181,7 @@ class SessionTests(unittest.TestCase):
                         second.invoke, "campaign-writer", ["second"],
                         effect_target=target,
                     )
-                    time.sleep(0.1)
+                    self.assertTrue(waiting_for_lease.wait(2))
                     self.assertFalse(second_provider_started.is_set())
                     release_first.set()
                     self.assertEqual(first_result.result(timeout=4)["status"], "ok")

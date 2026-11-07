@@ -534,6 +534,11 @@ def execute_suite(session, obligation: dict, measured: dict,
     if (fresh_head != measured.get("repository_revision")
             or fresh_dirty != measured.get("repository_fingerprint")):
         return None, "state-changed-during-execution"
+    document["_environment_operation"] = {
+        "demand_reference": result.get("demand_reference"),
+        "provider_request_id": result.get("provider_request_id"),
+        "result_kind": "observed",
+    }
     return document, None
 
 
@@ -704,17 +709,13 @@ def ambient_pass(session, *, mode: str = "ambient",
                     record["classification"] = str(document.get("classification", "none"))
                     record["run_tag"] = run_tag
                     record["failed_test_ids"] = _failed_test_ids(document)
-                    if record["outcome"] == "passed":
-                        session._emit("verification.verified", "environment",
-                                      {"obligation": identity,
-                                       "evidence_id": evidence_id})
-                    else:
-                        session._emit("verification.failed", "environment",
-                                      {"obligation": identity,
-                                       "outcome": record["outcome"],
-                                       "failure_class": record["failure_class"],
-                                       "classification": record["classification"],
-                                       "evidence_id": evidence_id})
+                    record["verification_event"] = {
+                        "type": "verification.verified" if record["outcome"] == "passed" else "verification.failed",
+                        "payload": {"obligation": identity, "evidence_id": evidence_id,
+                                    "outcome": record["outcome"],
+                                    **document.get("_environment_operation", {})},
+                    }
+
         elif verdict.get("status") in ("new_execution_required", "stale"):
             record["outcome"] = "deferred"
             session._emit("verification.deferred", "environment",
@@ -781,6 +782,15 @@ def _finish(session, started: str, clock_started: float,
                 "invalid": invalid, "failure": failure,
                 "coherence_summary": dict(native)}
     evidence_ref = _write_evidence(session, evidence, mode)
+    # Publish the existing immutable verification evidence before its event.
+    # This gives a request/result join a readable owner record, not just a tag.
+    for record in results:
+        observed = record.get("verification_event")
+        if isinstance(observed, dict):
+            session._emit(observed["type"], "environment", {
+                **observed["payload"], "verification_evidence": evidence_ref,
+                "verification_evidence_digest": digest_hex(evidence, length=64),
+            })
     summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
     if failure is None:
         session.snapshot["verification_state"] = rows

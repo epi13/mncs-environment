@@ -109,7 +109,10 @@
           "mncs_env/sessions.py",
           "mncs_env/session_store.py",
           "mncs_env/store_backend.py",
-          "scripts/mncs-env"
+          "scripts/mncs-env",
+          "mncs_env/demand.py",
+          "native-applications/demand-correlation.json",
+          "native/mncs/environment/demand_correlation_v1.mncs"
         ],
         "invocation": {
           "kind": "executable",

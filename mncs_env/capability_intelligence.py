@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from . import demand as demand_module
 from . import authority as authority_module
 from . import claims as claims_module
 from . import coherence as coherence_module
@@ -5805,6 +5806,14 @@ def _compact_session_activity_budget_overview(
     if not isinstance(activity, dict):
         return None
     result: dict[str, Any] = {}
+    demand = activity.get("decision_opportunities")
+    if isinstance(demand, dict):
+        result["decision_opportunities"] = {
+            key: demand[key] for key in (
+                "schema_version", "status", "scope", "recorded_demand_count", "records_omitted",
+                "eligible_need_denominator", "agent_burden", "fulfillment", "avoided_work",
+            ) if key in demand
+        } | {"detail_status": "omitted-under-response-budget"}
     for key in (
         "status", "interaction_count", "completion_count",
         "unmatched_invocation_count", "ambiguous_correlation_count",
@@ -12927,6 +12936,8 @@ def _focus_session_activity(
         )
         if verification_activity is not None:
             result["verification_activity"] = verification_activity
+    elif section == "demand":
+        result["decision_opportunities"] = deepcopy(activity.get("decision_opportunities", {}))
     elif section == "services":
         readiness = activity.get("service_readiness")
         if isinstance(readiness, dict):
@@ -12967,7 +12978,7 @@ def _focus_session_activity(
     else:
         raise ValueError(
             "session activity section must be resources, diagnostics, "
-            "verification, or services"
+            "verification, services, or demand"
         )
     measurement_limits = activity.get("measurement_limits")
     if isinstance(measurement_limits, list):
@@ -13011,11 +13022,11 @@ def project_session_activity(
     if (activity_section is not None
             and (not isinstance(activity_section, str)
                  or activity_section not in (
-                     "resources", "diagnostics", "verification", "services",
+                     "resources", "diagnostics", "verification", "services", "demand",
                  ))):
         raise ValueError(
             "session activity section must be resources, diagnostics, "
-            "verification, or services"
+            "verification, services, or demand"
         )
     if (type(doctor_gap_limit) is not int
             or not 0 <= doctor_gap_limit <= MAX_DOCTOR_GAP_EXAMPLES):
@@ -31303,7 +31314,9 @@ def _session_activity(
         if isinstance(value, str) and value
     }
     resource_samples = _session_resource_samples(session, snapshot, events)
+    demand_observations = demand_module.project(session, events)
     return {
+        "decision_opportunities": demand_observations,
         "status": status,
         "context": context,
         "resource_samples": resource_samples,

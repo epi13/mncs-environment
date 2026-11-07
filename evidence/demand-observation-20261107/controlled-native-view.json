@@ -1,0 +1,336 @@
+{
+  "schema_version": "mncs.environment.decision-opportunities/1",
+  "status": "native-projected",
+  "scope": "Environment-bound capability requests in selected event window; not every agent decision",
+  "records": [
+    {
+      "demand_event": {
+        "identity": "evt_686b78a374e709f7",
+        "sequence": 2,
+        "type": "demand.observed"
+      },
+      "request": {
+        "actor_kind": "agent",
+        "ambient_owner_pass": null,
+        "capability": "noop",
+        "context_bytes": 607,
+        "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_reference": "mncs-store:ses_4338bb71e58ccfa8:decision-context:53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_status": "recorded",
+        "observation_wall_ns": 80930938,
+        "parent_request_id": null,
+        "request_surface": "session-api-unattributed",
+        "snapshot_sequence": 5,
+        "snapshot_updated_at": "2026-11-07T15:03:17+00:00"
+      },
+      "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+      "context_status": "integrity-verified",
+      "invocation_events": [
+        {
+          "identity": "evt_3c8bb1368110728f",
+          "sequence": 3,
+          "type": "capability.invoked"
+        }
+      ],
+      "completion_events": [
+        {
+          "identity": "evt_98985ba5baaf495f",
+          "sequence": 4,
+          "type": "invocation.completed"
+        }
+      ],
+      "verification_events": [],
+      "finish_events": [
+        {
+          "identity": "evt_68b04d53a4a5b6b1",
+          "sequence": 5,
+          "type": "demand.finished",
+          "status": "ok",
+          "delivery": "result-prepared"
+        }
+      ],
+      "operation_status": "ok",
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "agent_receipt": "not-established",
+      "usefulness": "not-established",
+      "correlation": {
+        "operation_matched": true,
+        "reason": 0,
+        "verification_linked": false
+      }
+    },
+    {
+      "demand_event": {
+        "identity": "evt_0a168bb6cba8cb08",
+        "sequence": 6,
+        "type": "demand.observed"
+      },
+      "request": {
+        "actor_kind": "agent",
+        "ambient_owner_pass": null,
+        "capability": "noop",
+        "context_bytes": 607,
+        "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_reference": "mncs-store:ses_4338bb71e58ccfa8:decision-context:53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_status": "recorded",
+        "observation_wall_ns": 6629735,
+        "parent_request_id": null,
+        "request_surface": "session-api-unattributed",
+        "snapshot_sequence": 7,
+        "snapshot_updated_at": "2026-11-07T15:03:17+00:00"
+      },
+      "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+      "context_status": "integrity-verified",
+      "invocation_events": [
+        {
+          "identity": "evt_66435fde370a43c9",
+          "sequence": 7,
+          "type": "capability.invoked"
+        }
+      ],
+      "completion_events": [
+        {
+          "identity": "evt_cdf7967b49b70007",
+          "sequence": 8,
+          "type": "invocation.completed"
+        }
+      ],
+      "verification_events": [],
+      "finish_events": [
+        {
+          "identity": "evt_b6cc6c5f70c382de",
+          "sequence": 9,
+          "type": "demand.finished",
+          "status": "ok",
+          "delivery": "result-prepared"
+        }
+      ],
+      "operation_status": "ok",
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "agent_receipt": "not-established",
+      "usefulness": "not-established",
+      "correlation": {
+        "operation_matched": true,
+        "reason": 0,
+        "verification_linked": false
+      }
+    },
+    {
+      "demand_event": {
+        "identity": "evt_2ad763b06241ce73",
+        "sequence": 10,
+        "type": "demand.observed"
+      },
+      "request": {
+        "actor_kind": "agent",
+        "ambient_owner_pass": null,
+        "capability": "noop",
+        "context_bytes": 607,
+        "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_reference": "mncs-store:ses_4338bb71e58ccfa8:decision-context:53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_status": "recorded",
+        "observation_wall_ns": 7073900,
+        "parent_request_id": null,
+        "request_surface": "session-api-unattributed",
+        "snapshot_sequence": 9,
+        "snapshot_updated_at": "2026-11-07T15:03:18+00:00"
+      },
+      "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+      "context_status": "integrity-verified",
+      "invocation_events": [
+        {
+          "identity": "evt_2c14c09210ba7cfb",
+          "sequence": 11,
+          "type": "capability.invoked"
+        }
+      ],
+      "completion_events": [
+        {
+          "identity": "evt_fe487e41963a0b10",
+          "sequence": 12,
+          "type": "invocation.completed"
+        }
+      ],
+      "verification_events": [],
+      "finish_events": [
+        {
+          "identity": "evt_2fa0807671885a10",
+          "sequence": 13,
+          "type": "demand.finished",
+          "status": "ok",
+          "delivery": "result-prepared"
+        }
+      ],
+      "operation_status": "ok",
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "agent_receipt": "not-established",
+      "usefulness": "not-established",
+      "correlation": {
+        "operation_matched": true,
+        "reason": 0,
+        "verification_linked": false
+      }
+    },
+    {
+      "demand_event": {
+        "identity": "evt_8fd52bbef16126c1",
+        "sequence": 14,
+        "type": "demand.observed"
+      },
+      "request": {
+        "actor_kind": "agent",
+        "ambient_owner_pass": null,
+        "capability": "noop",
+        "context_bytes": 607,
+        "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_reference": "mncs-store:ses_4338bb71e58ccfa8:decision-context:53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_status": "recorded",
+        "observation_wall_ns": 6935497,
+        "parent_request_id": null,
+        "request_surface": "session-api-unattributed",
+        "snapshot_sequence": 11,
+        "snapshot_updated_at": "2026-11-07T15:03:18+00:00"
+      },
+      "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+      "context_status": "integrity-verified",
+      "invocation_events": [
+        {
+          "identity": "evt_79cc5269e46be2ae",
+          "sequence": 15,
+          "type": "capability.invoked"
+        }
+      ],
+      "completion_events": [
+        {
+          "identity": "evt_a190489edfd81517",
+          "sequence": 16,
+          "type": "invocation.completed"
+        }
+      ],
+      "verification_events": [],
+      "finish_events": [
+        {
+          "identity": "evt_95e17f1c1dd32eff",
+          "sequence": 17,
+          "type": "demand.finished",
+          "status": "ok",
+          "delivery": "result-prepared"
+        }
+      ],
+      "operation_status": "ok",
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "agent_receipt": "not-established",
+      "usefulness": "not-established",
+      "correlation": {
+        "operation_matched": true,
+        "reason": 0,
+        "verification_linked": false
+      }
+    },
+    {
+      "demand_event": {
+        "identity": "evt_3dbe55daeaf62658",
+        "sequence": 18,
+        "type": "demand.observed"
+      },
+      "request": {
+        "actor_kind": "agent",
+        "ambient_owner_pass": null,
+        "capability": "noop",
+        "context_bytes": 607,
+        "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_reference": "mncs-store:ses_4338bb71e58ccfa8:decision-context:53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+        "context_status": "recorded",
+        "observation_wall_ns": 7336052,
+        "parent_request_id": null,
+        "request_surface": "session-api-unattributed",
+        "snapshot_sequence": 13,
+        "snapshot_updated_at": "2026-11-07T15:03:18+00:00"
+      },
+      "context_digest": "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb",
+      "context_status": "integrity-verified",
+      "invocation_events": [
+        {
+          "identity": "evt_cb25d47f4c33e0be",
+          "sequence": 19,
+          "type": "capability.invoked"
+        }
+      ],
+      "completion_events": [
+        {
+          "identity": "evt_4d2f5d777993064e",
+          "sequence": 20,
+          "type": "invocation.completed"
+        }
+      ],
+      "verification_events": [],
+      "finish_events": [
+        {
+          "identity": "evt_2d8d18db56bd5a52",
+          "sequence": 21,
+          "type": "demand.finished",
+          "status": "ok",
+          "delivery": "result-prepared"
+        }
+      ],
+      "operation_status": "ok",
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "agent_receipt": "not-established",
+      "usefulness": "not-established",
+      "correlation": {
+        "operation_matched": true,
+        "reason": 0,
+        "verification_linked": false
+      }
+    }
+  ],
+  "contexts": {
+    "53964c91eb3a222970729da8a0f7ff9db9974ff1a02954fe66161fb73e6861cb": {
+      "authority_revision": null,
+      "bindings": [
+        {
+          "availability": "available",
+          "binding_id": "cap_7140653e8984189b",
+          "capability": "noop",
+          "contract_revision": "1",
+          "provider": "fixture"
+        }
+      ],
+      "bindings_omitted": 0,
+      "campaign_id": null,
+      "environment_id": "renv_4c52b20705a70831",
+      "freshness": "last-owner-observation; not-a-live-admission-check",
+      "readiness": "not-recorded",
+      "repositories": [],
+      "repositories_omitted": 0,
+      "rights_inputs_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "schema_version": "mncs.environment.decision-context/1",
+      "session_id": "ses_4338bb71e58ccfa8",
+      "work_intent_id": "int_27ebecb4f6169321"
+    }
+  },
+  "context_bytes": 607,
+  "context_records_omitted": 0,
+  "recorded_demand_count": 5,
+  "records_omitted": 0,
+  "eligible_need_denominator": null,
+  "agent_burden": "not-measured",
+  "fulfillment": "not-established",
+  "avoided_work": "not-established",
+  "orphan_observation_count": 0
+}

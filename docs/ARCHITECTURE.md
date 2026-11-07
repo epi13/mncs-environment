@@ -284,3 +284,10 @@ refreshes prevent unrelated Store activity from aging the index indefinitely.
 See
 [PROVIDER_RESIDENT_COHERENCE.md](PROVIDER_RESIDENT_COHERENCE.md) for contracts,
 current implementation boundaries and unresolved producer provenance.
+
+## Bounded demand evidence
+
+Non-ambient capability requests now preserve a decision-time observation reference
+and exact invocation/result lineage. Native correlation extends the existing
+session-activity projection; observation, availability, delivery, verification and
+usefulness remain separate. See [DEMAND_OBSERVATION.md](DEMAND_OBSERVATION.md).

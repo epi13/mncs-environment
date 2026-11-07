@@ -46,6 +46,8 @@ TYPES = (
     "capability.unavailable",
     "capability.unknown",
     "capability.invoked",
+    "demand.observed",
+    "demand.finished",
     "effect.operation-deferred",
     "invocation.completed",
     "environment.rpc.read_observed",

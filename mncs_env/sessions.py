@@ -32,6 +32,7 @@ from . import campaign_selector, composition
 from . import capabilities as capabilities_module
 from . import claims as claims_module
 from . import events as events_module
+from . import demand as demand_module
 from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import readiness as readiness_module
@@ -6471,7 +6472,30 @@ class Session:
             prepared.append({"name": name, **metadata, "content": content})
         return prepared
 
-    def invoke(
+    def invoke(self, capability: str, argv: list[str], **options) -> dict[str, Any]:
+        """Observe an actual capability request without inferring private intent."""
+        # Ambient work already has owner-pass invocation/completion evidence.
+        # Do not duplicate it as an agent-demand opportunity or accidentally
+        # attach its helper calls to an enclosing consumer operation.
+        if invocation_context_module.current_ambient_owner_pass_context(self.session_id) is not None:
+            with demand_module.observing(self.session_id, None):
+                return self._invoke(capability, argv, **options)
+        opportunity = demand_module.requested(self, capability, options.get("request_surface"))
+        with demand_module.observing(self.session_id, demand_module.ref(opportunity)):
+            try:
+                result = self._invoke(capability, argv, **options)
+            except Exception as error:
+                demand_module.finished(self, opportunity, None, error,
+                                       refused=isinstance(error, AuthorityDenied))
+                self._refresh_feed_baseline()
+                raise
+            finished = demand_module.finished(self, opportunity, result)
+            self._refresh_feed_baseline()
+            result["demand_reference"] = demand_module.ref(opportunity)
+            result["demand_finish_reference"] = demand_module.ref(finished)
+            return result
+
+    def _invoke(
         self,
         capability: str,
         argv: list[str],
@@ -6979,7 +7003,9 @@ class Session:
                             self.session_id,
                         )
                     )
+                    demand_reference = demand_module.active(self.session_id)
                     invocation_payload = {
+                        "demand_reference": demand_reference,
                         "capability": capability, "argv": argv,
                         "executor": executor,
                         **binding_identity,
@@ -7032,6 +7058,7 @@ class Session:
              **artifact_fields, "at": utcnow()}
         )
         completion_payload = {
+            "demand_reference": demand_module.active(self.session_id),
             "capability": capability, "status": result["status"],
             **binding_identity,
             "effect_target": admitted_effect_target,
@@ -7055,8 +7082,10 @@ class Session:
             completion_payload["ambient_owner_pass_context"] = (
                 ambient_owner_pass_context
             )
-        self._emit("invocation.completed", binding.get("provider", "unknown"),
+        completed_event = self._emit("invocation.completed", binding.get("provider", "unknown"),
                    completion_payload)
+        result["provider_request_id"] = provider_request_id
+        result["completion_reference"] = demand_module.ref(completed_event)
         self._save()
         return result
 

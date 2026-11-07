@@ -608,3 +608,11 @@ cache workload demonstrates a Compiler capability in that workload. It does not
 establish recurrence, agent-attributed resource pressure, a general speedup,
 or reduced agent burden. Inspect the exact source evidence pointer and the
 `measurement_summary` before interpreting its figures.
+
+## Decision-opportunity request evidence
+
+The session-activity projection now includes bounded request-time context and
+operation/verification links. `--activity-section demand` selects that evidence
+without declaring a complete agent-need denominator. Native correlation is optional
+on the selected toolchain; unavailable classification never becomes a host guess.
+See [DEMAND_OBSERVATION.md](DEMAND_OBSERVATION.md) for scope, budgets and exclusions.

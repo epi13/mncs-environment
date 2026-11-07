@@ -1,0 +1,15 @@
+{
+  "schema_version": "mncs.native-application/1",
+  "application_identity": "mncs-environment.demand-correlation",
+  "source": "../native/mncs/environment/demand_correlation_v1.mncs",
+  "module": "mncs.environment.demand_correlation_v1",
+  "entry_function": "demand_correlation_app_v1",
+  "profile": "0.18",
+  "libraries": [
+    "../native"
+  ],
+  "environment_keys": [],
+  "required_capabilities": [
+    "environment_readiness"
+  ]
+}

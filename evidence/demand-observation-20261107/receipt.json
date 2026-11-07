@@ -1,0 +1,171 @@
+{
+  "schema_version": "mncs.environment.demand-observation-proof/1",
+  "origin": "controlled mechanical fixture, not naturally occurring agent behavior",
+  "tested_parent": "159618f8ed04d193b986041a8fca38ad9c3bf1df",
+  "source_sha256": {
+    "mncs_env/demand.py": "41863d065c9be036a62273cc90ac4fd7741d42faf3eaa5a85efdbad21a5c6893",
+    "mncs_env/sessions.py": "e1cc1c3185f303fdee322e1de98a1310a6ae842b038ff16545478cec0d00c17b",
+    "mncs_env/verification.py": "b4b40d9c9988c49b5e10024c2ce25b79fbb7120707f3f517a06aa02d10f0305c",
+    "mncs_env/events.py": "3eb17e7a85a85f4e2ba2fde9e514bfa49219d641573b5253db2e56298ab6b6c3",
+    "mncs_env/capability_intelligence.py": "b8fc7af7e324d2ef10717498d7b16cb3fc46a577f3f25eac3c52e2404315ba45",
+    "mncs_env/cli.py": "ba56d9d2cc6f9323ddce54893b0df8b4ebf394d94b5c197f9378f5fcff74f535",
+    "native/mncs/environment/demand_correlation_v1.mncs": "5c2c9e6f5eedb3079045e2db44a7e14f6e07d9c31842fc76207a48d4a5949812",
+    "native-applications/demand-correlation.json": "998d76ec001460a2da86cacb8d97a2ae6d297ffd1ae4d8986777b90f564dcd9b",
+    "tests/native/demand.mncs": "b72ba8c3f3a1fee2c7997df6894a114443327bfc03438631fc1db1bf0e4395cc",
+    "tests/test_demand.py": "87a1246e05ced8a005c419636a98b0b31300cc7ccb889fc216c9d9061f82232c",
+    "scripts/demand_proof.py": "b5fac79209ac686ae0e6221f69c674dfaa0b51f9c6109523dbde46da898ecff8"
+  },
+  "compiler_binary_sha256": "129ef764bd56f6a3e05ee19631c46c044217590d537d52ee1c62b0fba335d7ae",
+  "native_result_sha256": "7791aad74da629e26652591701e84e7f29a7d636dc93e772989b523a0e2ef516",
+  "native_summary": {
+    "authority": "native_suite",
+    "failed": 0,
+    "passed": 11,
+    "skipped": 0,
+    "total": 11,
+    "unsupported": 0,
+    "verdict": "PASS"
+  },
+  "native_execution": {
+    "artifact_identity": "mncs:compiler:backend-artifact:4f437f9f36e75d2726a59d90eff6562e465e99f0cdc6f6cb68775b1480f727dd",
+    "artifact_sha256": "c39b1048a1a548409c7982c4f891f03fd9fb41a8b05ef901bf2f1d72f6bd7364",
+    "backend": "mncs-research-bytecode",
+    "batch_size": 11,
+    "canonical_path": true,
+    "compiler_owned_inventory": true,
+    "fallback": false,
+    "host_subprocesses": 0,
+    "inventory_identity": "11fe5d2685c3a2be10d9a78b86640b361d23de67a74a7be2402463072856f30d",
+    "mode": "native-toolchain-embed",
+    "native_batch_calls": 1,
+    "native_session_calls": 35,
+    "reused_session": true,
+    "run_identity": "30fed384008f65324e6ebfd91f353301bbded6526a9f824a675eb90d151dabac",
+    "runner_version": "0.1.0",
+    "step_budget": 3000000,
+    "test_case_identities": [
+      "mncs:0.2:test-case:mncs.environment.demand_tests::ambiguous_events_are_not_arbitrarily_selected::b50848c4f267e750fd8e13d3ced6e0e717c852ecaaa83e1c7eb771747b91ebe3",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::changed_binding_cannot_be_backfilled_from_current_state::92e4d8337ad9a9c7f34b63451a7edd1fc11c891af3dadd0ce2f741678a8e1055",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::completed_operation_does_not_imply_verified_work::43ee0c49be00988d1bbd65d3a3d4afd7002dcb376eaad422342d2ef9115db804",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::completion_must_follow_request_and_invocation::05a2d170f7c880efbe83f5c899517806f50fa6f8153be40da2f649a20451b60f",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::completion_request_mismatch_refuses::88d67e6bd3b9f151daadb633f967669c9c4934a110c7e667553b522bd854aa18",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::historical_context_must_be_present_and_complete::30761adf3be971ea024ea19576113ef95e9ed5a3d3ac4b261c33212c0b430057",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::joined_observed_verification_is_separate_from_usefulness::844508172b1c30943938a570c18d6e1bdfbcd65467fc4821e646ecab58b5e019",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::outcome_must_follow_completed_operation::4f12f7457b73e2dd29ec62955c58ab67dc1649ac82357172e6f8fd371f737f66",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::partial_window_is_explicit::76c229816491313edeb8c3afcfcea6766b54ccc15bffb4556a398d378010d008",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::predictions_cannot_be_verified_outcomes::2b90390064816674ad292b64d65df86ebaf1b820908ebbbff6f2c46affc3626f",
+      "mncs:0.2:test-case:mncs.environment.demand_tests::result_must_belong_to_exact_provider_request::98dafef5dec1e9bc2777a9b9c87cea632eaee65d3d626b1af9592373dca994c3"
+    ]
+  },
+  "measurements": [
+    {
+      "backend": "file",
+      "instrumented": false,
+      "calls": 5,
+      "wall_ns": [
+        1857377,
+        2064146,
+        1704341,
+        1826375,
+        1999210
+      ],
+      "median_wall_ns": 1857377,
+      "events_added": 10,
+      "new_event_json_bytes": 6357,
+      "state_file_bytes_growth": 10675,
+      "context_bytes_per_request": [],
+      "distinct_context_references": null,
+      "observation_pre_emit_wall_ns": []
+    },
+    {
+      "backend": "file",
+      "instrumented": true,
+      "calls": 5,
+      "wall_ns": [
+        2370523,
+        2295152,
+        2556924,
+        2916565,
+        2989669
+      ],
+      "median_wall_ns": 2556924,
+      "events_added": 20,
+      "new_event_json_bytes": 16429,
+      "state_file_bytes_growth": 21377,
+      "context_bytes_per_request": [
+        607,
+        607,
+        607,
+        607,
+        607
+      ],
+      "distinct_context_references": null,
+      "observation_pre_emit_wall_ns": [
+        186032,
+        61041,
+        53142,
+        54116,
+        55794
+      ]
+    },
+    {
+      "backend": "store",
+      "instrumented": false,
+      "calls": 5,
+      "wall_ns": [
+        225251694,
+        225470755,
+        226712203,
+        223541622,
+        233946837
+      ],
+      "median_wall_ns": 225470755,
+      "events_added": 10,
+      "new_event_json_bytes": 6357,
+      "state_file_bytes_growth": 76783,
+      "context_bytes_per_request": [],
+      "distinct_context_references": 0,
+      "observation_pre_emit_wall_ns": []
+    },
+    {
+      "backend": "store",
+      "instrumented": true,
+      "calls": 5,
+      "wall_ns": [
+        447596332,
+        383204026,
+        379057534,
+        378008664,
+        391672790
+      ],
+      "median_wall_ns": 383204026,
+      "events_added": 20,
+      "new_event_json_bytes": 13869,
+      "state_file_bytes_growth": 92518,
+      "context_bytes_per_request": [
+        607,
+        607,
+        607,
+        607,
+        607
+      ],
+      "distinct_context_references": 1,
+      "observation_pre_emit_wall_ns": [
+        80930938,
+        6629735,
+        7073900,
+        6935497,
+        7336052
+      ]
+    }
+  ],
+  "native_view_sha256": "79625ead53343407e795dc2ab1b16f914f9007631d0d1971f2c10f7225743fc4",
+  "limitations": [
+    "Five sequential samples per treatment; not randomized and not a latency distribution.",
+    "Wall time covers the full existing admission/provider/persistence path; not agent reasoning time.",
+    "State-file growth is logical file size, not filesystem allocation or attributed physical I/O.",
+    "Native/host peak memory and agent tokens are unmeasured.",
+    "All noop calls are mechanically successful; none has independently verified task usefulness.",
+    "Private _invoke is used only as the controlled pre-observation baseline; it retains the same admission checks."
+  ]
+}

@@ -1,0 +1,56 @@
+mncs 0.18;
+module mncs.environment.demand_correlation_v1;
+use mncs.std.application.v1;
+
+// This kernel validates bounded evidence joins, never permissions or usefulness.
+record DemandJoin {
+ demand: [byte; up_to 160], binding: [byte; up_to 160],
+ start_demand: [byte; up_to 160], end_demand: [byte; up_to 160],
+ start_binding: [byte; up_to 160], end_binding: [byte; up_to 160],
+ start_request: [byte; up_to 160], end_request: [byte; up_to 160],
+ result_demand: [byte; up_to 160], result_request: [byte; up_to 160],
+ demand_sequence: u64, start_sequence: u64, end_sequence: u64, result_sequence: u64,
+ starts: u64, completions: u64, results: u64,
+ context_present: bool, context_complete: bool, observed_result: bool
+}
+// reason: 0 operation matched, 1 incomplete, 2 ambiguous, 3 identity mismatch,
+// 4 invalid chronology, 5 missing/incomplete historical context.
+record DemandJoinResult { operation_matched: bool, verification_linked: bool, reason: u64 }
+fn same(a: [byte; up_to 160], b: [byte; up_to 160]) -> (result: bool) {
+ if a.len != b.len { return false; }
+ iterate i over a carrying equal: bool = true { next equal = equal && a[i] == b[i]; }
+ return equal;
+}
+fn join_result(matched: bool, verified: bool, reason: u64) -> (result: DemandJoinResult) { return DemandJoinResult { operation_matched: matched, verification_linked: verified, reason: reason }; }
+fn correlate(r: DemandJoin) -> (result: DemandJoinResult) {
+ if r.starts > 1 || r.completions > 1 || r.results > 1 { return join_result(false, false, 2); }
+ if !r.context_present || !r.context_complete { return join_result(false, false, 5); }
+ if r.starts == 0 || r.completions == 0 { return join_result(false, false, 1); }
+ if r.demand.len == 0 || r.binding.len == 0 || r.start_request.len == 0 || !same(r.demand, r.start_demand) || !same(r.demand, r.end_demand) || !same(r.binding, r.start_binding) || !same(r.binding, r.end_binding) || !same(r.start_request, r.end_request) { return join_result(false, false, 3); }
+ if r.demand_sequence == 0 || r.start_sequence <= r.demand_sequence || r.end_sequence <= r.start_sequence { return join_result(false, false, 4); }
+ if r.results == 0 { return join_result(true, false, 0); }
+ if !r.observed_result || !same(r.demand, r.result_demand) || !same(r.start_request, r.result_request) { return join_result(true, false, 3); }
+ if r.result_sequence <= r.end_sequence { return join_result(true, false, 4); }
+ return join_result(true, true, 0);
+}
+record DemandCorrelationRequest { schema_version: [byte; up_to 64], rows: [DemandJoin; up_to 16] }
+record DemandCorrelationOutput { schema_version: [byte; up_to 64], decisions: [DemandJoinResult; up_to 16] }
+record DemandCorrelationState { count: u64, decisions: [DemandJoinResult; 16] }
+fn request_schema() -> (result: [byte; up_to 64]) { return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 100, 101, 109, 97, 110, 100, 45, 99, 111, 114, 114, 101, 108, 97, 116, 105, 111, 110, 45, 114, 101, 113, 117, 101, 115, 116, 47, 49]; }
+fn result_schema() -> (result: [byte; up_to 64]) { return [109, 110, 99, 115, 46, 101, 110, 118, 105, 114, 111, 110, 109, 101, 110, 116, 46, 100, 101, 109, 97, 110, 100, 45, 99, 111, 114, 114, 101, 108, 97, 116, 105, 111, 110, 45, 114, 101, 115, 117, 108, 116, 47, 49]; }
+fn demand_correlation_app_v1(context: ApplicationContext) -> (result: ApplicationExit)
+ capability environment_readiness
+ effect structured_read authorized_by environment_readiness
+ effect structured_write authorized_by environment_readiness
+{
+ if !context_is_bounded(context) || context.argv_count != 2 { return failure([105,110,118,97,108,105,100], 2); }
+ let request: DemandCorrelationRequest = structured_read(context.argv[0], request_schema());
+ let initial: DemandCorrelationState = DemandCorrelationState { count: 0, decisions: [join_result(false, false, 1); 16] };
+ iterate i over request.rows carrying state: DemandCorrelationState = initial {
+  next state = DemandCorrelationState { count: i + 1, decisions: replace(state.decisions, i, correlate(request.rows[i])) };
+ }
+ let output: DemandCorrelationOutput = DemandCorrelationOutput { schema_version: result_schema(), decisions: state.decisions[0..state.count] };
+ let published: u64 = structured_write(context.argv[1], result_schema(), output);
+ if published == 0 { return failure([119,114,105,116,101], 3); }
+ return success([]);
+}
