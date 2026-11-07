@@ -1,0 +1,96 @@
+{
+  "session_id": "ses_181a8dfebdb7e2eb",
+  "lifecycle": "completed",
+  "selected_checkouts": {
+    "mncs-language": {
+      "authoritative_head": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+      "branch": "main",
+      "clean": false,
+      "head": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+      "path": "/home/epi13/Documents/Projects/mncs-language",
+      "repository": "mncs-language",
+      "source_ref": "explicit-workspace-selection"
+    },
+    "mncs-stdlib": {
+      "authoritative_head": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff",
+      "branch": "main",
+      "clean": false,
+      "head": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff",
+      "path": "/home/epi13/Documents/Projects/mncs-stdlib",
+      "repository": "mncs-stdlib",
+      "source_ref": "explicit-workspace-selection"
+    },
+    "mncs-test": {
+      "authoritative_head": "d51958bf2cb2dbba583bee255897b4c7544a0468",
+      "branch": "main",
+      "checkout_identity": "checkout:1372e03f21da8344",
+      "clean": true,
+      "git_common_directory_identity": "git-common:edc46f1a6583a8c5",
+      "head": "d51958bf2cb2dbba583bee255897b4c7544a0468",
+      "observed_path": "mncs-test",
+      "path": "/home/epi13/Documents/Projects/mncs-test",
+      "repository": "mncs-test",
+      "source_ref": "current-working-checkout"
+    }
+  },
+  "toolchain": {
+    "binary": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "checkout": "/home/epi13/Documents/Projects/mncs-language",
+    "repository": "mncs-language",
+    "revision": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+    "status": "available"
+  },
+  "verification_state": {
+    "mncs-test.cross-module-suite-execution": {
+      "classification": "passed",
+      "covered_test_identities": [],
+      "evidence": {
+        "definition_identity": "1392e245b1a210a3",
+        "evidence_id": "ver-6f6ee2583310",
+        "executor_identity": "3ee819626049503e",
+        "invalidation_identity": "d2350fdae1327164",
+        "inventory_identity": "bcfd537c0d1144ec",
+        "repository_fingerprint": "clean",
+        "repository_revision": "d51958bf2cb2dbba583bee255897b4c7544a0468",
+        "subject_fingerprint": "sha256:b49259bf34cf065bd5640d24e4afa9540a5febd9d6e11a8ba1d5893e247c3a36",
+        "subject_identity": "mncs-test:tests/closure_suite.mncs",
+        "toolchain_identity": "3ecea7693f349405",
+        "verdict": "PASS",
+        "verifier_identity": "mncs-test-runner/0.2.1"
+      },
+      "executed_at": "2026-11-07T19:54:48+00:00",
+      "failed_test_ids": [],
+      "failure_class": "none",
+      "inventory_test_identities": [
+        "mncs:0.2:test-case:tests.closure_suite::independent_arithmetic::f6b97985600350f4dc9234701e912705ffb5d4a50bd60e8abfb2163be88cd84b",
+        "mncs:0.2:test-case:tests.closure_suite::independent_boolean::4687b1baf988c8859ae852920e949e051ab8d2595c3f513b74557540edea560d"
+      ],
+      "inventory_truncated": false,
+      "run_id": "2d863271f558dab09af68b439d42dabef955c2baa1380a857c885fa0c2729784",
+      "run_tag": "c2f4c74b-545abe03",
+      "verdict": "PASS"
+    }
+  },
+  "verification_epoch": {
+    "at": "2026-11-07T19:54:48+00:00",
+    "epoch": "85f1dc5984289b56",
+    "evidence_ref": "mncs-store:ses_181a8dfebdb7e2eb:verification:feca279e7531c101ce0cfaa2669ae826f5b609fc49175593a2ddbd3d1c42c7ae",
+    "summary": {
+      "blockers": 0,
+      "contradictory": 0,
+      "current": 1,
+      "deferred": 0,
+      "elapsed_seconds": 2.767,
+      "epoch_reused": false,
+      "excluded": 0,
+      "executed": 1,
+      "failed": 0,
+      "failed_ids": [],
+      "invalid": 0,
+      "obligations": 1,
+      "unknown": 0,
+      "unresolved": 0,
+      "unsupported": 0
+    }
+  }
+}

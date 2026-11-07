@@ -1,0 +1,114 @@
+{
+  "schema_version": "mncs.environment.remediation-admission-proof/1",
+  "source_sha256": "430b9e1f4360b48cd64348cd402bded0c279019989bf19aa1374ce85295d7a9c",
+  "advice_used": false,
+  "attempts": [
+    {
+      "stage": "missing-claim",
+      "interface": "invoke",
+      "response": {
+        "binding_id": null,
+        "capability": "fixture.start/1",
+        "status": "deferred-coordination",
+        "returncode": null,
+        "stdout": "",
+        "stderr": "nothing executed: fixture is not an isolated proposal worktree (dirty/foreign/off-branch)",
+        "action": "write",
+        "coordination_status": "shared-checkout-needs-isolation-or-lease",
+        "next_step": "select-or-create-an-observed-proposal-worktree",
+        "truncated": false,
+        "event_reference": {
+          "identity": "evt_a4406fafc9262eba",
+          "sequence": 6,
+          "type": "authority.coordination-deferred"
+        },
+        "demand_reference": {
+          "identity": "evt_d3c035efd5e36039",
+          "sequence": 5,
+          "type": "demand.observed"
+        },
+        "demand_finish_reference": {
+          "identity": "evt_eccb3faad93cb1b8",
+          "sequence": 7,
+          "type": "demand.finished"
+        }
+      }
+    },
+    {
+      "stage": "narrow-claim",
+      "interface": "invoke",
+      "response": {
+        "binding_id": null,
+        "capability": "fixture.start/1",
+        "status": "deferred-coordination",
+        "returncode": null,
+        "stdout": "",
+        "stderr": "nothing executed: fixture is not an isolated proposal worktree (dirty/foreign/off-branch)",
+        "action": "write",
+        "coordination_status": "shared-checkout-needs-isolation-or-lease",
+        "next_step": "select-or-create-an-observed-proposal-worktree",
+        "truncated": false,
+        "event_reference": {
+          "identity": "evt_00efc50af89cbffc",
+          "sequence": 11,
+          "type": "authority.coordination-deferred"
+        },
+        "demand_reference": {
+          "identity": "evt_f58f058a2157fbd8",
+          "sequence": 10,
+          "type": "demand.observed"
+        },
+        "demand_finish_reference": {
+          "identity": "evt_59fbb3b72cfdb7d2",
+          "sequence": 12,
+          "type": "demand.finished"
+        }
+      }
+    },
+    {
+      "stage": "whole-worktree-claim",
+      "interface": "invoke",
+      "response": {
+        "binding_id": "cap_a2ef7f65cd57428a",
+        "capability": "fixture.start/1",
+        "status": "ok",
+        "returncode": 0,
+        "stdout": "{\"schema_version\": \"fixture.status/1\", \"ready\": true, \"starts\": 1}\n",
+        "stderr": "",
+        "truncated": false,
+        "artifact_store_ref": null,
+        "artifact_file_count": null,
+        "artifact_byte_count": null,
+        "input_artifacts": [],
+        "provider_request_id": "req_6df90de11b6aa4b79a4a475ba951a9d5961c0630c37477c5",
+        "completion_reference": {
+          "identity": "evt_971ecc0eadd77f1f",
+          "sequence": 16,
+          "type": "invocation.completed"
+        },
+        "demand_reference": {
+          "identity": "evt_ea2419d7fef3a11e",
+          "sequence": 14,
+          "type": "demand.observed"
+        },
+        "demand_finish_reference": {
+          "identity": "evt_971ecc0eadd77f1f",
+          "sequence": 16,
+          "type": "invocation.completed"
+        }
+      }
+    }
+  ],
+  "independent_fixture_state": {
+    "ready": true,
+    "starts": 1
+  },
+  "provider_invocation_requests": 3,
+  "unsuccessful_invocation_requests": 2,
+  "provider_executions": 1,
+  "limitations": [
+    "Controlled sequence with identical provider and scope prerequisites, not natural agent behavior.",
+    "Advisories add checks; they never replace live admission or grant execution permission.",
+    "Counts come from the explicit harness requests and actual outcomes, not missing observations."
+  ]
+}

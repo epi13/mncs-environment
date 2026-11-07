@@ -1,0 +1,86 @@
+{
+  "context": {
+    "claim_fences": [],
+    "claim_holders": {
+      "mncs-environment": [
+        {
+          "basis": "explicit-claim",
+          "claim_id": "claim:mncs-environment:worktree:38265bf5f1d6",
+          "consumer_id": "local-agent",
+          "scope": {
+            "branch": "campaign/deterministic-remediation-20261107",
+            "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107",
+            "checkout_identity": "checkout:19b5f22694311891",
+            "exclusive": false,
+            "git_common_directory_identity": "git-common:8bf6635617971eae",
+            "kind": "worktree",
+            "manifest_identity": "955c3febf3d79c9c",
+            "paths": null,
+            "repository": "mncs-environment"
+          },
+          "session_id": "ses_81bd16d081ab29e7"
+        }
+      ]
+    },
+    "claim_required_actions": [
+      "delegate"
+    ],
+    "denied": [
+      "delete"
+    ],
+    "escalation_required": [],
+    "grants": [],
+    "invocable": [
+      "*"
+    ],
+    "protected_repositories": [],
+    "readable": [
+      "workspace"
+    ],
+    "revision": "70607197cd9834b69e0010d7b40b7e3ccb45fc7ae3d270e17fa307a5fcf30dc7",
+    "schema_version": "mncs.environment.authority-context/1",
+    "scope_grant_repositories": [],
+    "scope_grants": [],
+    "subject": "local-agent",
+    "writable": [
+      "mncs-environment"
+    ]
+  },
+  "evaluation": {
+    "authorization_basis": "writable-repository-rights",
+    "concurrency_note": "This decision does not reserve the scope; the integration operation must enforce its repository-native reference update",
+    "eligibility_basis": "exact-observed-scope-and-repository-native-concurrency",
+    "eligibility_evidence": {
+      "action": "merge",
+      "event_reference": {
+        "identity": "evt_9d4aea37552b6cd1",
+        "sequence": 6,
+        "type": "authority.integration-eligible"
+      },
+      "operation_executed": false,
+      "preflight_state": {
+        "branch": "main",
+        "branch_status": "attached",
+        "checkout_identity": "checkout:6d9581db142d06e1",
+        "head": "46057a9f449021b081f5a586dede4b7b1eb8acb6",
+        "head_status": "measured",
+        "observation_basis": "fresh-registered-checkout-inspection",
+        "schema_version": "mncs.environment.integration-preflight-state/1",
+        "working_tree_status": "clean"
+      },
+      "repository": "mncs-environment",
+      "scope": {
+        "branch": "main",
+        "checkout_identity": "checkout:6d9581db142d06e1",
+        "exclusive": false,
+        "git_common_directory_identity": "git-common:8bf6635617971eae",
+        "kind": "worktree",
+        "manifest_identity": "955c3febf3d79c9c",
+        "repository": "mncs-environment"
+      }
+    },
+    "persistent_claim_required": false,
+    "reason": "merge eligible within writable scope on mncs-environment; claim overlaps are coordination evidence",
+    "verdict": "allow"
+  }
+}

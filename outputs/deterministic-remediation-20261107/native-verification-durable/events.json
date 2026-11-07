@@ -1,0 +1,230 @@
+[
+  {
+    "causes": [],
+    "identity": "evt_35be2fe60c1edad8",
+    "observed_at": "2026-11-07T19:54:45+00:00",
+    "payload": {
+      "consumer_id": "remediation-proof"
+    },
+    "producer": "environment",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 1,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "session.created"
+  },
+  {
+    "causes": [],
+    "identity": "evt_744494f4a338a200",
+    "observed_at": "2026-11-07T19:54:45+00:00",
+    "payload": {
+      "actor_kind": "agent",
+      "ambient_owner_pass": null,
+      "capability": "mncs.test-verification-coherence/1",
+      "context_bytes": 8604,
+      "context_digest": "9a14ad3ab13343a957c0f0957eb1b59aca7e83ff6656fdfff39f9114f234ce18",
+      "context_reference": "mncs-store:ses_181a8dfebdb7e2eb:decision-context:9a14ad3ab13343a957c0f0957eb1b59aca7e83ff6656fdfff39f9114f234ce18",
+      "context_status": "recorded",
+      "observation_wall_ns": 58273107,
+      "parent_request_id": null,
+      "request_surface": "session-api-unattributed",
+      "snapshot_sequence": 4,
+      "snapshot_updated_at": "2026-11-07T19:54:45+00:00"
+    },
+    "producer": "remediation-proof",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 2,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "demand.observed"
+  },
+  {
+    "causes": [],
+    "identity": "evt_4095c64efd85b008",
+    "observed_at": "2026-11-07T19:54:45+00:00",
+    "payload": {
+      "argv": [
+        "request.json",
+        "result.json"
+      ],
+      "binding_id": "cap_436af10f7755214e",
+      "capability": "mncs.test-verification-coherence/1",
+      "contract_revision": "1",
+      "demand_reference": {
+        "identity": "evt_744494f4a338a200",
+        "sequence": 2,
+        "type": "demand.observed"
+      },
+      "effect_target": null,
+      "executor": {
+        "capability": "mncs.test-verification-coherence/1",
+        "checkout": "/home/epi13/Documents/Projects/mncs-test",
+        "provider": "mncs-test"
+      },
+      "input_artifacts": [],
+      "parent_request_id": null,
+      "provider": "mncs-test",
+      "provider_request_id": "req_bb0c51a51090cd92addf008ebc2883f9a0cacfa0f17658d5"
+    },
+    "producer": "remediation-proof",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 3,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "capability.invoked"
+  },
+  {
+    "causes": [],
+    "identity": "evt_586855d92cf62cc0",
+    "observed_at": "2026-11-07T19:54:46+00:00",
+    "payload": {
+      "artifact_store_ref": null,
+      "binding_id": "cap_436af10f7755214e",
+      "capability": "mncs.test-verification-coherence/1",
+      "contract_revision": "1",
+      "demand_reference": {
+        "identity": "evt_744494f4a338a200",
+        "sequence": 2,
+        "type": "demand.observed"
+      },
+      "effect_target": null,
+      "input_artifacts": [],
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "parent_request_id": null,
+      "provider": "mncs-test",
+      "provider_request_id": "req_bb0c51a51090cd92addf008ebc2883f9a0cacfa0f17658d5",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "producer": "mncs-test",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 4,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "invocation.completed"
+  },
+  {
+    "causes": [],
+    "identity": "evt_ae5912cf2863b1ba",
+    "observed_at": "2026-11-07T19:54:47+00:00",
+    "payload": {
+      "actor_kind": "agent",
+      "ambient_owner_pass": null,
+      "capability": "mncs.test-result/1",
+      "context_bytes": 8604,
+      "context_digest": "9a14ad3ab13343a957c0f0957eb1b59aca7e83ff6656fdfff39f9114f234ce18",
+      "context_reference": "mncs-store:ses_181a8dfebdb7e2eb:decision-context:9a14ad3ab13343a957c0f0957eb1b59aca7e83ff6656fdfff39f9114f234ce18",
+      "context_status": "recorded",
+      "observation_wall_ns": 7288106,
+      "parent_request_id": null,
+      "request_surface": "session-api-unattributed",
+      "snapshot_sequence": 6,
+      "snapshot_updated_at": "2026-11-07T19:54:47+00:00"
+    },
+    "producer": "remediation-proof",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 5,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "demand.observed"
+  },
+  {
+    "causes": [],
+    "identity": "evt_1c9d78503697a22b",
+    "observed_at": "2026-11-07T19:54:47+00:00",
+    "payload": {
+      "argv": [
+        "/home/epi13/Documents/Projects/mncs-test/tests/closure_suite.mncs",
+        "--format",
+        "json",
+        "--result",
+        "result.json"
+      ],
+      "binding_id": "cap_459fc02c03c88a64",
+      "capability": "mncs.test-result/1",
+      "contract_revision": "1",
+      "demand_reference": {
+        "identity": "evt_ae5912cf2863b1ba",
+        "sequence": 5,
+        "type": "demand.observed"
+      },
+      "effect_target": null,
+      "executor": {
+        "capability": "mncs.test-result/1",
+        "checkout": "/home/epi13/Documents/Projects/mncs-test",
+        "provider": "mncs-test"
+      },
+      "input_artifacts": [],
+      "parent_request_id": null,
+      "provider": "mncs-test",
+      "provider_request_id": "req_d962f7c2285019423051408e796129df4e49d9bd8c63ccae"
+    },
+    "producer": "remediation-proof",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 6,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "capability.invoked"
+  },
+  {
+    "causes": [],
+    "identity": "evt_a9562ec796d74fc1",
+    "observed_at": "2026-11-07T19:54:47+00:00",
+    "payload": {
+      "artifact_store_ref": null,
+      "binding_id": "cap_459fc02c03c88a64",
+      "capability": "mncs.test-result/1",
+      "contract_revision": "1",
+      "demand_reference": {
+        "identity": "evt_ae5912cf2863b1ba",
+        "sequence": 5,
+        "type": "demand.observed"
+      },
+      "effect_target": null,
+      "input_artifacts": [],
+      "output_capture": {
+        "limit_bytes": 65536,
+        "status": "complete"
+      },
+      "parent_request_id": null,
+      "provider": "mncs-test",
+      "provider_request_id": "req_d962f7c2285019423051408e796129df4e49d9bd8c63ccae",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "producer": "mncs-test",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 7,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "invocation.completed"
+  },
+  {
+    "causes": [],
+    "identity": "evt_d74974e77e3b52fe",
+    "observed_at": "2026-11-07T19:54:48+00:00",
+    "payload": {
+      "demand_reference": {
+        "identity": "evt_ae5912cf2863b1ba",
+        "sequence": 5,
+        "type": "demand.observed"
+      },
+      "evidence_id": "ver-6f6ee2583310",
+      "obligation": "mncs-test.cross-module-suite-execution",
+      "outcome": "passed",
+      "provider_request_id": "req_d962f7c2285019423051408e796129df4e49d9bd8c63ccae",
+      "result_kind": "observed",
+      "verification_evidence": "mncs-store:ses_181a8dfebdb7e2eb:verification:feca279e7531c101ce0cfaa2669ae826f5b609fc49175593a2ddbd3d1c42c7ae",
+      "verification_evidence_digest": "feca279e7531c101ce0cfaa2669ae826f5b609fc49175593a2ddbd3d1c42c7ae"
+    },
+    "producer": "environment",
+    "provider_type": null,
+    "schema_version": "mncs.environment.event/1",
+    "sequence": 8,
+    "session_id": "ses_181a8dfebdb7e2eb",
+    "type": "verification.verified"
+  }
+]

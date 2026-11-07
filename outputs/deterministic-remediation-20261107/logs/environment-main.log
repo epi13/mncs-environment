@@ -1,0 +1,67 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+........................................................................ [ 21%]
+........................................................................ [ 26%]
+........................................................................ [ 31%]
+........................................................................ [ 36%]
+........................................................................ [ 42%]
+........................................................................ [ 47%]
+........................................................................ [ 52%]
+........................................................................ [ 57%]
+........................................................................ [ 63%]
+.............................................................sssssssssss [ 68%]
+sssssssssss..................s..............sss.sssssss.sssss.ss..sss... [ 73%]
+........................................................................ [ 78%]
+.......................................sss.............................. [ 84%]
+........................................................................ [ 89%]
+........................................................................ [ 94%]
+........................................................................ [ 99%]
+..                                                                       [100%]
+-------- generated xml file: /tmp/mncs-remediation-environment-main.xml --------
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_family.py:486: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:464: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:322: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:307: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:427: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:518: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:335: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:411: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:299: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:589: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:569: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:437: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:389: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:621: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:497: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:289: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:508: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:451: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:368: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:264: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:530: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_family.py:554: pristine toolchain or family vocabulary unavailable
+SKIPPED [1] tests/test_incremental.py:375: explicit native compiler and Automation checkout required
+SKIPPED [3] tests/test_incremental.py:1122: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1259: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1271: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1283: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1300: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1309: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1319: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1337: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1444: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1471: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1483: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1511: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1530: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1619: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1665: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1698: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1718: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_incremental.py:1731: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_provider_resident.py:20: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_provider_resident.py:35: explicit native compiler and Automation checkout required
+SKIPPED [1] tests/test_provider_resident.py:50: explicit native compiler and Automation checkout required
+1324 passed, 46 skipped in 1095.99s (0:18:15)

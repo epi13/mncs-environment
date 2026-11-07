@@ -1,0 +1,282 @@
+{
+  "schema_version": "mncs.environment.remediation-entry-proof/1",
+  "source_sha256": {
+    "mncs_env/sessions.py": "430b9e1f4360b48cd64348cd402bded0c279019989bf19aa1374ce85295d7a9c",
+    "mncs_env/doctor.py": "b35ea89a1b46f624c8c01cf4b801adab94f06eadda9914e816dc09b12a8b723c",
+    "mncs_env/entry.py": "ec882b83538945680121928aa1de080478d701121068fb6ed39f8b091793f04a"
+  },
+  "rows": [
+    {
+      "wall_ns": 176936810,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.046,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 183183771,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.047,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 188989206,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.047,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 170232737,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.042,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 167028257,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.041,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 171467337,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.044,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 182271815,
+      "doctor_reused": false,
+      "doctor_elapsed_seconds": 0.043,
+      "snapshot_saves": 5,
+      "events_added": [
+        "campaign.reconciled",
+        "doctor.remediated"
+      ],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "consumed_provider_diagnostics": {
+          "count": 0,
+          "items": [],
+          "omitted_count": 0
+        },
+        "reprobed": 0,
+        "reused": 2,
+        "scope_composition": {
+          "base_intent_skipped": [
+            {
+              "reason": "no-live-base-intent-checkout-claim",
+              "repository": "fixture"
+            }
+          ],
+          "composed": [],
+          "observed": [],
+          "removed": [],
+          "retained": [],
+          "skipped": [],
+          "status": "unchanged"
+        },
+        "unbound": []
+      }
+    }
+  ],
+  "median_wall_ns": 176936810,
+  "scope": "seven unchanged real CLI reentries, file-debug backend, declared live service fixture",
+  "limitations": [
+    "Controlled fixture, not agent productivity or a production latency distribution.",
+    "Live readiness checks are retained; required independent verification is not counted as waste."
+  ]
+}

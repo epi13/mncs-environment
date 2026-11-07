@@ -1,0 +1,617 @@
+{
+  "baseline": {
+    "total_seconds": 1.699182224,
+    "top_cumulative": [
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.exec>",
+        "calls": 1,
+        "self_seconds": 0.000109467,
+        "cumulative_seconds": 1.6996081340000002
+      },
+      {
+        "file": "<string>",
+        "line": 1,
+        "function": "<module>",
+        "calls": 1,
+        "self_seconds": 1.9681e-05,
+        "cumulative_seconds": 1.699498667
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/sessions.py",
+        "line": 6475,
+        "function": "invoke",
+        "calls": 5,
+        "self_seconds": 0.000160392,
+        "cumulative_seconds": 1.6994789860000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/store_backend.py",
+        "line": 240,
+        "function": "_put_immutable",
+        "calls": 25,
+        "self_seconds": 0.000270433,
+        "cumulative_seconds": 1.6141899450000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/embedded.py",
+        "line": 1699,
+        "function": "put_bound_object",
+        "calls": 25,
+        "self_seconds": 0.0015682250000000001,
+        "cumulative_seconds": 1.6125226910000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/embedded.py",
+        "line": 368,
+        "function": "_hash",
+        "calls": 205,
+        "self_seconds": 0.004255682,
+        "cumulative_seconds": 1.6025056670000002
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/session.py",
+        "line": 626,
+        "function": "sha256",
+        "calls": 205,
+        "self_seconds": 0.006358287000000001,
+        "cumulative_seconds": 1.598249985
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/session.py",
+        "line": 522,
+        "function": "call",
+        "calls": 580,
+        "self_seconds": 0.0012297900000000001,
+        "cumulative_seconds": 1.565910686
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/session.py",
+        "line": 539,
+        "function": "call_batch",
+        "calls": 580,
+        "self_seconds": 1.489603271,
+        "cumulative_seconds": 1.564680896
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/sessions.py",
+        "line": 3533,
+        "function": "_emit",
+        "calls": 15,
+        "self_seconds": 9.470000000000001e-05,
+        "cumulative_seconds": 1.2844617600000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/session_store.py",
+        "line": 776,
+        "function": "put_event",
+        "calls": 15,
+        "self_seconds": 8.087900000000001e-05,
+        "cumulative_seconds": 1.267090246
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/store_backend.py",
+        "line": 284,
+        "function": "put_event",
+        "calls": 15,
+        "self_seconds": 7.1098e-05,
+        "cumulative_seconds": 1.266990136
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/sessions.py",
+        "line": 6503,
+        "function": "_invoke",
+        "calls": 5,
+        "self_seconds": 0.00043854200000000004,
+        "cumulative_seconds": 1.2316361470000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/embedded.py",
+        "line": 515,
+        "function": "_build_content",
+        "calls": 25,
+        "self_seconds": 0.0009754550000000001,
+        "cumulative_seconds": 1.180969822
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/demand.py",
+        "line": 97,
+        "function": "requested",
+        "calls": 5,
+        "self_seconds": 0.00013233100000000002,
+        "cumulative_seconds": 0.46759131000000004
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/sessions.py",
+        "line": 3470,
+        "function": "_save",
+        "calls": 10,
+        "self_seconds": 4.5121000000000004e-05,
+        "cumulative_seconds": 0.34937359700000004
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/session_store.py",
+        "line": 728,
+        "function": "save_snapshot",
+        "calls": 10,
+        "self_seconds": 2.3667000000000002e-05,
+        "cumulative_seconds": 0.34870522000000004
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/store_backend.py",
+        "line": 411,
+        "function": "put_snapshot",
+        "calls": 10,
+        "self_seconds": 4.8960000000000006e-05,
+        "cumulative_seconds": 0.348679703
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/embedded.py",
+        "line": 399,
+        "function": "_binding_id",
+        "calls": 30,
+        "self_seconds": 3.9688000000000004e-05,
+        "cumulative_seconds": 0.169519982
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/embedded.py",
+        "line": 402,
+        "function": "_logical_id",
+        "calls": 25,
+        "self_seconds": 4.6164e-05,
+        "cumulative_seconds": 0.08885387700000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/python/mncs_store/embedded.py",
+        "line": 460,
+        "function": "_node",
+        "calls": 25,
+        "self_seconds": 8.029700000000001e-05,
+        "cumulative_seconds": 0.088140153
+      },
+      {
+        "file": "/usr/lib64/python3.14/json/__init__.py",
+        "line": 185,
+        "function": "dumps",
+        "calls": 690,
+        "self_seconds": 0.002433349,
+        "cumulative_seconds": 0.046125048
+      },
+      {
+        "file": "/usr/lib64/python3.14/json/encoder.py",
+        "line": 185,
+        "function": "encode",
+        "calls": 690,
+        "self_seconds": 0.001632765,
+        "cumulative_seconds": 0.043177975
+      },
+      {
+        "file": "/usr/lib64/python3.14/json/encoder.py",
+        "line": 207,
+        "function": "iterencode",
+        "calls": 690,
+        "self_seconds": 0.040890695000000005,
+        "cumulative_seconds": 0.040890695000000005
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/mncs_env/evidence_store.py",
+        "line": 63,
+        "function": "publish",
+        "calls": 5,
+        "self_seconds": 3.3149000000000004e-05,
+        "cumulative_seconds": 0.03772149
+      }
+    ]
+  },
+  "final": {
+    "total_seconds": 1.1261440670000007,
+    "top_cumulative": [
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.exec>",
+        "calls": 1,
+        "self_seconds": 7.206e-05,
+        "cumulative_seconds": 1.126548224
+      },
+      {
+        "file": "<string>",
+        "line": 1,
+        "function": "<module>",
+        "calls": 1,
+        "self_seconds": 1.7780000000000003e-05,
+        "cumulative_seconds": 1.126476164
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 6587,
+        "function": "invoke",
+        "calls": 5,
+        "self_seconds": 0.00011709,
+        "cumulative_seconds": 1.126458384
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 240,
+        "function": "_put_immutable",
+        "calls": 25,
+        "self_seconds": 0.00023338700000000002,
+        "cumulative_seconds": 1.048667226
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 1702,
+        "function": "put_bound_object",
+        "calls": 25,
+        "self_seconds": 0.0014251930000000002,
+        "cumulative_seconds": 1.047157598
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 368,
+        "function": "_hash",
+        "calls": 180,
+        "self_seconds": 0.000128806,
+        "cumulative_seconds": 1.037119202
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 626,
+        "function": "sha256",
+        "calls": 180,
+        "self_seconds": 0.0031810870000000004,
+        "cumulative_seconds": 1.036990396
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 522,
+        "function": "call",
+        "calls": 195,
+        "self_seconds": 0.000456299,
+        "cumulative_seconds": 1.0218761440000002
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 539,
+        "function": "call_batch",
+        "calls": 195,
+        "self_seconds": 0.99851818,
+        "cumulative_seconds": 1.021419845
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 6615,
+        "function": "_invoke",
+        "calls": 5,
+        "self_seconds": 0.000370211,
+        "cumulative_seconds": 0.8338381720000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 3540,
+        "function": "_emit",
+        "calls": 15,
+        "self_seconds": 0.00010620100000000001,
+        "cumulative_seconds": 0.7836644220000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 776,
+        "function": "put_event",
+        "calls": 15,
+        "self_seconds": 7.008700000000001e-05,
+        "cumulative_seconds": 0.767236699
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 284,
+        "function": "put_event",
+        "calls": 15,
+        "self_seconds": 7.2002e-05,
+        "cumulative_seconds": 0.767148735
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 515,
+        "function": "_build_content",
+        "calls": 25,
+        "self_seconds": 0.0007535650000000001,
+        "cumulative_seconds": 0.689654895
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/demand.py",
+        "line": 97,
+        "function": "requested",
+        "calls": 5,
+        "self_seconds": 0.00011832,
+        "cumulative_seconds": 0.292416544
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 3477,
+        "function": "_save",
+        "calls": 10,
+        "self_seconds": 4.6009000000000006e-05,
+        "cumulative_seconds": 0.283439459
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 728,
+        "function": "save_snapshot",
+        "calls": 10,
+        "self_seconds": 2.2479000000000003e-05,
+        "cumulative_seconds": 0.282826839
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 411,
+        "function": "put_snapshot",
+        "calls": 10,
+        "self_seconds": 5.1303e-05,
+        "cumulative_seconds": 0.282802323
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 399,
+        "function": "_binding_id",
+        "calls": 30,
+        "self_seconds": 3.3497e-05,
+        "cumulative_seconds": 0.142394225
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 460,
+        "function": "_node",
+        "calls": 25,
+        "self_seconds": 7.951e-05,
+        "cumulative_seconds": 0.06510702900000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 402,
+        "function": "_logical_id",
+        "calls": 25,
+        "self_seconds": 4.2014e-05,
+        "cumulative_seconds": 0.06490293100000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/evidence_store.py",
+        "line": 63,
+        "function": "publish",
+        "calls": 5,
+        "self_seconds": 3.0038000000000003e-05,
+        "cumulative_seconds": 0.032902307
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 691,
+        "function": "get_record_strict",
+        "calls": 5,
+        "self_seconds": 3.7914e-05,
+        "cumulative_seconds": 0.032757055
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 603,
+        "function": "get_record_strict",
+        "calls": 5,
+        "self_seconds": 1.9572e-05,
+        "cumulative_seconds": 0.032717129000000005
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 3063,
+        "function": "get_bound_object",
+        "calls": 5,
+        "self_seconds": 3.8884e-05,
+        "cumulative_seconds": 0.032626043
+      }
+    ]
+  },
+  "reopen-final": {
+    "total_seconds": 7.919150655000002,
+    "top_cumulative": [
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.exec>",
+        "calls": 1,
+        "self_seconds": 9.749300000000001e-05,
+        "cumulative_seconds": 7.919664976000001
+      },
+      {
+        "file": "<string>",
+        "line": 1,
+        "function": "<module>",
+        "calls": 1,
+        "self_seconds": 0.00016277000000000002,
+        "cumulative_seconds": 7.919567483000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 243,
+        "function": "__init__",
+        "calls": 10,
+        "self_seconds": 0.000181546,
+        "cumulative_seconds": 6.6743407690000005
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 906,
+        "function": "open_store",
+        "calls": 5,
+        "self_seconds": 2.0639e-05,
+        "cumulative_seconds": 6.67340628
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 665,
+        "function": "__init__",
+        "calls": 5,
+        "self_seconds": 5.8894e-05,
+        "cumulative_seconds": 6.673385641
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 179,
+        "function": "__init__",
+        "calls": 5,
+        "self_seconds": 7.9097e-05,
+        "cumulative_seconds": 6.673305842
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 481,
+        "function": "__init__",
+        "calls": 5,
+        "self_seconds": 5.65770789,
+        "cumulative_seconds": 6.665677555
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 6587,
+        "function": "invoke",
+        "calls": 5,
+        "self_seconds": 0.00012144300000000001,
+        "cumulative_seconds": 1.164393284
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 240,
+        "function": "_put_immutable",
+        "calls": 25,
+        "self_seconds": 0.000225452,
+        "cumulative_seconds": 1.071608665
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 1702,
+        "function": "put_bound_object",
+        "calls": 25,
+        "self_seconds": 0.001444862,
+        "cumulative_seconds": 1.0675702120000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 368,
+        "function": "_hash",
+        "calls": 180,
+        "self_seconds": 0.0001375,
+        "cumulative_seconds": 1.043701962
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 626,
+        "function": "sha256",
+        "calls": 180,
+        "self_seconds": 0.003357717,
+        "cumulative_seconds": 1.043564462
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 522,
+        "function": "call",
+        "calls": 195,
+        "self_seconds": 0.00047755800000000005,
+        "cumulative_seconds": 1.028182976
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 539,
+        "function": "call_batch",
+        "calls": 195,
+        "self_seconds": 1.00420884,
+        "cumulative_seconds": 1.027705418
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method _hashlib.openssl_sha256>",
+        "calls": 1540,
+        "self_seconds": 0.936504184,
+        "cumulative_seconds": 0.936504184
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 6615,
+        "function": "_invoke",
+        "calls": 5,
+        "self_seconds": 0.000394821,
+        "cumulative_seconds": 0.8430046670000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 3540,
+        "function": "_emit",
+        "calls": 15,
+        "self_seconds": 0.000100962,
+        "cumulative_seconds": 0.8192393050000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 776,
+        "function": "put_event",
+        "calls": 15,
+        "self_seconds": 7.1247e-05,
+        "cumulative_seconds": 0.788735888
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/store_backend.py",
+        "line": 284,
+        "function": "put_event",
+        "calls": 15,
+        "self_seconds": 6.7168e-05,
+        "cumulative_seconds": 0.7886479120000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/embedded.py",
+        "line": 515,
+        "function": "_build_content",
+        "calls": 25,
+        "self_seconds": 0.000781533,
+        "cumulative_seconds": 0.6951319690000001
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 365,
+        "function": "_compile_artifact",
+        "calls": 5,
+        "self_seconds": 0.000339148,
+        "cumulative_seconds": 0.359662702
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107/python/mncs_store/session.py",
+        "line": 204,
+        "function": "_artifact_identity_material",
+        "calls": 5,
+        "self_seconds": 0.00018881800000000002,
+        "cumulative_seconds": 0.356513534
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/demand.py",
+        "line": 97,
+        "function": "requested",
+        "calls": 5,
+        "self_seconds": 0.00012381300000000002,
+        "cumulative_seconds": 0.32117557700000005
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/sessions.py",
+        "line": 3477,
+        "function": "_save",
+        "calls": 10,
+        "self_seconds": 4.3318e-05,
+        "cumulative_seconds": 0.284891665
+      },
+      {
+        "file": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107/mncs_env/session_store.py",
+        "line": 728,
+        "function": "save_snapshot",
+        "calls": 10,
+        "self_seconds": 2.2501e-05,
+        "cumulative_seconds": 0.28426944600000004
+      }
+    ]
+  }
+}

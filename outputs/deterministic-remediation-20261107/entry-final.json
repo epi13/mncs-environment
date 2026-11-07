@@ -1,0 +1,128 @@
+{
+  "schema_version": "mncs.environment.remediation-entry-proof/1",
+  "source_sha256": {
+    "mncs_env/sessions.py": "d8d5336efc92cb684163b70adc4414989173e8820be1b5dcdfcc01c19763b061",
+    "mncs_env/doctor.py": "b35ea89a1b46f624c8c01cf4b801adab94f06eadda9914e816dc09b12a8b723c",
+    "mncs_env/entry.py": "ec882b83538945680121928aa1de080478d701121068fb6ed39f8b091793f04a"
+  },
+  "rows": [
+    {
+      "wall_ns": 162275165,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.033,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "e046bd381e3e9111",
+        "reprobed": 0,
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 166898740,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.033,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "b4808370d9bf224a",
+        "reprobed": 0,
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 166230406,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.032,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "fc9f06f70cd7ac4d",
+        "reprobed": 0,
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 162873461,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.032,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "39d1e68c226b9e55",
+        "reprobed": 0,
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 160041122,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.034,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "d4e1e273c952a69b",
+        "reprobed": 0,
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 158839342,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.031,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "590144e9e6441dbb",
+        "reprobed": 0,
+        "unbound": []
+      }
+    },
+    {
+      "wall_ns": 164524321,
+      "doctor_reused": true,
+      "doctor_elapsed_seconds": 0.031,
+      "snapshot_saves": 0,
+      "events_added": [],
+      "readiness": "ready",
+      "service_ready": "ready",
+      "revalidation": {
+        "bound": [],
+        "changed": [],
+        "epoch": "36b1364a5a52f58c",
+        "reprobed": 0,
+        "unbound": []
+      }
+    }
+  ],
+  "median_wall_ns": 162873461,
+  "scope": "seven unchanged real CLI reentries, file-debug backend, declared live service fixture",
+  "limitations": [
+    "Controlled fixture, not agent productivity or a production latency distribution.",
+    "Live readiness checks are retained; required independent verification is not counted as waste."
+  ]
+}

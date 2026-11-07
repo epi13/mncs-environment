@@ -1,0 +1,35 @@
+{
+  "schema_version": "mncs.environment.campaign-component-cleanup/1",
+  "source": "Observed successful ordinary Environment completion responses and exact clean merged worktree retirement",
+  "components": [
+    {
+      "repository": "mncs-store",
+      "session_id": "ses_28a77f51dbc37020",
+      "completion_checkpoint": "chk_b4a628ce6d0d959b",
+      "outcome": "verified",
+      "claims_released": [
+        "claim:mncs-store:worktree:e71222ee2735"
+      ],
+      "claims_release_error": null,
+      "own_clean_merged_worktree_retired": true
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "session_id": "ses_4ff3e54fbcb10151",
+      "completion_checkpoint": "chk_7da818aa686b8814",
+      "outcome": "verified",
+      "claims_released": [
+        "claim:mncs-control-mcp:worktree:b47dbb0b752f"
+      ],
+      "claims_release_error": null,
+      "own_clean_merged_worktree_retired": true
+    },
+    {
+      "session_id": "ses_c7aaf235528a31af",
+      "completion_checkpoint": "chk_6fc1559e199e06fe",
+      "outcome": "verified",
+      "claims_released": [],
+      "claims_release_error": null
+    }
+  ]
+}

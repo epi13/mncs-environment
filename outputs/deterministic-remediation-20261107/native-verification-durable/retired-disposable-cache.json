@@ -1,0 +1,8 @@
+{
+  "reason": "proof completed; immutable Store evidence and invocation bundles retained",
+  "retired_files": {
+    "state/native-applications/.cache.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "state/native-applications/05eea447aee860aa/1e281c7b305712c8df23fb2cd7a12f03fca861fddd2b3b1a7dd2f763314c0996/artifact.json": "cb5077c660532d9ab7d09a7a7383a3278e24d91d76a32db0d3751cf4adbcbe71",
+    "state/native-applications/05eea447aee860aa/1e281c7b305712c8df23fb2cd7a12f03fca861fddd2b3b1a7dd2f763314c0996/record.json": "adc8b2ec604688ca1fe05baf7e6c661981eac7a2bbc8c325d115003177f1ad7e"
+  }
+}

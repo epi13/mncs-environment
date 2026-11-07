@@ -1,0 +1,1011 @@
+{
+  "schema_version": "mncs.environment.remediation-cost-proof/1",
+  "source_sha256": {
+    "environment": {
+      "mncs_env/sessions.py": "d8d5336efc92cb684163b70adc4414989173e8820be1b5dcdfcc01c19763b061",
+      "mncs_env/demand.py": "83a73e40d42a2138866adec0f550868ddfa58ee531dfcef0bea8c335b017e85b",
+      "mncs_env/store_backend.py": "029d8a84ec7fa16425ff998066230ba1f260796456ad25fe15df4a5aad0f2ebb",
+      "mncs_env/session_store.py": "0353ffa3ca21cd5c7b2d8d8c78484229e0b219da482ce3b824bb7ebfa7daa3b1"
+    },
+    "store": {
+      "python/mncs_store/embedded.py": "a86af75457f0791c7cca9a0e621730fd1f7b021dee8cd56a33dc406a5d671879",
+      "python/mncs_store/session.py": "ed1abafcaab4d89833a7ddbe49373d554b844a9189d036edb23351274af8c23c",
+      "src/store/content.mncs": "ef3e7bc87844c35d1de789c335c4c6fd76d42073334ed483179012af7d2afc55"
+    }
+  },
+  "rows": [
+    {
+      "run": 2,
+      "backend": "store",
+      "condition": "resident",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        157698813,
+        157112437,
+        158915650,
+        158398947,
+        161690208,
+        167318799,
+        162639536,
+        165872716
+      ],
+      "median_ns": 160302929.0,
+      "p90_ns": 167318799,
+      "first_call_ns": 160553271,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 143344,
+      "generation_delta": 32,
+      "native_counters": {
+        "call_count": 240,
+        "semantic_seconds": 1.1990375330788083,
+        "request_transport_bytes": 704987,
+        "response_transport_bytes": 231703
+      },
+      "process_usage_before": {
+        "user_seconds": 1.877015,
+        "system_seconds": 0.126555,
+        "max_rss_kib_process_lifetime": 306696
+      },
+      "process_usage_after": {
+        "user_seconds": 3.114498,
+        "system_seconds": 0.16195299999999999,
+        "max_rss_kib_process_lifetime": 306696
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "store",
+      "condition": "reopen",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1554464824,
+        1533499296,
+        1531502298,
+        1483597108,
+        1496998145,
+        1498922140,
+        1502768230,
+        1485673368
+      ],
+      "median_ns": 1500845185.0,
+      "p90_ns": 1554464824,
+      "first_call_ns": 162124108,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 143343,
+      "generation_delta": 32,
+      "native_counters": {
+        "call_count": 240,
+        "semantic_seconds": 1.1599923847825266,
+        "request_transport_bytes": 705390,
+        "response_transport_bytes": 231772
+      },
+      "process_usage_before": {
+        "user_seconds": 6.187763,
+        "system_seconds": 0.233199,
+        "max_rss_kib_process_lifetime": 324940
+      },
+      "process_usage_after": {
+        "user_seconds": 17.997456,
+        "system_seconds": 0.517015,
+        "max_rss_kib_process_lifetime": 325212
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "file",
+      "condition": "resident",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        2012510,
+        2022561,
+        2119005,
+        1991586,
+        2109977,
+        2287911,
+        2225730,
+        2306627
+      ],
+      "median_ns": 2114491.0,
+      "p90_ns": 2306627,
+      "first_call_ns": 1857835,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 16995,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 19.332985,
+        "system_seconds": 0.575768,
+        "max_rss_kib_process_lifetime": 325244
+      },
+      "process_usage_after": {
+        "user_seconds": 19.347438,
+        "system_seconds": 0.575786,
+        "max_rss_kib_process_lifetime": 325244
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "store",
+      "condition": "resident",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        226315397,
+        215827292,
+        214853404,
+        218561521,
+        218332566,
+        221511625,
+        218344833,
+        221045715
+      ],
+      "median_ns": 218453177.0,
+      "p90_ns": 226315397,
+      "first_call_ns": 269140598,
+      "events_added": 24,
+      "event_json_bytes": 17429,
+      "logical_state_growth_bytes": 156147,
+      "generation_delta": 40,
+      "native_counters": {
+        "call_count": 312,
+        "semantic_seconds": 1.6379349401395302,
+        "request_transport_bytes": 1019145,
+        "response_transport_bytes": 302466
+      },
+      "process_usage_before": {
+        "user_seconds": 21.100584,
+        "system_seconds": 0.625545,
+        "max_rss_kib_process_lifetime": 325244
+      },
+      "process_usage_after": {
+        "user_seconds": 22.808996,
+        "system_seconds": 0.6514059999999999,
+        "max_rss_kib_process_lifetime": 325244
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "file",
+      "condition": "reopen",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1955566,
+        2127259,
+        2207815,
+        2230763,
+        2270752,
+        2382325,
+        2377297,
+        2589358
+      ],
+      "median_ns": 2250757.5,
+      "p90_ns": 2589358,
+      "first_call_ns": 1897778,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 16995,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 24.208576,
+        "system_seconds": 0.689504,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "process_usage_after": {
+        "user_seconds": 24.220101,
+        "system_seconds": 0.693452,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "file",
+      "condition": "resident",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        2116681,
+        2246007,
+        2602700,
+        2637974,
+        2819032,
+        3366030,
+        3336313,
+        3325580
+      ],
+      "median_ns": 2728503.0,
+      "p90_ns": 3366030,
+      "first_call_ns": 2274866,
+      "events_added": 24,
+      "event_json_bytes": 22366,
+      "logical_state_growth_bytes": 29991,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 24.224564,
+        "system_seconds": 0.693452,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "process_usage_after": {
+        "user_seconds": 24.243233,
+        "system_seconds": 0.6944589999999999,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "file",
+      "condition": "resident",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1755455,
+        1875795,
+        2188010,
+        2026435,
+        2103465,
+        2150309,
+        2341568,
+        2294469
+      ],
+      "median_ns": 2126887.0,
+      "p90_ns": 2341568,
+      "first_call_ns": 1639841,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 16995,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 24.247731,
+        "system_seconds": 0.6944589999999999,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "process_usage_after": {
+        "user_seconds": 24.259647,
+        "system_seconds": 0.69641,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "store",
+      "condition": "reopen",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        1537081536,
+        1543470343,
+        1542901170,
+        1546394231,
+        1542501642,
+        1567394094,
+        1684323597,
+        1621877443
+      ],
+      "median_ns": 1544932287.0,
+      "p90_ns": 1684323597,
+      "first_call_ns": 268817525,
+      "events_added": 24,
+      "event_json_bytes": 17429,
+      "logical_state_growth_bytes": 156147,
+      "generation_delta": 40,
+      "native_counters": {
+        "call_count": 312,
+        "semantic_seconds": 1.6606695719528943,
+        "request_transport_bytes": 1019424,
+        "response_transport_bytes": 302446
+      },
+      "process_usage_before": {
+        "user_seconds": 26.020703,
+        "system_seconds": 0.724181,
+        "max_rss_kib_process_lifetime": 325308
+      },
+      "process_usage_after": {
+        "user_seconds": 38.391066,
+        "system_seconds": 0.9801209999999999,
+        "max_rss_kib_process_lifetime": 325344
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "file",
+      "condition": "reopen",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        2590756,
+        2735692,
+        2941977,
+        3204114,
+        3312404,
+        3478064,
+        3902269,
+        3786347
+      ],
+      "median_ns": 3258259.0,
+      "p90_ns": 3902269,
+      "first_call_ns": 2125267,
+      "events_added": 24,
+      "event_json_bytes": 22366,
+      "logical_state_growth_bytes": 29991,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 39.782853,
+        "system_seconds": 1.019937,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "process_usage_after": {
+        "user_seconds": 39.803462,
+        "system_seconds": 1.021925,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "file",
+      "condition": "reopen",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        2198249,
+        2004834,
+        2112899,
+        2130322,
+        2291897,
+        2507044,
+        2630581,
+        2574209
+      ],
+      "median_ns": 2245073.0,
+      "p90_ns": 2630581,
+      "first_call_ns": 1764913,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 16995,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 39.80817,
+        "system_seconds": 1.021925,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "process_usage_after": {
+        "user_seconds": 39.822674,
+        "system_seconds": 1.022909,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "store",
+      "condition": "resident",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        218583160,
+        214030139,
+        218104303,
+        221863827,
+        217733823,
+        216116571,
+        220401417,
+        224625380
+      ],
+      "median_ns": 218343731.5,
+      "p90_ns": 224625380,
+      "first_call_ns": 277230830,
+      "events_added": 24,
+      "event_json_bytes": 17429,
+      "logical_state_growth_bytes": 156147,
+      "generation_delta": 40,
+      "native_counters": {
+        "call_count": 312,
+        "semantic_seconds": 1.636611177236773,
+        "request_transport_bytes": 1019526,
+        "response_transport_bytes": 302410
+      },
+      "process_usage_before": {
+        "user_seconds": 41.586594,
+        "system_seconds": 1.058681,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "process_usage_after": {
+        "user_seconds": 43.30515,
+        "system_seconds": 1.078465,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "store",
+      "condition": "reopen",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        1538023984,
+        1528001325,
+        1537739050,
+        1532600680,
+        1548000226,
+        1540732356,
+        1563059776,
+        1553155909
+      ],
+      "median_ns": 1539378170.0,
+      "p90_ns": 1563059776,
+      "first_call_ns": 270221985,
+      "events_added": 24,
+      "event_json_bytes": 17429,
+      "logical_state_growth_bytes": 156147,
+      "generation_delta": 40,
+      "native_counters": {
+        "call_count": 312,
+        "semantic_seconds": 1.6125329170026816,
+        "request_transport_bytes": 1019278,
+        "response_transport_bytes": 302334
+      },
+      "process_usage_before": {
+        "user_seconds": 46.462292,
+        "system_seconds": 1.137147,
+        "max_rss_kib_process_lifetime": 325360
+      },
+      "process_usage_after": {
+        "user_seconds": 58.589379,
+        "system_seconds": 1.404373,
+        "max_rss_kib_process_lifetime": 325392
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "file",
+      "condition": "resident",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1746497,
+        1827922,
+        2039015,
+        1994760,
+        2221323,
+        2387289,
+        2281312,
+        2409735
+      ],
+      "median_ns": 2130169.0,
+      "p90_ns": 2409735,
+      "first_call_ns": 1828731,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 17003,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 59.978602,
+        "system_seconds": 1.436245,
+        "max_rss_kib_process_lifetime": 325408
+      },
+      "process_usage_after": {
+        "user_seconds": 59.990929,
+        "system_seconds": 1.438199,
+        "max_rss_kib_process_lifetime": 325408
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "file",
+      "condition": "reopen",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        2406663,
+        2536616,
+        2744541,
+        3046473,
+        3151802,
+        3429946,
+        3609961,
+        3719277
+      ],
+      "median_ns": 3099137.5,
+      "p90_ns": 3719277,
+      "first_call_ns": 2063110,
+      "events_added": 24,
+      "event_json_bytes": 22366,
+      "logical_state_growth_bytes": 29999,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 59.994461,
+        "system_seconds": 1.439184,
+        "max_rss_kib_process_lifetime": 325408
+      },
+      "process_usage_after": {
+        "user_seconds": 60.013317,
+        "system_seconds": 1.442118,
+        "max_rss_kib_process_lifetime": 325408
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "file",
+      "condition": "reopen",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        2313406,
+        2579909,
+        3113110,
+        3243922,
+        3319992,
+        3357585,
+        3519043,
+        3845457
+      ],
+      "median_ns": 3281957.0,
+      "p90_ns": 3845457,
+      "first_call_ns": 2162834,
+      "events_added": 24,
+      "event_json_bytes": 22365,
+      "logical_state_growth_bytes": 29998,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 60.018241,
+        "system_seconds": 1.442118,
+        "max_rss_kib_process_lifetime": 325408
+      },
+      "process_usage_after": {
+        "user_seconds": 60.038218,
+        "system_seconds": 1.444114,
+        "max_rss_kib_process_lifetime": 325408
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "store",
+      "condition": "reopen",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1472390547,
+        1478911779,
+        1482140410,
+        1467999842,
+        1485078722,
+        1467461397,
+        1485864012,
+        1481469325
+      ],
+      "median_ns": 1480190552.0,
+      "p90_ns": 1485864012,
+      "first_call_ns": 149381335,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 143343,
+      "generation_delta": 32,
+      "native_counters": {
+        "call_count": 240,
+        "semantic_seconds": 1.1410538503550924,
+        "request_transport_bytes": 705481,
+        "response_transport_bytes": 231754
+      },
+      "process_usage_before": {
+        "user_seconds": 61.678266,
+        "system_seconds": 1.474968,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "process_usage_after": {
+        "user_seconds": 73.342759,
+        "system_seconds": 1.7181600000000001,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "store",
+      "condition": "reopen",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        1535775791,
+        1537699363,
+        1550271566,
+        1534505167,
+        1545589633,
+        1552770291,
+        1548231957,
+        1581953961
+      ],
+      "median_ns": 1546910795.0,
+      "p90_ns": 1581953961,
+      "first_call_ns": 263911987,
+      "events_added": 24,
+      "event_json_bytes": 17429,
+      "logical_state_growth_bytes": 156147,
+      "generation_delta": 40,
+      "native_counters": {
+        "call_count": 312,
+        "semantic_seconds": 1.634351932007121,
+        "request_transport_bytes": 1019153,
+        "response_transport_bytes": 302483
+      },
+      "process_usage_before": {
+        "user_seconds": 76.412416,
+        "system_seconds": 1.783917,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "process_usage_after": {
+        "user_seconds": 88.613782,
+        "system_seconds": 2.052051,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "file",
+      "condition": "resident",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        2263853,
+        2684399,
+        2491430,
+        2672658,
+        2988029,
+        3136229,
+        3241713,
+        3430037
+      ],
+      "median_ns": 2836214.0,
+      "p90_ns": 3430037,
+      "first_call_ns": 2387052,
+      "events_added": 24,
+      "event_json_bytes": 22366,
+      "logical_state_growth_bytes": 29999,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 89.993595,
+        "system_seconds": 2.082954,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "process_usage_after": {
+        "user_seconds": 90.012482,
+        "system_seconds": 2.083929,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "store",
+      "condition": "resident",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        152270374,
+        149800091,
+        157824008,
+        152295432,
+        151578798,
+        156898645,
+        151703785,
+        152824786
+      ],
+      "median_ns": 152282903.0,
+      "p90_ns": 157824008,
+      "first_call_ns": 147752138,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 143344,
+      "generation_delta": 32,
+      "native_counters": {
+        "call_count": 240,
+        "semantic_seconds": 1.1423573761421721,
+        "request_transport_bytes": 705337,
+        "response_transport_bytes": 231706
+      },
+      "process_usage_before": {
+        "user_seconds": 91.65458,
+        "system_seconds": 2.112826,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "process_usage_after": {
+        "user_seconds": 92.860211,
+        "system_seconds": 2.124802,
+        "max_rss_kib_process_lifetime": 325412
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 0,
+      "backend": "file",
+      "condition": "resident",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        2510149,
+        2453542,
+        2604697,
+        2882035,
+        3611693,
+        3467336,
+        3352177,
+        3550926
+      ],
+      "median_ns": 3117106.0,
+      "p90_ns": 3611693,
+      "first_call_ns": 2217253,
+      "events_added": 24,
+      "event_json_bytes": 22366,
+      "logical_state_growth_bytes": 29999,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 94.18841,
+        "system_seconds": 2.153689,
+        "max_rss_kib_process_lifetime": 325460
+      },
+      "process_usage_after": {
+        "user_seconds": 94.20843,
+        "system_seconds": 2.154688,
+        "max_rss_kib_process_lifetime": 325460
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "store",
+      "condition": "reopen",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1475376814,
+        1469874362,
+        1479570514,
+        1468039999,
+        1486234769,
+        1476568449,
+        1481604463,
+        1480334816
+      ],
+      "median_ns": 1478069481.5,
+      "p90_ns": 1486234769,
+      "first_call_ns": 152732541,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 143343,
+      "generation_delta": 32,
+      "native_counters": {
+        "call_count": 240,
+        "semantic_seconds": 1.1465972652367782,
+        "request_transport_bytes": 705274,
+        "response_transport_bytes": 231731
+      },
+      "process_usage_before": {
+        "user_seconds": 95.854814,
+        "system_seconds": 2.187562,
+        "max_rss_kib_process_lifetime": 325460
+      },
+      "process_usage_after": {
+        "user_seconds": 107.519159,
+        "system_seconds": 2.420726,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 1,
+      "backend": "store",
+      "condition": "resident",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        154134331,
+        153866155,
+        155613203,
+        153354803,
+        153570691,
+        154745616,
+        154072104,
+        156797804
+      ],
+      "median_ns": 154103217.5,
+      "p90_ns": 156797804,
+      "first_call_ns": 149227798,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 143344,
+      "generation_delta": 32,
+      "native_counters": {
+        "call_count": 240,
+        "semantic_seconds": 1.1506625442998484,
+        "request_transport_bytes": 705131,
+        "response_transport_bytes": 231885
+      },
+      "process_usage_before": {
+        "user_seconds": 110.4819,
+        "system_seconds": 2.474544,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "process_usage_after": {
+        "user_seconds": 111.688312,
+        "system_seconds": 2.496469,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "store",
+      "condition": "resident",
+      "observed": true,
+      "calls": 8,
+      "wall_ns": [
+        245375455,
+        237825529,
+        221304929,
+        216159845,
+        234037024,
+        219250687,
+        221015871,
+        222111609
+      ],
+      "median_ns": 221708269.0,
+      "p90_ns": 245375455,
+      "first_call_ns": 304363035,
+      "events_added": 24,
+      "event_json_bytes": 17429,
+      "logical_state_growth_bytes": 156147,
+      "generation_delta": 40,
+      "native_counters": {
+        "call_count": 312,
+        "semantic_seconds": 1.6936463849851862,
+        "request_transport_bytes": 1019170,
+        "response_transport_bytes": 302387
+      },
+      "process_usage_before": {
+        "user_seconds": 114.903234,
+        "system_seconds": 2.56523,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "process_usage_after": {
+        "user_seconds": 116.675567,
+        "system_seconds": 2.599103,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "persisted_events_and_contexts_recovered": true
+    },
+    {
+      "run": 2,
+      "backend": "file",
+      "condition": "reopen",
+      "observed": false,
+      "calls": 8,
+      "wall_ns": [
+        1863377,
+        1908566,
+        2008521,
+        2101709,
+        2271198,
+        2313463,
+        2407819,
+        2564894
+      ],
+      "median_ns": 2186453.5,
+      "p90_ns": 2564894,
+      "first_call_ns": 1864807,
+      "events_added": 16,
+      "event_json_bytes": 10130,
+      "logical_state_growth_bytes": 17003,
+      "generation_delta": null,
+      "native_counters": {
+        "call_count": 0,
+        "semantic_seconds": 0,
+        "request_transport_bytes": 0,
+        "response_transport_bytes": 0
+      },
+      "process_usage_before": {
+        "user_seconds": 118.098598,
+        "system_seconds": 2.634018,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "process_usage_after": {
+        "user_seconds": 118.112358,
+        "system_seconds": 2.635021,
+        "max_rss_kib_process_lifetime": 325464
+      },
+      "persisted_events_and_contexts_recovered": true
+    }
+  ],
+  "scope": "full admission/provider/persistence path; reopen additionally includes handle/artifact admission",
+  "limitations": [
+    "Mechanical no-op fixture, not useful task fulfillment or agent productivity.",
+    "Reopen means a fresh handle, not an OS cold cache or fresh process.",
+    "Randomized fixed-seed treatment order; concurrent machine load is not controlled.",
+    "Native counters exclude reopen/admission; wall samples include it.",
+    "Logical bytes are not physical I/O; RSS is the process lifetime high water mark.",
+    "Private _invoke is only the pre-observation experimental baseline, with identical admission."
+  ]
+}

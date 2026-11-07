@@ -1,0 +1,48 @@
+{
+  "definition_id": "env_e0c063b1cda66eea",
+  "selected_checkouts": {
+    "mncs-language": {
+      "repository": "mncs-language",
+      "path": "/home/epi13/Documents/Projects/mncs-language",
+      "head": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+      "branch": "main",
+      "clean": false,
+      "source_ref": "explicit-workspace-selection",
+      "authoritative_head": "f8212ed8b7478196b5293a84152154be5e0bea3f"
+    },
+    "mncs-stdlib": {
+      "repository": "mncs-stdlib",
+      "path": "/home/epi13/Documents/Projects/mncs-stdlib",
+      "head": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff",
+      "branch": "main",
+      "clean": false,
+      "source_ref": "explicit-workspace-selection",
+      "authoritative_head": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff"
+    },
+    "mncs-test": {
+      "repository": "mncs-test",
+      "path": "/home/epi13/Documents/Projects/mncs-test",
+      "branch": "main",
+      "head": "d51958bf2cb2dbba583bee255897b4c7544a0468",
+      "clean": true,
+      "source_ref": "current-working-checkout",
+      "authoritative_head": "d51958bf2cb2dbba583bee255897b4c7544a0468",
+      "checkout_identity": "checkout:1372e03f21da8344",
+      "git_common_directory_identity": "git-common:edc46f1a6583a8c5",
+      "observed_path": "mncs-test"
+    }
+  },
+  "toolchain": {
+    "repository": "mncs-language",
+    "checkout": "/home/epi13/Documents/Projects/mncs-language",
+    "revision": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+    "binary": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "status": "available"
+  },
+  "execution_roles": {
+    "reference": {
+      "capability": "mncs-language:cli-toolchain",
+      "use_reference_toolchain": true
+    }
+  }
+}

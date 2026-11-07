@@ -1,0 +1,36 @@
+{
+  "schema_version": "mncs.environment.correlation-query-cost/1",
+  "samples": [
+    {
+      "wall_ns": 90876749,
+      "records": 2,
+      "contexts": 1
+    },
+    {
+      "wall_ns": 89542491,
+      "records": 2,
+      "contexts": 1
+    },
+    {
+      "wall_ns": 92602066,
+      "records": 2,
+      "contexts": 1
+    },
+    {
+      "wall_ns": 91207302,
+      "records": 2,
+      "contexts": 1
+    },
+    {
+      "wall_ns": 88776972,
+      "records": 2,
+      "contexts": 1
+    }
+  ],
+  "store_generation_unchanged": true,
+  "scope": "strict evidence/context reads plus selected native application invocation; excludes initial Store handle admission",
+  "limitations": [
+    "Five descriptive query samples, not a latency distribution.",
+    "VM steps and physical I/O are not measured."
+  ]
+}

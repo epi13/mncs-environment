@@ -1,0 +1,1245 @@
+{
+  "schema_version": "mncs.environment.deterministic-remediation-receipt/1",
+  "created_at": "2026-11-07T20:51:08.945845+00:00",
+  "scope": "The seven owner-requested deterministic Environment/tooling problem families; no learned-model work.",
+  "source": {
+    "mncs-environment": {
+      "commit": "d1d9df0357c6712e295005112f40f7b53755b351",
+      "sha256": {
+        "mncs_env/sessions.py": "d8d5336efc92cb684163b70adc4414989173e8820be1b5dcdfcc01c19763b061",
+        "mncs_env/cli.py": "5f00b65f3a66392b262cdcaa446dc20e56ce9be44e495b326b7a1b5be6112cd1",
+        "mncs_env/doctor.py": "b35ea89a1b46f624c8c01cf4b801adab94f06eadda9914e816dc09b12a8b723c",
+        "mncs_env/demand.py": "83a73e40d42a2138866adec0f550868ddfa58ee531dfcef0bea8c335b017e85b",
+        "mncs_env/verification.py": "b4b40d9c9988c49b5e10024c2ce25b79fbb7120707f3f517a06aa02d10f0305c",
+        "mncs_env/authority.py": "019ef7777dd62c96c4216855eb84a9e6c2c311988855bd5d8f2e0a4512294e9e",
+        "mncs_env/store_backend.py": "029d8a84ec7fa16425ff998066230ba1f260796456ad25fe15df4a5aad0f2ebb",
+        "mncs_env/session_store.py": "0353ffa3ca21cd5c7b2d8d8c78484229e0b219da482ce3b824bb7ebfa7daa3b1",
+        "mncs_env/evidence_store.py": "ef7aba95cea6ff104db9cc1b84abf7a9ba314af391ac7262f47bcb8b63abe58d",
+        "native/mncs/environment/demand_correlation_v1.mncs": "5c2c9e6f5eedb3079045e2db44a7e14f6e07d9c31842fc76207a48d4a5949812",
+        "tests/test_doctor.py": "c66e693550574ddddb8089099de28f1fc6d262b74632a511c22f3422ab5ef9af",
+        "tests/test_capability_preflight.py": "0271ef070d926abb2364e5c95d8cb9986356c75c37be7f905430ca324b98eb35",
+        "scripts/remediation_admission_proof.py": "8ea74a006f681ebb6d6b34dde3b12b8badbf5fe7c4f641c10c9437222407548a",
+        "scripts/remediation_cost_proof.py": "6cd3ccfc0cf91de27c3b5cb289dcfa3dd58fde5e9cf2faa4b435b1f6b0ea836b",
+        "scripts/remediation_entry_proof.py": "e2cd9b94749837b630b1ad97b89530f7afac8d2f2b95232a233332a6629adfd8",
+        "scripts/remediation_verification_proof.py": "5684c14b23385d32b4e0e80b38deff7bda26d8be1345138d7598d2a2e723130d"
+      },
+      "commit_role": "merged implementation base; exact publication working-tree bytes are pinned by sha256",
+      "overlay_files": [
+        "scripts/remediation_verification_proof.py"
+      ],
+      "overlay_scope": "Reproduction helper accepts a separate output directory; production implementation files match the merged base."
+    },
+    "mncs-store": {
+      "commit": "af502328fedfc7297735727f6c189b3b8bcbd0c0",
+      "sha256": {
+        "python/mncs_store/embedded.py": "a86af75457f0791c7cca9a0e621730fd1f7b021dee8cd56a33dc406a5d671879",
+        "python/mncs_store/session.py": "ed1abafcaab4d89833a7ddbe49373d554b844a9189d036edb23351274af8c23c",
+        "src/store/content.mncs": "ef3e7bc87844c35d1de789c335c4c6fd76d42073334ed483179012af7d2afc55",
+        "tests/test_embedded_store.py": "d33602cf9ad59b054104485b9220dd99c07869a8e565ddc77975722c7560524e",
+        "tests/test_session_runner.py": "a63c65e15727135c88983b5b364c81b5da747da6e9bae78d25a6580a16eb8848",
+        "tests/test_native_substrate.py": "afc63fb8c79157ed99f5cc3f7bd654f17ceae53f9a6685141621c4a6c5cdac49",
+        ".mncs/verification-obligations.json": "94865e52513fff3cbd19a86993f0f72a7ad48274a50c27b26a964658c68b1277"
+      }
+    },
+    "mncs-control-mcp": {
+      "commit": "9d8f65a685b2974d95c899c6dae4c9059aad10a4",
+      "sha256": {
+        "src/mncs_control_mcp/local_environment_mcp.py": "c69bb33cb569fe7df62a45fcb5171fab72b2131f39e1080dc163bf2873ec3f60",
+        "src/mncs_control_mcp/environment_rpc.py": "ce28c9d71b1c4ff90cee94e0d7ca9d8e53899d4357ae1902c05628b8f0298912",
+        "src/mncs_control_mcp/environment_sessions.py": "82d2150a4e04aaf0d515fbdc8e4f82ee13040fc801345672b60660149cb04e9e",
+        "src/mncs_control_mcp/processes.py": "71385c745a01453c80c65b5827009f310c08515a898e642e53370db6a4bd5c3c",
+        "tests/test_capture_availability.py": "910bb12573da648063d46943a763a9cee25757e131149436de7422562f29223b",
+        "tests/test_local_environment_mcp.py": "54d76bfb43717f86dc85b6a89b32802bfc367331a03b40a3f0a2ed65600bbb88",
+        "tests/test_environment_sessions.py": "1e55ffed3d21af705abd67505e272719ad8020a27dc29201d956f4afedbbbc6d"
+      }
+    },
+    "mncs-test": {
+      "commit": "d51958bf2cb2dbba583bee255897b4c7544a0468",
+      "sha256": {
+        "bin/mncs-test": "34474b09beeec262be7a7957bdad0c47536bb68302f9f30b89f85c853ef68f5e",
+        "tests/closure_suite.mncs": "1c6e7a7da70920c7dbc52ebc413f50d1f30ddc4fadc8a259bcd71ed7ddaaac52",
+        ".mncs/verification-obligations.json": "791625812c9177f8b8f9a9aba1e0c5849f930064bddfbac04dc649385685ed90",
+        "native/mncs/test/verification_coherence.mncs": "33aab4a7c96e3f13071f75b6a69dfbdde17d3020b6b53ad75fa4300ee8f30c81"
+      }
+    },
+    "mncs-stdlib": {
+      "commit": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff",
+      "sha256": {
+        "library/std/sha256.mncs": "eaca4fbc51546dbb6bd8001fbfd270c54a1db30ebf7cb9f52234bfab0a28aa43"
+      }
+    }
+  },
+  "baseline_heads": {
+    "mncs-environment": "46057a9f449021b081f5a586dede4b7b1eb8acb6",
+    "mncs-control-mcp": "bce6941ddacd1c5c8934538c3e0b92616af2f604",
+    "mncs-store": "4358df436be66157b274cf82a3911185b2b1d81b"
+  },
+  "changed_repositories": [
+    "mncs-environment",
+    "mncs-store",
+    "mncs-control-mcp"
+  ],
+  "reference_only_models": {
+    "requested_reference": "890262b8a656dacb95439d50bf37b5bd1c6d6bb4",
+    "observed_primary_head": "b10d5c2cadcb50d274aa18480e24d54015abc5af",
+    "uncommitted_work_preserved": true,
+    "native_models_tests_not_claimed_current": true
+  },
+  "verification": [
+    {
+      "authority": "pytest / Environment",
+      "scope": "primary repository suite baseline",
+      "status": "failed-baseline",
+      "passed": 1312,
+      "skipped": 46,
+      "failed": 4,
+      "log": "logs/environment-baseline.log"
+    },
+    {
+      "authority": "pytest / Environment",
+      "scope": "primary final repository suite",
+      "status": "passed",
+      "passed": 1324,
+      "skipped": 46,
+      "failed": 0,
+      "junit": "logs/environment-main.xml"
+    },
+    {
+      "authority": "pytest / Environment",
+      "scope": "isolated repository suite",
+      "status": "passed",
+      "passed": 1287,
+      "skipped": 82,
+      "failed": 0,
+      "log": "logs/environment-worktree.log",
+      "limitation": "Fixed-depth sibling fixtures skip additional provider cases; primary suite restores available-provider coverage."
+    },
+    {
+      "authority": "pytest / Control",
+      "scope": "primary baseline",
+      "status": "passed",
+      "passed": 364,
+      "skipped": 4,
+      "failed": 0,
+      "log": "logs/control-baseline.log"
+    },
+    {
+      "authority": "pytest / Control",
+      "scope": "primary final after canonical path assertion correction",
+      "status": "passed",
+      "passed": 365,
+      "skipped": 4,
+      "failed": 0,
+      "junit": "logs/control-main.xml"
+    },
+    {
+      "authority": "pytest / Store",
+      "scope": "current native-substrate module plus adaptive/provider/embedded/session/cache regressions",
+      "status": "passed",
+      "passed": 140,
+      "skipped": 0,
+      "failed": 0,
+      "junit": "logs/store-main.xml",
+      "command": "PYTHONPATH=python MNCS_BIN=<selected release mncs> MNCS_EMBED_LIB=<selected release library> python3 -m pytest tests/test_native_substrate.py tests/test_adaptive_store.py tests/test_provider.py tests/test_embedded_store.py tests/test_session_runner.py tests/test_artifact_cache.py -q -rs"
+    },
+    {
+      "authority": "pytest / Store",
+      "scope": "broader scheduled historical matrix",
+      "status": "deliberately-interrupted-not-a-pass",
+      "passed_before_interruption": 189,
+      "exit_code": 2,
+      "log": "logs/store-scheduled-interrupted.log",
+      "disposition": "logs/store-scheduled-disposition.json"
+    },
+    {
+      "authority": "Store real-process proof",
+      "scope": "competing writers and crash/reopen",
+      "status": "passed",
+      "race": [
+        "COMMITTED",
+        "STALE_GENERATION"
+      ],
+      "recovery": "RECOVERED_OLD",
+      "log": "logs/store-real-process.log"
+    },
+    {
+      "authority": "Environment architectural proofs",
+      "scope": "vertical proof plus core campaign and corrected provider subset",
+      "status": "passed",
+      "vertical": true,
+      "campaign_core_passed": 14,
+      "corrected_provider_checks_passed": 3,
+      "logs": [
+        "logs/vertical-final.log",
+        "logs/campaign-final.log",
+        "logs/campaign-family-final.log"
+      ]
+    },
+    {
+      "authority": "MNCS Test, Environment native correlation, strict Store reads",
+      "scope": "mncs-test.cross-module-suite-execution only",
+      "status": "passed",
+      "session_id": "ses_181a8dfebdb7e2eb",
+      "record": "native-verification-durable/response.json",
+      "independent_restart_readback": true,
+      "completed": true,
+      "scope_limit": "Native declared test execution, not generic pytest verification or agent task usefulness."
+    },
+    {
+      "authority": "reproduction helper / real Test and Store providers",
+      "scope": "fresh temporary-output full script replay, including completion and strict restart checks",
+      "status": "passed",
+      "log": "logs/native-script-replay.log",
+      "limit": "Temporary replay Store retired; enduring native references remain in native-verification-durable."
+    }
+  ],
+  "known_doctor_failures_resolved": [
+    "test_epoch_hit_does_not_write_a_resume_marker",
+    "test_provider_runtime_state_change_is_detected_despite_valid_epoch",
+    "test_quiet_reentry_doctor_block_is_compact",
+    "test_reentry_hits_epoch_and_skips_revalidation"
+  ],
+  "family_dispositions": [
+    {
+      "family": 1,
+      "issue": "operation-specific addressing, effects and claim readiness",
+      "status": "resolved-and-verified",
+      "owners": [
+        "Environment",
+        "Control"
+      ],
+      "evidence": [
+        "admission-baseline.json",
+        "admission-final.json",
+        "live-preflight.json"
+      ]
+    },
+    {
+      "family": 2,
+      "issue": "identified context/schema/selected-worktree/missing-preflight projections",
+      "status": "already-resolved-current-regressions-verified; deterministic effect-checkout selection corrected",
+      "owners": [
+        "Environment",
+        "source evidence owners"
+      ],
+      "limit": "No claim of exhaustive live integration of every provider."
+    },
+    {
+      "family": 3,
+      "issue": "Control empty versus unavailable output",
+      "status": "already-resolved-current-nine-capture-tests-verified",
+      "owners": [
+        "Control"
+      ],
+      "limit": "Environment provider-transport capture and inner terminal-job capture remain distinct; no independent deployed-build attestation."
+    },
+    {
+      "family": 4,
+      "issue": "supported native test request/result/verification correlation",
+      "status": "already-resolved-real-operation-and-restart-verified",
+      "owners": [
+        "Test",
+        "Environment",
+        "Store"
+      ]
+    },
+    {
+      "family": 4,
+      "issue": "generic Control pytest verification relationship",
+      "status": "blocked-by-missing-admitted-producer-contract",
+      "owners": [
+        "Test",
+        "Forge",
+        "Control",
+        "Actions"
+      ],
+      "pressure": "prs_86eca87538c8bbd1",
+      "limit": "Actions process-outcome emission does not establish a native Test result or the exact local request/source/selection join."
+    },
+    {
+      "family": 5,
+      "issue": "native Store hashing and invocation overhead",
+      "status": "resolved-measured-redundancies",
+      "owners": [
+        "Store",
+        "Environment"
+      ],
+      "limit": "Native SHA computation and fresh embedded admission remain material; physical I/O not measured."
+    },
+    {
+      "family": 6,
+      "issue": "Doctor epoch reentry failures",
+      "status": "resolved-and-verified",
+      "owners": [
+        "Environment"
+      ],
+      "evidence": [
+        "entry-baseline.json",
+        "entry-final.json",
+        "logs/environment-main.xml"
+      ]
+    },
+    {
+      "family": 7,
+      "issue": "redundant capability-history reads and first-use operation discovery",
+      "status": "resolved-and-verified",
+      "owners": [
+        "Environment",
+        "Control"
+      ],
+      "limit": "Agent receipt, usefulness and a complete eligible-need denominator remain unestablished."
+    }
+  ],
+  "performance": [
+    {
+      "artifact": "cost-baseline.json",
+      "cells": [
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 2.02306,
+          "p90_ms": 2.256479,
+          "per_run_median_ms": [
+            1.996354,
+            2.098647,
+            1.960321
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 2.6874045,
+          "p90_ms": 3.397164,
+          "per_run_median_ms": [
+            3.054489,
+            2.6693475,
+            2.608866
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29991,
+            29999,
+            29999
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 2.3784605,
+          "p90_ms": 2.781339,
+          "per_run_median_ms": [
+            2.257343,
+            2.539616,
+            2.2295265
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 3.0917195,
+          "p90_ms": 3.803965,
+          "per_run_median_ms": [
+            3.1746945,
+            3.038924,
+            3.0338935
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29990,
+            29998,
+            29998
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 206.4339185,
+          "p90_ms": 212.924786,
+          "per_run_median_ms": [
+            206.218938,
+            206.7238685,
+            206.1248255
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143344,
+            143344,
+            143344
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 300.0077235,
+          "p90_ms": 340.658239,
+          "per_run_median_ms": [
+            296.844748,
+            335.7787255,
+            298.19448
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 1529.628688,
+          "p90_ms": 1543.651973,
+          "per_run_median_ms": [
+            1533.403431,
+            1527.3256935,
+            1527.5977795
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143343,
+            143343,
+            143343
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 1630.3490225,
+          "p90_ms": 1685.814063,
+          "per_run_median_ms": [
+            1677.734939,
+            1627.082376,
+            1622.5402605
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "cost-native-stage1.json",
+      "cells": [
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 1.9535680000000002,
+          "p90_ms": 2.2933,
+          "per_run_median_ms": [
+            1.884321,
+            1.9289,
+            2.041182
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 2.7600875,
+          "p90_ms": 3.343039,
+          "per_run_median_ms": [
+            2.7071155,
+            2.870795,
+            2.929622
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29991,
+            29998,
+            29998
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 2.3134300000000003,
+          "p90_ms": 2.654631,
+          "per_run_median_ms": [
+            2.2588735,
+            2.0619275,
+            2.5433405
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 3.145955,
+          "p90_ms": 3.757194,
+          "per_run_median_ms": [
+            2.943595,
+            3.5524295,
+            3.012223
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29990,
+            30000,
+            29999
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 200.5122755,
+          "p90_ms": 222.301168,
+          "per_run_median_ms": [
+            191.5471535,
+            201.3533595,
+            215.631363
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143344,
+            143344,
+            143344
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 285.5752245,
+          "p90_ms": 324.446956,
+          "per_run_median_ms": [
+            279.644497,
+            283.0414475,
+            315.073115
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 1572.0249205,
+          "p90_ms": 1623.284963,
+          "per_run_median_ms": [
+            1504.2447915,
+            1596.735476,
+            1589.0584135
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143343,
+            143343,
+            143343
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 1637.5736285,
+          "p90_ms": 1702.703819,
+          "per_run_median_ms": [
+            1615.478504,
+            1630.0373405,
+            1698.380695
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "cost-store-stage2.json",
+      "cells": [
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 1.9656194999999999,
+          "p90_ms": 2.36818,
+          "per_run_median_ms": [
+            1.931216,
+            2.037892,
+            1.897822
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 2.7812935000000003,
+          "p90_ms": 3.233445,
+          "per_run_median_ms": [
+            2.935578,
+            2.660621,
+            2.77121
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29990,
+            29998,
+            29998
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 2.209415,
+          "p90_ms": 2.540486,
+          "per_run_median_ms": [
+            2.2230725,
+            2.3454585,
+            2.126048
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 3.0550965000000003,
+          "p90_ms": 3.712196,
+          "per_run_median_ms": [
+            3.0550965,
+            2.905766,
+            3.219088
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29990,
+            29998,
+            29999
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 152.75609450000002,
+          "p90_ms": 172.755336,
+          "per_run_median_ms": [
+            170.6408235,
+            152.2561795,
+            149.8224945
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143344,
+            143344,
+            143344
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 215.349148,
+          "p90_ms": 220.278213,
+          "per_run_median_ms": [
+            218.4940695,
+            214.54415,
+            215.084941
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 1472.73921,
+          "p90_ms": 1571.466965,
+          "per_run_median_ms": [
+            1555.804125,
+            1472.73921,
+            1453.7088925
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143343,
+            143343,
+            143343
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 1530.3585014999999,
+          "p90_ms": 1563.746254,
+          "per_run_median_ms": [
+            1533.412979,
+            1524.309188,
+            1542.4000295
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        }
+      ]
+    },
+    {
+      "artifact": "cost-final.json",
+      "cells": [
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 2.114491,
+          "p90_ms": 2.341568,
+          "per_run_median_ms": [
+            2.114491,
+            2.126887,
+            2.130169
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 2.8505335,
+          "p90_ms": 3.467336,
+          "per_run_median_ms": [
+            2.728503,
+            2.836214,
+            3.117106
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29991,
+            29999,
+            29999
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 2.2507574999999997,
+          "p90_ms": 2.574209,
+          "per_run_median_ms": [
+            2.2507575,
+            2.245073,
+            2.1864535
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            16995,
+            16995,
+            17003
+          ]
+        },
+        {
+          "backend": "file",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 3.224018,
+          "p90_ms": 3.786347,
+          "per_run_median_ms": [
+            3.258259,
+            3.0991375,
+            3.281957
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            null,
+            null,
+            null
+          ],
+          "logical_growth_bytes": [
+            29991,
+            29999,
+            29998
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 155.17940950000002,
+          "p90_ms": 162.639536,
+          "per_run_median_ms": [
+            160.302929,
+            152.282903,
+            154.1032175
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143344,
+            143344,
+            143344
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "resident",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 219.826052,
+          "p90_ms": 234.037024,
+          "per_run_median_ms": [
+            218.453177,
+            218.3437315,
+            221.708269
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": false,
+          "samples": 24,
+          "p50_ms": 1481.8724364999998,
+          "p90_ms": 1531.502298,
+          "per_run_median_ms": [
+            1500.845185,
+            1480.190552,
+            1478.0694815
+          ],
+          "event_counts": [
+            16,
+            16,
+            16
+          ],
+          "generation_deltas": [
+            32,
+            32,
+            32
+          ],
+          "logical_growth_bytes": [
+            143343,
+            143343,
+            143343
+          ]
+        },
+        {
+          "backend": "store",
+          "condition": "reopen",
+          "observed": true,
+          "samples": 24,
+          "p50_ms": 1544.529988,
+          "p90_ms": 1581.953961,
+          "per_run_median_ms": [
+            1544.932287,
+            1539.37817,
+            1546.910795
+          ],
+          "event_counts": [
+            24,
+            24,
+            24
+          ],
+          "generation_deltas": [
+            40,
+            40,
+            40
+          ],
+          "logical_growth_bytes": [
+            156147,
+            156147,
+            156147
+          ]
+        }
+      ]
+    }
+  ],
+  "burden_classification": {
+    "verified_deterministic_correction": true,
+    "measured_environmental_efficiency": true,
+    "potential_agent_burden_reduction": true,
+    "verified_natural_agent_burden_reduction": false,
+    "agent_time_tokens_reasoning_measured": false,
+    "independent_required_verification_retained": true
+  },
+  "authority_boundaries": {
+    "preflight_authorizes_execution": false,
+    "preflight_recovers_or_transfers_claims": false,
+    "live_admission_and_locked_checks_preserved": true,
+    "capture_retention_expanded": false,
+    "new_verification_authority_created": false,
+    "private_cache_or_alternate_store_added": false
+  },
+  "compiler_binaries": {
+    "mncs-language/target/release/mncs": "cc06a0576e04378131af28a75098895638e322118ab8bb6d3ff7f94c87ca1dcd",
+    "mncs-language/target/release/libmncs_embed.so": "d1ba68cd9a9e705a3ef7ba1d1c85106b244a1b6c663c45eea56dc06eee14effd"
+  },
+  "limitations": [
+    "Mechanical fixtures are not a natural productivity cohort or a production latency distribution.",
+    "Machine load and concurrent verification were not isolated.",
+    "Reopen means fresh handle/admission, not an OS cold cache.",
+    "Logical state growth is not physical I/O; process lifetime RSS is not per-call peak memory.",
+    "No learned model was developed, trained, integrated or optimized.",
+    "The source-bound checks do not independently attest a deployed service build or compiler build origin."
+  ],
+  "implementation_heads_pushed": {
+    "mncs-environment": "d1d9df0357c6712e295005112f40f7b53755b351",
+    "mncs-store": "af502328fedfc7297735727f6c189b3b8bcbd0c0",
+    "mncs-control-mcp": "9d8f65a685b2974d95c899c6dae4c9059aad10a4"
+  },
+  "foreign_uncommitted_control_file_preserved": ".mncs/project-view.json"
+}

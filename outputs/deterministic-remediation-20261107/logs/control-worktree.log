@@ -1,0 +1,33 @@
+................s....................................................... [ 19%]
+....................................................................s... [ 39%]
+..................................s.................................s... [ 58%]
+............................................................s........... [ 78%]
+.......s............sssss............................................... [ 97%]
+........                                                                 [100%]
+=============================== warnings summary ===============================
+tests/test_control_plane.py::test_external_control_job_has_stable_lifecycle
+tests/test_control_plane.py::test_external_jobs_have_truthful_exception_and_deadline_states[<lambda>-failed]
+tests/test_control_plane.py::test_external_jobs_have_truthful_exception_and_deadline_states[<lambda>-timed_out]
+tests/test_control_plane.py::test_external_cancellation_before_execution_and_while_owned_are_distinct
+tests/test_control_plane.py::test_external_cancellation_before_execution_and_while_owned_are_distinct
+tests/test_control_plane.py::test_external_capacity_recovers_after_timeout_and_restart_is_truthful
+tests/test_control_plane.py::test_external_capacity_recovers_after_timeout_and_restart_is_truthful
+tests/test_control_plane.py::test_external_capacity_recovers_after_timeout_and_restart_is_truthful
+  /usr/lib64/python3.14/multiprocessing/popen_fork.py:76: DeprecationWarning: This process (pid=1176612) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_persistent_fabric.py:17: could not import 'mncs_fabric': No module named 'mncs_fabric'
+SKIPPED [1] tests/test_commons_control.py:142: could not import 'mncs_commons': No module named 'mncs_commons'
+SKIPPED [1] tests/test_environment_sessions.py:597: rights library required for gate enforcement
+SKIPPED [1] tests/test_experiment_readiness.py:31: could not import 'epi13_local_harness.experiment_readiness': No module named 'epi13_local_harness'
+SKIPPED [1] tests/test_forge_integration.py:41: local Forge checkout and migrated reference configuration are required
+SKIPPED [1] tests/test_mcp_server.py:351: sibling mncs-fabric source checkout is required
+SKIPPED [1] tests/test_operations.py:324: installed mncs-control-mcp executable is not on PATH
+SKIPPED [1] tests/test_sandbox_terminal.py:208: sibling mncs-environment checkout is unavailable
+SKIPPED [1] tests/test_sandbox_terminal.py:376: sibling mncs-environment checkout is unavailable
+SKIPPED [1] tests/test_sandbox_terminal.py:445: sibling mncs-environment checkout is unavailable
+SKIPPED [1] tests/test_sandbox_terminal.py:543: sibling mncs-environment checkout is unavailable
+SKIPPED [1] tests/test_sandbox_terminal.py:651: sibling mncs-environment checkout is unavailable
+357 passed, 12 skipped, 8 warnings in 86.43s (0:01:26)

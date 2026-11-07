@@ -1,0 +1,1 @@
+{"causes": [], "identity": "evt_35be2fe60c1edad8", "observed_at": "2026-11-07T19:54:45+00:00", "payload": {"consumer_id": "remediation-proof"}, "producer": "environment", "provider_type": null, "schema_version": "mncs.environment.event/1", "sequence": 1, "session_id": "ses_181a8dfebdb7e2eb", "type": "session.created"}

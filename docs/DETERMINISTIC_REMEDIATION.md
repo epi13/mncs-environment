@@ -130,3 +130,56 @@ Correctness, environmental resource reductions, potential agent savings, and
 verified agent savings are separate conclusions. Mechanical no-op probes and
 regression tests do not establish agent productivity. Independent verification
 and changed-state checks remain required work.
+
+## Final verification and delivery
+
+| Authority / check | Outcome |
+| --- | --- |
+| Environment primary baseline | 1,312 passed, 46 skipped, the four named Doctor failures reproduced. |
+| Environment isolated suite | 1,287 passed, 82 skipped; no failures. Fixed-depth sibling fixtures explain additional skips; primary validation below supplies the available-provider coverage. |
+| Environment final primary suite | **1,324 passed, 46 skipped**, no failures. All four original Doctor cases retain their assertions. |
+| Control primary baseline / final | **364 / 365 passed**, the same four dependency-related skips; no final failures. All nine capture cases pass. |
+| Store current canonical native/adapter suite | **140 passed**, no skips; includes native records, adaptive representations, provider transport, immutable publication/recovery/CAS, digest boundary oracles and artifact admission/cache checks. |
+| Store focused / real process | 72 focused cases pass; competing real writers produce one COMMITTED and one STALE_GENERATION; crash recovery returns a verified old committed state. |
+| Architectural proofs | Vertical proof passes. Campaign proof has 14 passing core checks; three corrected Language/Memory checks pass after using the Git-aware family root, replacing the earlier two path-induced skips. |
+| Supported native Test relationship | One real declared obligation executes and passes; strict request/result/verification correlation and enduring Store restart/readback pass. |
+
+The broad historical Store matrix is **incomplete**, not a suite PASS: 189 cases
+passed before deliberate interruption after 46 minutes inside
+`tests/test_phase2.py::test_general_blob_boundaries_roundtrip`. The owner explicitly
+separates the canonical `test_native_substrate.py` regression from scheduled
+historical/scale/all-backend matrices. The completed 140-case current canonical
+suite and real-process proof are this correction's verification basis. No test
+was skipped or weakened to conceal a product failure; the interrupted run and
+its disposition are retained in the logs.
+
+Primary Control validation caught one obsolete test assumption: an abbreviated
+fresh seed used an absolute path, while established canonical campaign refs use
+workspace-relative paths. The existing Control reader already resolves both
+forms. The test now resolves the declared workspace root and still asserts the
+exact checkout, recorded 40-digit HEAD, changed live HEAD, and selection behavior.
+The intermediate failure is retained; the corrected full primary suite passes.
+
+The further strict native correlation query costs 88.8–92.6 ms across five
+descriptive samples for two request rows with one deduplicated context. Store
+generation remains unchanged; initial Store-handle admission is excluded. This
+query is separate from request observation. First-call/new-context resident Store
+medians are 373.705 ms before and 277.231 ms after; corresponding observed-call
+user CPU medians for the measured Python process (including its embedded native
+execution) fall from 292.469 to 214.819 ms per call.
+These fixtures establish resource observations, not agent reasoning savings.
+
+Implementation commits merged and pushed to `main` are Environment `d1d9df0`,
+Store `af50232`, and Control `9d8f65a`. The containing evidence commit and final
+pushed refs are recorded in the campaign ledger and delivery response; receipts
+pin tested bytes independently of their own containing Git commit.
+Control's pre-existing uncommitted `.mncs/project-view.json` is preserved.
+
+The Store source claim belongs to local session `ses_28a77f51dbc37020`
+(`claim:mncs-store:worktree:e71222ee2735`); the Control source claim belongs to
+authenticated session `ses_4ff3e54fbcb10151`
+(`claim:mncs-control-mcp:worktree:b47dbb0b752f`). Store's local transport work intent
+and the read-only local observation context use the separate local campaign
+identity recorded at entry; no principal or ownership was silently transferred.
+The primary campaign ledger consolidates their exact published source/evidence
+references without widening session authority.

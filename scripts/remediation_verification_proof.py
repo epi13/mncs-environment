@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import argparse
 import json
 import os
 import shutil
@@ -16,7 +17,10 @@ sys.path.insert(0, str(ROOT))
 from mncs_env import demand, evidence_store, sessions, verification, workspace  # noqa: E402
 from mncs_env.session_store import open_store  # noqa: E402
 
-output = ROOT / 'outputs/deterministic-remediation-20261107/native-verification-durable'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--output', type=Path,
+                    default=ROOT / 'outputs/deterministic-remediation-20261107/native-verification-durable')
+output = parser.parse_args().output.resolve()
 output.mkdir(parents=True, exist_ok=True)
 state = output / 'state'
 if state.exists():

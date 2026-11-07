@@ -1,0 +1,23 @@
+{
+  "summary": {
+    "obligations": 1,
+    "current": 1,
+    "executed": 1,
+    "failed": 0,
+    "unknown": 0,
+    "unsupported": 0,
+    "unresolved": 0,
+    "contradictory": 0,
+    "excluded": 0,
+    "deferred": 0,
+    "invalid": 0,
+    "blockers": 0,
+    "epoch_reused": false,
+    "failed_ids": [],
+    "elapsed_seconds": 2.363,
+    "persisted": true
+  },
+  "reused": false,
+  "evidence": "mncs-store:ses_328ff7e2e13abdb9:verification:77b6ff04bde2b177382e21642dd08c3cc31e3675d3fc35f686b9b8d8adf4fe20",
+  "operation_status": "complete"
+}

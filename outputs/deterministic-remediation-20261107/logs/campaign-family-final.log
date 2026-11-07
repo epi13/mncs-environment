@@ -1,0 +1,2 @@
+memory HEAD: 601cbcaa55cb52ffb5c8218b09f8607c2281c864
+[('language.live-delta', 'PASS', "host change -> ['semantic.changed']: semantic change at file:///tmp/proof-language-o1402169/ws/proof.mncs (+6 -0 diagnostics)"), ('language.dedup', 'PASS', 're-poll after cursor is silent'), ('memory.untouched', 'PASS', 'HEAD=601cbcaa55cb52ffb5c8218b09f8607c2281c864; no campaign artifacts in working tree (porcelain lines: 0, all foreign)')]

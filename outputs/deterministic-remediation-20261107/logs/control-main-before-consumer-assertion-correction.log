@@ -1,0 +1,162 @@
+................s....................................................... [ 19%]
+....................................................................s... [ 39%]
+........................F.........s..................................... [ 58%]
+........................................................................ [ 78%]
+........................................................................ [ 97%]
+........                                                                 [100%]
+=================================== FAILURES ===================================
+_____________ test_campaign_continuation_reads_real_isolated_store _____________
+
+tmp_path = PosixPath('/tmp/pytest-of-epi13/pytest-14/test_campaign_continuation_rea0')
+
+    @needs_environment
+    def test_campaign_continuation_reads_real_isolated_store(tmp_path: Path) -> None:
+        repository = "mncs-control-mcp"
+        checkout = tmp_path / "projects" / repository
+        checkout.mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", str(checkout)], check=True)
+        subprocess.run(["git", "-C", str(checkout), "config", "user.name", "continuity-test"], check=True)
+        subprocess.run(["git", "-C", str(checkout), "config", "user.email",
+                        "continuity-test@example.invalid"], check=True)
+        manifest = checkout / ".mncs" / "project.json"
+        manifest.parent.mkdir()
+        manifest.write_text(json.dumps({
+            "schema_version": "mncs-family.repository-manifest/v0alpha1",
+            "repository": repository,
+            "revision": 1,
+        }), encoding="utf-8")
+        (checkout / "README.md").write_text("isolated campaign fixture\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(checkout), "add", ".mncs/project.json"], check=True)
+        subprocess.run(["git", "-C", str(checkout), "add", "README.md"], check=True)
+        subprocess.run(["git", "-C", str(checkout), "commit", "-qm", "fixture"], check=True)
+    
+        service = EnvironmentService(_config(tmp_path))
+        service.authenticated_principal_id = "principal-isolated-test"
+        task_identity = "control-isolated-store-campaign-task"
+        entered = service.enter(
+            {
+                "name": "continuity-test",
+                "intent": {
+                    "goal": "prove authenticated campaign lookup",
+                    "repositories": [repository],
+                },
+            },
+            "continuity-test-consumer",
+            workspace=".",
+            campaign_id="cmp_isolated_test",
+            task_identity=task_identity,
+        )
+        recorded_head = subprocess.run(
+            ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        (checkout / "README.md").write_text("checkout advanced after session entry\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(checkout), "add", "README.md"], check=True)
+        subprocess.run(["git", "-C", str(checkout), "commit", "-qm", "advance after entry"], check=True)
+        live_head = subprocess.run(
+            ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        assert live_head != recorded_head
+    
+        pkg = service._pkg()
+        store = service._store(pkg)
+        recorded = store.load_snapshot(entered["session_id"])
+        assert isinstance(recorded, dict)
+        working_checkout = pkg.workspace.verify_registered_checkout(
+            checkout, repository=repository, workspace_root=service._config.workspace_root,
+            expected_repository_root=checkout,
+        )
+        checkpoint_owner = pkg.sessions.Session.open(
+            state_dir=service.state_dir, session_id=entered["session_id"],
+            backend="store", store=store,
+        )
+        checkpoint_owner.snapshot["selected_checkouts"] = {
+            repository: {
+                key: working_checkout[key] for key in (
+                    "repository", "path", "workspace_root", "repository_root",
+                    "git_common_directory", "git_common_directory_identity",
+                    "checkout_identity", "branch", "head",
+                )
+            }
+        }
+        checkpoint_owner.snapshot["selected_checkouts"][repository]["head"] = recorded_head
+        checkpoint_owner._save()
+        recorded = store.load_snapshot(entered["session_id"])
+        assert isinstance(recorded, dict)
+        checkpoint = checkpoint_owner.checkpoint(
+            progress="unique checkpoint identifies the continuing checkout session",
+        )
+        assert checkpoint["sequence"] == 1
+        environment = {
+            "identity": recorded["environment_id"],
+            "intent": recorded.get("intent"),
+            "authority": recorded.get("authority"),
+            "rights": recorded.get("rights", {}),
+            "workspace": recorded.get("workspace", {}),
+            "selected_checkouts": recorded.get("selected_checkouts", {}),
+            "toolchain": recorded.get("toolchain"),
+            "execution_roles": recorded.get("execution_roles", {}),
+            "execution_compatibility_service": recorded.get("execution_compatibility_service"),
+            "execution_stack": recorded.get("execution_stack"),
+            "configuration": recorded.get("configuration", {}),
+            "requirements": recorded.get("requirements", {}),
+            "repo_facts": recorded.get("repo_facts", {}),
+            "claim_holders": recorded.get("claim_holders", {}),
+            "bindings": recorded.get("bindings", []),
+            "definition_id": (recorded.get("provenance") or {}).get("definition_id"),
+            "resolution_inputs_digest": (recorded.get("provenance") or {}).get(
+                "resolution_inputs_digest"
+            ),
+        }
+        duplicate = pkg.sessions.Session.create(
+            state_dir=service.state_dir,
+            environment=environment,
+            consumer_id="continuity-test-restarted-process",
+            campaign_id="cmp_isolated_test",
+            authenticated_principal_id=service.authenticated_principal_id,
+            store=store,
+        )
+        duplicate.transition("resolving", "test interrupted continuation setup")
+        duplicate.transition("ready", "test continuation setup complete")
+        duplicate.transition("active", "test restarted consumer entered")
+        duplicate_session_id = duplicate.session_id
+        store.close()
+    
+        result = service.campaign_continuation(repository, "cmp_isolated_test")
+    
+        assert result["status"] == "ambiguous"
+        assert {item["session_id"] for item in result["continuations"]} == {
+            entered["session_id"], duplicate_session_id,
+        }
+        selected = next(item for item in result["continuations"]
+                        if item["session_id"] == entered["session_id"])
+        assert selected["work_intent"]["goal"] == "prove authenticated campaign lookup"
+        checkout_ref = selected["repositories"][0]
+        assert checkout_ref["repository"] == repository
+>       assert checkout_ref.get("observed_path", checkout_ref.get("path")) == str(checkout)
+E       AssertionError: assert 'mncs-control-mcp' == '/tmp/pytest-...s-control-mcp'
+E         
+E         - /tmp/pytest-of-epi13/pytest-14/test_campaign_continuation_rea0/projects/mncs-control-mcp
+E         + mncs-control-mcp
+
+tests/test_environment_sessions.py:2232: AssertionError
+=============================== warnings summary ===============================
+tests/test_control_plane.py::test_external_control_job_has_stable_lifecycle
+tests/test_control_plane.py::test_external_jobs_have_truthful_exception_and_deadline_states[<lambda>-failed]
+tests/test_control_plane.py::test_external_jobs_have_truthful_exception_and_deadline_states[<lambda>-timed_out]
+tests/test_control_plane.py::test_external_cancellation_before_execution_and_while_owned_are_distinct
+tests/test_control_plane.py::test_external_cancellation_before_execution_and_while_owned_are_distinct
+tests/test_control_plane.py::test_external_capacity_recovers_after_timeout_and_restart_is_truthful
+tests/test_control_plane.py::test_external_capacity_recovers_after_timeout_and_restart_is_truthful
+tests/test_control_plane.py::test_external_capacity_recovers_after_timeout_and_restart_is_truthful
+  /usr/lib64/python3.14/multiprocessing/popen_fork.py:76: DeprecationWarning: This process (pid=1199450) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_persistent_fabric.py:17: could not import 'mncs_fabric': No module named 'mncs_fabric'
+SKIPPED [1] tests/test_commons_control.py:142: could not import 'mncs_commons': No module named 'mncs_commons'
+SKIPPED [1] tests/test_environment_sessions.py:597: rights library required for gate enforcement
+SKIPPED [1] tests/test_experiment_readiness.py:31: could not import 'epi13_local_harness.experiment_readiness': No module named 'epi13_local_harness'
+1 failed, 364 passed, 4 skipped, 8 warnings in 180.95s (0:03:00)

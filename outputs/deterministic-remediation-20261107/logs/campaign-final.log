@@ -1,0 +1,21 @@
+SKIP language.live-delta: host binary absent: /home/epi13/Documents/Projects/mncs-environment/.worktrees/mncs-language-service/target/debug/mnls-language-service-host
+SKIP memory.untouched: mncs-memory checkout absent
+
+PASS two-agent.conflict
+PASS two-agent.authority-coordination-defer
+PASS two-agent.handoff
+PASS bypass.no-claim-no-exec
+PASS bypass.claim-executes
+PASS bypass.release-revokes
+PASS restart.resume
+PASS restart.missed-event-once
+PASS health.shape
+PASS idle.noop
+PASS resource.bounded
+PASS context.bounded
+PASS context.ack-advances
+PASS reuse.resume
+SKIP language.live-delta
+SKIP memory.untouched
+
+CAMPAIGN PROOFS: PASS (14 passed, 2 skipped, 0 failed)

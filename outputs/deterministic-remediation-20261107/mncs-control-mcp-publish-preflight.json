@@ -1,0 +1,124 @@
+{
+  "context": {
+    "claim_fences": [],
+    "claim_holders": {
+      "mncs-control-mcp": [
+        {
+          "basis": "explicit-claim",
+          "claim_id": "claim:mncs-control-mcp:worktree:b47dbb0b752f",
+          "consumer_id": "local-agent",
+          "scope": {
+            "branch": "campaign/deterministic-remediation-20261107",
+            "checkout": "/home/epi13/Documents/Projects/mncs-control-mcp/.worktrees/deterministic-remediation-20261107",
+            "checkout_identity": "checkout:0d0473913866eac0",
+            "exclusive": false,
+            "git_common_directory_identity": "git-common:fef6e1d62624de2b",
+            "kind": "worktree",
+            "manifest_identity": "6d702354fc32aafe",
+            "paths": null,
+            "repository": "mncs-control-mcp"
+          },
+          "session_id": "ses_4ff3e54fbcb10151"
+        }
+      ],
+      "mncs-environment": [
+        {
+          "basis": "explicit-claim",
+          "claim_id": "claim:mncs-environment:worktree:38265bf5f1d6",
+          "consumer_id": "local-agent",
+          "scope": {
+            "branch": "campaign/deterministic-remediation-20261107",
+            "checkout": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/deterministic-remediation-20261107",
+            "checkout_identity": "checkout:19b5f22694311891",
+            "exclusive": false,
+            "git_common_directory_identity": "git-common:8bf6635617971eae",
+            "kind": "worktree",
+            "manifest_identity": "955c3febf3d79c9c",
+            "paths": null,
+            "repository": "mncs-environment"
+          },
+          "session_id": "ses_81bd16d081ab29e7"
+        }
+      ],
+      "mncs-store": [
+        {
+          "basis": "explicit-claim",
+          "claim_id": "claim:mncs-store:worktree:e71222ee2735",
+          "consumer_id": "codex-deterministic-remediation",
+          "scope": {
+            "branch": "campaign/deterministic-remediation-20261107",
+            "checkout": "/home/epi13/Documents/Projects/mncs-store/.worktrees/deterministic-remediation-20261107",
+            "checkout_identity": "checkout:afad91c1f593e83f",
+            "exclusive": false,
+            "git_common_directory_identity": "git-common:38ab247aa209f6a0",
+            "kind": "worktree",
+            "manifest_identity": "c4f29e7709ab5605",
+            "paths": null,
+            "repository": "mncs-store"
+          },
+          "session_id": "ses_28a77f51dbc37020"
+        }
+      ]
+    },
+    "claim_required_actions": [
+      "delegate"
+    ],
+    "denied": [
+      "delete"
+    ],
+    "escalation_required": [],
+    "grants": [],
+    "invocable": [
+      "*"
+    ],
+    "protected_repositories": [],
+    "readable": [
+      "workspace"
+    ],
+    "revision": "5939414b8cef343366d25227d00a3b8f9704c0cb404bb2ca7ed93c8d2b6485d8",
+    "schema_version": "mncs.environment.authority-context/1",
+    "scope_grant_repositories": [],
+    "scope_grants": [],
+    "subject": "local-agent",
+    "writable": [
+      "mncs-control-mcp"
+    ]
+  },
+  "evaluation": {
+    "authorization_basis": "writable-repository-rights",
+    "concurrency_note": "This decision does not reserve the scope; the integration operation must enforce its repository-native reference update",
+    "eligibility_basis": "exact-observed-scope-and-repository-native-concurrency",
+    "eligibility_evidence": {
+      "action": "publish",
+      "event_reference": {
+        "identity": "evt_b8640670ddb44c03",
+        "sequence": 7,
+        "type": "authority.integration-eligible"
+      },
+      "operation_executed": false,
+      "preflight_state": {
+        "branch": "main",
+        "branch_status": "attached",
+        "checkout_identity": "checkout:3dda6d0cbc2787f3",
+        "head": "9d8f65a685b2974d95c899c6dae4c9059aad10a4",
+        "head_status": "measured",
+        "observation_basis": "fresh-registered-checkout-inspection",
+        "schema_version": "mncs.environment.integration-preflight-state/1",
+        "working_tree_status": "dirty"
+      },
+      "repository": "mncs-control-mcp",
+      "scope": {
+        "branch": "main",
+        "checkout_identity": "checkout:3dda6d0cbc2787f3",
+        "exclusive": false,
+        "git_common_directory_identity": "git-common:fef6e1d62624de2b",
+        "kind": "worktree",
+        "manifest_identity": "6d702354fc32aafe",
+        "repository": "mncs-control-mcp"
+      }
+    },
+    "persistent_claim_required": false,
+    "reason": "publish eligible within writable scope on mncs-control-mcp; claim overlaps are coordination evidence",
+    "verdict": "allow"
+  }
+}

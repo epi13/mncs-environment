@@ -1,0 +1,9 @@
+{
+  "status": "deliberately-interrupted-not-a-pass",
+  "pid": 1150998,
+  "owned_children": [
+    1330589
+  ],
+  "case": "tests/test_phase2.py::test_general_blob_boundaries_roundtrip",
+  "reason": "The owner classifies broad historical/scale matrices as scheduled; all 140 canonical native/adapter regressions and the real crash/CAS proof passed. No failure was observed before this deliberate interruption."
+}

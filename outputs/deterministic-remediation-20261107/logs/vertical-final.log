@@ -1,0 +1,9 @@
+1. resolved renv_337ec6fec24e302b (2 repos, 27 bindings)
+2. entered session ses_6f640ae4f08097dd
+3. invoked mncs-atlas:context-capsule (947 bytes of real provider output)
+4. protected write to mncs-language denied with reason
+5. checkpoint chk_9126a83b5bd34e20
+6. resumed in a new process: intent, bindings, 10 events intact
+7. handoff hff_70f1f3d5cefb7ee0 accepted by proof-agent-b
+8. completed; 16 events, 3 checkpoints, 1 handoffs
+VERTICAL PROOF: PASS
