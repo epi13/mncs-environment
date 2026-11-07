@@ -386,5 +386,18 @@
     "desired_contract": "Obtain a complete owner-side verbose outcome for the broad suite and diagnose any actual errors without treating the interrupted probe as green.",
     "why_not_local": "Final preparation remains bounded; no Test native implementation or unrelated test policy is changed to conceal this incomplete run.",
     "workaround": "Use the separately verified declared native-application-build-vm obligation for the specific tested workflow; retain this broader verification gap."
+  },
+  {
+    "schema_version": "mncs.environment.pressure/1",
+    "identity": "prs_86eca87538c8bbd1",
+    "title": "Generic Control tests lack an admitted owner verification producer",
+    "owner": "mncs-test / mncs-forge (verification contract), mncs-control-mcp (execution identity), mncs-actions (check carrier)",
+    "status": "open",
+    "description": "The ordinary Control pytest descriptor executes Python tests but publishes no owner-admitted test verification reference binding its provider request, source fingerprint and test selection. Test's ambient producer explicitly accepts native_first_class_test and rejects host executors as executor-not-native. Actions emit_obligation_check runs an entrypoint and emits a process-outcome check; that carrier does not establish a native Test result or the local Environment request/source/selection join. Forge preserves declared provider and execution receipts but no configured generic pytest verifier for this Control operation was found.",
+    "effect": "Native supported tests can already produce strict request/execution/verification links (this campaign's real native proof passes); generic pytest completion remains unverified work. No generic process exit is promoted into native verification.",
+    "evidence": "docs/DETERMINISTIC_REMEDIATION.md; outputs/deterministic-remediation-20261107/native-verification-durable/; mncs_env/verification.py _measured_current and execute_suite; mncs-control-mcp/.mncs/project.json control-mcp-tests; mncs-actions/scripts/emit_obligation_check.py; mncs-forge/src/mncs_forge/micro_verifiers.py",
+    "desired_contract": "An explicit owner-declared generic test producer and verifier binding the exact Control request/execution, source revision or fingerprint, selection and result artifacts, with honest generic-runner scope, missing/forged/mismatched/duplicate evidence refusal and durable result references. Reuse Test/Forge/Actions authorities rather than adding Environment verification policy.",
+    "why_not_local": "Environment cannot widen Test's native verification contract or manufacture an admitted result from a generic process outcome. The necessary generic producer/verification semantics are not available in the inspected supported contracts; this is a precise producer boundary, not a reason to bypass it.",
+    "workaround": "Use the supported native Test verification path for native obligations; preserve generic pytest output and JUnit as runner evidence with verification_linked false."
   }
 ]

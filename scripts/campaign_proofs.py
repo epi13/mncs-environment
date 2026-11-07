@@ -30,7 +30,9 @@ from mncs_env import (  # noqa: E402
 )
 from mncs_env.session_store import open_store  # noqa: E402
 
-FAMILY = ROOT.parent
+from vertical_proof import git_workspace_root  # noqa: E402
+
+FAMILY = git_workspace_root(ROOT)
 RESULTS: list[tuple[str, str, str]] = []
 
 

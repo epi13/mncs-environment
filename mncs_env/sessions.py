@@ -3231,6 +3231,13 @@ class Session:
             ]
         store.save_snapshot(session_id, snapshot)
         instance = cls(store, session_id)
+        # Use the same current checkout projection on creation and reentry.
+        # Abbreviated seed refs otherwise acquire identity/observation fields
+        # on the first quiet continuation, emitting campaign.reconciled and
+        # needlessly invalidating the just-recorded Doctor epoch.
+        instance.snapshot["campaign"]["repository_refs"] = (
+            instance._campaign_repository_refs({})
+        )
         instance._emit("session.created", "environment", {"consumer_id": consumer_id})
         instance._save()
         return instance
@@ -6337,7 +6344,7 @@ class Session:
             if not raw.is_absolute():
                 raw = root / raw
             try:
-                resolved = raw.resolve()
+                resolved = workspace_module.resolve_control_workspace_alias(raw)
                 resolved.relative_to(root)
             except (OSError, ValueError):
                 raise AuthorityDenied(
@@ -6386,16 +6393,121 @@ class Session:
             for item in read_only_dependencies
         ):
             return None, None
-        for repo in self.snapshot.get("workspace", {}).get("repositories", []):
-            if not isinstance(repo, dict):
-                continue
-            if repo.get("name") != repository and repo.get("manifest_repository") != repository:
-                continue
-            try:
-                return Path(str(repo["path"])).resolve(), repo.get("branch")
-            except OSError:
-                return None, None
-        return None, None
+        matching = [repo for repo in self.snapshot.get("workspace", {}).get("repositories", [])
+                    if isinstance(repo, dict) and (
+                        repo.get("name") == repository or repo.get("manifest_repository") == repository)]
+        primary = [repo for repo in matching if repo.get("name") == repository]
+        candidates = primary or matching
+        if len(candidates) != 1:
+            return None, None
+        repo = candidates[0]
+        try:
+            return workspace_module.resolve_control_workspace_alias(root / str(repo["path"])), repo.get("branch")
+        except (OSError, ValueError):
+            return None, None
+
+    def _provider_effect_scope(self, binding: dict[str, Any]):
+        """Resolve the declared provider target for advisory and live checks.
+
+        This verifies addressing only. Neither this observation nor a caller's
+        earlier advisory replaces live rights, claims or locked admission.
+        """
+        provider = str(binding.get("provider", binding["capability"]))
+        checkout = binding.get("provenance", {}).get("checkout", {})
+        checkout_path = checkout.get("path") or binding.get("provider_root")
+        if not isinstance(checkout_path, str) or not checkout_path:
+            return provider, None, False
+        workspace_root = self.snapshot.get("workspace", {}).get("root")
+        raw_path = Path(checkout_path)
+        if not raw_path.is_absolute() and workspace_root:
+            raw_path = Path(str(workspace_root)) / raw_path
+        try:
+            selected_path = workspace_module.resolve_control_workspace_alias(raw_path)
+        except (OSError, ValueError) as error:
+            raise AuthorityDenied(
+                f"capability {binding['capability']!r} provider checkout identity "
+                f"is unavailable: {error}") from None
+        selected_checkout = None
+        for repository, record in self.snapshot.get("selected_checkouts", {}).items():
+            raw_selected = Path(str(record.get("path", "")))
+            if not raw_selected.is_absolute() and workspace_root:
+                raw_selected = Path(str(workspace_root)) / raw_selected
+            if raw_selected.resolve() == selected_path:
+                provider, selected_checkout = str(repository), record
+                break
+        scope = {"kind": "worktree", "checkout": str(selected_path)}
+        branch = checkout.get("branch") or (
+            selected_checkout.get("branch") if selected_checkout else None)
+        try:
+            declared = _verified_declared_provider_checkout(
+                self.snapshot, provider, selected_path,
+                expected_branch=branch if isinstance(branch, str) and branch else None,
+                authority_scope_grants=self.authority_scope_grants())
+        except (OSError, RuntimeError, ValueError,
+                workspace_module.WorkspaceResolutionError) as error:
+            raise AuthorityDenied(
+                f"capability {binding['capability']!r} provider checkout identity "
+                f"is unavailable: {error}") from None
+        if declared is not None:
+            branch = declared.get("branch") or branch
+        if isinstance(branch, str) and branch:
+            scope["branch"] = branch
+        return provider, scope, selected_checkout is not None
+
+    def capability_preflight(self, capability: str, *,
+                             effect_target: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inspect one operation using existing checkout and authority checks.
+
+        No provider execution, claim recovery, transfer or scope expansion.
+        Authority checks retain their normal observation events. Availability
+        is freshly probed; bindings/selection are the recorded session context.
+        Execution must still refresh and recheck under its existing boundary.
+        """
+        binding = capabilities_module.probe_availability(self._binding(capability))
+        required = authority_module.required_action_for_effects(binding.get("effects", ["read"]))
+        report = {
+            "schema_version": "mncs.environment.capability-preflight/1",
+            "session_id": self.session_id, "binding_id": binding.get("binding_id"),
+            "capability": binding["capability"], "observed_at": utcnow(),
+            "observation": "advisory; live admission required at execution",
+            "authorizes_execution": False, "effects": binding.get("effects", ["read"]),
+            "required_action": required, "availability": binding.get("availability"),
+            "workspace_root": self.snapshot.get("workspace", {}).get("root"),
+            "provider_root": binding.get("provider_root"),
+        }
+        typed = binding.get("provenance", {}).get("consumed_typed_execution_dependency")
+        if isinstance(typed, dict) and (
+                not isinstance(effect_target, dict)
+                or effect_target.get("repository") != typed.get("effect_target_repository")):
+            return {**report, "status": "context-required",
+                    "required_effect_repository": typed.get("effect_target_repository"),
+                    "next_step": "supply the declared effect repository from the selected session"}
+        try:
+            invocation = self.check(action="invoke", target=capability)
+            report["invocation_admission"] = invocation
+            if required != "read":
+                if effect_target is not None:
+                    repository, scope = self._admit_effect_target(capability, effect_target)
+                    selected = self.snapshot.get("selected_checkouts", {}).get(repository, {})
+                    root = Path(str(report["workspace_root"]))
+                    selected_path = selected.get("path")
+                    selected_target = bool(selected_path) and str((root / selected_path).resolve()) == scope["checkout"]
+                else:
+                    repository, scope, selected_target = self._provider_effect_scope(binding)
+                report.update(effect_repository=repository, effect_scope=scope)
+                report["effect_admission"] = self.check(
+                    action=required, target=repository,
+                    scope=None if selected_target else scope)
+            checks = [invocation, report.get("effect_admission", invocation)]
+            report["status"] = (
+                "requirements-observed" if all(c.get("verdict") == "allow" for c in checks)
+                and binding.get("availability", {}).get("status") == "available"
+                else "requirements-unmet")
+        except (AuthorityDenied, LifecycleError, ValueError,
+                workspace_module.WorkspaceResolutionError) as error:
+            report.update(status="context-unavailable", reason=str(error),
+                          next_step="select the registered provider checkout inside this workspace; inspect scope and claims")
+        return report
 
     def _read_provider_input_artifacts(
         self, artifacts: list[dict[str, Any]] | None,
@@ -6635,59 +6747,15 @@ class Session:
                     scope=effect_check_scope,
                 )
             else:
-                provider = str(binding.get("provider", capability))
-                checkout = binding.get("provenance", {}).get("checkout", {})
-                checkout_path = checkout.get("path") or binding.get("provider_root")
-                effect_scope = None
-                selected_checkout = None
-                if isinstance(checkout_path, str) and checkout_path:
-                    workspace_root = self.snapshot.get("workspace", {}).get("root")
-                    raw_selected_path = Path(checkout_path)
-                    if not raw_selected_path.is_absolute() and workspace_root:
-                        raw_selected_path = Path(str(workspace_root)) / raw_selected_path
-                    selected_path = raw_selected_path.resolve()
-                    for repository, record in self.snapshot.get("selected_checkouts", {}).items():
-                        raw_selected = Path(str(record.get("path", "")))
-                        if not raw_selected.is_absolute() and workspace_root:
-                            raw_selected = Path(str(workspace_root)) / raw_selected
-                        if raw_selected.resolve() == selected_path:
-                            provider = str(repository)
-                            selected_checkout = record
-                            break
-                    effect_scope = {"kind": "worktree", "checkout": str(selected_path)}
-                    branch = checkout.get("branch") or (
-                        selected_checkout.get("branch") if selected_checkout else None
-                    )
-                    try:
-                        declared_provider = _verified_declared_provider_checkout(
-                            self.snapshot, provider, selected_path,
-                            expected_branch=(
-                                branch if isinstance(branch, str) and branch else None
-                            ),
-                            authority_scope_grants=self.authority_scope_grants(),
-                        )
-                    except (OSError, RuntimeError, ValueError,
-                            workspace_module.WorkspaceResolutionError) as error:
-                        raise AuthorityDenied(
-                            f"capability {capability!r} provider checkout identity "
-                            f"is unavailable: {error}"
-                        ) from None
-                    if declared_provider is not None:
-                        branch = declared_provider.get("branch") or branch
-                        # The registered provider identity was checked above
-                        # against the current scope grant and binding. Keep
-                        # the effect request at the exact path-and-branch
-                        # scope so an existing narrow claim remains valid if
-                        # it predates optional identity fields on claim rows.
-                    if isinstance(branch, str) and branch:
-                        effect_scope["branch"] = branch
+                provider, effect_scope, selected_target = self._provider_effect_scope(binding)
+                if effect_scope is not None:
                     checked_effect_repository = provider
                     admitted_effect_target = {"repository": provider}
                 if (isinstance(effect_scope, dict)
                         and effect_scope.get("kind") == "worktree"):
                     operation_checkout_path = effect_scope["checkout"]
                 effect_check_scope = (
-                    None if selected_checkout is not None else effect_scope
+                    None if selected_target else effect_scope
                 )
                 effect_verdict = self.check(
                     action=required,
@@ -7251,8 +7319,20 @@ class Session:
 
         known = {(item.get("repository"), item.get("observed_path")) for item in observed}
         for item in (self.snapshot.get("campaign") or {}).get("repository_refs", []):
-            if (isinstance(item, dict)
-                    and (item.get("repository"), item.get("observed_path")) not in known):
+            if not isinstance(item, dict):
+                continue
+            previous_path = item.get("observed_path")
+            # Older seed refs can use an absolute path for the exact checkout
+            # now observed under a workspace-relative path. Compare lexical
+            # paths only: a historical symlink alias must not be promoted to
+            # a current checkout observation.
+            if isinstance(previous_path, str) and previous_path:
+                absolute = Path(os.path.abspath(root / previous_path))
+                try:
+                    previous_path = absolute.relative_to(root).as_posix()
+                except ValueError:
+                    pass
+            if (item.get("repository"), previous_path) not in known:
                 observed.append({**item, "observation": "unavailable_current_namespace"})
         return sorted(observed, key=lambda item: (
             str(item.get("repository", "")), str(item.get("observed_path", ""))))[:64]
@@ -11113,6 +11193,12 @@ class Session:
                   "--persistence", "store" if hasattr(self.store, "backend") else "file"]
         actions = {name: {"argv": [*prefix, name, self.session_id]} for name in
                    ("health", "reconcile", "inspect", "capabilities")}
+        actions["capabilities"]["operation_preflight"] = {
+            "append_argv": ["--preflight"],
+            "required_argument": "bound capability identity",
+            "effect_repository_option": "--effect-repository",
+            "authorizes_execution": False,
+        }
         actions["resources"] = {"argv": [*prefix, "resources"]}
         actions["scratch"] = {"argv": [*prefix, "scratch", self.session_id],
                               "cleanup": "on-complete-or-fail"}

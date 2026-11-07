@@ -148,6 +148,46 @@ class EpochTests(DoctorFixture):
         self.assertEqual(snap_after["snapshot_sequence"], snap_before["snapshot_sequence"])
         self.assertEqual(events_after, events_before)
 
+    def test_selected_checkout_starts_with_current_unique_campaign_refs(self):
+        self.config.update(working_checkout="current",
+                           workspace_scope={"repositories": ["fixture"]})
+        self.definition.write_text(json.dumps(self.config))
+        self.ready()
+        code, first = self.enter()
+        self.assertEqual(code, 0, first)
+        store = open_store(self.state, "file")
+        before = store.load_snapshot(first["session_id"])
+        refs = before["campaign"]["repository_refs"]
+        self.assertEqual(len(refs), 1, refs)
+        self.assertEqual(refs[0]["observed_path"], "fixture")
+        self.assertEqual(refs[0]["observation"], "current")
+        self.assertTrue(refs[0]["checkout_identity"])
+        events_before = store.read_events(first["session_id"])
+        code, second = self.enter()
+        self.assertEqual(code, 0, second)
+        self.assertTrue(second["doctor"]["reused"])
+        self.assertEqual(store.load_snapshot(first["session_id"]), before)
+        self.assertEqual(store.read_events(first["session_id"]), events_before)
+
+    def test_legacy_absolute_ref_is_replaced_only_by_exact_current_path(self):
+        self.ready()
+        _, first = self.enter()
+        session = sessions.Session(open_store(self.state, "file"), first["session_id"])
+        original = session.snapshot["campaign"]["repository_refs"][0]
+        alias = self.base / "alias"
+        alias.symlink_to(self.project, target_is_directory=True)
+        session.snapshot["campaign"]["repository_refs"] = [
+            {**original, "observed_path": str(self.project)},
+            {**original, "observed_path": str(alias)},
+            {**original, "observed_path": "missing-checkout"},
+        ]
+        refs = session._campaign_repository_refs({})
+        current = [r for r in refs if r["observation"] == "current"]
+        self.assertEqual(len(current), 1, refs)
+        unavailable = [r["observed_path"] for r in refs
+                       if r["observation"] == "unavailable_current_namespace"]
+        self.assertEqual(set(unavailable), {str(alias), "missing-checkout"})
+
     def test_epoch_miss_on_working_tree_change(self):
         self.ready()
         _, first = self.enter()

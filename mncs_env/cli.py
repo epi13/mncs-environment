@@ -821,7 +821,15 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 def cmd_capabilities(args: argparse.Namespace) -> int:
     with closing(_open(args)) as session:
-        out(session.inspect()["bindings"])
+        if args.preflight:
+            target = {"repository": args.effect_repository} if args.effect_repository else None
+            out(session.capability_preflight(args.preflight, effect_target=target))
+        elif args.effect_repository:
+            return fail("--effect-repository requires --preflight")
+        else:
+            # Capability discovery needs the bound snapshot, not a full
+            # session inspection (which reads the complete durable event log).
+            out([dict(binding) for binding in session.snapshot.get("bindings", [])])
     return 0
 
 
@@ -2842,6 +2850,10 @@ def build_parser() -> argparse.ArgumentParser:
     resume.set_defaults(func=cmd_resume)
 
     capabilities = session_parser("capabilities", "list bound capabilities")
+    capabilities.add_argument("--preflight", metavar="CAPABILITY",
+                              help="observe one operation's addressing/effect/claim requirements; grants no execution permission")
+    capabilities.add_argument("--effect-repository",
+                              help="resolve a declared effect target through the selected session")
     capabilities.set_defaults(func=cmd_capabilities)
 
     authority = session_parser("authority", "show authority or evaluate an action")

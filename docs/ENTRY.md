@@ -45,6 +45,24 @@ to file persistence.
 
 ## Claim discovery
 
+Before invoking a bound operation, inspect its addressing and effect requirements:
+
+```sh
+mncs-env capabilities SESSION --preflight PROVIDER:CAPABILITY
+```
+
+`--effect-repository REPOSITORY` resolves an operation's declared consumer target
+through the selected session. The existing capability action advertises this
+option. The bounded advisory includes the provider/workspace roots, declared
+effects, exact resolved worktree/branch scope, current availability and existing
+authority evaluations, including claim conflicts and their supported next steps.
+Missing typed effect context is explicit. It neither executes the provider nor
+recovers, transfers or expands a claim. Authority checks retain their ordinary
+observation events. Selection and bindings remain the recorded session context;
+the timestamp does not turn that context into current execution permission.
+Invocation still refreshes its selection and repeats every live admission and
+locked checkout check. Reusing an earlier advisory cannot bypass changed state.
+
 `mncs-env claims SESSION` returns a bounded page of the latest held claim
 record for each scope, including expired held records with `live: false` so
 stale work remains discoverable. The default page contains at most 25 records

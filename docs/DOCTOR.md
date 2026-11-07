@@ -30,8 +30,8 @@ ambient pass (`mncs_env/doctor.py`):
    or any unreadable input — invalidates the epoch. Doubt always runs the
    full path.
 2. **Epoch hit: skip redundant work.** No revalidation, no rediscovery, no
-   rebinding, no extra saves or events beyond the caller's own resume
-   marker. A second entry over an unchanged world reports the validated
+   rebinding, no extra saves or events. Ordinary quiet re-entry is observational;
+   explicit participating resume retains its own marker. A second entry over an unchanged world reports the validated
    summary instead of recomputing it.
 3. **Services are always probed live.** Provider runtime state (processes,
    state files, sockets) is observable only by probing, so the epoch never
@@ -48,6 +48,14 @@ Entry also opens the Store exactly once (matching, resume/creation, and
 the ambient pass share the handle) and waits boundedly on a contended
 entry lock instead of failing immediately. The lock is never seized or
 broken: after a 15s budget the waiter reports `entry-busy` as before.
+
+Fresh sessions initialize the same current campaign checkout references used by
+continuity reconciliation. Adding identity fields to an abbreviated seed is not
+a checkout change and must not cause a new reconciliation event or invalidate
+Doctor on the first quiet re-entry. Exact absolute/relative historical aliases
+are matched lexically against freshly observed paths; symlink aliases and missing
+checkouts remain unavailable history. Actual checkout, content, claim, service
+and unknown event changes retain their existing invalidation checks.
 
 ## Terse summaries and evidence
 
