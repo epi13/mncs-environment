@@ -1,0 +1,29 @@
+{
+  "artifact_byte_count": 0,
+  "artifact_file_count": 0,
+  "artifact_store_ref": null,
+  "binding_id": "cap_e10bf6052b85f8ab",
+  "capability": "mncs-control-mcp:test/control-mcp-tests",
+  "completion_reference": {
+    "identity": "evt_7c5ca99b9097e982",
+    "sequence": 76,
+    "type": "invocation.completed"
+  },
+  "demand_finish_reference": {
+    "identity": "evt_7c5ca99b9097e982",
+    "sequence": 76,
+    "type": "invocation.completed"
+  },
+  "demand_reference": {
+    "identity": "evt_2b6ae327112ed979",
+    "sequence": 74,
+    "type": "demand.observed"
+  },
+  "input_artifacts": [],
+  "provider_request_id": "req_9152cfa8c85ee83174012e02f8151e4db595e9346b943392",
+  "returncode": 0,
+  "status": "ok",
+  "stderr": "",
+  "stdout": ".........                                                                [100%]\n---- generated xml file: /tmp/ambient-demand-authentic-junit-validated.xml -----\n9 passed in 0.23s\n",
+  "truncated": false
+}

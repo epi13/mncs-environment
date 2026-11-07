@@ -1,0 +1,53 @@
+{
+  "call": {
+    "artifact_identity": "mncs:compiler:backend-artifact:31a9a15a6e7f910bfe5ad29d96725866590c851c2a416b94f8727f71fc586392",
+    "artifact_sha256": "f3bb9a2cbeb2eb4f72fa7e376b63a6e61ebecd027dc7f0d530d06ecc8df5d640",
+    "backend": "mncs-research-bytecode",
+    "returned": [
+      {
+        "record": {
+          "fields": [
+            [
+              "operation_matched",
+              {
+                "boolean": {
+                  "value": true
+                }
+              }
+            ],
+            [
+              "reason",
+              {
+                "integer": {
+                  "type": {
+                    "bits": 64,
+                    "signed": false
+                  },
+                  "value": 0
+                }
+              }
+            ],
+            [
+              "verification_linked",
+              {
+                "boolean": {
+                  "value": true
+                }
+              }
+            ]
+          ],
+          "name": "DemandJoinResult",
+          "type_identity": "mncs:0.2:record-type:mncs.environment.demand_correlation_v1::DemandJoinResult::operation_matched%3Abool%3Breason%3Au64%3Bverification_linked%3Abool%3B"
+        }
+      }
+    ],
+    "reused_session": true,
+    "status": "returned",
+    "steps": 2442
+  },
+  "canonical_arguments_sha256": "348648348ef905bbec10a163e47576c7af23c9c4d82af0734d89c50f802d711a",
+  "function": "correlate",
+  "module": "mncs.environment.demand_correlation_v1",
+  "schema_version": "mncs.application-call/1",
+  "status": "returned"
+}

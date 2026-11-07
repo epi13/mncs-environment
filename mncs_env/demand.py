@@ -55,12 +55,25 @@ def _context(session) -> dict:
             for item in bindings[:MAX_BINDINGS] if isinstance(item, dict)]
     repos = []
     selected = snapshot.get("selected_checkouts", {})
+    # A family discovery inventory can be much larger than the session's
+    # explicitly selected work context. Preserve that scope, not an arbitrary
+    # alphabetical prefix of unrelated checkouts.
+    outside_scope = 0
+    if selected:
+        selected_paths = {item.get("path") for item in selected.values() if item.get("path")}
+        outside_scope = sum(1 for item in repositories if item.get("path") not in selected_paths)
+        # The selected checkout observation is authoritative for this session;
+        # family inventory can omit linked worktrees and is not a substitute.
+        repositories = [{"name": name, "manifest_repository": name,
+                         **{key: item.get(key) for key in ("path", "head", "branch")},
+                         "dirty": not item["clean"] if type(item.get("clean")) is bool else None}
+                        for name, item in sorted(selected.items())]
     for item in repositories[:MAX_REPOSITORIES]:
         name = item.get("manifest_repository") or item.get("name")
         chosen = selected.get(name, {})
         repos.append({key: item.get(key) for key in (
             "name", "manifest_repository", "path", "branch", "head", "dirty",
-        )} | {"selected_identity": chosen.get("repository_identity"),
+        )} | {"selected_identity": chosen.get("checkout_identity") or chosen.get("repository_identity"),
                "observed_facts": snapshot.get("workspace_facts", {}).get(name)})
     return {
         "schema_version": "mncs.environment.decision-context/1",
@@ -71,6 +84,9 @@ def _context(session) -> dict:
         "authority_revision": (snapshot.get("authority") or {}).get("revision"),
         "rights_inputs_digest": digest_hex(snapshot.get("rights_context_inputs", {}), length=64),
         "bindings": rows, "repositories": repos,
+        "repository_scope": "selected-checkouts" if selected else "recorded-workspace",
+        "repositories_outside_scope": outside_scope,
+        "repositories_missing_selected": sum(1 for item in selected.values() if not item.get("path")),
         "bindings_omitted": max(0, len(bindings) - MAX_BINDINGS),
         "repositories_omitted": max(0, len(repositories) - MAX_REPOSITORIES),
         "readiness": snapshot.get("readiness", {}).get("status", "not-recorded"),
@@ -121,6 +137,7 @@ def finished(session, opportunity: dict, result: dict | None, error: Exception |
     payload = {
         "demand_reference": ref(opportunity),
         "provider_request_id": (result or {}).get("provider_request_id"),
+        "admission_reference": (result or {}).get("event_reference"),
         "status": (result or {}).get("status", "refused" if refused else "failed" if error is not None else "unknown"),
         "error_type": type(error).__name__ if error is not None else None,
         "delivery": "result-prepared" if result is not None else "no-result",
@@ -247,7 +264,7 @@ def project(session, events: list[dict]) -> dict:
             "result_sequence": outcome["sequence"] if outcome else 0,
             "starts": len(starts), "completions": len(ends), "results": len(results),
             "context_present": context is not None,
-            "context_complete": bool(context is not None and not context.get("bindings_omitted") and not context.get("repositories_omitted")),
+            "context_complete": bool(context is not None and not context.get("bindings_omitted") and not context.get("repositories_omitted") and not context.get("repositories_missing_selected")),
             "observed_result": _verification_link(session, outcome),
         })
         rows.append({
@@ -256,7 +273,7 @@ def project(session, events: list[dict]) -> dict:
             "invocation_events": [ref(e) for e in starts],
             "completion_events": [ref(e) for e in ends],
             "verification_events": [ref(e) | {"event_type": e["type"], "outcome": _payload(e).get("outcome", "not-recorded"), "evidence_id": _payload(e).get("evidence_id"), "verification_evidence": _payload(e).get("verification_evidence"), "evidence_integrity": _verification_link(session, e)} for e in results],
-            "finish_events": [ref(e) | {"status": _payload(e).get("status"), "delivery": _payload(e).get("delivery")} for e in finishes],
+            "finish_events": [ref(e) | {"status": _payload(e).get("status"), "delivery": _payload(e).get("delivery"), "admission_reference": _payload(e).get("admission_reference")} for e in finishes],
             "operation_status": _payload(end).get("status", "not-recorded-in-window"),
             "output_capture": _payload(end).get("output_capture"),
             "agent_receipt": "not-established", "usefulness": "not-established",

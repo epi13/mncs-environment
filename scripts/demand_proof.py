@@ -107,6 +107,36 @@ run = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=
 assert run.returncode == 0, run.stdout + run.stderr
 native = json.loads(native_result.read_text())
 assert native['summary']['verdict'] == 'PASS' and native['summary']['total'] == 11
+# A pure native call measures the join kernel separately from capture/storage
+# and structured-application JSON transport. Handles have ordinary production
+# lengths, but these are explicit mechanical inputs, never utility labels.
+def integer(n):
+    return {"integer": {"type": {"bits": 64, "signed": False}, "value": n}}
+def text(value):
+    return {"sequence": {"values": [{"byte": {"value": n}} for n in value.encode()]}}
+fields = {name: text(value) for name, value in {
+    "demand": "evt_" + "a" * 16, "binding": "cap_" + "b" * 16,
+    "start_demand": "evt_" + "a" * 16, "end_demand": "evt_" + "a" * 16,
+    "start_binding": "cap_" + "b" * 16, "end_binding": "cap_" + "b" * 16,
+    "start_request": "req_" + "c" * 48, "end_request": "req_" + "c" * 48,
+    "result_demand": "evt_" + "a" * 16, "result_request": "req_" + "c" * 48,
+}.items()}
+fields.update({name: integer(n) for name, n in {
+    "demand_sequence": 1, "start_sequence": 2, "end_sequence": 3,
+    "result_sequence": 4, "starts": 1, "completions": 1, "results": 1,
+}.items()})
+fields.update({name: {"boolean": {"value": True}} for name in
+               ["context_present", "context_complete", "observed_result"]})
+arguments = OUT / 'join.args.json'
+arguments.write_text(json.dumps([{"record": {"fields": fields}}], indent=2) + '\n')
+call_result = OUT / 'join-call.json'
+call = subprocess.run([str(BIN), 'call', 'native/mncs/environment/demand_correlation_v1.mncs',
+                       '--module', 'mncs.environment.demand_correlation_v1', '--function', 'correlate',
+                       '--args', str(arguments), '--library', 'native', '--library', str(FAMILY / 'mncs-stdlib/library'),
+                       '--result', str(call_result)], cwd=ROOT, capture_output=True, text=True, timeout=180)
+assert call.returncode == 0, call.stderr + call.stdout
+call_data = json.loads(call_result.read_text())
+assert call_data.get('status') == 'returned'
 assert initial == source_hashes() and binary_hash == digest(BIN)
 report = {
     'schema_version': 'mncs.environment.demand-observation-proof/1',
@@ -115,6 +145,9 @@ report = {
     'source_sha256': initial, 'compiler_binary_sha256': binary_hash,
     'native_result_sha256': digest(native_result), 'native_summary': native['summary'],
     'native_execution': native['execution'], 'measurements': measurements,
+    'pure_join_vm_steps': call_data['call']['steps'], 'pure_join_arguments_sha256': digest(arguments),
+    'pure_join_result_sha256': digest(call_result),
+    'pure_join_scope': 'native kernel only; excludes event lookup, evidence reads, context capture and structured JSON application transport',
     'native_view_sha256': digest(OUT / 'controlled-native-view.json'),
     'limitations': ['Five sequential samples per treatment; not randomized and not a latency distribution.',
                    'Wall time covers the full existing admission/provider/persistence path; not agent reasoning time.',

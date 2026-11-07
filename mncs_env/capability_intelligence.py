@@ -18062,7 +18062,9 @@ def _recording_context(recorder: Any) -> dict[str, str] | None:
     return context
 
 
-def _event_reference(event: dict[str, Any]) -> dict[str, Any] | None:
+def _event_reference(event: Any) -> dict[str, Any] | None:
+    if not isinstance(event, dict):
+        return None
     identity = event.get("identity")
     sequence = event.get("sequence")
     event_type = event.get("type")

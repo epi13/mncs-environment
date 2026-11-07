@@ -44,7 +44,7 @@ def test_request_context_is_immutable_and_operation_ids_are_exact(session, monke
     reference = r['demand_reference']
     assert reference['identity'] == request['identity']
     assert request['sequence'] < r['completion_reference']['sequence']
-    assert r['demand_finish_reference']['sequence'] > r['completion_reference']['sequence']
+    assert r['demand_finish_reference'] == r['completion_reference']
     s.snapshot['bindings'] = []  # No current-state backfill into history.
     p = demand.project(s, events)
     assert p['status'] == 'native-unavailable'
@@ -185,3 +185,53 @@ def test_ambient_calls_keep_existing_owner_trace_without_duplicate_agent_demand(
     start = next(e for e in events if e['type'] == 'capability.invoked')
     assert start['payload']['ambient_owner_pass_context']['owner_pass'] == 'fixture-pass'
     assert start['payload']['demand_reference'] is None
+
+
+def test_deferred_admission_reference_is_preserved_without_execution(session, monkeypatch):
+    decision = session._emit('authority.coordination-deferred', 'environment', {'fixture': True})
+    result = {'status': 'deferred-coordination', 'event_reference': demand.ref(decision)}
+    monkeypatch.setattr(session, '_invoke', lambda *a, **kw: result)
+    response = session.invoke('echo', [])
+    assert response['event_reference'] == demand.ref(decision)
+    finish = next(e for e in session._log() if e['type'] == 'demand.finished')
+    assert finish['payload']['admission_reference'] == demand.ref(decision)
+    projection = demand.project(session, session._log())
+    assert projection['records'][0]['finish_events'][0]['admission_reference'] == demand.ref(decision)
+    assert projection['records'][0]['operation_status'] == 'not-recorded-in-window'
+
+
+def test_activity_projection_preserves_missing_preflight_reference():
+    for missing in (None, [], 'not-a-reference'):
+        assert capability_intelligence._event_reference(missing) is None
+    projected = capability_intelligence._invocation_effect_target(
+        {'repository': 'mncs-control-mcp', 'branch': 'main'}, None)
+    assert projected['repository'] == 'mncs-control-mcp'
+    assert 'preflight_event' not in projected
+
+
+def test_large_family_keeps_selected_repository_context_without_backfill(session):
+    session.snapshot['workspace']['repositories'] = [
+        {'name': 'fixture@' + str(i), 'manifest_repository': 'fixture', 'path': '/foreign/' + str(i), 'head': 'old'} for i in range(100)
+    ] + [{'name': 'fixture', 'path': '/selected/fixture', 'head': 'observed-before'}]
+    session.snapshot['selected_checkouts'] = {'fixture': {'checkout_identity': 'fixture-checkout', 'path': '/selected/fixture', 'head': 'observed-before', 'clean': True}}
+    context = demand._context(session)
+    assert context['repository_scope'] == 'selected-checkouts'
+    assert context['repositories_outside_scope'] == 100
+    assert context['repositories_omitted'] == 0
+    assert context['repositories'][0]['head'] == 'observed-before'
+    assert context['repositories'][0]['dirty'] is False
+    assert context['repositories'][0]['selected_identity'] == 'fixture-checkout'
+    assert context['repositories_missing_selected'] == 0
+    session.snapshot['workspace']['repositories'][-1]['head'] = 'later'
+    assert context['repositories'][0]['head'] == 'observed-before'
+
+
+def test_selected_checkout_observation_survives_missing_family_inventory(session):
+    session.snapshot['workspace']['repositories'] = []
+    session.snapshot['selected_checkouts'] = {'fixture': {
+        'path': '/selected/linked-checkout', 'head': 'observed', 'clean': False}}
+    context = demand._context(session)
+    assert context['repositories'][0]['path'] == '/selected/linked-checkout'
+    assert context['repositories'][0]['head'] == 'observed'
+    assert context['repositories_missing_selected'] == 0
+    assert context['repositories'][0]['dirty'] is True

@@ -1,0 +1,29 @@
+{
+  "name": "ambient-demand-authoritative-validation",
+  "working_checkout": "current",
+  "workspace_scope": {
+    "kind": "workspace",
+    "repositories": [
+      "mncs-environment",
+      "mncs-control-mcp",
+      "mncs-language",
+      "mncs-stdlib"
+    ]
+  },
+  "intent": {
+    "goal": "Validate published capture and authoritative request-to-result observation for this development task",
+    "repositories": [
+      "mncs-environment",
+      "mncs-control-mcp"
+    ],
+    "constraints": [
+      "Read-only tooling dependencies; preserve all foreign work; no learned operation control"
+    ]
+  },
+  "execution_roles": {
+    "reference": {
+      "capability": "mncs-language:cli-toolchain",
+      "use_reference_toolchain": true
+    }
+  }
+}

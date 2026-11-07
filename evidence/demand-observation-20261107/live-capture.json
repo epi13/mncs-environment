@@ -1,0 +1,70 @@
+{
+  "schema_version": "mncs.environment.live-capture-observation/1",
+  "observed_at": "2026-11-07 15:42:41 UTC",
+  "source_tools": [
+    "MNCS Control terminal_jobs",
+    "MNCS Control terminal_output"
+  ],
+  "job_count": 100,
+  "capture_status_counts": {
+    "unknown": 100
+  },
+  "job_id": "term-2406e128ff82350dc8277363",
+  "output_capture": {
+    "schema_version": "mncs.control.output-capture/1",
+    "retention": "bounded-memory-only",
+    "lifecycle": "unknown",
+    "process_complete": true,
+    "stdout": {
+      "status": "unknown",
+      "available": false,
+      "start_offset": null,
+      "end_offset": null,
+      "retained_bytes": null,
+      "limit_bytes": null
+    },
+    "stderr": {
+      "status": "unknown",
+      "available": false,
+      "start_offset": null,
+      "end_offset": null,
+      "retained_bytes": null,
+      "limit_bytes": null
+    }
+  },
+  "output": {
+    "stdout_bytes": 0,
+    "stderr_bytes": 0,
+    "stdout_next_offset": 0,
+    "stderr_next_offset": 0,
+    "output_truncated": false,
+    "output_capture": {
+      "schema_version": "mncs.control.output-capture/1",
+      "retention": "bounded-memory-only",
+      "lifecycle": "unknown",
+      "process_complete": true,
+      "stdout": {
+        "status": "unknown",
+        "available": false,
+        "start_offset": null,
+        "end_offset": null,
+        "retained_bytes": null,
+        "limit_bytes": null
+      },
+      "stderr": {
+        "status": "unknown",
+        "available": false,
+        "start_offset": null,
+        "end_offset": null,
+        "retained_bytes": null,
+        "limit_bytes": null
+      }
+    }
+  },
+  "limits": [
+    "Read-only current tool observation; no service build identity was independently attested.",
+    "All 100 retained records report legacy unknown; no historical diagnostics recovered or inferred.",
+    "Commands and retained terminal contents are omitted from this evidence excerpt.",
+    "No productivity or burden reduction is established."
+  ]
+}

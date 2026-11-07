@@ -1,0 +1,1626 @@
+[
+  {
+    "record": {
+      "fields": {
+        "demand": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 118
+                }
+              },
+              {
+                "byte": {
+                  "value": 116
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              }
+            ]
+          }
+        },
+        "binding": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 112
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              }
+            ]
+          }
+        },
+        "start_demand": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 118
+                }
+              },
+              {
+                "byte": {
+                  "value": 116
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              }
+            ]
+          }
+        },
+        "end_demand": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 118
+                }
+              },
+              {
+                "byte": {
+                  "value": 116
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              }
+            ]
+          }
+        },
+        "start_binding": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 112
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              }
+            ]
+          }
+        },
+        "end_binding": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 112
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              },
+              {
+                "byte": {
+                  "value": 98
+                }
+              }
+            ]
+          }
+        },
+        "start_request": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 114
+                }
+              },
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 113
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              }
+            ]
+          }
+        },
+        "end_request": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 114
+                }
+              },
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 113
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              }
+            ]
+          }
+        },
+        "result_demand": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 118
+                }
+              },
+              {
+                "byte": {
+                  "value": 116
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              },
+              {
+                "byte": {
+                  "value": 97
+                }
+              }
+            ]
+          }
+        },
+        "result_request": {
+          "sequence": {
+            "values": [
+              {
+                "byte": {
+                  "value": 114
+                }
+              },
+              {
+                "byte": {
+                  "value": 101
+                }
+              },
+              {
+                "byte": {
+                  "value": 113
+                }
+              },
+              {
+                "byte": {
+                  "value": 95
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              },
+              {
+                "byte": {
+                  "value": 99
+                }
+              }
+            ]
+          }
+        },
+        "demand_sequence": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 1
+          }
+        },
+        "start_sequence": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 2
+          }
+        },
+        "end_sequence": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 3
+          }
+        },
+        "result_sequence": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 4
+          }
+        },
+        "starts": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 1
+          }
+        },
+        "completions": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 1
+          }
+        },
+        "results": {
+          "integer": {
+            "type": {
+              "bits": 64,
+              "signed": false
+            },
+            "value": 1
+          }
+        },
+        "context_present": {
+          "boolean": {
+            "value": true
+          }
+        },
+        "context_complete": {
+          "boolean": {
+            "value": true
+          }
+        },
+        "observed_result": {
+          "boolean": {
+            "value": true
+          }
+        }
+      }
+    }
+  }
+]

@@ -6489,10 +6489,15 @@ class Session:
                                        refused=isinstance(error, AuthorityDenied))
                 self._refresh_feed_baseline()
                 raise
-            finished = demand_module.finished(self, opportunity, result)
-            self._refresh_feed_baseline()
+            # Normal completion already has an immutable owner event. Reuse it
+            # instead of publishing a redundant per-request finish record.
+            finish_reference = result.get("completion_reference")
+            if not isinstance(finish_reference, dict):
+                finished = demand_module.finished(self, opportunity, result)
+                finish_reference = demand_module.ref(finished)
+                self._refresh_feed_baseline()
             result["demand_reference"] = demand_module.ref(opportunity)
-            result["demand_finish_reference"] = demand_module.ref(finished)
+            result["demand_finish_reference"] = finish_reference
             return result
 
     def _invoke(

@@ -1,0 +1,28 @@
+{
+  "acquired_at": "2026-11-07T15:28:06+00:00",
+  "basis": "explicit-claim",
+  "claim_id": "claim:mncs-control-mcp:worktree:d5b6533e66a1",
+  "consumer_id": "codex-ambient-validation-20261107",
+  "expires_at": "2026-11-08T15:28:06+00:00",
+  "identity": "clm_e04835625b8623f7",
+  "provenance": {
+    "acquired_by": "codex-ambient-validation-20261107"
+  },
+  "reason": "declared-whole-project-test-verification",
+  "repository": "mncs-control-mcp",
+  "schema_version": "mncs.environment.workspace-claim/2",
+  "scope": {
+    "branch": "main",
+    "checkout": "/home/epi13/Documents/Projects/mncs-control-mcp",
+    "checkout_identity": "checkout:3dda6d0cbc2787f3",
+    "exclusive": false,
+    "git_common_directory_identity": "git-common:fef6e1d62624de2b",
+    "kind": "worktree",
+    "manifest_identity": "6d702354fc32aafe",
+    "paths": null,
+    "repository": "mncs-control-mcp"
+  },
+  "session_id": "ses_ceab707839e80ef4",
+  "status": "held",
+  "version": 1
+}

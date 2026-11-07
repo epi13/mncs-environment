@@ -1,0 +1,27 @@
+{
+  "action": "write",
+  "binding_id": null,
+  "capability": "mncs-control-mcp:test/control-mcp-tests",
+  "coordination_status": "own-claim-does-not-cover-requested-scope",
+  "demand_finish_reference": {
+    "identity": "evt_b846ed5a022e0e03",
+    "sequence": 54,
+    "type": "demand.finished"
+  },
+  "demand_reference": {
+    "identity": "evt_af7567705cf81f99",
+    "sequence": 52,
+    "type": "demand.observed"
+  },
+  "event_reference": {
+    "identity": "evt_30594228903dfad2",
+    "sequence": 53,
+    "type": "authority.coordination-deferred"
+  },
+  "next_step": "narrow-operation-scope-or-extend-own-claim",
+  "returncode": null,
+  "status": "deferred-coordination",
+  "stderr": "nothing executed: the current claim covers 6 repo-relative path(s), while this preflight requests the whole worktree; narrow the requested paths or extend the same session's claim",
+  "stdout": "",
+  "truncated": false
+}

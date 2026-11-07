@@ -12,13 +12,16 @@ The canonical request loop extends existing session events and Store evidence:
    references, bounded source interface, valid parent RPC request ID if present,
    and the snapshot sequence known before admission.
 2. A bounded immutable `decision-context` record preserves the last owner-observed
-   bindings, repository observations, authority revision and rights-input digest.
+   bindings, selected checkout observations, authority revision and rights-input digest.
    Repeated unchanged contexts reuse their content-derived Store reference.
    File-debug sessions embed the same bounded projection in the event log.
 3. Existing `capability.invoked` and `invocation.completed` events carry the exact
    demand-event reference and provider request identity. They retain their existing
    admission, checkout-lease, failure and capture semantics.
-4. A finish observation separates result preparation/refusal from agent receipt.
+4. Normal requests reuse that completion event as their finish reference. Only
+   refusal, exception or deferred nonexecution needs a separate `demand.finished`
+   observation, including an available admission-event reference. Provider completion
+   and result availability never imply agent receipt.
 5. Existing verification records publish their immutable evidence before emitting
    the corresponding verification event. The event points to that exact evidence
    digest and carries the selected operation/demand references. Verifier semantics,
@@ -36,7 +39,10 @@ feed so they are not mistaken for external work.
 The capability set describes what Environment had recorded at request time. It
 is not a live permissions certificate or a historical reconstruction from today's
 bindings. Repository HEAD/branch/dirty observations and selected checkout identity
-remain scoped observations, not proof of every dirty byte. Snapshot update time
+remain scoped observations, not proof of every dirty byte. Selected checkout
+observations are taken from the existing selection record, including linked
+worktrees absent from family discovery. Other discovered worktrees are explicitly
+outside this repository scope, not silently counted as omitted selected state. Snapshot update time
 is not necessarily the age of each provider observation. Freshness is explicitly
 last-owner-observation, not a new TTL or live admission verdict.
 
@@ -104,3 +110,17 @@ established by this implementation. The next empirical step is ordinary request,
 delivery/use and independently verified task outcomes at an explicitly named
 residual boundary, compared with the strongest deterministic service. Independent
 verification and legitimate retries must not be counted as redundant work.
+
+The scoped validation profile `.mncs/demand-observation.environment.json` selects
+Control and Environment plus read-only Language/Stdlib dependencies. From an
+isolated linked checkout, use the registered family root explicitly:
+
+```bash
+./scripts/mncs-env enter --definition .mncs/demand-observation.environment.json \
+  --workspace /absolute/path/to/Projects --consumer validation-consumer
+```
+
+Declared whole-project test effects on shared main still require their exact
+claim scope. This profile does not bypass those checks or reconcile an entire
+family of services. See [execution evidence](DEMAND_OBSERVATION_EVIDENCE.md) for
+the authentic validation workflow, resource costs and remaining verification gap.

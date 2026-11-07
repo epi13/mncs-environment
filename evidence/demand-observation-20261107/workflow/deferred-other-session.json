@@ -1,0 +1,27 @@
+{
+  "action": "write",
+  "binding_id": null,
+  "capability": "mncs-control-mcp:test/control-mcp-tests",
+  "coordination_status": "overlapping-scope-conflict",
+  "demand_finish_reference": {
+    "identity": "evt_a37041e9254aacfc",
+    "sequence": 50,
+    "type": "demand.finished"
+  },
+  "demand_reference": {
+    "identity": "evt_edeff6993630e50b",
+    "sequence": 48,
+    "type": "demand.observed"
+  },
+  "event_reference": {
+    "identity": "evt_be34948631e15918",
+    "sequence": 49,
+    "type": "authority.coordination-deferred"
+  },
+  "next_step": "select-or-create-an-isolated-worktree",
+  "returncode": null,
+  "status": "deferred-coordination",
+  "stderr": "nothing executed: mncs-control-mcp overlaps scope claimed by another session (ses_b84411e99d03e199): same checkout with overlapping paths",
+  "stdout": "",
+  "truncated": false
+}

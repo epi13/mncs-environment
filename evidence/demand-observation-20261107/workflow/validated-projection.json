@@ -1,0 +1,585 @@
+{
+  "activity_section": "demand",
+  "content_digest": "227340a4d7f84265edcf560ec98e7db8",
+  "detail_status": "section-focused",
+  "measurement_limits": [
+    "Session evidence is limited to the selected bounded event page and recorded provider artifacts.",
+    "Host resource samples describe host state at capture time; they are not agent-attributed consumption and do not establish pressure or causation.",
+    "Unavailable historical context remains unavailable; current session context is not retroactive attribution."
+  ],
+  "schema_version": "mncs.environment.session-activity-projection/1",
+  "session_activity": {
+    "context": {
+      "campaign_id": "cmp_966ffd5d5d40deb0",
+      "definition_id": "env_6a603dad26effdb4",
+      "environment_id": "renv_35f3d61eb7f9589e",
+      "session_id": "ses_ceab707839e80ef4",
+      "work_intent_goal": "Validate published capture and authoritative request-to-result observation for this development task",
+      "work_intent_id": "int_cf5e29f9f186a9c0"
+    },
+    "decision_opportunities": {
+      "agent_burden": "not-measured",
+      "avoided_work": "not-established",
+      "context_bytes": 11565,
+      "context_records_omitted": 0,
+      "contexts": {
+        "4cb47d8c5bbe659492f7982ba525f16f432977077e3f9036243d584516553e57": {
+          "authority_revision": null,
+          "bindings": [
+            {
+              "availability": "unknown",
+              "binding_id": "cap_2e2b79d256722187",
+              "capability": "mncs-control-mcp:environment.campaign-continuation",
+              "contract_revision": "1",
+              "provider": "mncs-control-mcp"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_9571e18bf1ce8618",
+              "capability": "mncs-control-mcp:journal-context",
+              "contract_revision": "1",
+              "provider": "mncs-control-mcp"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_e10bf6052b85f8ab",
+              "capability": "mncs-control-mcp:test/control-mcp-tests",
+              "contract_revision": "c288fdef3013a70c",
+              "provider": "mncs-control-mcp"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_1b51c7104ddb2480",
+              "capability": "mncs-control-mcp:workspace.worktree.prepare",
+              "contract_revision": "1",
+              "provider": "mncs-control-mcp"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_bce1ed9579aa6fe9",
+              "capability": "mncs-environment:ambient-projection-coherence",
+              "contract_revision": "2",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_68b98adbd7ade487",
+              "capability": "mncs-environment:campaign-state-inspection",
+              "contract_revision": "2",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_e4c6d2d42e0c6c43",
+              "capability": "mncs-environment:projection-evidence-inspection",
+              "contract_revision": "2",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_119c8621002666ce",
+              "capability": "mncs-environment:test/environment-incremental-coherence",
+              "contract_revision": "929abf1d19d7b382",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_ccb1d96d31f0b67a",
+              "capability": "mncs-environment:test/environment-unit-tests",
+              "contract_revision": "8e0de6981d96005f",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_2384a185a089e343",
+              "capability": "mncs-environment:test/environment-worktree-claim-paths",
+              "contract_revision": "c9ca6ef3ef5aeaa7",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_e874ce428a316588",
+              "capability": "mncs-environment:test/selected-toolchain-binding",
+              "contract_revision": "8aa25673618b8c82",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_f35efdc9d7667c45",
+              "capability": "mncs-environment:workspace-discovery",
+              "contract_revision": "1",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_b9bb55f2ab1f3ebf",
+              "capability": "mncs-environment:workspace-readiness",
+              "contract_revision": "1",
+              "provider": "mncs-environment"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_711a08255c2ca5ea",
+              "capability": "mncs-language:capability-index",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_7d583dacd11a8286",
+              "capability": "mncs-language:cli-toolchain",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_5682b3204519c2fb",
+              "capability": "mncs-language:compiler-inventory",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_57f9877354faf3da",
+              "capability": "mncs-language:compiler-runtime",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_6a7398f82d5354e1",
+              "capability": "mncs-language:core-standard-library",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_759d5c2762433b0f",
+              "capability": "mncs-language:reference-build",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_e103e53d7db3da16",
+              "capability": "mncs-language:reference-runtime",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_c82a465d23ca9844",
+              "capability": "mncs-language:semantic-identity",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_3f3aca33cc933fa5",
+              "capability": "mncs-language:source-profile",
+              "contract_revision": "0.18",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_787a9613d95dc3dd",
+              "capability": "mncs-language:test/capability-index-generation",
+              "contract_revision": "d1a88bac2254233d",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_f2cb2761fedb60d2",
+              "capability": "mncs-language:test/language-tests-mncs-cli",
+              "contract_revision": "f9dee4e8240b27e4",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_bd0d2bbe193b6f70",
+              "capability": "mncs-language:test/language-tests-mncs-codegen",
+              "contract_revision": "b829e61964f69ec5",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_08888560a7a1d237",
+              "capability": "mncs-language:test/language-tests-mncs-compiler",
+              "contract_revision": "19771c079f82fb85",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_3287d8b78e127437",
+              "capability": "mncs-language:test/language-tests-mncs-conformance",
+              "contract_revision": "23722d106c1b80fc",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_561ff94c39b888ed",
+              "capability": "mncs-language:test/language-tests-mncs-embed",
+              "contract_revision": "7581a6ae55f94694",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_8111e0c4e13f8383",
+              "capability": "mncs-language:test/language-tests-mncs-model",
+              "contract_revision": "ecb803d6b90bced3",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_3f20e3a7e5725b69",
+              "capability": "mncs-language:test/language-tests-mncs-syntax",
+              "contract_revision": "6b87ad00ebb989c1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_07a23c329456ee6f",
+              "capability": "mncs-language:test/language-tests-mncs-translation-check",
+              "contract_revision": "bf86f203f53b2032",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_ce243708b2acec2c",
+              "capability": "mncs.cli-toolchain/1",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_89739a4acb9588ee",
+              "capability": "mncs.compiler.test-inventory/1",
+              "contract_revision": "0.18",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_1b39281feae3e2e1",
+              "capability": "mncs.execution-observation/1",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_6fedf552e17cc3ae",
+              "capability": "mncs.semantic-impact-classification/1",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_4b8314d017bdfb40",
+              "capability": "mncs.semantic-impact/1",
+              "contract_revision": "1",
+              "provider": "mncs-language"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_ed2c5c05edbb5bf0",
+              "capability": "mncs-stdlib:stdlib-bundle",
+              "contract_revision": "1",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_613cd903b5a84fcc",
+              "capability": "mncs-stdlib:stdlib-manifest",
+              "contract_revision": "1",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_a178a686862dd782",
+              "capability": "mncs-stdlib:stdlib-source",
+              "contract_revision": "1",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_a606f7cc6fdbb5f3",
+              "capability": "mncs-stdlib:test/stdlib-integrity",
+              "contract_revision": "684aa1e9271c6542",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_6a04e530bcb69d72",
+              "capability": "mncs-stdlib:test/stdlib-toolchain",
+              "contract_revision": "8f6417e316a87508",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_eba7710d0b445fc8",
+              "capability": "mncs-stdlib:verification-executor/mncs-stdlib.manifest-freshness",
+              "contract_revision": "416f917c6ce0fbb0",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_3dfe4c0bf783b4a7",
+              "capability": "mncs.stdlib-bundle/1",
+              "contract_revision": "1",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_dffcbc66ddf5abe6",
+              "capability": "mncs.stdlib-manifest/1",
+              "contract_revision": "1",
+              "provider": "mncs-stdlib"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_2d76de021e79ca4c",
+              "capability": "mncs-automation:automation-reconciliation",
+              "contract_revision": "1",
+              "provider": "mncs-automation"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_7c8986176bd168f9",
+              "capability": "mncs-automation:coherence-routing",
+              "contract_revision": "1",
+              "provider": "mncs-automation"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_557d7adc92b34c7f",
+              "capability": "mncs-commons:family-change",
+              "contract_revision": "1",
+              "provider": "mncs-commons"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_7dce14e3aa9fcab1",
+              "capability": "mncs-doc:documentation-projection",
+              "contract_revision": "1",
+              "provider": "mncs-doc"
+            },
+            {
+              "availability": "available",
+              "binding_id": "cap_95eabb0251840162",
+              "capability": "mncs-doctor:projection-health",
+              "contract_revision": "1",
+              "provider": "mncs-doctor"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_26c357b3123c0a63",
+              "capability": "mncs-store:binding-observation",
+              "contract_revision": "1",
+              "provider": "mncs-store"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_79523abc548d45f5",
+              "capability": "mncs-store:commit-feed",
+              "contract_revision": "1",
+              "provider": "mncs-store"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_c0008d452280dcb0",
+              "capability": "mncs-store:persistent-object",
+              "contract_revision": "1",
+              "provider": "mncs-store"
+            },
+            {
+              "availability": "unknown",
+              "binding_id": "cap_3cbd96327013db67",
+              "capability": "mncs-store:projection-state",
+              "contract_revision": "1",
+              "provider": "mncs-store"
+            }
+          ],
+          "bindings_omitted": 0,
+          "campaign_id": "cmp_966ffd5d5d40deb0",
+          "environment_id": "renv_35f3d61eb7f9589e",
+          "freshness": "last-owner-observation; not-a-live-admission-check",
+          "readiness": "not-recorded",
+          "repositories": [
+            {
+              "branch": "main",
+              "dirty": true,
+              "head": "bce6941ddacd1c5c8934538c3e0b92616af2f604",
+              "manifest_repository": "mncs-control-mcp",
+              "name": "mncs-control-mcp",
+              "observed_facts": {
+                "branch": "main",
+                "clean": false,
+                "dirty_path_count": 1,
+                "dirty_paths_digest": "62ae71e7a8f698d7",
+                "dirty_truncated": false,
+                "head": "bce6941ddacd1c5c8934538c3e0b92616af2f604",
+                "missing": false
+              },
+              "path": "/home/epi13/Documents/Projects/mncs-control-mcp",
+              "selected_identity": null
+            },
+            {
+              "branch": "ambient-demand-implementation-20261107",
+              "dirty": true,
+              "head": "62235cd4c2ed0456a4dab4232fcd624171a1baec",
+              "manifest_repository": "mncs-environment",
+              "name": "mncs-environment",
+              "observed_facts": {
+                "branch": "ambient-demand-implementation-20261107",
+                "clean": false,
+                "dirty_path_count": null,
+                "dirty_paths_digest": null,
+                "dirty_truncated": false,
+                "head": "62235cd4c2ed0456a4dab4232fcd624171a1baec",
+                "missing": true
+              },
+              "path": "/home/epi13/Documents/Projects/.worktrees/ambient-demand-loop/implementation/mncs-environment",
+              "selected_identity": "checkout:c40e65c9df9f6e2c"
+            },
+            {
+              "branch": "main",
+              "dirty": true,
+              "head": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+              "manifest_repository": "mncs-language",
+              "name": "mncs-language",
+              "observed_facts": {
+                "branch": "main",
+                "clean": false,
+                "dirty_path_count": 2,
+                "dirty_paths_digest": "9054b1a2ea08db0c",
+                "dirty_truncated": false,
+                "head": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+                "missing": false
+              },
+              "path": "/home/epi13/Documents/Projects/mncs-language",
+              "selected_identity": null
+            },
+            {
+              "branch": "main",
+              "dirty": true,
+              "head": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff",
+              "manifest_repository": "mncs-stdlib",
+              "name": "mncs-stdlib",
+              "observed_facts": {
+                "branch": "main",
+                "clean": false,
+                "dirty_path_count": 2,
+                "dirty_paths_digest": "0115971885b89704",
+                "dirty_truncated": false,
+                "head": "7f1d3bae9ab676c45b73811cdb2e5827658c69ff",
+                "missing": false
+              },
+              "path": "/home/epi13/Documents/Projects/mncs-stdlib",
+              "selected_identity": null
+            }
+          ],
+          "repositories_missing_selected": 0,
+          "repositories_omitted": 0,
+          "repositories_outside_scope": 112,
+          "repository_scope": "selected-checkouts",
+          "rights_inputs_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "schema_version": "mncs.environment.decision-context/1",
+          "session_id": "ses_ceab707839e80ef4",
+          "work_intent_id": "int_cf5e29f9f186a9c0"
+        }
+      },
+      "eligible_need_denominator": null,
+      "fulfillment": "not-established",
+      "orphan_observation_count": 0,
+      "recorded_demand_count": 1,
+      "records": [
+        {
+          "agent_receipt": "not-established",
+          "completion_events": [
+            {
+              "identity": "evt_7c5ca99b9097e982",
+              "sequence": 76,
+              "type": "invocation.completed"
+            }
+          ],
+          "context_digest": "4cb47d8c5bbe659492f7982ba525f16f432977077e3f9036243d584516553e57",
+          "context_status": "integrity-verified",
+          "correlation": {
+            "operation_matched": true,
+            "reason": 0,
+            "verification_linked": false
+          },
+          "demand_event": {
+            "identity": "evt_2b6ae327112ed979",
+            "sequence": 74,
+            "type": "demand.observed"
+          },
+          "finish_events": [],
+          "invocation_events": [
+            {
+              "identity": "evt_ddb3fc6efd3ebcdf",
+              "sequence": 75,
+              "type": "capability.invoked"
+            }
+          ],
+          "operation_status": "ok",
+          "output_capture": {
+            "limit_bytes": 32768,
+            "status": "complete"
+          },
+          "request": {
+            "actor_kind": "agent",
+            "ambient_owner_pass": null,
+            "capability": "mncs-control-mcp:test/control-mcp-tests",
+            "context_bytes": 11565,
+            "context_digest": "4cb47d8c5bbe659492f7982ba525f16f432977077e3f9036243d584516553e57",
+            "context_reference": "mncs-store:ses_ceab707839e80ef4:decision-context:4cb47d8c5bbe659492f7982ba525f16f432977077e3f9036243d584516553e57",
+            "context_status": "recorded",
+            "observation_wall_ns": 69174365,
+            "parent_request_id": null,
+            "request_surface": "mncs-env-invoke-cli",
+            "snapshot_sequence": 74,
+            "snapshot_updated_at": "2026-11-07T15:36:48+00:00"
+          },
+          "usefulness": "not-established",
+          "verification_events": []
+        }
+      ],
+      "records_omitted": 0,
+      "schema_version": "mncs.environment.decision-opportunities/1",
+      "scope": "Environment-bound capability requests in selected event window; not every agent decision",
+      "status": "native-projected"
+    },
+    "detail_status": "section-focused",
+    "measurement_limits": [
+      "Capability interactions cover Environment-bound invocations; direct external tools are outside this session event view.",
+      "Control read-operation events contain bounded operation and outcome fields, never raw arguments or responses.",
+      "Control read-operation repository branch/head fields come from the authenticated session-selected checkout; this projection does not re-probe Git at each operation.",
+      "Model identity, token usage, execution duration, and resource consumption are not inferred when the runtime does not expose them.",
+      "The Store page reader verifies only selected event payloads; finding their bindings still scans the generation's metadata index.",
+      "Resource samples are bounded aggregate host snapshots linked to Environment invocations; they do not measure agent-attributed consumption or establish pressure by themselves."
+    ],
+    "source": {
+      "event_count": 76,
+      "event_page_before_sequence": 77,
+      "event_page_has_older_records": true,
+      "event_page_scoped": true,
+      "event_window_limit": 3,
+      "event_window_sequence_end": 76,
+      "event_window_sequence_start": 74,
+      "event_window_truncated": true,
+      "next_event_before_sequence": 74,
+      "resource_sample_identity_digest": "4f53cda18c2baa0c",
+      "verification_activity_digest": "832b5090859e013b"
+    },
+    "status": "partial"
+  },
+  "status": "partial",
+  "subject": {
+    "campaign_id": "cmp_966ffd5d5d40deb0",
+    "definition_id": "env_6a603dad26effdb4",
+    "environment_id": "renv_35f3d61eb7f9589e",
+    "session_id": "ses_ceab707839e80ef4",
+    "work_intent_goal": "Validate published capture and authoritative request-to-result observation for this development task",
+    "work_intent_id": "int_cf5e29f9f186a9c0"
+  }
+}

@@ -1,19 +1,19 @@
 {
   "schema_version": "mncs.environment.demand-observation-proof/1",
   "origin": "controlled mechanical fixture, not naturally occurring agent behavior",
-  "tested_parent": "159618f8ed04d193b986041a8fca38ad9c3bf1df",
+  "tested_parent": "62235cd4c2ed0456a4dab4232fcd624171a1baec",
   "source_sha256": {
-    "mncs_env/demand.py": "41863d065c9be036a62273cc90ac4fd7741d42faf3eaa5a85efdbad21a5c6893",
-    "mncs_env/sessions.py": "e1cc1c3185f303fdee322e1de98a1310a6ae842b038ff16545478cec0d00c17b",
+    "mncs_env/demand.py": "83a73e40d42a2138866adec0f550868ddfa58ee531dfcef0bea8c335b017e85b",
+    "mncs_env/sessions.py": "430b9e1f4360b48cd64348cd402bded0c279019989bf19aa1374ce85295d7a9c",
     "mncs_env/verification.py": "b4b40d9c9988c49b5e10024c2ce25b79fbb7120707f3f517a06aa02d10f0305c",
     "mncs_env/events.py": "3eb17e7a85a85f4e2ba2fde9e514bfa49219d641573b5253db2e56298ab6b6c3",
-    "mncs_env/capability_intelligence.py": "b8fc7af7e324d2ef10717498d7b16cb3fc46a577f3f25eac3c52e2404315ba45",
+    "mncs_env/capability_intelligence.py": "17b6d298a8f75ef5efd5d84b13642fbcaa96b78e82e4a61e25d1a031e123e149",
     "mncs_env/cli.py": "ba56d9d2cc6f9323ddce54893b0df8b4ebf394d94b5c197f9378f5fcff74f535",
     "native/mncs/environment/demand_correlation_v1.mncs": "5c2c9e6f5eedb3079045e2db44a7e14f6e07d9c31842fc76207a48d4a5949812",
     "native-applications/demand-correlation.json": "998d76ec001460a2da86cacb8d97a2ae6d297ffd1ae4d8986777b90f564dcd9b",
     "tests/native/demand.mncs": "b72ba8c3f3a1fee2c7997df6894a114443327bfc03438631fc1db1bf0e4395cc",
-    "tests/test_demand.py": "87a1246e05ced8a005c419636a98b0b31300cc7ccb889fc216c9d9061f82232c",
-    "scripts/demand_proof.py": "b5fac79209ac686ae0e6221f69c674dfaa0b51f9c6109523dbde46da898ecff8"
+    "tests/test_demand.py": "b2068a57379743ad4cad4a9276376c75c9081e913888094fbbc2ac53bdce0164",
+    "scripts/demand_proof.py": "49f3f7a4a9a8b377b609fe8d82f6f991ed51d5f9700a8f14e094ed8b6d81f387"
   },
   "compiler_binary_sha256": "129ef764bd56f6a3e05ee19631c46c044217590d537d52ee1c62b0fba335d7ae",
   "native_result_sha256": "7791aad74da629e26652591701e84e7f29a7d636dc93e772989b523a0e2ef516",
@@ -63,13 +63,13 @@
       "instrumented": false,
       "calls": 5,
       "wall_ns": [
-        1857377,
-        2064146,
-        1704341,
-        1826375,
-        1999210
+        1806186,
+        1810397,
+        1890716,
+        1868638,
+        2245131
       ],
-      "median_wall_ns": 1857377,
+      "median_wall_ns": 1868638,
       "events_added": 10,
       "new_event_json_bytes": 6357,
       "state_file_bytes_growth": 10675,
@@ -82,30 +82,30 @@
       "instrumented": true,
       "calls": 5,
       "wall_ns": [
-        2370523,
-        2295152,
-        2556924,
-        2916565,
-        2989669
+        2155765,
+        2212030,
+        2266546,
+        2699601,
+        2606155
       ],
-      "median_wall_ns": 2556924,
-      "events_added": 20,
-      "new_event_json_bytes": 16429,
-      "state_file_bytes_growth": 21377,
+      "median_wall_ns": 2266546,
+      "events_added": 15,
+      "new_event_json_bytes": 14029,
+      "state_file_bytes_growth": 18817,
       "context_bytes_per_request": [
-        607,
-        607,
-        607,
-        607,
-        607
+        712,
+        712,
+        712,
+        712,
+        712
       ],
       "distinct_context_references": null,
       "observation_pre_emit_wall_ns": [
-        186032,
-        61041,
-        53142,
-        54116,
-        55794
+        243364,
+        80294,
+        62001,
+        60656,
+        62882
       ]
     },
     {
@@ -113,13 +113,13 @@
       "instrumented": false,
       "calls": 5,
       "wall_ns": [
-        225251694,
-        225470755,
-        226712203,
-        223541622,
-        233946837
+        216660862,
+        227769880,
+        215577175,
+        216353586,
+        221450181
       ],
-      "median_wall_ns": 225470755,
+      "median_wall_ns": 216660862,
       "events_added": 10,
       "new_event_json_bytes": 6357,
       "state_file_bytes_growth": 76783,
@@ -132,34 +132,38 @@
       "instrumented": true,
       "calls": 5,
       "wall_ns": [
-        447596332,
-        383204026,
-        379057534,
-        378008664,
-        391672790
+        392297148,
+        323539625,
+        309080741,
+        310427453,
+        319867153
       ],
-      "median_wall_ns": 383204026,
-      "events_added": 20,
-      "new_event_json_bytes": 13869,
-      "state_file_bytes_growth": 92518,
+      "median_wall_ns": 319867153,
+      "events_added": 15,
+      "new_event_json_bytes": 10944,
+      "state_file_bytes_growth": 86339,
       "context_bytes_per_request": [
-        607,
-        607,
-        607,
-        607,
-        607
+        712,
+        712,
+        712,
+        712,
+        712
       ],
       "distinct_context_references": 1,
       "observation_pre_emit_wall_ns": [
-        80930938,
-        6629735,
-        7073900,
-        6935497,
-        7336052
+        87192063,
+        7150649,
+        7729334,
+        7012003,
+        7134421
       ]
     }
   ],
-  "native_view_sha256": "79625ead53343407e795dc2ab1b16f914f9007631d0d1971f2c10f7225743fc4",
+  "pure_join_vm_steps": 2442,
+  "pure_join_arguments_sha256": "6e09ca7957a2f5b7b288f6daa21197828517606e337d243e52ee99f8360fe416",
+  "pure_join_result_sha256": "5be2406b0dad976a9e562e8ec3d5b05aaade7c0d6e2277753febd6954bea3ecb",
+  "pure_join_scope": "native kernel only; excludes event lookup, evidence reads, context capture and structured JSON application transport",
+  "native_view_sha256": "a6a9d6062d56dcea78cb3dd94847daf2d9db4bf7f42dddf5813b5edcb9829784",
   "limitations": [
     "Five sequential samples per treatment; not randomized and not a latency distribution.",
     "Wall time covers the full existing admission/provider/persistence path; not agent reasoning time.",

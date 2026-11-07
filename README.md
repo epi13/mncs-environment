@@ -380,3 +380,10 @@ Memory integration, and deeper compiler/Forge artifact propagation as owning
 repositories publish the needed contracts (see pressures).
 
 Licensed under Apache-2.0.
+
+Non-ambient bound requests now retain bounded decision-time evidence and exact
+operation references. Inspect them with `mncs-env projections SESSION --interpret
+session-activity --activity-section demand`. Availability, delivered responses,
+verified outcomes and useful work remain separate. See the
+[observation contract](docs/DEMAND_OBSERVATION.md) and
+[measured evidence](docs/DEMAND_OBSERVATION_EVIDENCE.md).

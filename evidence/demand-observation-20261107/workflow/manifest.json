@@ -1,0 +1,86 @@
+{
+  "schema_version": "mncs.environment.demand-workflow-evidence/1",
+  "origin": "This implementation campaign: ordinary verification of the published Control capture fix. Not a productivity cohort or a controlled burden comparison.",
+  "session_id": "ses_ceab707839e80ef4",
+  "earlier_isolated_session": "ses_b84411e99d03e199",
+  "task": "Verify output-capture availability regression cases using the existing Control test capability.",
+  "control_source": "bce6941ddacd1c5c8934538c3e0b92616af2f604",
+  "environment_parent": "62235cd4c2ed0456a4dab4232fcd624171a1baec",
+  "environment_source_sha256": {
+    "mncs_env/demand.py": "83a73e40d42a2138866adec0f550868ddfa58ee531dfcef0bea8c335b017e85b",
+    "mncs_env/sessions.py": "430b9e1f4360b48cd64348cd402bded0c279019989bf19aa1374ce85295d7a9c",
+    "mncs_env/verification.py": "b4b40d9c9988c49b5e10024c2ce25b79fbb7120707f3f517a06aa02d10f0305c",
+    "mncs_env/events.py": "3eb17e7a85a85f4e2ba2fde9e514bfa49219d641573b5253db2e56298ab6b6c3",
+    "mncs_env/capability_intelligence.py": "17b6d298a8f75ef5efd5d84b13642fbcaa96b78e82e4a61e25d1a031e123e149",
+    "mncs_env/cli.py": "ba56d9d2cc6f9323ddce54893b0df8b4ebf394d94b5c197f9378f5fcff74f535",
+    "native/mncs/environment/demand_correlation_v1.mncs": "5c2c9e6f5eedb3079045e2db44a7e14f6e07d9c31842fc76207a48d4a5949812",
+    "native-applications/demand-correlation.json": "998d76ec001460a2da86cacb8d97a2ae6d297ffd1ae4d8986777b90f564dcd9b",
+    "tests/native/demand.mncs": "b72ba8c3f3a1fee2c7997df6894a114443327bfc03438631fc1db1bf0e4395cc",
+    "tests/test_demand.py": "b2068a57379743ad4cad4a9276376c75c9081e913888094fbbc2ac53bdce0164",
+    "scripts/demand_proof.py": "49f3f7a4a9a8b377b609fe8d82f6f991ed51d5f9700a8f14e094ed8b6d81f387"
+  },
+  "request": {
+    "capability": "mncs-control-mcp:test/control-mcp-tests",
+    "args": [
+      "tests/test_capture_availability.py",
+      "--junitxml=/tmp/ambient-demand-authentic-junit-validated.xml"
+    ]
+  },
+  "demand_reference": {
+    "identity": "evt_2b6ae327112ed979",
+    "sequence": 74,
+    "type": "demand.observed"
+  },
+  "provider_request_id": "req_9152cfa8c85ee83174012e02f8151e4db595e9346b943392",
+  "completion_reference": {
+    "identity": "evt_7c5ca99b9097e982",
+    "sequence": 76,
+    "type": "invocation.completed"
+  },
+  "correlation": {
+    "operation_matched": true,
+    "reason": 0,
+    "verification_linked": false
+  },
+  "context": {
+    "bytes": 11565,
+    "status": "integrity-verified",
+    "digest": "4cb47d8c5bbe659492f7982ba525f16f432977077e3f9036243d584516553e57",
+    "repository_scope": "four explicitly selected checkouts; other discovered worktrees excluded"
+  },
+  "native_projection_binary": {
+    "path": "/home/epi13/Documents/Projects/mncs-language/target/release/mncs",
+    "sha256": "cc06a0576e04378131af28a75098895638e322118ab8bb6d3ff7f94c87ca1dcd",
+    "selected_source_revision": "f8212ed8b7478196b5293a84152154be5e0bea3f",
+    "qualification": "Selected binary executed the structured native application. Its independently admitted build origin/compatibility was not established by this workflow."
+  },
+  "observed_outcome": {
+    "process_exit": 0,
+    "pytest_tests": 9,
+    "pytest_failures": 0,
+    "pytest_errors": 0,
+    "junit_role": "Independent pytest runner output captured at the requested path; no trusted MNCS Test verification record published by this capability.",
+    "agent_receipt": "not-independently-established",
+    "task_usefulness": "not-established",
+    "burden_reduction": "not-measured"
+  },
+  "limits": [
+    "Not a complete agent activity trace; direct local-shell operations and the initial CLI argument parse failure did not create Session.invoke demand records.",
+    "The isolated workspace-root refusal had no provider execution; its exception is not a diagnosis or a result.",
+    "The first recorded deferrals predate explicit finish.admission_reference support. Their invocation responses preserve authority event references; the historical finish events were not backfilled.",
+    "Earlier large-family contexts remain incomplete and native-unmatched. Current state was not substituted.",
+    "Repeated executions here verify contract fixes during development; they are not independent empirical utility examples.",
+    "No counterfactual time, token saving, redundant work, fulfilled need denominator or learned advantage is inferred."
+  ],
+  "files_sha256": {
+    "claim-transfer.json": "c715ebc9c7466994413f5e5c93aebc8c86ad7342cca2d63c4b91bb041488d7e7",
+    "deferred-other-session.json": "37c0a2d7f0be61e05cc6b9abb33cbf416a71bf2047df4eedb4c7435a6c349a4c",
+    "deferred-scope.json": "b00c0532982f71fe07f351b30823938ced9368c9ccd5b3c1a6569a2b0b259112",
+    "first-completed-invocation.json": "82d3cb52668afb084eb07ca46936841cc4eb377df991bcd5047adee8a4fa3394",
+    "initial-projection.json": "7ef8c87465ad141748639894c18d90b4686567dd34d61174a9b390ec8d5db248",
+    "pytest-junit.xml": "2a95c84d86282f101f93f5e7113f16bbd7c24f3c64a79cea6d3383334684c414",
+    "validated-invocation.json": "ea876dc00ee9c339d61311418ced4230a4505216c2744e3653d1d4ec0fa14209",
+    "validated-projection.json": "f843b704a6f1f255ee03f0b4f5172940418413a6e531cbad9812834556acdceb",
+    "verification-scope-claim.json": "97790a18463cdcecff0a5a4b3ef0d43e8f35706e1bff3e392556b10e54187d92"
+  }
+}

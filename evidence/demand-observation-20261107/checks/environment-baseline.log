@@ -1,0 +1,97 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 16%]
+........................................................................ [ 21%]
+........................................................................ [ 26%]
+........................................................................ [ 32%]
+..........................................F.......FFF................... [ 37%]
+........................................................................ [ 42%]
+........................................................................ [ 48%]
+........................................................................ [ 53%]
+........................................................................ [ 58%]
+........................................................................ [ 64%]
+........................................ssssssssssssssssssssss.......... [ 69%]
+........s..............sss.sssssss.sssss.ss..sss........................ [ 74%]
+...........................................sssssssssssssssssssssssssssss [ 80%]
+ssssss............sss................................................... [ 85%]
+........................................................................ [ 90%]
+............................................................s........... [ 96%]
+.....................................................                    [100%]
+=================================== FAILURES ===================================
+___________ EpochTests.test_epoch_hit_does_not_write_a_resume_marker ___________
+
+self = <test_doctor.EpochTests testMethod=test_epoch_hit_does_not_write_a_resume_marker>
+
+    def test_epoch_hit_does_not_write_a_resume_marker(self):
+        self.ready()
+        _, first = self.enter()
+        store = open_store(self.state, "file")
+        snap_before = store.load_snapshot(first["session_id"])
+        events_before = len(store.read_events(first["session_id"]))
+        _, second = self.enter()
+>       self.assertTrue(second["doctor"]["reused"])
+E       AssertionError: False is not true
+
+tests/test_doctor.py:144: AssertionError
+_ EpochTests.test_provider_runtime_state_change_is_detected_despite_valid_epoch _
+
+self = <test_doctor.EpochTests testMethod=test_provider_runtime_state_change_is_detected_despite_valid_epoch>
+
+    def test_provider_runtime_state_change_is_detected_despite_valid_epoch(self):
+        self.config["intent"]["repositories"] = []
+        self.definition.write_text(json.dumps(self.config))
+        self.ready()
+        _, first = self.enter()
+        # service-state.json is gitignored: no fingerprinted input changes,
+        # but the declared service is no longer ready.
+        (self.project / "service-state.json").write_text(json.dumps({"ready": False, "starts": 0}))
+        code, health = self.run_cli("health", first["session_id"])
+        self.assertEqual(code, 5, health)
+        self.assertEqual(health["readiness"]["observation"], "live")
+        # Entry reconciles services without paying for a full
+        # revalidation. Recovery itself needs authority the fixture
+        # session does not hold, so the invocation is not admitted.
+        code, second = self.enter()
+        self.assertEqual(code, 5, second)
+        self.assertFalse(second["doctor"]["reused"])
+        self.assertEqual(second["entry"]["revalidation"]["reprobed"], 0)
+>       self.assertIn("services reconciled", second["entry"]["revalidation"]["note"])
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'note'
+
+tests/test_doctor.py:260: KeyError
+____________ EpochTests.test_quiet_reentry_doctor_block_is_compact _____________
+
+self = <test_doctor.EpochTests testMethod=test_quiet_reentry_doctor_block_is_compact>
+
+    def test_quiet_reentry_doctor_block_is_compact(self):
+        self.ready()
+        _, first = self.enter()
+        code, second = self.enter()
+        self.assertEqual(code, 0, second)
+>       self.assertTrue(second["doctor"]["reused"])
+E       AssertionError: False is not true
+
+tests/test_doctor.py:217: AssertionError
+__________ EpochTests.test_reentry_hits_epoch_and_skips_revalidation ___________
+
+self = <test_doctor.EpochTests testMethod=test_reentry_hits_epoch_and_skips_revalidation>
+
+    def test_reentry_hits_epoch_and_skips_revalidation(self):
+        self.ready()
+        _, first = self.enter()
+        code, second = self.enter()
+        self.assertEqual(code, 0, second)
+        self.assertEqual(second["session_id"], first["session_id"])
+        self.assertTrue(second["entry"]["reused"])
+        self.assertEqual(second["entry"]["revalidation"]["reprobed"], 0)
+>       self.assertTrue(second["doctor"]["reused"])
+E       AssertionError: False is not true
+
+tests/test_doctor.py:134: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_doctor.py::EpochTests::test_epoch_hit_does_not_write_a_resume_marker
+FAILED tests/test_doctor.py::EpochTests::test_provider_runtime_state_change_is_detected_despite_valid_epoch
+FAILED tests/test_doctor.py::EpochTests::test_quiet_reentry_doctor_block_is_compact
+FAILED tests/test_doctor.py::EpochTests::test_reentry_hits_epoch_and_skips_revalidation
+4 failed, 1263 passed, 82 skipped in 837.64s (0:13:57)

@@ -1,0 +1,39 @@
+{
+  "acquired_at": "2026-11-07T15:13:30+00:00",
+  "basis": "transfer",
+  "claim_id": "claim:mncs-control-mcp:worktree:4913f7a548fd",
+  "consumer_id": "codex-ambient-validation-20261107",
+  "expires_at": "2026-11-08T15:13:30+00:00",
+  "identity": "clm_c2b415b350595c83",
+  "provenance": {
+    "transfer_request_digest": "2a6832a838b24bd1",
+    "transfer_request_id": "transfer_05c5b712c141a9e9c18e86b5c9c66fcd",
+    "transferred_by": "ses_b84411e99d03e199",
+    "transferred_from": "ses_b84411e99d03e199",
+    "transferred_from_version": 1
+  },
+  "reason": "published-capture-validation-handoff",
+  "repository": "mncs-control-mcp",
+  "schema_version": "mncs.environment.workspace-claim/2",
+  "scope": {
+    "branch": "main",
+    "checkout": "/home/epi13/Documents/Projects/mncs-control-mcp",
+    "checkout_identity": "checkout:3dda6d0cbc2787f3",
+    "exclusive": false,
+    "git_common_directory_identity": "git-common:fef6e1d62624de2b",
+    "kind": "worktree",
+    "manifest_identity": "6d702354fc32aafe",
+    "paths": [
+      "README.md",
+      "docs/OUTPUT-CAPTURE.md",
+      "evidence/output-capture-availability-20261107.json",
+      "schemas/output-capture.schema.json",
+      "src/mncs_control_mcp/processes.py",
+      "tests/test_capture_availability.py"
+    ],
+    "repository": "mncs-control-mcp"
+  },
+  "session_id": "ses_ceab707839e80ef4",
+  "status": "held",
+  "version": 3
+}

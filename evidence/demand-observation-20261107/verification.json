@@ -1,0 +1,126 @@
+{
+  "schema_version": "mncs.environment.demand-observation-verification/1",
+  "baseline_environment_commit": "159618f8ed04d193b986041a8fca38ad9c3bf1df",
+  "implementation_parent": "62235cd4c2ed0456a4dab4232fcd624171a1baec",
+  "control_commit": "bce6941ddacd1c5c8934538c3e0b92616af2f604",
+  "source_sha256": {
+    ".mncs/demand-observation.environment.json": "c8591ce67002ccf943f20584ab290f969d700d2639c5420b522ebdcdc2310cd7",
+    ".mncs/project-view.json": "aa31f9af0f757d6d403254438ce54d3c7d24499e32ddab33c246f97972314c01",
+    ".mncs/project.json": "fa34fa7e7d168f5de3f6ca45ba50ed3ea3d61899f75525b9658c4ef76a072c7d",
+    "README.md": "7ea849c324d799c7d07b7d054124d2e97b358600708dac48ea42e7ee722c285b",
+    "docs/ARCHITECTURE.md": "b2b89989d746fd6edc8c45e26ab83f2651f0a397cb1bdea66481a432e5e38fbb",
+    "docs/CAPABILITY_INTELLIGENCE.md": "be628f88009ad24d7685015d5878ef29a43f6828f25f8e7314a8b1a031db4f1e",
+    "docs/DEMAND_OBSERVATION.md": "685e4ff1827cab1403afc4e098344a28992af716813be20c14246b014462fbe2",
+    "docs/DEMAND_OBSERVATION_EVIDENCE.md": "39810f29fe4068893175f04063ddfbb8abf9d1c11b7a724c156b833a7a4d67fb",
+    "mncs_env/capability_intelligence.py": "17b6d298a8f75ef5efd5d84b13642fbcaa96b78e82e4a61e25d1a031e123e149",
+    "mncs_env/cli.py": "ba56d9d2cc6f9323ddce54893b0df8b4ebf394d94b5c197f9378f5fcff74f535",
+    "mncs_env/demand.py": "83a73e40d42a2138866adec0f550868ddfa58ee531dfcef0bea8c335b017e85b",
+    "mncs_env/events.py": "3eb17e7a85a85f4e2ba2fde9e514bfa49219d641573b5253db2e56298ab6b6c3",
+    "mncs_env/sessions.py": "430b9e1f4360b48cd64348cd402bded0c279019989bf19aa1374ce85295d7a9c",
+    "mncs_env/verification.py": "b4b40d9c9988c49b5e10024c2ce25b79fbb7120707f3f517a06aa02d10f0305c",
+    "native-applications/demand-correlation.json": "998d76ec001460a2da86cacb8d97a2ae6d297ffd1ae4d8986777b90f564dcd9b",
+    "native/mncs/environment/demand_correlation_v1.mncs": "5c2c9e6f5eedb3079045e2db44a7e14f6e07d9c31842fc76207a48d4a5949812",
+    "rfcs/0003-demand-observation.md": "d4871da0307b413f3d4d76e2746dac14454fb8c19c83959f58864824b88dc0c4",
+    "scripts/demand_proof.py": "49f3f7a4a9a8b377b609fe8d82f6f991ed51d5f9700a8f14e094ed8b6d81f387",
+    "tests/native/demand.mncs": "b72ba8c3f3a1fee2c7997df6894a114443327bfc03438631fc1db1bf0e4395cc",
+    "tests/test_demand.py": "b2068a57379743ad4cad4a9276376c75c9081e913888094fbbc2ac53bdce0164",
+    "tests/test_environment.py": "5e1cfc23e08082cb2a99fb59dc6a9731cea1d3ec2d2ab157bb9239fcb252f133"
+  },
+  "checks": [
+    {
+      "command": "python3 -m pytest tests/ -q",
+      "repository": "mncs-environment",
+      "baseline": {
+        "passed": 1263,
+        "skipped": 82,
+        "failed": 4,
+        "seconds": 837.64
+      },
+      "final": {
+        "passed": 1276,
+        "skipped": 82,
+        "failed": 4,
+        "seconds": 846.72
+      },
+      "complete_suite_pass": false,
+      "baseline_reproduced_failure_ids": [
+        "tests/test_doctor.py::EpochTests::test_epoch_hit_does_not_write_a_resume_marker",
+        "tests/test_doctor.py::EpochTests::test_provider_runtime_state_change_is_detected_despite_valid_epoch",
+        "tests/test_doctor.py::EpochTests::test_quiet_reentry_doctor_block_is_compact",
+        "tests/test_doctor.py::EpochTests::test_reentry_hits_epoch_and_skips_revalidation"
+      ],
+      "new_failure_ids": []
+    },
+    {
+      "command": "python3 -m pytest tests/test_demand.py tests/test_project_view_capability_discovery.py tests/test_verification.py -q",
+      "passed": 35,
+      "failed": 0
+    },
+    {
+      "command": "python3 scripts/vertical_proof.py",
+      "verdict": "PASS"
+    },
+    {
+      "command": "python3 scripts/campaign_proofs.py",
+      "passed": 14,
+      "skipped": 2,
+      "failed": 0
+    },
+    {
+      "command": "python3 scripts/demand_proof.py",
+      "native_passed": 11,
+      "native_skipped": 0,
+      "native_failed": 0,
+      "fallback": false,
+      "host_subprocesses": 0,
+      "pure_join_vm_steps": 2442
+    },
+    {
+      "repository": "mncs-control-mcp",
+      "command": "python3 -m pytest tests/ -q",
+      "baseline_passed": 363,
+      "final_passed": 372,
+      "skipped": 5,
+      "failed": 0,
+      "warnings": 8
+    }
+  ],
+  "evidence_files_sha256": {
+    "checks/campaign-final.log": "4b85e6caa2975d40dd08a3df5a375693270b28f8c21562924652fb337bc914c2",
+    "checks/control-baseline.log": "820adf528cbd1870e72904c72ecfe2dcf0b56cd974bcdf378dfe71ae54659269",
+    "checks/control-final.log": "0ef178d1462f135d29552fa7582f4e43468f60117e04fb20765dd8339932f4cd",
+    "checks/environment-baseline.log": "a1823c570bb31f24dcc2bb9b7dfc79ea81f293105018d5d634971596b265901a",
+    "checks/environment-final.log": "82e57ea23ebdfd44779ff1110cd900a30dbc1ef0e7a3e83f82d1c5baa034b3c0",
+    "checks/focused-final.log": "46084b58b096131ea5f43151a882cb65bc3c151b56eb829c35eb461a3c8112fa",
+    "checks/vertical-final.log": "9a0a389f5f23b23d4a5b2df2bf055e24e707a161b5f06bb81ff5eb5be1af8754",
+    "controlled-native-view.json": "a6a9d6062d56dcea78cb3dd94847daf2d9db4bf7f42dddf5813b5edcb9829784",
+    "initial/receipt.json": "fef2288dd4de6b6d6283bb5db2a33820b12705ee9cea34a41bedcea8790b5265",
+    "join-call.json": "5be2406b0dad976a9e562e8ec3d5b05aaade7c0d6e2277753febd6954bea3ecb",
+    "join.args.json": "6e09ca7957a2f5b7b288f6daa21197828517606e337d243e52ee99f8360fe416",
+    "live-capture.json": "ef2377429d14993338d1310994adadab6e08ac4a31f6fb2185f242dbb02f55c5",
+    "native-result.json": "7791aad74da629e26652591701e84e7f29a7d636dc93e772989b523a0e2ef516",
+    "receipt.json": "8c448759e26fc4a76c760777735f2d0496781f054c49338f078a951c69b833bc",
+    "workflow/claim-transfer.json": "c715ebc9c7466994413f5e5c93aebc8c86ad7342cca2d63c4b91bb041488d7e7",
+    "workflow/deferred-other-session.json": "37c0a2d7f0be61e05cc6b9abb33cbf416a71bf2047df4eedb4c7435a6c349a4c",
+    "workflow/deferred-scope.json": "b00c0532982f71fe07f351b30823938ced9368c9ccd5b3c1a6569a2b0b259112",
+    "workflow/first-completed-invocation.json": "82d3cb52668afb084eb07ca46936841cc4eb377df991bcd5047adee8a4fa3394",
+    "workflow/initial-projection.json": "7ef8c87465ad141748639894c18d90b4686567dd34d61174a9b390ec8d5db248",
+    "workflow/manifest.json": "3776268aeb4e46590fbb8cd7afabfc463d0c8c9c4b9ddb5bda573ddd033ddc37",
+    "workflow/pytest-junit.xml": "2a95c84d86282f101f93f5e7113f16bbd7c24f3c64a79cea6d3383334684c414",
+    "workflow/validated-invocation.json": "ea876dc00ee9c339d61311418ced4230a4505216c2744e3653d1d4ec0fa14209",
+    "workflow/validated-projection.json": "f843b704a6f1f255ee03f0b4f5172940418413a6e531cbad9812834556acdceb",
+    "workflow/verification-scope-claim.json": "97790a18463cdcecff0a5a4b3ef0d43e8f35706e1bff3e392556b10e54187d92"
+  },
+  "interpretation": {
+    "mechanics_verified": true,
+    "operational_burden_reduction": "not-established",
+    "agent_time_and_tokens": "unmeasured",
+    "learned_selection": "not-enabled",
+    "authentic_result_join": "operation matched; no admitted MNCS verification reference from the generic Python test capability"
+  },
+  "limits": [
+    "This Git evidence bundle preserves runner results and source hashes; it is not itself an admitted MNCS Test verification record.",
+    "Four pre-existing Doctor epoch tests remain failing. No new skips or weakened Doctor assertions were introduced.",
+    "The concurrency regression test now waits for observed lock contention instead of assuming that admission completes within an arbitrary sleep."
+  ]
+}
