@@ -364,13 +364,13 @@ def test_authority_cli_rechecks_with_the_exact_owned_claim_scope() -> None:
     calls = {}
     fake_session = SimpleNamespace(
         session_id=session_id,
-        inspect=lambda: {"authority": {
+        effective_authority=lambda: {
             "claim_holders": {"mncs-environment": [{
                 "claim_id": claim_id,
                 "session_id": session_id,
                 "scope": scope,
             }]},
-        }},
+        },
         check=lambda **kwargs: calls.update(kwargs) or {
             "verdict": "allow", "reason": "merge by scoped claim",
         },
@@ -429,9 +429,9 @@ def test_authority_cli_accepts_explicit_unowned_scope_as_an_operation_proposal()
 
     fake_session = SimpleNamespace(
         session_id=session_id,
-        inspect=lambda: {"authority": {
+        effective_authority=lambda: {
             "claim_holders": {"mncs-environment": [foreign_holder]},
-        }},
+        },
         check=check,
     )
     args = Namespace(
@@ -482,7 +482,7 @@ def test_authority_cli_marks_explicit_worktree_write_as_non_executing_preflight(
 
     fake_session = SimpleNamespace(
         session_id=session_id,
-        inspect=lambda: {"authority": {"claim_holders": {}}},
+        effective_authority=lambda: {"claim_holders": {}},
         check=check,
     )
     args = Namespace(

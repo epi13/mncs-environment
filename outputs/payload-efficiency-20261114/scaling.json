@@ -1,0 +1,62 @@
+[
+  {
+    "repositories": 1,
+    "worktrees_per_repository": 0,
+    "bindings_per_repository": 1,
+    "expanded": {
+      "bytes": 1209,
+      "serialization_seconds": 0.0001789899542927742,
+      "peak_serialization_allocation_bytes": 4355
+    },
+    "compact": {
+      "bytes": 1253,
+      "serialization_seconds": 0.0005988660268485546,
+      "peak_serialization_allocation_bytes": 8568
+    }
+  },
+  {
+    "repositories": 4,
+    "worktrees_per_repository": 8,
+    "bindings_per_repository": 16,
+    "expanded": {
+      "bytes": 99195,
+      "serialization_seconds": 0.005077964044176042,
+      "peak_serialization_allocation_bytes": 118668
+    },
+    "compact": {
+      "bytes": 34112,
+      "serialization_seconds": 0.012721919978503138,
+      "peak_serialization_allocation_bytes": 130030
+    }
+  },
+  {
+    "repositories": 4,
+    "worktrees_per_repository": 32,
+    "bindings_per_repository": 64,
+    "expanded": {
+      "bytes": 945451,
+      "serialization_seconds": 0.04594343499047682,
+      "peak_serialization_allocation_bytes": 1087362
+    },
+    "compact": {
+      "bytes": 129294,
+      "serialization_seconds": 0.07522696303203702,
+      "peak_serialization_allocation_bytes": 491689
+    }
+  },
+  {
+    "repositories": 4,
+    "worktrees_per_repository": 64,
+    "bindings_per_repository": 128,
+    "expanded": {
+      "bytes": 3364259,
+      "serialization_seconds": 0.1630885429913178,
+      "peak_serialization_allocation_bytes": 4142218
+    },
+    "compact": {
+      "bytes": 256549,
+      "serialization_seconds": 0.2235170920030214,
+      "peak_serialization_allocation_bytes": 979542
+    }
+  }
+]

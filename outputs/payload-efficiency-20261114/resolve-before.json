@@ -1,0 +1,49 @@
+{
+  "source": "/home/epi13/Documents/Projects/mncs-environment",
+  "argv": [
+    "--",
+    "resolve",
+    "--definition",
+    "/home/epi13/Documents/Projects/mncs-environment/.mncs/environment.json"
+  ],
+  "measurements": [
+    {
+      "request": "cold-process",
+      "exit_code": 0,
+      "stderr": "",
+      "bytes": 4480675,
+      "elapsed_seconds": 9.03111788595561,
+      "serialization_seconds": 0.02491218299837783,
+      "peak_rss_bytes": 404733952,
+      "invocations": {
+        "git_commands": 906,
+        "worktree_inventory_commands": 218,
+        "availability_probes": 210
+      },
+      "reference_count": 0,
+      "repeated_collection_bytes": 2112626,
+      "repeated_collection_copies": 274,
+      "workspace_checkouts": 189,
+      "bindings": 210
+    },
+    {
+      "request": "warm-process",
+      "exit_code": 0,
+      "stderr": "",
+      "bytes": 4480673,
+      "elapsed_seconds": 7.212006516987458,
+      "serialization_seconds": 0.02392162597971037,
+      "peak_rss_bytes": 481001472,
+      "invocations": {
+        "git_commands": 154,
+        "worktree_inventory_commands": 30,
+        "availability_probes": 210
+      },
+      "reference_count": 0,
+      "repeated_collection_bytes": 2112626,
+      "repeated_collection_copies": 274,
+      "workspace_checkouts": 189,
+      "bindings": 210
+    }
+  ]
+}

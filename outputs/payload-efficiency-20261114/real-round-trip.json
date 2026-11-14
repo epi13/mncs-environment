@@ -1,0 +1,13 @@
+{
+  "definition": "/home/epi13/Documents/Projects/mncs-environment/.mncs/environment.json",
+  "environment": "renv_d33e345bec7eb4f5",
+  "repositories": 189,
+  "bindings": 210,
+  "unknown_bindings": 56,
+  "expanded_bytes": 4481213,
+  "compact_bytes": 1151929,
+  "comparison": "exact recursive equality after resolving in-document pointers",
+  "authority_retained": true,
+  "provenance_retained": true,
+  "unavailable_and_unknown_retained": true
+}

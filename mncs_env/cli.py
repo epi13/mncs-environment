@@ -32,6 +32,7 @@ from . import family as family_module
 from . import invocation_artifacts as invocation_artifacts_module
 from . import invocation_context as invocation_context_module
 from . import netcheck as netcheck_module
+from . import payloads
 from . import pressures as pressures_module
 from . import projections as projections_module
 from . import resources as resources_module
@@ -57,7 +58,9 @@ DEFAULT_ECI_EVIDENCE_PAGE_SIZE = 2
 DEFAULT_ECI_SESSION_EVENT_LIMIT = 4
 
 
-def out(value: object, *, max_bytes: int | None = None) -> None:
+def out(value: object, *, max_bytes: int | None = None, compact: bool = False) -> None:
+    if compact:
+        value = payloads.compact(value)
     if max_bytes is None:
         print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
         return
@@ -156,7 +159,7 @@ def cmd_resolve(args: argparse.Namespace) -> int:
         return fail(str(error), diagnostics=error.diagnostics)
     except ValueError as error:
         return fail(str(error), diagnostics={"code": "entry-invalid", "next": "check the selected definition and workspace"})
-    out(environment)
+    out(environment, compact=getattr(args, "compact", False))
     return 0
 
 
@@ -315,7 +318,8 @@ def _resume_session(
 
 def cmd_inspect(args: argparse.Namespace) -> int:
     with closing(_open(args)) as session:
-        out(session.inspect())
+        out(session.inspect(section=getattr(args, "section", None)),
+            compact=getattr(args, "compact", False))
     return 0
 
 
@@ -740,6 +744,15 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     """Print compact session status, or list session ids when none is given."""
+    limit = getattr(args, "limit", None)
+    offset = getattr(args, "offset", 0)
+    summary = getattr(args, "summary", False)
+    if (limit is not None and not 1 <= limit <= 100) or offset < 0:
+        return fail("status page needs --limit 1..100 and a nonnegative --offset")
+    if args.session and (limit is not None or offset or summary):
+        return fail("--summary, --limit and --offset select the global session inventory; omit SESSION")
+    if offset and limit is None:
+        return fail("--offset requires --limit")
     if args.session and args.terse:
         fast = doctor_module.serve_terse_fast(args.state_dir, args.session)
         if fast is not None:
@@ -767,11 +780,18 @@ def cmd_status(args: argparse.Namespace) -> int:
     store = open_store(args.state_dir, args.persistence)
     try:
         session_ids = store.list_sessions()
-        out({
+        result = {
             "schema_version": "mncs.environment.status/1",
-            "sessions": session_ids,
+            "sessions": ([] if summary else session_ids[offset:offset + limit]
+                         if limit is not None else session_ids),
             "session_count": len(session_ids),
-        })
+        }
+        if summary or limit is not None:
+            result.update({"offset": offset, "returned_count": len(result["sessions"]),
+                           "next_offset": (offset + limit if not summary and limit is not None
+                                           and offset + limit < len(session_ids) else None),
+                           "detail": "status --limit 25 --offset N; context SESSION for recorded context; health SESSION for live readiness"})
+        out(result)
         return 0
     finally:
         close_store(store)
@@ -829,7 +849,14 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
         else:
             # Capability discovery needs the bound snapshot, not a full
             # session inspection (which reads the complete durable event log).
-            out([dict(binding) for binding in session.snapshot.get("bindings", [])])
+            selected = getattr(args, "capability", None)
+            bindings = session.snapshot.get("bindings", [])
+            if selected:
+                bindings = [binding for binding in bindings
+                            if selected in (binding.get("capability"), binding.get("binding_id"))]
+                if not bindings:
+                    return fail("no bound capability matches the selected identity")
+            out([dict(binding) for binding in bindings])
     return 0
 
 
@@ -871,7 +898,7 @@ def cmd_authority(args: argparse.Namespace) -> int:
                 diagnostics={"code": "invalid-authority-scope"},
             )
     session = _open(args)
-    result = session.inspect()["authority"]
+    result = session.effective_authority()
     if claim_id:
         if not args.action:
             return fail("--claim-id requires --action")
@@ -1948,12 +1975,13 @@ def cmd_claim_recover(args: argparse.Namespace) -> int:
 
 
 def cmd_workspace(args: argparse.Namespace) -> int:
-    document = workspace_module.discover_workspace(args.root)
+    document = workspace_module.discover_workspace(
+        args.root, repositories=getattr(args, "repository", None))
     if args.summary:
         document = {key: document[key] for key in
                     ("schema_version", "root", "scan", "repository_count") if key in document}
         document["schema_version"] = "mncs.environment.workspace-readiness/1"
-    out(document)
+    out(document, compact=getattr(args, "compact", False))
     return 0
 
 
@@ -2643,6 +2671,8 @@ def build_parser() -> argparse.ArgumentParser:
     resolve.add_argument("--definition", type=Path, required=True)
     resolve.add_argument("--workspace", default=None)
     resolve.add_argument("--consumer", default="local-agent")
+    resolve.add_argument("--compact", action="store_true",
+                         help="lossless shared JSON pointers; omit for the expanded contract")
     resolve.set_defaults(func=cmd_resolve)
 
     enter = sub.add_parser("enter", help="discover context, create/reuse a session, reconcile readiness")
@@ -2699,6 +2729,10 @@ def build_parser() -> argparse.ArgumentParser:
     campaign_state.set_defaults(func=cmd_campaign_state)
 
     inspect = session_parser("inspect", "inspect session state (read-only)")
+    inspect.add_argument("--section", choices=("workspace", "bindings", "authority", "readiness", "events"),
+                         help="select detail before assembling an inspection; events is a bounded recent page")
+    inspect.add_argument("--compact", action="store_true",
+                         help="lossless shared JSON pointers; omit for expanded details")
     inspect.set_defaults(func=cmd_inspect)
 
     context = session_parser("context", "show compact first-use session context")
@@ -2838,6 +2872,9 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("session", nargs="?", default=None)
     status.add_argument("--terse", action="store_true",
                         help="terse doctor summary, served without opening the store when the epoch is valid")
+    status.add_argument("--summary", action="store_true", help="global session count without historical IDs")
+    status.add_argument("--limit", type=int, default=None, help="opt-in inventory page of 1..100 session IDs")
+    status.add_argument("--offset", type=int, default=0, help="inventory page offset (requires --limit)")
     status.set_defaults(func=cmd_status)
 
     resume = session_parser("resume", "resume a session in this process")
@@ -2850,7 +2887,10 @@ def build_parser() -> argparse.ArgumentParser:
     resume.set_defaults(func=cmd_resume)
 
     capabilities = session_parser("capabilities", "list bound capabilities")
-    capabilities.add_argument("--preflight", metavar="CAPABILITY",
+    capability_query = capabilities.add_mutually_exclusive_group()
+    capability_query.add_argument("--capability", metavar="IDENTITY",
+                                  help="retrieve full detail for one capability or binding ID")
+    capability_query.add_argument("--preflight", metavar="CAPABILITY",
                               help="observe one operation's addressing/effect/claim requirements; grants no execution permission")
     capabilities.add_argument("--effect-repository",
                               help="resolve a declared effect target through the selected session")
@@ -3093,6 +3133,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     workspace = sub.add_parser("workspace", help="discover workspace repositories")
     workspace.add_argument("--root", default=".")
+    workspace.add_argument("--repository", action="append", default=None,
+                           help="select an immediate repository before discovery (repeatable)")
+    workspace.add_argument("--compact", action="store_true",
+                           help="lossless shared JSON pointers; omit for expanded details")
     workspace.add_argument("--summary", action="store_true", help="bounded readiness response; omit repository details")
     workspace.set_defaults(func=cmd_workspace)
 

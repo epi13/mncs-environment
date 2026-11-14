@@ -11465,7 +11465,21 @@ class Session:
             "next_before_sequence": min(sequences) if has_older and sequences else None,
         }
 
-    def inspect(self) -> dict[str, Any]:
+    def inspect(self, *, section: str | None = None) -> dict[str, Any]:
+        # Select before reading history or constructing unrelated response
+        # objects. Full inspection remains the unchanged default contract.
+        if section is not None:
+            if section == "authority":
+                value = self.effective_authority()
+            elif section == "readiness":
+                value = readiness_module.summarize(self.snapshot)
+            elif section == "events":
+                value = self.recent_events(limit=25)
+            elif section in {"workspace", "bindings"}:
+                value = self.snapshot.get(section, {} if section == "workspace" else [])
+            else:
+                raise ValueError("unsupported inspection section")
+            return {"session_id": self.session_id, section: value}
         log = self._log()
         unavailable = [
             {

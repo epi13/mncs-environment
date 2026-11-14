@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -672,14 +672,17 @@ class RepoState:
 
 
 def inspect_repo(path: Path, *, deadline: float | None = None,
-                 _refresh: bool = False) -> RepoState | None:
+                 _refresh: bool = False,
+                 _worktree_inventory: list[dict[str, str]] | None = None) -> RepoState | None:
     """Inspect one directory; return None when it is not a git checkout."""
     try:
         key = str(Path(path).resolve())
     except OSError:
         return None
     if not _refresh and key in _inspect_cache:
-        return _inspect_cache[key]
+        cached = _inspect_cache[key]
+        return (replace(cached, worktrees=_worktree_inventory)
+                if cached is not None and _worktree_inventory is not None else cached)
     if not (path / ".git").exists():
         _inspect_cache[key] = None
         return None
@@ -707,7 +710,8 @@ def inspect_repo(path: Path, *, deadline: float | None = None,
         dirty_files=lines,
         dirty_truncated=truncated,
         untracked_count=untracked,
-        worktrees=_worktrees(path, deadline=deadline),
+        worktrees=(_worktree_inventory if _worktree_inventory is not None
+                   else _worktrees(path, deadline=deadline)),
         git_error=git_error,
     )
     # Transient git failures (timeouts) are never cached: a loaded moment
@@ -1115,7 +1119,8 @@ def discover_workspace(
                 skipped += 1
             continue
         repos.append(state.record())
-        for record in _managed_worktrees(candidate, deadline=deadline):
+        for record in _managed_worktrees(candidate, deadline=deadline,
+                                         inventory=state.worktrees):
             repos.append(record)
         if time.monotonic() >= deadline and inspected < len(candidates):
             status = "timed_out"
@@ -1151,6 +1156,7 @@ def _managed_worktrees(
     repo: Path,
     *,
     deadline: float | None = None,
+    inventory: list[dict[str, str]] | None = None,
 ) -> list[dict[str, Any]]:
     """First-class records for worktrees nested in one repository."""
     out: list[dict[str, Any]] = []
@@ -1160,10 +1166,15 @@ def _managed_worktrees(
                            if path.is_dir() and not path.is_symlink())
     except OSError:
         return out
+    registered = {item.get("path") for item in inventory or []}
     for checkout in checkouts[:MAX_REPOS]:
         if deadline is not None and time.monotonic() >= deadline:
             break
-        state = inspect_repo(checkout, deadline=deadline)
+        # Only reuse the inventory for paths Git actually registered in this
+        # repository. A directory under .worktrees may be an unrelated clone.
+        shared = inventory if str(checkout) in registered else None
+        state = inspect_repo(checkout, deadline=deadline,
+                             _worktree_inventory=shared)
         if state is None:
             continue
         state.worktree_of = repo.name

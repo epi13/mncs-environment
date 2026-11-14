@@ -975,3 +975,39 @@ It owns the lifetime of local disposable storage. Forge and other producers
 continue to own their execution and artifact contracts. Historical unregistered
 build directories require a separate audited cleanup; the allocator never
 silently classifies them as disposable.
+
+## Selecting response detail
+
+The established expanded JSON remains the default for CLI and Python consumers.
+For lossless inspection with repeated observations represented once:
+
+```bash
+./scripts/mncs-env resolve --definition .mncs/environment.json --compact
+./scripts/mncs-env workspace --root /path/to/workspace --repository mncs-environment --compact
+./scripts/mncs-env inspect SESSION --section workspace --compact
+./scripts/mncs-env inspect SESSION --section bindings --compact
+./scripts/mncs-env capabilities SESSION --capability PROVIDER:CAPABILITY
+```
+
+`--compact` adds `representation: shared-json-pointers`. Repeated worktree
+inventories, checkout observations and toolchain provenance use `{"$ref":
+"#/..."}` references to an equal observation in that same document. These are
+RFC 6901 pointers (including `~0`/`~1` escaping), not external files or new
+persistent records. Resolve a pointer against the whole response; its target
+retains the observed revision, checkout identity and provider source reference.
+No operational information is dropped. Omit `--compact` for fully expanded
+records. The option is explicit so consumers expecting nested lists or dictionaries
+continue to receive their established representation.
+
+`inspect --section` selects workspace, bindings, authority, readiness or a bounded
+recent event page before assembling unrelated inspection details or loading full
+event history. Unqualified `inspect` retains its detailed historical contract.
+Capabilities can be selected by capability identity or binding ID; a missing
+identity is an error rather than an empty successful result.
+
+Global `status` retains its historical session-ID inventory. `status --summary`
+returns its count without IDs; `status --limit 25 --offset 0` returns a bounded
+page with a continuation offset. Neither hydrates historical session snapshots.
+Use project entry/continuation to select authenticated work; an inventory ID is
+not permission to resume another owner's session. Recorded context and readiness
+remain historical observations; `health SESSION` performs live read-only probes.

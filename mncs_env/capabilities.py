@@ -786,6 +786,17 @@ def discover_capabilities(
                 raise CapabilityError(
                     f"runtime toolchain checkout for {repository} is unavailable"
                 )
+    # One immutable observation per dependency for this discovery operation.
+    # Bindings reference these in memory; the default JSON contract still
+    # expands them, while the explicit compact view emits shared references.
+    dependency_records = {
+        name: {key: facts.get(key) for key in (
+            "repository", "observed_path", "branch", "head", "clean",
+            "checkout_identity", "git_common_directory_identity", "source_ref",
+            "read_only", "declared_by")}
+        for name, facts in (runtime_toolchain_facts or {}).items()
+    }
+    dependency_groups = {}
     for repo in repos:
         discovered = [
             *_from_semantic_contracts(repo, root, language_bin, invocation_roots),
@@ -799,11 +810,12 @@ def discover_capabilities(
         )
         facts = (checkout_facts or {}).get(repository)
         if facts is not None:
+            checkout_provenance = {
+                key: facts.get(key)
+                for key in ("path", "branch", "head", "clean", "source_ref", "authoritative_head")
+            }
             for binding in discovered:
-                binding.setdefault("provenance", {})["checkout"] = {
-                    key: facts.get(key)
-                    for key in ("path", "branch", "head", "clean", "source_ref", "authoritative_head")
-                }
+                binding.setdefault("provenance", {})["checkout"] = checkout_provenance
         runtime_facts = runtime_toolchain_facts or {}
         for binding in discovered:
             addresses = [binding.get("toolchain_address")]
@@ -832,17 +844,15 @@ def discover_capabilities(
                     break
                 if not refers_to_dependency:
                     continue
-                selected_dependencies.append({
-                    key: dependency_facts.get(key)
-                    for key in ("repository", "observed_path", "branch", "head",
-                                "clean", "checkout_identity",
-                                "git_common_directory_identity", "source_ref",
-                                "read_only", "declared_by")
-                })
+                selected_dependencies.append(dependency)
             if selected_dependencies:
+                group_key = tuple(selected_dependencies)
+                if group_key not in dependency_groups:
+                    dependency_groups[group_key] = [dependency_records[name]
+                                                     for name in selected_dependencies]
                 binding.setdefault("provenance", {})[
                     "toolchain_checkouts"
-                ] = selected_dependencies
+                ] = dependency_groups[group_key]
         bindings.extend(_coalesce_addressed_binding_declarations(discovered))
     bindings.sort(key=lambda item: (item["provider"], item["capability"]))
     return bindings

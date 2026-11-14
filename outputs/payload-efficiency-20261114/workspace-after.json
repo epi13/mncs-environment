@@ -1,0 +1,48 @@
+{
+  "source": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/payload-efficiency-20261114",
+  "argv": [
+    "--",
+    "workspace",
+    "--root",
+    "/home/epi13/Documents/Projects",
+    "--compact"
+  ],
+  "measurements": [
+    {
+      "request": "cold-process",
+      "exit_code": 0,
+      "stderr": "",
+      "bytes": 310419,
+      "elapsed_seconds": 1.7774375639855862,
+      "serialization_seconds": 0.007666799006983638,
+      "peak_rss_bytes": 35119104,
+      "invocations": {
+        "git_commands": 982,
+        "worktree_inventory_commands": 94
+      },
+      "reference_count": 215,
+      "repeated_collection_bytes": 0,
+      "repeated_collection_copies": 0,
+      "workspace_checkouts": 296,
+      "bindings": 0
+    },
+    {
+      "request": "warm-process",
+      "exit_code": 0,
+      "stderr": "",
+      "bytes": 310417,
+      "elapsed_seconds": 0.10148429899709299,
+      "serialization_seconds": 0.009162064990960062,
+      "peak_rss_bytes": 36651008,
+      "invocations": {
+        "git_commands": 39,
+        "worktree_inventory_commands": 15
+      },
+      "reference_count": 215,
+      "repeated_collection_bytes": 0,
+      "repeated_collection_copies": 0,
+      "workspace_checkouts": 296,
+      "bindings": 0
+    }
+  ]
+}
