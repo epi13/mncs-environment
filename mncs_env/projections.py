@@ -1387,8 +1387,12 @@ def ambient_pass(session, *, mode: str = "ambient",
     post_inputs = _epoch_inputs(session, declarations, digests)
     post_inputs["structure"] = epoch_inputs["structure"]
     post_epoch = digest_hex(post_inputs)
+    # Claim facts used by a decision may predate a concurrent release or
+    # acquisition. Do not lend the post-pass claim epoch to that older verdict.
+    # A later pass re-observes it; ordinary stable passes keep their fast path.
     return _finish(session, started, clock_started, results, rows,
-                   invalid, mode, None, post_epoch)
+                   invalid, mode, None, post_epoch,
+                   cache_epoch=post_inputs.get("claims") == epoch_inputs.get("claims"))
 
 
 def interpretation(
@@ -2037,7 +2041,7 @@ def _adopt_shared(session, rows: dict, projection_id: str,
 def _finish(session, started: str, clock_started: float,
             results: list[dict], rows: dict, invalid: list[dict],
             mode: str, failure: dict | None,
-            epoch: str) -> dict[str, Any]:
+            epoch: str, *, cache_epoch: bool = True) -> dict[str, Any]:
     summary = {"current": 0, "pending": 0, "reconciled": 0, "blockers": 0,
                "degraded": 0, "epoch_reused": False}
     pending_ids: list[str] = []
@@ -2083,7 +2087,7 @@ def _finish(session, started: str, clock_started: float,
     # because claims, markers, and inputs feed the next fingerprint.
     retryable_verification = _retryable_verification_defer(results)
     if (mode == "ambient" and summary.get("degraded", 0) == 0
-            and failure is None and not retryable_verification):
+            and failure is None and not retryable_verification and cache_epoch):
         stored_epoch = epoch
     else:
         stored_epoch = f"uncached:{mode}:{epoch}"
