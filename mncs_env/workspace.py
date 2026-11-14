@@ -1152,6 +1152,42 @@ def discover_workspace(
     }
 
 
+def _inventory_common_directory(checkout: Path) -> Path | None:
+    """Read Git's small metadata files to confirm inventory sharing identity.
+
+    This is only an observation reuse guard, never checkout admission. A stale
+    registration may name a path that has since become a different clone.
+    Unreadable or unfamiliar metadata falls back to that checkout's own Git.
+    """
+    def text(path: Path) -> str:
+        if path.is_symlink():
+            raise ValueError("symlinked Git metadata")
+        with path.open(encoding="utf-8") as stream:
+            value = stream.read(4097)
+        if len(value) > 4096:
+            raise ValueError("over-bound Git metadata")
+        return value.strip()
+
+    try:
+        marker = checkout / ".git"
+        if marker.is_symlink():
+            return None
+        if marker.is_dir():
+            directory = marker
+        else:
+            prefix, separator, target = text(marker).partition(":")
+            if prefix != "gitdir" or not separator or not target.strip():
+                return None
+            directory = checkout / target.strip()
+        try:
+            common = text(directory / "commondir")
+        except FileNotFoundError:
+            common = "."
+        return (directory / common).resolve(strict=True)
+    except (OSError, ValueError, UnicodeError):
+        return None
+
+
 def _managed_worktrees(
     repo: Path,
     *,
@@ -1167,12 +1203,14 @@ def _managed_worktrees(
     except OSError:
         return out
     registered = {item.get("path") for item in inventory or []}
+    common_directory = _inventory_common_directory(repo) if inventory else None
     for checkout in checkouts[:MAX_REPOS]:
         if deadline is not None and time.monotonic() >= deadline:
             break
         # Only reuse the inventory for paths Git actually registered in this
         # repository. A directory under .worktrees may be an unrelated clone.
-        shared = inventory if str(checkout) in registered else None
+        shared = (inventory if str(checkout) in registered and common_directory is not None
+                  and _inventory_common_directory(checkout) == common_directory else None)
         state = inspect_repo(checkout, deadline=deadline,
                              _worktree_inventory=shared)
         if state is None:

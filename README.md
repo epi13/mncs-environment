@@ -52,6 +52,44 @@ Environment-mediated provider writes to one checkout are serialized by a
 kernel-scoped lock for the invocation and exposed with release evidence;
 separate worktrees can progress independently.
 
+## First contact
+
+MNCS is a family of services; Environment composes their project-scoped working
+context, authority and durable sessions. In an authenticated Control/MCP client,
+use `mncs_environment` with your `project` and `operation: continuation` to find
+existing work, or `operation: enter` for a new Work Intent. Control supplies the
+consumer identity. Read `configuration`, `workspace_root`, `work_intent`,
+`writable_repositories`, `readiness` and `continuation` before acting. A session
+ID or available executable does not grant effect permission.
+
+Standalone CLI entry uses the closest `.mncs/environment.json`. Protected Control
+entry prefers the owner-controlled `.mncs/project-environment.json` when present;
+these can intentionally select different providers and intent. To inspect the
+same project definition locally, with your own standalone session:
+
+```bash
+./scripts/mncs-env enter --definition .mncs/project-environment.json --consumer my-agent
+```
+
+The returned `actions` work from another directory. Start with the bounded
+`capability_summary` action; follow its pages and retrieve one binding's full
+detail by identity. `workspace` retrieves the full checkout inventory using
+lossless references; selected writable work and selected providers appear first
+in the automatic project list. `claims` exposes coordination detail and `health`
+probes live readiness. Context/status are recorded observations. The existing
+`inspect` action remains the full historical inspection.
+
+Through MCP, use `capabilities` with `summary: true`, then `capability: ID` for
+one complete binding; `preflight: ID` explains effect and claim requirements.
+Use `inspect` with `section: workspace` and `compact: true` for checkout detail.
+No arbitrary CLI arguments or principal/claim bypass is added. See
+[entry and detail selection](docs/ENTRY.md) for supported navigation.
+
+Atlas owns ecosystem orientation and relationships; Language Service owns live
+semantic observations; Forge owns retained execution; Environment composes the
+selected session. Their related context surfaces serve distinct responsibilities.
+Use a bound provider capability or its owning documentation for deeper questions.
+
 ## Why this exists
 
 MNCS increasingly has the machinery needed to compile, plan, admit, execute, observe, verify, diagnose, automate, persist, and reason about work. What has been missing is the coherent boundary through which a consumer enters that machinery.

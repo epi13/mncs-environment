@@ -10881,6 +10881,35 @@ class Session:
 
     # -- inspection ------------------------------------------------------------
 
+    def _context_projects(self, writable: list[str], limit: int = 20) -> list[dict[str, Any]]:
+        """Selected work first; historical worktrees cannot crowd out providers."""
+        projects: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
+        def add(repository, path, branch, dirty):
+            if isinstance(path, str) and path not in seen and len(projects) < limit:
+                seen.add(path)
+                projects.append({"repository": repository, "path": path,
+                                 "branch": branch, "dirty": dirty})
+
+        selected = self.snapshot.get("selected_checkouts", {})
+        for name, facts in sorted(selected.items(), key=lambda item: (item[0] not in writable, item[0])):
+            clean = facts.get("clean")
+            add(name, facts.get("path") or facts.get("observed_path"), facts.get("branch"),
+                not clean if isinstance(clean, bool) else None)
+            if len(projects) == limit:
+                return projects
+        repositories = self.snapshot.get("workspace", {}).get("repositories", [])
+        for managed in (False, True):
+            for repo in repositories:
+                if bool(repo.get("worktree_of")) != managed:
+                    continue
+                add(repo.get("manifest_repository") or repo.get("name"), repo.get("path"),
+                    repo.get("branch"), repo.get("dirty"))
+                if len(projects) == limit:
+                    return projects
+        return projects
+
     def context(self) -> dict[str, Any]:
         """Return the bounded first-use context for this session.
 
@@ -10894,6 +10923,9 @@ class Session:
         writable = sorted(
             set(authority.get("writable", [])) - set(protected)
         )
+        projects = self._context_projects(writable)
+        actions = self.actions()
+        readiness = readiness_module.summarize(self.snapshot)
         available: list[dict[str, Any]] = []
         unavailable = 0
         unavailable_detail_count = 0
@@ -11132,6 +11164,7 @@ class Session:
             continuation["previous_consumers_truncated"] = len(previous_consumers) > 7
         return {
             "schema_version": "mncs.environment.entry-context/1",
+            "observation": "recorded-session",
             "session_id": session_id,
             "lifecycle": self.snapshot.get("lifecycle"),
             "environment_id": self.snapshot.get("environment_id"),
@@ -11147,16 +11180,14 @@ class Session:
                    and self.snapshot.get("configuration", {}).get("name") == "mncs-orientation") else {}),
             "state_dir": str(self.state_dir.expanduser().resolve()),
             "persistence": "store" if hasattr(self.store, "backend") else "file",
-            "readiness": readiness_module.summarize(self.snapshot),
+            "readiness": readiness,
             "service_operations": self.snapshot.get("service_operations", []),
             "doctor": self.doctor_summary(),
             **({"rights_context": self.snapshot["rights_context"]}
                if isinstance(self.snapshot.get("rights_context"), dict) else {}),
-            "projects": [{"repository": repo.get("manifest_repository") or repo.get("name"),
-                          "path": repo.get("path"), "branch": repo.get("branch"),
-                          "dirty": repo.get("dirty")}
-                         for repo in self.snapshot.get("workspace", {}).get("repositories", [])][:20],
+            "projects": projects,
             "project_count": self.snapshot.get("workspace", {}).get("repository_count", 0),
+            "projects_truncated": len(projects) < self.snapshot.get("workspace", {}).get("repository_count", 0),
             "toolchain": self.snapshot.get("toolchain"),
             "execution_stack": self.snapshot.get("execution_stack"),
             "workspace_root": (self.snapshot.get("workspace") or {}).get("root"),
@@ -11217,9 +11248,9 @@ class Session:
                 ),
                 "truncated": len(available) > max_capabilities,
             },
-            "actions": self.actions(),
-            "next_commands": [shlex.join(self.actions()[
-                "reconcile" if readiness_module.summarize(self.snapshot)["blocking"] else "capabilities"
+            "actions": actions,
+            "next_commands": [shlex.join(actions[
+                "reconcile" if readiness["blocking"] else "capability_summary"
             ]["argv"])],
         }
 
@@ -11230,6 +11261,12 @@ class Session:
                   "--persistence", "store" if hasattr(self.store, "backend") else "file"]
         actions = {name: {"argv": [*prefix, name, self.session_id]} for name in
                    ("health", "reconcile", "inspect", "capabilities")}
+        actions["capability_summary"] = {"argv": [*prefix, "capabilities", self.session_id, "--summary"]}
+        actions["workspace"] = {"argv": [*prefix, "inspect", self.session_id, "--section=workspace", "--compact"]}
+        actions["claims"] = {"argv": [*prefix, "claims", self.session_id]}
+        actions["capabilities"]["binding_detail"] = {
+            "append_argv": ["--capability"], "required_argument": "capability or binding ID",
+        }
         actions["capabilities"]["operation_preflight"] = {
             "append_argv": ["--preflight"],
             "required_argument": "bound capability identity",

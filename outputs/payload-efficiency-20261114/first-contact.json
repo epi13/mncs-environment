@@ -1,0 +1,212 @@
+{
+  "method": "scripted exercise from actual README and returned actions; not an independent unfamiliar agent",
+  "source": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/payload-efficiency-20261114",
+  "selected_definition": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/payload-efficiency-20261114/.mncs/project-environment.json",
+  "manual_workarounds": [],
+  "source_selection": "documented explicit match to the protected project definition",
+  "same_session_on_continuation": true,
+  "read_navigation_preserved_generation": true,
+  "availability": {
+    "availability_attention": {
+      "scope": "selected-session-binding-snapshot",
+      "unavailable_bindings": [
+        {
+          "binding_id": "cap_2d76de021e79ca4c",
+          "capability": "mncs-automation:automation-reconciliation",
+          "code": "provider-invocation-unresolvable",
+          "contract_revision": "1",
+          "observed_at": "2026-11-14T15:32:18+00:00",
+          "provider": "mncs-automation",
+          "resolution_issue": {
+            "code": "repository-checkout-not-selected",
+            "dependency_repository": "mncs-language",
+            "environment_name": "MNCS_BIN"
+          },
+          "status": "unavailable",
+          "verification": "substrate"
+        },
+        {
+          "binding_id": "cap_7dce14e3aa9fcab1",
+          "capability": "mncs-doc:documentation-projection",
+          "code": "provider-invocation-unresolvable",
+          "contract_revision": "1",
+          "observed_at": "2026-11-14T15:32:18+00:00",
+          "provider": "mncs-doc",
+          "resolution_issue": {
+            "code": "repository-checkout-not-selected",
+            "dependency_repository": "mncs-language",
+            "environment_name": "MNCS_BIN"
+          },
+          "status": "unavailable",
+          "verification": "substrate"
+        },
+        {
+          "binding_id": "cap_95eabb0251840162",
+          "capability": "mncs-doctor:projection-health",
+          "code": "provider-invocation-unresolvable",
+          "contract_revision": "1",
+          "observed_at": "2026-11-14T15:32:18+00:00",
+          "provider": "mncs-doctor",
+          "resolution_issue": {
+            "code": "repository-checkout-not-selected",
+            "dependency_repository": "mncs-language",
+            "environment_name": "MNCS_BIN"
+          },
+          "status": "unavailable",
+          "verification": "substrate"
+        }
+      ],
+      "unavailable_bindings_omitted_count": 0,
+      "unknown_reason_code_categories_omitted_count": 0,
+      "unknown_reason_code_counts": [
+        {
+          "code": "provider-invocation-undeclared",
+          "count": 6
+        }
+      ],
+      "unknown_without_reason_code_count": 0
+    },
+    "available": [
+      {
+        "binding_id": "cap_bce1ed9579aa6fe9",
+        "capability": "mncs-environment:ambient-projection-coherence",
+        "contract_revision": "2",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_68b98adbd7ade487",
+        "capability": "mncs-environment:campaign-state-inspection",
+        "contract_revision": "2",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_e4c6d2d42e0c6c43",
+        "capability": "mncs-environment:projection-evidence-inspection",
+        "contract_revision": "2",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_ccb1d96d31f0b67a",
+        "capability": "mncs-environment:test/environment-unit-tests",
+        "contract_revision": "8e0de6981d96005f",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_2384a185a089e343",
+        "capability": "mncs-environment:test/environment-worktree-claim-paths",
+        "contract_revision": "c9ca6ef3ef5aeaa7",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_e874ce428a316588",
+        "capability": "mncs-environment:test/selected-toolchain-binding",
+        "contract_revision": "8aa25673618b8c82",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_f35efdc9d7667c45",
+        "capability": "mncs-environment:workspace-discovery",
+        "contract_revision": "1",
+        "provider": "mncs-environment"
+      },
+      {
+        "binding_id": "cap_b9bb55f2ab1f3ebf",
+        "capability": "mncs-environment:workspace-readiness",
+        "contract_revision": "1",
+        "provider": "mncs-environment"
+      }
+    ],
+    "available_count": 8,
+    "truncated": false,
+    "unavailable_count": 3,
+    "unknown_count": 6,
+    "unknown_provider_declaration_scan_complete": true,
+    "unknown_provider_declarations_omitted_count": 0,
+    "unknown_provider_declared_evidence_reference_count": 0,
+    "unknown_provider_evidence_without_callable_address_count": 0
+  },
+  "readiness": "degraded",
+  "workspace_checkouts": 53,
+  "projects_prioritize_writable_selection": true,
+  "binding_detail_retained_provenance": true,
+  "compact_workspace_exactly_matches_full_detail": true,
+  "steps": [
+    {
+      "operation": "fresh entry from README",
+      "exit_code": 0,
+      "bytes": 46067,
+      "elapsed_seconds": 3.816803129040636,
+      "peak_rss_bytes": 321187840
+    },
+    {
+      "operation": "generation before read navigation",
+      "exit_code": 0,
+      "bytes": 23,
+      "elapsed_seconds": 1.6576107330038212,
+      "peak_rss_bytes": 321347584
+    },
+    {
+      "operation": "suggested next command from unrelated cwd",
+      "exit_code": 0,
+      "bytes": 11675,
+      "elapsed_seconds": 1.7094895400223322,
+      "peak_rss_bytes": 321327104
+    },
+    {
+      "operation": "exact binding detail",
+      "exit_code": 0,
+      "bytes": 4126,
+      "elapsed_seconds": 1.7394637410179712,
+      "peak_rss_bytes": 321355776
+    },
+    {
+      "operation": "compact full checkout inventory",
+      "exit_code": 0,
+      "bytes": 58474,
+      "elapsed_seconds": 1.7595492480322719,
+      "peak_rss_bytes": 321060864
+    },
+    {
+      "operation": "expanded authoritative checkout detail",
+      "exit_code": 0,
+      "bytes": 909059,
+      "elapsed_seconds": 1.721084869990591,
+      "peak_rss_bytes": 321200128
+    },
+    {
+      "operation": "claim navigation",
+      "exit_code": 0,
+      "bytes": 302,
+      "elapsed_seconds": 1.6458347429870628,
+      "peak_rss_bytes": 321376256
+    },
+    {
+      "operation": "live readiness navigation",
+      "exit_code": 0,
+      "bytes": 12760,
+      "elapsed_seconds": 1.7269726409576833,
+      "peak_rss_bytes": 321150976
+    },
+    {
+      "operation": "generation after read navigation",
+      "exit_code": 0,
+      "bytes": 23,
+      "elapsed_seconds": 1.6430528580094688,
+      "peak_rss_bytes": 321187840
+    },
+    {
+      "operation": "continuation in fresh process",
+      "exit_code": 0,
+      "bytes": 46057,
+      "elapsed_seconds": 2.6030394550180063,
+      "peak_rss_bytes": 321351680
+    },
+    {
+      "operation": "complete owned exercise session",
+      "exit_code": 0,
+      "bytes": 351,
+      "elapsed_seconds": 2.1215475000208244,
+      "peak_rss_bytes": 321323008
+    }
+  ]
+}

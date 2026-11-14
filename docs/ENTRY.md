@@ -3,9 +3,9 @@
 ## Arrival
 
 From the Environment checkout: `./scripts/mncs-env enter --consumer my-agent`.
-The checked-in definition composes six sibling providers and grants writable
-intent only to Environment. It probes Environment's real workspace discovery
-endpoint. Optional undeclared provider invocations are reported as degradation;
+The checked-in development definition selects its declared sibling providers
+and grants writable intent only to Environment. Its required services include
+workspace discovery, compiler/VM coherence and the resident Language Service. Optional undeclared provider invocations are reported as degradation;
 this does not mean that every resident MNCS service is running.
 
 From another project, call the same executable by its path. Selection precedence:
@@ -1011,3 +1011,41 @@ page with a continuation offset. Neither hydrates historical session snapshots.
 Use project entry/continuation to select authenticated work; an inventory ID is
 not permission to resume another owner's session. Recorded context and readiness
 remain historical observations; `health SESSION` performs live read-only probes.
+
+## First-contact navigation and authority boundaries
+
+For protected MCP entry, select an existing authenticated continuation before
+creating independent work. The bridge assigns the consumer and prefers the
+project-owned `.mncs/project-environment.json`; standalone CLI discovery selects
+`.mncs/environment.json`. Inspect `configuration.source` and `work_intent` to
+understand which owner-controlled definition was selected. This distinction is
+reported, not resolved by changing repository authority or silently combining
+provider sets. An explicit standalone definition can match the protected entry.
+
+`projects` prioritizes selected writable checkouts and selected provider
+checkouts, then other root repositories, before historical linked worktrees.
+`project_count` remains the complete checkout-inventory count for compatibility;
+`projects_truncated` tells the consumer to use `actions.workspace` for all rows.
+Unknown checkout cleanliness remains null, not an invented clean result.
+
+`actions.capability_summary` (or `capabilities SESSION --summary`) returns at most
+25 binding summaries by default, including available, unavailable and unknown
+states with their recorded reasons. `--limit` (1..100) and `--offset` traverse the
+same snapshot. `--capability ID` returns the full original binding and provenance;
+`--preflight ID` gives operation-specific effect/claim advice. The unqualified
+capabilities command and its existing action remain the expanded list. Normal
+nonblocking entry now suggests the summary action instead of expanding every
+binding. Nothing in the summary authorizes an invocation.
+
+MCP retains Environment's existing bounded configuration, continuation, action
+and availability-attention fields. It keeps its established string capability
+list while adding the original bounded binding summaries and accurate total/
+omission counts. Explicit `inspect` section/compact requests pass through without
+being compacted a second time into a context that loses the requested details.
+The same authenticated selected-session and RPC positional checks still apply.
+
+Environment composes authority, readiness and session lifecycle. Atlas supplies
+ecosystem orientation; Language Service supplies semantic observations; Forge
+owns retained execution and Doctor owns diagnostic policy. Repository commit
+frequency or generated-file age does not establish provider abandonment. The
+real Atlas context capability is exercised by the existing vertical proof.

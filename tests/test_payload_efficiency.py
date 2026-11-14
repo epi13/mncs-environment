@@ -235,3 +235,20 @@ def test_compact_and_selected_reads_do_not_publish_store_generations(tmp_path, b
             session.close()
         elif hasattr(store, 'close'):
             store.close()
+
+
+def test_stale_registration_cannot_share_inventory_with_replacement_clone(tmp_path):
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+    git(repo, 'init', '-b', 'main')
+    git(repo, '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+        'commit', '--allow-empty', '-m', 'initial')
+    registered = repo / '.worktrees' / 'replaced'
+    git(repo, 'worktree', 'add', '-b', 'proposal', str(registered))
+    registered.rename(tmp_path / 'parked-checkout')
+    git(repo, 'clone', str(repo), str(registered))
+    result = workspace.discover_workspace(repo)
+    root, replacement = result['repositories']
+    assert any(row['path'] == str(registered) for row in root['worktrees'])
+    assert replacement['worktrees'] == [{
+        'path': str(registered), 'head': root['head'], 'branch': 'refs/heads/main'}]

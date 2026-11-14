@@ -840,12 +840,27 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_capabilities(args: argparse.Namespace) -> int:
+    summary = getattr(args, "summary", False)
+    limit, offset = getattr(args, "limit", 25), getattr(args, "offset", 0)
+    if not 1 <= limit <= 100 or offset < 0:
+        return fail("capability summary needs --limit 1..100 and a nonnegative --offset")
+    if not summary and (limit != 25 or offset):
+        return fail("--limit and --offset require --summary")
     with closing(_open(args)) as session:
         if args.preflight:
             target = {"repository": args.effect_repository} if args.effect_repository else None
             out(session.capability_preflight(args.preflight, effect_target=target))
         elif args.effect_repository:
             return fail("--effect-repository requires --preflight")
+        elif summary:
+            bindings = session.snapshot.get("bindings", [])
+            page = [{key: binding.get(key) for key in
+                     ("binding_id", "capability", "provider", "contract_revision", "availability")}
+                    for binding in bindings[offset:offset + limit]]
+            out({"session_id": session.session_id, "observation": "recorded-session",
+                 "bindings": page, "binding_count": len(bindings), "offset": offset,
+                 "next_offset": offset + limit if offset + limit < len(bindings) else None,
+                 "detail": "capabilities SESSION --capability ID; --preflight ID for effect and claim requirements"})
         else:
             # Capability discovery needs the bound snapshot, not a full
             # session inspection (which reads the complete durable event log).
@@ -2657,7 +2672,10 @@ def cmd_resident(args):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="mncs-env")
+    parser = argparse.ArgumentParser(prog="mncs-env", description=(
+        "MNCS Environment composes project context, authority, capabilities and durable sessions. "
+        "Start in a project with enter; in an authenticated Control/MCP context use continuation "
+        "to select existing work. Context/status are recorded observations; health probes live readiness."))
     parser.add_argument("--state-dir", type=Path, default=DEFAULT_STATE_DIR)
     parser.add_argument("--persistence", choices=("store", "file"), default="store",
                         help="store is canonical; file is the debug projection")
@@ -2890,10 +2908,14 @@ def build_parser() -> argparse.ArgumentParser:
     capability_query = capabilities.add_mutually_exclusive_group()
     capability_query.add_argument("--capability", metavar="IDENTITY",
                                   help="retrieve full detail for one capability or binding ID")
+    capability_query.add_argument("--summary", action="store_true",
+                                  help="bounded binding page with availability and full-detail selectors")
     capability_query.add_argument("--preflight", metavar="CAPABILITY",
                               help="observe one operation's addressing/effect/claim requirements; grants no execution permission")
     capabilities.add_argument("--effect-repository",
                               help="resolve a declared effect target through the selected session")
+    capabilities.add_argument("--limit", type=int, default=25, help="summary page size, 1..100")
+    capabilities.add_argument("--offset", type=int, default=0, help="summary page offset")
     capabilities.set_defaults(func=cmd_capabilities)
 
     authority = session_parser("authority", "show authority or evaluate an action")
