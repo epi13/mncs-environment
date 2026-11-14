@@ -1,0 +1,58 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+........................................................................ [ 20%]
+........................................................................ [ 25%]
+........................................................................ [ 30%]
+........................................................................ [ 35%]
+........................................................................ [ 41%]
+........................................................................ [ 46%]
+........................................................................ [ 51%]
+........................................................................ [ 56%]
+........................................................................ [ 61%]
+.............................................................sssssssssss [ 66%]
+sssssssssss.....................s..............sss.sssssss.sssss.ss..sss [ 71%]
+........................................................................ [ 77%]
+.........................F....................................sss....... [ 82%]
+........................................................................ [ 87%]
+........................................................................ [ 92%]
+........................................................................ [ 97%]
+.................................                                        [100%]
+=================================== FAILURES ===================================
+____________ WatchTests.test_watch_reconsiders_after_claim_release _____________
+
+self = <test_projection_verification.WatchTests testMethod=test_watch_reconsiders_after_claim_release>
+
+    def test_watch_reconsiders_after_claim_release(self):
+        code, first = self.enter("watch-claim")
+        self.assertEqual(code, 0, first)
+        session_id = first["session_id"]
+        self.acquire_foreign("target-doc", ["docs/out.generated.md"])
+        (self.target_doc / "docs" / "rfcs" / "0002.md").write_text(
+            "# RFC 0002 blocked\n")
+        self.commit_all(self.target_doc, "blocked RFC")
+        with self._watch(session_id, "1", 6) as child:
+            import time as _time
+            _time.sleep(2.0)
+            self.release_foreign("target-doc")
+            stdout, _ = child.communicate(timeout=120)
+        self.assertEqual(child.returncode, 0, stdout)
+        lines = [json.loads(line) for line in stdout.splitlines()
+                 if line.strip()]
+        self.assertEqual(len(lines), 6, stdout)
+        pending_seen = any("target-doc:index" in tick["summary"].get(
+            "pending_ids", []) for tick in lines)
+        self.assertTrue(pending_seen, stdout)
+>       self.assertEqual(lines[-1]["summary"]["pending"], 0, stdout)
+E       AssertionError: 1 != 0 : {"iteration": 0, "reused": false, "session_id": "ses_e46d8b4a15954223", "summary": {"blockers": 0, "current": 1, "degraded": 0, "elapsed_seconds": 0.664, "epoch_reused": false, "invalid": 0, "pending": 1, "pending_ids": ["target-doc:index"], "persisted": true, "reconciled": 0}}
+E       {"iteration": 1, "reused": false, "session_id": "ses_e46d8b4a15954223", "summary": {"blockers": 0, "current": 1, "degraded": 0, "elapsed_seconds": 0.62, "epoch_reused": false, "invalid": 0, "pending": 1, "pending_ids": ["target-doc:index"], "persisted": true, "reconciled": 0}}
+E       {"iteration": 2, "reused": true, "session_id": "ses_e46d8b4a15954223", "summary": {"blockers": 0, "current": 1, "degraded": 0, "elapsed_seconds": 0.02, "epoch_reused": true, "invalid": 0, "pending": 1, "pending_ids": ["target-doc:index"], "persisted": false, "reconciled": 0}}
+E       {"iteration": 3, "reused": true, "session_id": "ses_e46d8b4a15954223", "summary": {"blockers": 0, "current": 1, "degraded": 0, "elapsed_seconds": 0.012, "epoch_reused": true, "invalid": 0, "pending": 1, "pending_ids": ["target-doc:index"], "persisted": false, "reconciled": 0}}
+E       {"iteration": 4, "reused": true, "session_id": "ses_e46d8b4a15954223", "summary": {"blockers": 0, "current": 1, "degraded": 0, "elapsed_seconds": 0.013, "epoch_reused": true, "invalid": 0, "pending": 1, "pending_ids": ["target-doc:index"], "persisted": false, "reconciled": 0}}
+E       {"iteration": 5, "reused": true, "session_id": "ses_e46d8b4a15954223", "summary": {"blockers": 0, "current": 1, "degraded": 0, "elapsed_seconds": 0.012, "epoch_reused": true, "invalid": 0, "pending": 1, "pending_ids": ["target-doc:index"], "persisted": false, "reconciled": 0}}
+
+tests/test_projection_verification.py:518: AssertionError
+----- generated xml file: /tmp/mncs-payload-20261114/environment-tests.xml -----
+=========================== short test summary info ============================
+FAILED tests/test_projection_verification.py::WatchTests::test_watch_reconsiders_after_claim_release
+1 failed, 1354 passed, 46 skipped in 1237.53s (0:20:37)

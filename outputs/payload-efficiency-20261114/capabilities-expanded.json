@@ -1,0 +1,40 @@
+{
+  "source": "/home/epi13/Documents/Projects/mncs-environment",
+  "argv": [
+    "--",
+    "capabilities",
+    "ses_2a517ebe10dd99fd"
+  ],
+  "measurements": [
+    {
+      "request": "cold-process",
+      "exit_code": 0,
+      "stderr": "",
+      "bytes": 75010,
+      "elapsed_seconds": 5.751363321032841,
+      "serialization_seconds": 0.0004777249996550381,
+      "peak_rss_bytes": 392560640,
+      "invocations": {},
+      "reference_count": 0,
+      "repeated_collection_bytes": 1234,
+      "repeated_collection_copies": 2,
+      "workspace_checkouts": null,
+      "bindings": 17
+    },
+    {
+      "request": "warm-process",
+      "exit_code": 0,
+      "stderr": "",
+      "bytes": 75010,
+      "elapsed_seconds": 5.564322357997298,
+      "serialization_seconds": 0.00046503101475536823,
+      "peak_rss_bytes": 410681344,
+      "invocations": {},
+      "reference_count": 0,
+      "repeated_collection_bytes": 1234,
+      "repeated_collection_copies": 2,
+      "workspace_checkouts": null,
+      "bindings": 17
+    }
+  ]
+}

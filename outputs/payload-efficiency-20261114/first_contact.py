@@ -19,9 +19,19 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--source', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
+parser.add_argument('--workspace-guide', type=Path)
 a = parser.parse_args()
 root = a.source.resolve()
-guide = (root / 'README.md').read_text()
+workspace_guide = a.workspace_guide.resolve() if a.workspace_guide else None
+if workspace_guide:
+    workspace_text = workspace_guide.read_text()
+    reference = re.search(r'\[MNCS Environment entry\]\(([^)#]+)(?:#[^)]*)?\)', workspace_text)
+    assert reference, 'workspace guidance has no discoverable Environment entry'
+    readme = (workspace_guide.parent / reference.group(1)).resolve()
+    assert readme.parent == root, 'workspace guidance selects a different source checkout'
+else:
+    readme = root / 'README.md'
+guide = readme.read_text()
 # Match the documented command for the protected project's selected definition.
 match = re.search(r'^\./scripts/mncs-env enter --definition \.mncs/project-environment\.json --consumer my-agent$', guide, re.M)
 assert match, 'actual entry guidance does not advertise the selected project definition'
@@ -98,7 +108,8 @@ runpy.run_path(target, run_name='__main__')
     assert continued['session_id'] == sid and continued['entry']['reused'] is True
     run('complete owned exercise session', [*base, 'complete', sid, '--outcome', 'first-contact exercise complete'])
     report = {'method': 'scripted exercise from actual README and returned actions; not an independent unfamiliar agent',
-        'source': str(root), 'selected_definition': first['configuration']['source'],
+        'source': str(root), 'workspace_guidance': str(workspace_guide) if workspace_guide else None,
+        'discovered_readme': str(readme), 'selected_definition': first['configuration']['source'],
         'manual_workarounds': [], 'source_selection': 'documented explicit match to the protected project definition',
         'same_session_on_continuation': True, 'read_navigation_preserved_generation': True,
         'availability': first['capabilities'], 'readiness': first['readiness']['status'],

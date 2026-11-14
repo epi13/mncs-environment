@@ -1,0 +1,11 @@
+{
+  "operation": "capability-detail",
+  "ok": true,
+  "exit_code": 0,
+  "elapsed_seconds": 51.592747889983,
+  "bytes": 3101,
+  "structured": true,
+  "binding_count": 1,
+  "provenance_retained": true,
+  "error": null
+}

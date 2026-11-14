@@ -1,0 +1,46 @@
+CLAIM-RACE-OBSERVATION {'summary': {'current': 1, 'pending': 1, 'reconciled': 0, 'blockers': 0, 'degraded': 0, 'epoch_reused': False, 'invalid': 0, 'pending_ids': ['target-doc:index'], 'elapsed_seconds': 0.745, 'persisted': True}, 'reused': False, 'evidence': 'sessions/ses_3f8b624cd038ba10/projection-artifacts/evidence/projection-ambient-f0bb92fb9c10.json'} 56782f76e2def0d8
+F
+=================================== FAILURES ===================================
+_ ClaimEpochTests.test_release_after_decision_does_not_cache_pending_under_released_claims _
+
+self = <tests.test_projection_claim_epoch.ClaimEpochTests testMethod=test_release_after_decision_does_not_cache_pending_under_released_claims>
+
+    def test_release_after_decision_does_not_cache_pending_under_released_claims(self):
+        code, first = self.enter('mid-pass-claim-release')
+        self.assertEqual(code, 0, first)
+        self.acquire_foreign('target-doc', ['docs/out.generated.md'])
+        (self.target_doc / 'docs/rfcs/0002.md').write_text('# RFC 0002 changed\n')
+        self.commit_all(self.target_doc, 'advance blocked source')
+        session = sessions.Session.open(state_dir=self.state,
+                                        session_id=first['session_id'], backend='file')
+        original = projections.claim_facts
+        captures = 0
+
+        def capture(session, repository, output):
+            nonlocal captures
+            observed = original(session, repository, output)
+            if repository == 'target-doc':
+                captures += 1
+                # The projection sampled a foreign claim. Release before the
+                # verifier's fresh admission so it can produce real PASS,
+                # while this pass still plans against the older claim fact.
+                self.release_foreign('target-doc')
+            return observed
+
+        try:
+            with mock.patch.dict('os.environ', self.env):
+                session.revalidate()
+            with mock.patch.dict('os.environ', self.env), mock.patch.object(
+                    projections, 'claim_facts', side_effect=capture):
+                blocked = projections.ambient_pass(session)
+            print('CLAIM-RACE-OBSERVATION', blocked, session.snapshot['projection_epoch']['epoch'])
+            self.assertEqual(captures, 1)
+            self.assertIn('target-doc:index', blocked['summary']['pending_ids'])
+>           self.assertTrue(session.snapshot['projection_epoch']['epoch'].startswith('uncached:'),
+                            session.snapshot['projection_epoch'])
+E                           AssertionError: False is not true : {'epoch': '56782f76e2def0d8', 'summary': {'current': 1, 'pending': 1, 'reconciled': 0, 'blockers': 0, 'degraded': 0, 'epoch_reused': False, 'invalid': 0, 'pending_ids': ['target-doc:index'], 'elapsed_seconds': 0.745}, 'evidence_ref': 'sessions/ses_3f8b624cd038ba10/projection-artifacts/evidence/projection-ambient-f0bb92fb9c10.json', 'at': '2026-11-14T16:12:45+00:00'}
+
+tests/test_projection_claim_epoch.py:41: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_projection_claim_epoch.py::ClaimEpochTests::test_release_after_decision_does_not_cache_pending_under_released_claims
+1 failed in 3.44s

@@ -1,0 +1,369 @@
+{
+  "scope": "real selected project capabilities; owned temporary canonical Store; not canonical host Store latency",
+  "profiles": [
+    {
+      "operation": "fresh-owned-store",
+      "elapsed_seconds_with_cprofile": 4.2176920239580795,
+      "bytes": 45484,
+      "top_cumulative_functions": [
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.exec>",
+          "calls": 244,
+          "cumulative_seconds": 4.133552364000001
+        },
+        {
+          "file": "mncs-env",
+          "line": 1,
+          "function": "<module>",
+          "calls": 1,
+          "cumulative_seconds": 4.13354616
+        },
+        {
+          "file": "cli.py",
+          "line": 3233,
+          "function": "main",
+          "calls": 1,
+          "cumulative_seconds": 4.05866737
+        },
+        {
+          "file": "cli.py",
+          "line": 166,
+          "function": "cmd_enter",
+          "calls": 1,
+          "cumulative_seconds": 4.034112866
+        },
+        {
+          "file": "entry.py",
+          "line": 1685,
+          "function": "enter",
+          "calls": 1,
+          "cumulative_seconds": 3.996584287
+        },
+        {
+          "file": "session_store.py",
+          "line": 906,
+          "function": "open_store",
+          "calls": 1,
+          "cumulative_seconds": 1.5640206470000002
+        },
+        {
+          "file": "session_store.py",
+          "line": 665,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.564015603
+        },
+        {
+          "file": "store_backend.py",
+          "line": 276,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.564002185
+        },
+        {
+          "file": "embedded.py",
+          "line": 247,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.548235357
+        },
+        {
+          "file": "session.py",
+          "line": 481,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.5465313170000001
+        },
+        {
+          "file": "workspace.py",
+          "line": 231,
+          "function": "_git",
+          "calls": 597,
+          "cumulative_seconds": 1.246345465
+        },
+        {
+          "file": "sessions.py",
+          "line": 3083,
+          "function": "create",
+          "calls": 1,
+          "cumulative_seconds": 1.0823893530000002
+        },
+        {
+          "file": "subprocess.py",
+          "line": 513,
+          "function": "run",
+          "calls": 597,
+          "cumulative_seconds": 1.0725434900000002
+        },
+        {
+          "file": "workspace.py",
+          "line": 674,
+          "function": "inspect_repo",
+          "calls": 141,
+          "cumulative_seconds": 1.0573466630000001
+        },
+        {
+          "file": "subprocess.py",
+          "line": 1177,
+          "function": "communicate",
+          "calls": 597,
+          "cumulative_seconds": 0.9186940680000001
+        },
+        {
+          "file": "subprocess.py",
+          "line": 2093,
+          "function": "_communicate",
+          "calls": 597,
+          "cumulative_seconds": 0.915592759
+        },
+        {
+          "file": "selectors.py",
+          "line": 385,
+          "function": "select",
+          "calls": 1219,
+          "cumulative_seconds": 0.8557225110000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'poll' of 'select.poll' objects>",
+          "calls": 1219,
+          "cumulative_seconds": 0.848742167
+        },
+        {
+          "file": "embedded.py",
+          "line": 417,
+          "function": "_hash",
+          "calls": 173,
+          "cumulative_seconds": 0.8428331320000001
+        },
+        {
+          "file": "session.py",
+          "line": 626,
+          "function": "sha256",
+          "calls": 173,
+          "cumulative_seconds": 0.8426881150000001
+        },
+        {
+          "file": "session.py",
+          "line": 522,
+          "function": "call",
+          "calls": 158,
+          "cumulative_seconds": 0.8239917320000001
+        },
+        {
+          "file": "session.py",
+          "line": 539,
+          "function": "call_batch",
+          "calls": 158,
+          "cumulative_seconds": 0.823564414
+        },
+        {
+          "file": "sessions.py",
+          "line": 7241,
+          "function": "_campaign_repository_refs",
+          "calls": 1,
+          "cumulative_seconds": 0.7259420000000001
+        },
+        {
+          "file": "sessions.py",
+          "line": 2575,
+          "function": "resolve_environment",
+          "calls": 1,
+          "cumulative_seconds": 0.630834226
+        },
+        {
+          "file": "entry.py",
+          "line": 408,
+          "function": "ambient_tick",
+          "calls": 1,
+          "cumulative_seconds": 0.58408247
+        }
+      ]
+    },
+    {
+      "operation": "continuation-owned-store",
+      "elapsed_seconds_with_cprofile": 2.9310430620098487,
+      "bytes": 45476,
+      "top_cumulative_functions": [
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.exec>",
+          "calls": 198,
+          "cumulative_seconds": 2.850924806
+        },
+        {
+          "file": "mncs-env",
+          "line": 1,
+          "function": "<module>",
+          "calls": 1,
+          "cumulative_seconds": 2.8509200040000002
+        },
+        {
+          "file": "cli.py",
+          "line": 3233,
+          "function": "main",
+          "calls": 1,
+          "cumulative_seconds": 2.7767347460000003
+        },
+        {
+          "file": "cli.py",
+          "line": 166,
+          "function": "cmd_enter",
+          "calls": 1,
+          "cumulative_seconds": 2.753247703
+        },
+        {
+          "file": "entry.py",
+          "line": 1685,
+          "function": "enter",
+          "calls": 1,
+          "cumulative_seconds": 2.715805775
+        },
+        {
+          "file": "session_store.py",
+          "line": 906,
+          "function": "open_store",
+          "calls": 1,
+          "cumulative_seconds": 1.564536417
+        },
+        {
+          "file": "session_store.py",
+          "line": 665,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.5645102450000001
+        },
+        {
+          "file": "store_backend.py",
+          "line": 276,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.5644966610000002
+        },
+        {
+          "file": "embedded.py",
+          "line": 247,
+          "function": "__init__",
+          "calls": 2,
+          "cumulative_seconds": 1.552048314
+        },
+        {
+          "file": "session.py",
+          "line": 481,
+          "function": "__init__",
+          "calls": 1,
+          "cumulative_seconds": 1.547740257
+        },
+        {
+          "file": "workspace.py",
+          "line": 231,
+          "function": "_git",
+          "calls": 344,
+          "cumulative_seconds": 0.760870205
+        },
+        {
+          "file": "sessions.py",
+          "line": 3288,
+          "function": "reconcile_campaign_continuity",
+          "calls": 1,
+          "cumulative_seconds": 0.758175881
+        },
+        {
+          "file": "sessions.py",
+          "line": 7241,
+          "function": "_campaign_repository_refs",
+          "calls": 1,
+          "cumulative_seconds": 0.757148307
+        },
+        {
+          "file": "subprocess.py",
+          "line": 513,
+          "function": "run",
+          "calls": 344,
+          "cumulative_seconds": 0.6602243400000001
+        },
+        {
+          "file": "workspace.py",
+          "line": 674,
+          "function": "inspect_repo",
+          "calls": 56,
+          "cumulative_seconds": 0.5678935270000001
+        },
+        {
+          "file": "subprocess.py",
+          "line": 1177,
+          "function": "communicate",
+          "calls": 344,
+          "cumulative_seconds": 0.567037615
+        },
+        {
+          "file": "subprocess.py",
+          "line": 2093,
+          "function": "_communicate",
+          "calls": 344,
+          "cumulative_seconds": 0.565206541
+        },
+        {
+          "file": "selectors.py",
+          "line": 385,
+          "function": "select",
+          "calls": 771,
+          "cumulative_seconds": 0.52518206
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'poll' of 'select.poll' objects>",
+          "calls": 771,
+          "cumulative_seconds": 0.5205271100000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method _hashlib.openssl_sha256>",
+          "calls": 614,
+          "cumulative_seconds": 0.332018018
+        },
+        {
+          "file": "session.py",
+          "line": 365,
+          "function": "_compile_artifact",
+          "calls": 1,
+          "cumulative_seconds": 0.232139539
+        },
+        {
+          "file": "workspace.py",
+          "line": 284,
+          "function": "_worktrees",
+          "calls": 56,
+          "cumulative_seconds": 0.229590396
+        },
+        {
+          "file": "embedded.py",
+          "line": 417,
+          "function": "_hash",
+          "calls": 35,
+          "cumulative_seconds": 0.19246975600000002
+        },
+        {
+          "file": "session.py",
+          "line": 626,
+          "function": "sha256",
+          "calls": 35,
+          "cumulative_seconds": 0.19243805800000002
+        },
+        {
+          "file": "session.py",
+          "line": 522,
+          "function": "call",
+          "calls": 36,
+          "cumulative_seconds": 0.189110634
+        }
+      ]
+    }
+  ]
+}

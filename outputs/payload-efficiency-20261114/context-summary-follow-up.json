@@ -1,0 +1,13 @@
+{
+  "finding": "existing read-activity context-summary binding ID width mismatch",
+  "native_available_binding_count": 8,
+  "native_binding_id_hex_widths": [
+    16
+  ],
+  "captured_binding_ids_status": "partial",
+  "captured_binding_ids": [],
+  "capture_status": "captured",
+  "reproduction": "EnvironmentRPCServer._context_response_summary({exit_code:0, stdout:json.dumps(actual_context)}, succeeded=True)",
+  "scope": "audit/observed-capability summary follow-up; new direct context and exact binding retrieval retain native IDs and full provenance",
+  "authority_change": "none"
+}

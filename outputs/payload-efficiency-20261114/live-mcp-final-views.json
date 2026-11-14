@@ -1,0 +1,68 @@
+[
+  {
+    "operation": "context",
+    "arguments": {
+      "session_id": "ses_2a517ebe10dd99fd"
+    },
+    "ok": true,
+    "exit_code": 0,
+    "elapsed_seconds": 60.62465429404983,
+    "bytes": 22093,
+    "error": null,
+    "navigation_retained": true,
+    "suggested_next_commands": [
+      "/home/epi13/Documents/Projects/mncs-control-mcp/.venv/bin/python /home/epi13/Documents/Projects/mncs-environment/scripts/mncs-env --state-dir /home/epi13/.local/share/mncs-environment --persistence store capabilities ses_2a517ebe10dd99fd --summary"
+    ]
+  },
+  {
+    "operation": "capabilities",
+    "arguments": {
+      "summary": true,
+      "limit": 5
+    },
+    "ok": true,
+    "exit_code": 0,
+    "elapsed_seconds": 33.34665969904745,
+    "bytes": 2806,
+    "error": null,
+    "binding_count": 17,
+    "returned_count": 5,
+    "next_offset": 5,
+    "availability_states": [
+      "available"
+    ]
+  },
+  {
+    "operation": "capabilities",
+    "arguments": {
+      "summary": true,
+      "limit": 5,
+      "offset": 5
+    },
+    "ok": true,
+    "exit_code": 0,
+    "elapsed_seconds": 33.48305997799616,
+    "bytes": 3179,
+    "error": null,
+    "binding_count": 17,
+    "returned_count": 5,
+    "next_offset": 10,
+    "availability_states": [
+      "available",
+      "unavailable",
+      "unknown"
+    ]
+  },
+  {
+    "operation": "capabilities",
+    "arguments": {
+      "capability": "mncs-environment:workspace-readiness"
+    },
+    "ok": true,
+    "exit_code": 0,
+    "elapsed_seconds": 33.53178067703266,
+    "bytes": 3101,
+    "error": null,
+    "provenance_retained": true
+  }
+]

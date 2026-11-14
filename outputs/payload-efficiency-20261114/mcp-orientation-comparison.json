@@ -1,0 +1,70 @@
+{
+  "before": {
+    "bytes": 4602,
+    "presentation_and_serialization_seconds": 0.00043554598232731223,
+    "peak_presentation_allocation_bytes": 13902,
+    "fields": [
+      "schema_version",
+      "session_id",
+      "lifecycle",
+      "environment_id",
+      "work_intent",
+      "workspace_root",
+      "persistence",
+      "toolchain",
+      "writable_repositories",
+      "protected_repositories",
+      "authority",
+      "readiness",
+      "doctor",
+      "projects",
+      "capabilities"
+    ],
+    "capability_fields": [
+      "available",
+      "count"
+    ]
+  },
+  "after": {
+    "bytes": 20941,
+    "presentation_and_serialization_seconds": 0.0014287229860201478,
+    "peak_presentation_allocation_bytes": 48116,
+    "fields": [
+      "schema_version",
+      "session_id",
+      "lifecycle",
+      "environment_id",
+      "work_intent",
+      "workspace_root",
+      "persistence",
+      "toolchain",
+      "writable_repositories",
+      "protected_repositories",
+      "configuration",
+      "observation",
+      "consumer_id",
+      "continuation",
+      "actions",
+      "next_commands",
+      "project_count",
+      "projects_truncated",
+      "authority",
+      "readiness",
+      "doctor",
+      "projects",
+      "capabilities"
+    ],
+    "capability_fields": [
+      "available",
+      "count",
+      "available_bindings",
+      "available_count",
+      "unavailable_count",
+      "unknown_count",
+      "truncated",
+      "availability_attention",
+      "unknown_provider_declaration_scan_complete"
+    ]
+  },
+  "interpretation": "Same actual native session context; additional bytes retain navigation, provenance selectors, continuation and unavailable/unknown attention previously discarded. No extra provider call."
+}

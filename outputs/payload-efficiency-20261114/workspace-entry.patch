@@ -1,0 +1,16 @@
+--- AGENTS.md
++++ AGENTS.md
+@@ -13,3 +13,13 @@
+ - Archive source revisions and receipts without carrying their Cargo targets forward. Retire obsolete build outputs after the replacement build succeeds.
+ - Before completing a task, remove its temporary build/cache directories, release its claims, and retire its own clean merged worktrees. Preserve foreign work, unmerged commits, modified source, durable evidence, and outputs still used by running services.
+ - Use system `/tmp` for temporary files. Keep enduring deliverables in the task's outputs directory.
++
++## MNCS first contact
++
++Start with the existing [MNCS Environment entry](mncs-environment/README.md#first-contact).
++In authenticated MCP, select your project with `mncs_environment` and use
++`continuation` for existing work or `enter` for an independent Work Intent.
++The returned configuration, scope, readiness and actions establish your working
++context; follow the bounded capability summary and linked details before effects.
++Environment composes sessions and authority; provider responsibilities remain
++with their owning tools. This navigation does not change the delivery authority above.

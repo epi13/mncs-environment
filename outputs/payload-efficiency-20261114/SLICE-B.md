@@ -62,3 +62,13 @@ older fixture paths relative to the checkout; canonical-checkout validation is
 recorded in the final completion report. The final vertical proof and all 17
 campaign proofs passed. Control MCP full suite: 375 passed / 12 skipped, with
 existing multiprocessing fork warnings; changed files passed Ruff.
+
+Canonical-checkout validation subsequently exposed a real projection status race:
+a claim could be released after the projection sampled it but before verifier
+admission and the post-pass fingerprint. A successful verifier plus the older
+foreign-claim decision could then be cached under the released claim epoch.
+`a8072da` prevents reuse of that cross-state result using the existing uncached
+epoch convention. A real native-provider regression fails deterministically
+before the fix and converges on the next pass afterward. Provider pass memoization
+and ordinary stable-claim quiet passes remain unchanged. Final affected-suite
+results are in the completion report.

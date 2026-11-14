@@ -1,0 +1,21 @@
+memory HEAD: 601cbcaa55cb52ffb5c8218b09f8607c2281c864
+
+PASS two-agent.conflict
+PASS two-agent.authority-coordination-defer
+PASS two-agent.handoff
+PASS bypass.no-claim-no-exec
+PASS bypass.claim-executes
+PASS bypass.release-revokes
+PASS restart.resume
+PASS restart.missed-event-once
+PASS health.shape
+PASS idle.noop
+PASS resource.bounded
+PASS context.bounded
+PASS context.ack-advances
+PASS reuse.resume
+PASS language.live-delta
+PASS language.dedup
+PASS memory.untouched
+
+CAMPAIGN PROOFS: PASS (17 passed, 0 skipped, 0 failed)

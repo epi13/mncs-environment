@@ -77,6 +77,7 @@ for index in range(a.repeat):
             for item in value:
                 visit(item)
     visit(document)
+    metadata = document if isinstance(document, dict) else {}
     results.append({'request': 'cold-process' if index == 0 else 'warm-process',
         'exit_code': code, 'stderr': stderr.getvalue()[:2000],
         'bytes': len(raw.encode()), 'elapsed_seconds': elapsed,
@@ -84,9 +85,9 @@ for index in range(a.repeat):
         'invocations': dict(counts), 'reference_count': reference_count,
         'repeated_collection_bytes': sum(len(key.encode()) * (count - 1) for key, count in repeated.items()),
         'repeated_collection_copies': sum(count - 1 for count in repeated.values()),
-        'workspace_checkouts': (document or {}).get('repository_count',
-            ((document or {}).get('workspace') or {}).get('repository_count')),
-        'bindings': len((document or {}).get('bindings', [])),
+        'workspace_checkouts': metadata.get('repository_count',
+            (metadata.get('workspace') or {}).get('repository_count')),
+        'bindings': len(document) if isinstance(document, list) else len(metadata.get('bindings', [])),
     })
 a.output.parent.mkdir(parents=True, exist_ok=True)
 a.output.write_text(json.dumps({'source': str(a.source.resolve()), 'argv': a.argv,
