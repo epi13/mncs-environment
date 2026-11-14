@@ -14,6 +14,7 @@ retries, and an identical re-put is an idempotent DUPLICATE.
 from __future__ import annotations
 
 import errno
+import hashlib
 import heapq
 import json
 import os
@@ -28,9 +29,43 @@ from . import workspace as workspace_module
 
 SCHEMA_EVENT = b"mncs.environment.session-event/1"
 SCHEMA_SNAPSHOT = b"mncs.environment.session-snapshot/1"
+SCHEMA_SNAPSHOT_SECTION = b"mncs.environment.session-snapshot-section/1"
 SCHEMA_CLAIM = b"mncs.environment.workspace-claim/1"
 SCHEMA_PROJECTION = b"mncs.environment.projection-state/1"
 SCHEMA_PROJECTION_EVIDENCE = b"mncs.environment.verification-evidence/1"
+
+_SNAPSHOT_SECTIONS_FIELD = "_mncs_snapshot_sections_v1"
+_SNAPSHOT_SECTION_MIN_BYTES = 512
+_INLINE_SNAPSHOT_KEYS = frozenset({
+    "schema_version",
+    "session_id",
+    "environment_id",
+    "environment_digest",
+    "consumer_id",
+    "consumer_kind",
+    "authenticated_principal_id",
+    "lifecycle",
+    "lifecycle_history",
+    "checkpoints",
+    "handoffs",
+    "accepted_handoffs",
+    "revalidation_receipts",
+    "rpc_read_activity_count",
+    "rpc_read_activity_limit_reached",
+    "rpc_read_activity_request_index",
+    "completion_pending",
+    "completion",
+    "termination_pending",
+    "snapshot_sequence",
+    "created_at",
+    "updated_at",
+    "last_store_generation",
+    _SNAPSHOT_SECTIONS_FIELD,
+})
+_NESTED_SNAPSHOT_SUBSECTIONS: tuple[tuple[str, str], ...] = (
+    ("workspace", "repositories"),
+    ("campaign", "repository_refs"),
+)
 
 MAX_CAS_RETRIES = 16
 _STORE_RUNTIME_LOCK = threading.RLock()
@@ -147,6 +182,68 @@ def _event_identity(session_id: str, sequence: int) -> bytes:
 
 def _snapshot_identity(session_id: str, revision: int) -> bytes:
     return f"{session_id}:snap:{revision:010d}".encode("utf-8")
+
+
+def _snapshot_section_identity(sha256_hex: str) -> bytes:
+    return f"snap-sec:{sha256_hex}".encode("utf-8")
+
+
+def _decompose_snapshot(
+    snapshot: dict[str, Any],
+) -> tuple[bytes, dict[bytes, bytes]]:
+    """Split a session snapshot into a compact envelope and content-addressed sections.
+
+    Large top-level fields (and large nested repository/checkout tables inside
+    ``workspace`` and ``campaign``) are externalized by their canonical UTF-8
+    JSON SHA-256 digest when they reach ``_SNAPSHOT_SECTION_MIN_BYTES``. Small
+    snapshots without qualifying sections remain identical to the legacy
+    single-object encoding.
+    """
+    envelope: dict[str, Any] = {}
+    sections_meta: dict[str, dict[str, Any]] = {}
+    section_blobs: dict[bytes, bytes] = {}
+    nested_parents = {parent: subkey for parent, subkey in _NESTED_SNAPSHOT_SUBSECTIONS}
+
+    for key, value in snapshot.items():
+        if key in _INLINE_SNAPSHOT_KEYS:
+            envelope[key] = value
+            continue
+        subkey = nested_parents.get(key)
+        if subkey is not None and isinstance(value, dict) and subkey in value:
+            sub_val = value[subkey]
+            sub_bytes = json.dumps(
+                sub_val, ensure_ascii=False, sort_keys=True
+            ).encode("utf-8")
+            if len(sub_bytes) >= _SNAPSHOT_SECTION_MIN_BYTES:
+                sub_sha = hashlib.sha256(sub_bytes).hexdigest()
+                sub_ident = _snapshot_section_identity(sub_sha)
+                sections_meta[f"{key}.{subkey}"] = {
+                    "sha256": sub_sha,
+                    "size": len(sub_bytes),
+                }
+                section_blobs[sub_ident] = sub_bytes
+                value = {k: v for k, v in value.items() if k != subkey}
+
+        sec_bytes = json.dumps(
+            value, ensure_ascii=False, sort_keys=True
+        ).encode("utf-8")
+        if len(sec_bytes) >= _SNAPSHOT_SECTION_MIN_BYTES:
+            sec_sha = hashlib.sha256(sec_bytes).hexdigest()
+            sec_ident = _snapshot_section_identity(sec_sha)
+            sections_meta[key] = {
+                "sha256": sec_sha,
+                "size": len(sec_bytes),
+            }
+            section_blobs[sec_ident] = sec_bytes
+        else:
+            envelope[key] = value
+
+    if sections_meta:
+        envelope[_SNAPSHOT_SECTIONS_FIELD] = sections_meta
+    envelope_bytes = json.dumps(
+        envelope, ensure_ascii=False, sort_keys=True
+    ).encode("utf-8")
+    return envelope_bytes, section_blobs
 
 
 def _claim_identity(claim_id: str, version: int) -> bytes:
@@ -408,20 +505,270 @@ class StoreBackend:
 
     # -- snapshots -----------------------------------------------------------
 
-    def put_snapshot(self, session_id: str, revision: int, snapshot: dict[str, Any]):
-        payload = json.dumps(snapshot, ensure_ascii=False, sort_keys=True).encode()
-        _, StoreError, StoreResultCode = self._api
-        try:
-            return self._put_immutable(
-                schema=SCHEMA_SNAPSHOT,
-                identity=_snapshot_identity(session_id, revision),
-                payload=payload,
+    def _has_binding_at(
+        self, generation: int, schema: bytes, identity: bytes
+    ) -> bool:
+        committed = getattr(self, "_committed_snapshot_sections", None)
+        if schema == SCHEMA_SNAPSHOT_SECTION and isinstance(committed, set):
+            if (
+                getattr(self, "_committed_sections_store_id", None)
+                != id(self._store)
+                or generation
+                < getattr(self, "_committed_sections_generation", 0)
+            ):
+                committed.clear()
+                self._committed_sections_store_id = id(self._store)
+                self._committed_sections_generation = generation
+            elif identity in committed:
+                return True
+        found = False
+        entry_lookup = getattr(self._store, "_entry_by_binding", None)
+        binding_id_fn = getattr(self._store, "_binding_id", None)
+        if callable(entry_lookup) and callable(binding_id_fn):
+            found = (
+                entry_lookup(generation, binding_id_fn(schema, identity))
+                is not None
             )
-        except StoreError as error:
-            if error.code == StoreResultCode.IDENTITY_CONFLICT:
+        else:
+            observe = getattr(self._store, "domain_bindings_at", None)
+            if callable(observe):
+                found = (schema, identity) in set(observe(generation))
+        if found and schema == SCHEMA_SNAPSHOT_SECTION:
+            if not isinstance(committed, set):
+                committed = set()
+                self._committed_snapshot_sections = committed
+            self._committed_sections_store_id = id(self._store)
+            self._committed_sections_generation = generation
+            committed.add(identity)
+        return found
+
+    def _read_snapshot_section_payload(self, sec_identity: bytes) -> bytes:
+        _, StoreError, StoreResultCode = getattr(
+            self, "_api", (None, Exception, None)
+        )
+        get_bound = getattr(self._store, "get_bound_object", None)
+        if callable(get_bound):
+            try:
+                item = get_bound(SCHEMA_SNAPSHOT_SECTION, sec_identity)
+            except StoreError as error:
+                if (
+                    StoreResultCode is not None
+                    and getattr(error, "code", None)
+                    in (
+                        StoreResultCode.DENIED,
+                        StoreResultCode.INTEGRITY_FAILURE,
+                    )
+                ):
+                    raise StoreIntegrityFailure(
+                        f"snapshot section {sec_identity.decode('utf-8', 'replace')} "
+                        f"is missing or failed verification: {error}"
+                    ) from error
+                raise
+            return bytes(item.payload)
+
+        find_bound = getattr(self._store, "find_bound_objects", None)
+        if callable(find_bound):
+            item = next(
+                (
+                    candidate
+                    for candidate in find_bound(
+                        SCHEMA_SNAPSHOT_SECTION, sec_identity
+                    )
+                    if candidate.domain_identity == sec_identity
+                ),
+                None,
+            )
+            if item is not None:
+                return bytes(item.payload)
+        raise StoreIntegrityFailure(
+            f"snapshot section {sec_identity.decode('utf-8', 'replace')} is missing"
+        )
+
+    def _reconstruct_sectioned_snapshot(
+        self, record: dict[str, Any]
+    ) -> dict[str, Any]:
+        reconstructed = dict(record)
+        sections = reconstructed.pop(_SNAPSHOT_SECTIONS_FIELD, None)
+        if not isinstance(sections, dict):
+            raise StoreIntegrityFailure(
+                "snapshot section manifest is not a JSON object"
+            )
+        nested_items: list[tuple[str, str, dict[str, Any]]] = []
+        for sec_key, meta in sections.items():
+            if not isinstance(sec_key, str) or not isinstance(meta, dict):
+                raise StoreIntegrityFailure(
+                    "snapshot section entry is malformed"
+                )
+            if "." in sec_key:
+                parent, _, subkey = sec_key.partition(".")
+                nested_items.append((parent, subkey, meta))
+                continue
+            reconstructed[sec_key] = self._decode_verified_section(
+                sec_key, meta
+            )
+
+        for parent, subkey, meta in nested_items:
+            parent_val = reconstructed.get(parent)
+            if not isinstance(parent_val, dict):
+                raise StoreIntegrityFailure(
+                    f"snapshot section parent {parent!r} is not a JSON object"
+                )
+            updated_parent = dict(parent_val)
+            updated_parent[subkey] = self._decode_verified_section(
+                f"{parent}.{subkey}", meta
+            )
+            reconstructed[parent] = updated_parent
+        return reconstructed
+
+    def _decode_verified_section(
+        self, sec_key: str, meta: dict[str, Any]
+    ) -> Any:
+        sha256_hex = meta.get("sha256")
+        expected_size = meta.get("size")
+        if (
+            not isinstance(sha256_hex, str)
+            or len(sha256_hex) != 64
+            or type(expected_size) is not int
+            or expected_size < 0
+        ):
+            raise StoreIntegrityFailure(
+                f"snapshot section {sec_key!r} has invalid metadata"
+            )
+        sec_identity = _snapshot_section_identity(sha256_hex)
+        payload = self._read_snapshot_section_payload(sec_identity)
+        if (
+            len(payload) != expected_size
+            or hashlib.sha256(payload).hexdigest() != sha256_hex
+        ):
+            raise StoreIntegrityFailure(
+                f"snapshot section {sec_key!r} failed content digest verification"
+            )
+        try:
+            return json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise StoreIntegrityFailure(
+                f"snapshot section {sec_key!r} is not valid UTF-8 JSON"
+            ) from error
+
+    def put_snapshot(self, session_id: str, revision: int, snapshot: dict[str, Any]):
+        envelope_bytes, section_blobs = _decompose_snapshot(snapshot)
+        snap_identity = _snapshot_identity(session_id, revision)
+        _, StoreError, StoreResultCode = self._api
+        store_obj = getattr(self, "_store", None)
+        if not section_blobs or store_obj is None or not hasattr(store_obj, "put_bound_objects"):
+            try:
+                return self._put_immutable(
+                    schema=SCHEMA_SNAPSHOT,
+                    identity=snap_identity,
+                    payload=envelope_bytes,
+                )
+            except StoreError as error:
+                if error.code == StoreResultCode.IDENTITY_CONFLICT:
+                    from .session_store import SnapshotConflict
+                    raise SnapshotConflict(session_id, revision) from error
+                raise
+
+        self._ensure_writable()
+        from mncs_store import BoundObjectInput  # noqa: E402
+
+        snap_descriptor = json.dumps(
+            {
+                "schema": SCHEMA_SNAPSHOT.decode(),
+                "identity": snap_identity.decode(),
+            },
+            sort_keys=True,
+        ).encode()
+        last_error: Exception | None = None
+        for _ in range(MAX_CAS_RETRIES):
+            generation = self._store.current_generation
+            missing_sections = [
+                (sec_ident, sec_bytes)
+                for sec_ident, sec_bytes in section_blobs.items()
+                if not self._has_binding_at(
+                    generation, SCHEMA_SNAPSHOT_SECTION, sec_ident
+                )
+            ]
+            if not missing_sections or self._has_binding_at(
+                generation, SCHEMA_SNAPSHOT, snap_identity
+            ):
+                try:
+                    return self._put_immutable(
+                        schema=SCHEMA_SNAPSHOT,
+                        identity=snap_identity,
+                        payload=envelope_bytes,
+                    )
+                except StoreError as error:
+                    if error.code == StoreResultCode.IDENTITY_CONFLICT:
+                        from .session_store import SnapshotConflict
+                        raise SnapshotConflict(session_id, revision) from error
+                    raise
+
+            batch = [
+                BoundObjectInput(
+                    SCHEMA_SNAPSHOT_SECTION,
+                    sec_ident,
+                    json.dumps(
+                        {
+                            "schema": SCHEMA_SNAPSHOT_SECTION.decode(),
+                            "identity": sec_ident.decode(),
+                        },
+                        sort_keys=True,
+                    ).encode(),
+                    sec_bytes,
+                )
+                for sec_ident, sec_bytes in missing_sections
+            ]
+            batch.append(
+                BoundObjectInput(
+                    SCHEMA_SNAPSHOT,
+                    snap_identity,
+                    snap_descriptor,
+                    envelope_bytes,
+                )
+            )
+            try:
+                result = self._store.put_bound_objects(
+                    batch, expected_generation=generation
+                )
+            except OSError as error:
+                if error.errno == errno.EROFS:
+                    raise StoreUnavailable(
+                        "canonical Store filesystem transport is read-only in this execution",
+                        code="direct-filesystem-read-only",
+                    ) from error
+                raise
+            except StoreError as error:
+                if error.code == StoreResultCode.IDENTITY_CONFLICT:
+                    from .session_store import SnapshotConflict
+                    raise SnapshotConflict(session_id, revision) from error
+                last_error = error
+                continue
+            if result.code == StoreResultCode.STALE_GENERATION:
+                last_error = StoreError(
+                    result.code, "generation advanced; retrying"
+                )
+                continue
+            if result.code == StoreResultCode.IDENTITY_CONFLICT:
                 from .session_store import SnapshotConflict
-                raise SnapshotConflict(session_id, revision) from error
-            raise
+                raise SnapshotConflict(session_id, revision)
+            if not result.committed:
+                raise StoreError(
+                    result.code, "session snapshot publication failed"
+                )
+            committed = getattr(self, "_committed_snapshot_sections", None)
+            if not isinstance(committed, set):
+                committed = set()
+                self._committed_snapshot_sections = committed
+            self._committed_sections_store_id = id(self._store)
+            self._committed_sections_generation = getattr(
+                result, "generation", generation
+            )
+            for sec_ident, _ in missing_sections:
+                committed.add(sec_ident)
+            return result
+        raise last_error or StoreError(
+            StoreResultCode.CONFLICT, "CAS retries exhausted"
+        )
 
     def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
         prefix = f"{session_id}:snap:".encode()
@@ -450,9 +797,14 @@ class StoreBackend:
             if item is None:
                 continue
             try:
-                return json.loads(item.payload.decode("utf-8"))
+                record = json.loads(item.payload.decode("utf-8"))
             except (ValueError, json.JSONDecodeError):
                 continue
+            if not isinstance(record, dict):
+                continue
+            if _SNAPSHOT_SECTIONS_FIELD in record:
+                return self._reconstruct_sectioned_snapshot(record)
+            return record
         return None
 
     # -- claims ---------------------------------------------------------------

@@ -42,6 +42,7 @@ MAX_REPLAY_WALK = 4096
 _DERIVED_STORE_SCHEMAS = {
     b"mncs.environment.verification-evidence/1",
     b"mncs.provider-execution-provenance/1",
+    b"mncs.environment.session-snapshot-section/1",
 }
 
 
@@ -265,8 +266,8 @@ class StoreReplaySource(Source):
             return None
         if text.startswith(self.own_prefix):
             return None
-        if ":evt:" in text:
-            return None  # session logs own event payloads
+        if ":evt:" in text or text.startswith("snap-sec:"):
+            return None  # session logs own event payloads; snap-sec: are internal snapshot sections
         cursor = f"{generation}:{digest_hex({'g': generation, 'i': text, 'schema': schema.hex()})[:12]}"
         moment = utcnow()
         if text.startswith("claim:"):

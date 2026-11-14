@@ -2309,8 +2309,8 @@ def enter(*, definition: dict, definition_path: Path | None, workspace_root: str
                                                   campaign_id=campaign_id,
                                                   authenticated_principal_id=authenticated_principal_id,
                                                   store=store)
-                session.transition("resolving", "enter: resolving environment")
-                session.transition("ready", "environment resolved; capability readiness is reported separately")
+                session.transition("resolving", "enter: resolving environment", save=False)
+                session.transition("ready", "environment resolved; capability readiness is reported separately", save=False)
                 session.transition("active", f"consumer {consumer_id} entered")
             elif authenticated_principal_id is not None:
                 if session.snapshot.get("authenticated_principal_id") != authenticated_principal_id:

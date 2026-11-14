@@ -364,7 +364,7 @@ class CompletionReleasesClaimsTests(unittest.TestCase):
             )
 
     def test_completion_recovers_before_intent_transition_and_final_snapshot(self):
-        for fail_save_call in (1, 2, 3, 4, 5, 6):
+        for fail_save_call in (1, 2, 3, 4, 5):
             with self.subTest(fail_save_call=fail_save_call):
                 store = StubStore(
                     _snapshot(), [_record("ses_test", "mncs-demo")],

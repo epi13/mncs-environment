@@ -2983,11 +2983,21 @@ def _apply_checkout_drift(readiness: dict[str, Any], execution_stack: dict[str, 
 class Session:
     """A durable session bound to a session store (snapshot + event log)."""
 
-    def __init__(self, store: SessionStore, session_id: str):
+    def __init__(
+        self,
+        store: SessionStore,
+        session_id: str,
+        *,
+        _initial_snapshot: dict[str, Any] | None = None,
+    ):
         # Sessions always open through create/open/resume below.
         self.store = store
         self.session_id = session_id
-        snapshot = store.load_snapshot(session_id)
+        snapshot = (
+            _initial_snapshot
+            if _initial_snapshot is not None
+            else store.load_snapshot(session_id)
+        )
         if not isinstance(snapshot, dict) or snapshot.get("session_id") != session_id:
             raise LifecycleError(f"session {session_id} has no readable snapshot")
         self.snapshot = snapshot
@@ -2997,6 +3007,7 @@ class Session:
         # Store-generation baseline for observe_store; None means this
         # handle has not adopted yet (adopts silently on first observe).
         self._feed_generation: int | None = None
+        self._defer_intermediate_saves: bool = False
 
     def close(self) -> None:
         close = getattr(self.store, "close", None)
@@ -3229,8 +3240,7 @@ class Session:
                 if isinstance(repo, dict) and repo.get("manifest_repository")
                 and isinstance(repo.get("path"), str) and repo["path"]
             ]
-        store.save_snapshot(session_id, snapshot)
-        instance = cls(store, session_id)
+        instance = cls(store, session_id, _initial_snapshot=snapshot)
         # Use the same current checkout projection on creation and reentry.
         # Abbreviated seed refs otherwise acquire identity/observation fields
         # on the first quiet continuation, emitting campaign.reconciled and
@@ -3392,7 +3402,8 @@ class Session:
                     if campaign_state_record else None
                 ),
             })
-            self._save()
+            if not getattr(self, "_defer_intermediate_saves", False):
+                self._save()
         return {"recovered_checkpoints": recovered,
                 "unavailable_checkpoints": missing,
                 "claim_ids": claims,
@@ -3462,7 +3473,7 @@ class Session:
         if instance.snapshot.get("lifecycle") in ("completed", "failed"):
             raise LifecycleError(f"session {session_id} is terminal and cannot resume")
         if instance.snapshot.get("lifecycle") == "abandoned":
-            instance.transition("active", "resumed from abandoned")
+            instance.transition("active", "resumed from abandoned", save=False)
         instance._emit(
             "session.resumed", "environment",
             {"consumer_id": instance.snapshot.get("consumer_id")},
@@ -3620,6 +3631,7 @@ class Session:
                     )
                 self._invalidate_log()
                 self._next_seq_hint = sequence + 1
+                self._refresh_feed_baseline()
                 return event
             except EventGenerationConflict:
                 self._next_seq_hint = None
@@ -3643,14 +3655,15 @@ class Session:
 
     # -- lifecycle ---------------------------------------------------------
 
-    def transition(self, to_state: str, reason: str) -> dict[str, Any]:
+    def transition(self, to_state: str, reason: str, *, save: bool = True) -> dict[str, Any]:
         current = self.snapshot.get("lifecycle")
         allowed = TRANSITIONS.get(current, ())
         if to_state not in allowed:
             raise LifecycleError(f"illegal transition {current} -> {to_state}: {reason}")
         self.snapshot["lifecycle"] = to_state
         self.snapshot["lifecycle_history"].append({"state": to_state, "reason": reason, "at": utcnow()})
-        self._save()
+        if save:
+            self._save()
         return {"from": current, "to": to_state, "reason": reason}
 
     # -- intent / authority / capabilities ----------------------------------
@@ -9280,6 +9293,15 @@ class Session:
             )
         self.snapshot["workspace_heads"] = current
         self.snapshot["workspace_facts"] = current_states
+        prior_workspace = self.snapshot.get("workspace")
+        if isinstance(prior_workspace, dict):
+            for preserved_key in (
+                "consumed_provider_diagnostics",
+                "runtime_toolchain_checkouts",
+                "runtime_toolchain_diagnostics",
+            ):
+                if preserved_key in prior_workspace and preserved_key not in workspace:
+                    workspace[preserved_key] = prior_workspace[preserved_key]
         if self.snapshot.get("selected_checkouts"):
             workspace["selected_checkouts"] = self.snapshot["selected_checkouts"]
         self.snapshot["workspace"] = workspace
@@ -9287,7 +9309,8 @@ class Session:
         self.reconcile_campaign_continuity(
             prior_repository_refs=prior_repository_refs,
         )
-        self._save()
+        if not getattr(self, "_defer_intermediate_saves", False):
+            self._save()
         return events
 
     def _feed_generation_now(self) -> int | None:
@@ -9391,11 +9414,15 @@ class Session:
         workspace_root = selected_workspace
         workspace_root_value = str(selected_workspace) if selected_workspace else None
         if workspace_root_value:
-            self.observe_workspace(
-                workspace_root_value,
-                request_id=request_id,
-                operation_digest=operation_digest,
-            )
+            self._defer_intermediate_saves = True
+            try:
+                self.observe_workspace(
+                    workspace_root_value,
+                    request_id=request_id,
+                    operation_digest=operation_digest,
+                )
+            finally:
+                self._defer_intermediate_saves = False
         # Refresh the campaign-root observation first. Exact cross-repository
         # scopes are composed immediately afterward from their canonical grant
         # and live claim, so an external checkout cannot be marked missing just
@@ -10010,8 +10037,16 @@ class Session:
         self.snapshot["checkpoints"] = list(dict.fromkeys(self.snapshot["checkpoints"]))
         if isinstance(record.get("campaign_state"), dict):
             campaign = dict(self.snapshot.get("campaign") or {})
+            updated_checkpoint_records = [
+                *(
+                    item
+                    for item in checkpoint_records
+                    if item.get("identity") != record.get("identity")
+                ),
+                record,
+            ]
             current_campaign_history = _validated_campaign_state_history(
-                self.store.list_checkpoints(self.session_id),
+                updated_checkpoint_records,
                 (self.snapshot.get("campaign") or {}).get("identity"),
             )
             if current_campaign_history:
@@ -10021,7 +10056,7 @@ class Session:
                 )
             self.snapshot["campaign"] = campaign
         if self.snapshot.get("lifecycle") == "active":
-            self.transition("checkpointed", f"checkpoint {sequence}")
+            self.transition("checkpointed", f"checkpoint {sequence}", save=False)
         events = self._log()
         if not any(event.get("payload", {}).get("checkpoint_id") == record["identity"]
                    for event in events):
@@ -10035,7 +10070,7 @@ class Session:
                         ),
                         "request_id": request_id})
         if self.snapshot.get("lifecycle") == "checkpointed":
-            self.transition("active", "resumed after checkpoint")
+            self.transition("active", "resumed after checkpoint", save=False)
         self._save()
         return record
 
@@ -10247,15 +10282,18 @@ class Session:
         if record["identity"] not in handoff_history:
             handoff_history.append(record["identity"])
         self.snapshot["pending_handoff_id"] = record["identity"]
+        transitioned_to_handed_off = False
         if self.snapshot.get("lifecycle") == "active":
             self.transition("handed_off", f"handoff to {to_consumer}")
+            transitioned_to_handed_off = True
         events = self._log()
         if not any(event.get("type") == "handoff.created"
                    and event.get("payload", {}).get("handoff_id") == record["identity"]
                    for event in events):
             self._emit("handoff.created", self.snapshot.get("consumer_id", "unknown"),
                        {"handoff_id": record["identity"], "to_consumer": to_consumer})
-            self._save()
+            if not transitioned_to_handed_off:
+                self._save()
         return record
 
     def accept_handoff(self, handoff_id: str, *, consumer_id: str,
@@ -10372,7 +10410,6 @@ class Session:
         self._emit("session.resumed", consumer_id,
                    {"previous_consumer": previous, "handoff_id": handoff_id,
                     "revalidation": divergence})
-        self._save()
         return result
 
     def _release_own_claims(
