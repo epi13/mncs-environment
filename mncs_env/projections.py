@@ -19,6 +19,7 @@ Nothing here commits, stages, switches branches, or pushes.
 
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import json
 import os
@@ -28,6 +29,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+_DIAGNOSE_PASS_CACHE: contextvars.ContextVar[
+    dict[tuple[Any, ...], dict[str, Any] | None] | None
+] = contextvars.ContextVar("mncs_env_diagnose_pass_cache", default=None)
 
 from . import capabilities as capabilities_module
 from . import capability_intelligence, capability_relationships, evidence_store
@@ -767,13 +772,28 @@ def diagnose_projection(session, declaration, health, repair):
     binding = _session_binding(session, capability)
     if binding is None or binding.get('availability', {}).get('status') != 'available':
         return None
+    pass_cache = _DIAGNOSE_PASS_CACHE.get(None)
+    cache_key = None
+    if isinstance(pass_cache, dict):
+        cache_key = (
+            binding.get('binding_id'),
+            tuple(health),
+            tuple(repair),
+        )
+        if cache_key in pass_cache:
+            cached = pass_cache[cache_key]
+            return dict(cached) if isinstance(cached, dict) else None
     try:
         response = session.invoke(capability, ['--facts-json', json.dumps(
             {'health': health, 'repair': repair})], timeout_seconds=120)
         if response.get('status') != 'ok':
+            if cache_key is not None:
+                pass_cache[cache_key] = None
             return None
         envelope = json.loads(response['stdout'])
         if envelope.get('schema_version') != 'mncs.projection-health/1':
+            if cache_key is not None:
+                pass_cache[cache_key] = None
             return None
         for receipt in envelope.get('provenance', []):
             if callable(getattr(session.store, 'put_record', None)):
@@ -784,8 +804,13 @@ def diagnose_projection(session, declaration, health, repair):
                     schema = item['schema_version'].encode()
                     if session.store.get_record(schema, address) is None:
                         session.store.put_record(schema, address, item)
-        return {k: v for k, v in envelope.items() if k != 'provenance'}
+        verdict = {k: v for k, v in envelope.items() if k != 'provenance'}
+        if cache_key is not None:
+            pass_cache[cache_key] = dict(verdict)
+        return verdict
     except (OSError, ValueError, KeyError, RuntimeError):
+        if cache_key is not None:
+            pass_cache[cache_key] = None
         return None
 
 
@@ -1311,38 +1336,51 @@ def ambient_pass(session, *, mode: str = "ambient",
                            f"unknown:{only}")
     digests = {declaration["id"]: declaration_digest(session, declaration)
         for declaration in declarations}
-    from .structure import inspect_structure
-    structure = {d['repository']: inspect_structure(session, Path(d['checkout'])) for d in declarations}
-    for d in declarations:
-        health = structure[d['repository']]
-        if health['state'] not in ('pass', 'not-declared'):
-            digests[d['id']] = None
-    input_diagnostics = {
-        d['id']: diagnostic
-        for d in declarations
-        if (diagnostic := projection_input_diagnostic(
-            digests[d['id']], structure[d['repository']])) is not None
-    }
-    epoch_inputs = _epoch_inputs(session, declarations, digests)
-    epoch_inputs['structure'] = {name: {k: v for k, v in info.items() if k != 'roles'} for name, info in structure.items()}
-    epoch = digest_hex(epoch_inputs)
-    stored = session.snapshot.get("projection_epoch") or {}
-    if (stored.get("epoch") == epoch and mode == "ambient"
-            and evidence_store.cacheable(
-                session, "projections", stored.get("evidence_ref"))):
-        summary = dict(stored.get("summary") or {})
-        summary["epoch_reused"] = True
-        summary['reconciled'] = 0
-        summary['persisted'] = False
-        summary["elapsed_seconds"] = round(time.monotonic() - clock_started,
-                                           3)
-        return {"summary": summary, "reused": True,
-                "evidence": stored.get("evidence_ref")}
-    results: list[dict[str, Any]] = []
-    for declaration in declarations:
-        results.append(_reconcile_one(
-            session, declaration, digests[declaration["id"]], rows, mode,
-            input_diagnostic=input_diagnostics.get(declaration['id'])))
+    from .structure import inspect_structure, structure_pass_cache
+    diagnose_token = _DIAGNOSE_PASS_CACHE.set({})
+    try:
+        with structure_pass_cache():
+            unique_checkouts: dict[str, Path] = {}
+            for d in declarations:
+                repo = d['repository']
+                if repo not in unique_checkouts:
+                    unique_checkouts[repo] = Path(d['checkout'])
+            structure = {
+                repo: inspect_structure(session, checkout)
+                for repo, checkout in unique_checkouts.items()
+            }
+            for d in declarations:
+                health = structure[d['repository']]
+                if health['state'] not in ('pass', 'not-declared'):
+                    digests[d['id']] = None
+            input_diagnostics = {
+                d['id']: diagnostic
+                for d in declarations
+                if (diagnostic := projection_input_diagnostic(
+                    digests[d['id']], structure[d['repository']])) is not None
+            }
+            epoch_inputs = _epoch_inputs(session, declarations, digests)
+            epoch_inputs['structure'] = {name: {k: v for k, v in info.items() if k != 'roles'} for name, info in structure.items()}
+            epoch = digest_hex(epoch_inputs)
+            stored = session.snapshot.get("projection_epoch") or {}
+            if (stored.get("epoch") == epoch and mode == "ambient"
+                    and evidence_store.cacheable(
+                        session, "projections", stored.get("evidence_ref"))):
+                summary = dict(stored.get("summary") or {})
+                summary["epoch_reused"] = True
+                summary['reconciled'] = 0
+                summary['persisted'] = False
+                summary["elapsed_seconds"] = round(time.monotonic() - clock_started,
+                                                   3)
+                return {"summary": summary, "reused": True,
+                        "evidence": stored.get("evidence_ref")}
+            results: list[dict[str, Any]] = []
+            for declaration in declarations:
+                results.append(_reconcile_one(
+                    session, declaration, digests[declaration["id"]], rows, mode,
+                    input_diagnostic=input_diagnostics.get(declaration['id'])))
+    finally:
+        _DIAGNOSE_PASS_CACHE.reset(diagnose_token)
     # The stored epoch describes the post-pass world: shared rows are
     # both an input and an output of the pass, so caching the
     # pre-pass state would never hit after a pass that wrote.

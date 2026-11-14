@@ -1,11 +1,27 @@
 """Read owner-declared MNCDS structure expectations; never infer anatomy."""
 from __future__ import annotations
+import contextlib
+import contextvars
 import hashlib
 import json
 from pathlib import Path
 from .projection_sources import confined
 from .capabilities import DOCTOR_PROJECTION_HEALTH
 from .identity import digest_hex
+
+_STRUCTURE_PASS_CACHE: contextvars.ContextVar[
+    dict[tuple[object, ...], str | None] | None
+] = contextvars.ContextVar("mncs_env_structure_pass_cache", default=None)
+
+
+@contextlib.contextmanager
+def structure_pass_cache():
+    """Share identical structure-policy verdicts across one projection pass."""
+    token = _STRUCTURE_PASS_CACHE.set({})
+    try:
+        yield
+    finally:
+        _STRUCTURE_PASS_CACHE.reset(token)
 
 
 def inspect_structure(session, checkout):
@@ -53,13 +69,35 @@ def inspect_structure(session, checkout):
         if cached and cached.get('identity') == key:
             state = cached['state']
         else:
-            response = session.invoke(DOCTOR_PROJECTION_HEALTH, ['--facts-json',
-                json.dumps({'structure': [1, len(gaps), 0]})], timeout_seconds=120)
-            result = json.loads(response['stdout'])
-            if response.get('status') != 'ok' or result.get('schema_version') != 'mncs.projection-structure/1':
-                raise ValueError('Doctor structure verdict unavailable')
-            state = result['state']
-            session.snapshot['structure_observations'][str(checkout)] = {'identity': key, 'state': state}
+            pass_cache = _STRUCTURE_PASS_CACHE.get(None)
+            pass_key = (
+                (policy.get('binding_id'), digest_hex(observations['policy']), len(gaps))
+                if isinstance(pass_cache, dict)
+                else None
+            )
+            if pass_key is not None and pass_key in pass_cache:
+                cached_state = pass_cache[pass_key]
+                if cached_state is None:
+                    raise ValueError('Doctor structure verdict unavailable')
+                state = cached_state
+            else:
+                try:
+                    response = session.invoke(DOCTOR_PROJECTION_HEALTH, ['--facts-json',
+                        json.dumps({'structure': [1, len(gaps), 0]})], timeout_seconds=120)
+                    result = json.loads(response['stdout'])
+                    if response.get('status') != 'ok' or result.get('schema_version') != 'mncs.projection-structure/1':
+                        raise ValueError('Doctor structure verdict unavailable')
+                    state = result['state']
+                except Exception:
+                    if pass_key is not None:
+                        pass_cache[pass_key] = None
+                    raise
+                if pass_key is not None:
+                    pass_cache[pass_key] = state
+            session.snapshot.setdefault('structure_observations', {})[str(checkout)] = {
+                'identity': key,
+                'state': state,
+            }
         return {'state': state, 'profile': profile['profile'],
                 'identity': identity, 'gaps': gaps,
                 'roles': manifest.get('organization', {}).get('surfaces', [])}

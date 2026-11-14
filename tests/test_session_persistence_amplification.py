@@ -630,6 +630,212 @@ class SessionPersistenceAmplificationTests(unittest.TestCase):
             finally:
                 store.close()
 
+    def test_projection_ambient_pass_deduplicates_structure_and_diagnosis_invocations(self):
+        import hashlib
+        from types import SimpleNamespace
+        from mncs_env import capabilities as capabilities_module
+        from mncs_env import projections as projections_module
+        from mncs_env import projection_sources as semantic_sources
+        from mncs_env import structure as structure_module
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            owner = root / "structure-owner"
+            (owner / "profiles").mkdir(parents=True)
+            (owner / "schemas").mkdir()
+            (owner / ".mncs").mkdir()
+            profile = {
+                "schema_version": "mncds.project-structure-profile/1",
+                "profile": "fixture",
+                "required_paths": [],
+                "artifact_classes": [],
+                "rules": [],
+            }
+            profile_bytes = json.dumps(profile).encode("utf-8")
+            profile_digest = "sha256:" + hashlib.sha256(profile_bytes).hexdigest()
+            (owner / "profiles/profile.json").write_bytes(profile_bytes)
+            (owner / "schemas/project-structure-profile-1.schema.json").write_text(
+                json.dumps({"type": "object"})
+            )
+            (owner / ".mncs/project.json").write_text(
+                json.dumps(
+                    {
+                        "contracts": {
+                            "provides": [{"contract": "projection-health"}]
+                        }
+                    }
+                )
+            )
+            declarations = []
+            for repo_name in ("repo-a", "repo-b"):
+                checkout = root / repo_name
+                (checkout / ".mncs").mkdir(parents=True)
+                (checkout / ".mncs/project.json").write_text(
+                    json.dumps(
+                        {
+                            "structure_profile": {
+                                "repository": "structure-owner",
+                                "path": "profiles/profile.json",
+                                "identity": profile_digest,
+                            }
+                        }
+                    )
+                )
+                for idx in range(3):
+                    declarations.append(
+                        {
+                            "id": f"{repo_name}:view-{idx}",
+                            "repository": repo_name,
+                            "checkout": str(checkout),
+                            "output": f"docs/view-{idx}.md",
+                            "schema_version": semantic_sources.SCHEMA,
+                            "provider_capability": "fixture:render",
+                        }
+                    )
+
+            state_dir = root / "state"
+            state_dir.mkdir()
+            invoke_calls: list[tuple[str, list[str]]] = []
+
+            class FakeSession:
+                def __init__(self, *, fail_provider: bool):
+                    self.session_id = "ses_proj_dedup_fixture"
+                    self.store = SimpleNamespace(read_claims=lambda: [])
+                    self.fail_provider = fail_provider
+                    self.snapshot = {
+                        "workspace": {"root": str(root)},
+                        "selected_checkouts": {
+                            "structure-owner": {"path": str(owner)},
+                            "repo-a": {"path": str(root / "repo-a")},
+                            "repo-b": {"path": str(root / "repo-b")},
+                        },
+                        "bindings": [
+                            {
+                                "capability": capabilities_module.DOCTOR_PROJECTION_HEALTH,
+                                "binding_id": "cap_doctor_proj_health",
+                                "provider_root": str(owner),
+                                "availability": {"status": "available"},
+                            }
+                        ],
+                    }
+
+                def _binding(self, capability: str):
+                    for item in self.snapshot.get("bindings", []):
+                        if item.get("capability") == capability:
+                            return item
+                    raise KeyError(capability)
+
+                def invoke(self, capability, argv, **kwargs):
+                    invoke_calls.append((capability, list(argv)))
+                    if self.fail_provider:
+                        return {"status": "failed", "returncode": 1, "stdout": ""}
+                    payload = json.loads(argv[argv.index("--facts-json") + 1])
+                    if "structure" in payload:
+                        return {
+                            "status": "ok",
+                            "returncode": 0,
+                            "stdout": json.dumps(
+                                {
+                                    "schema_version": "mncs.projection-structure/1",
+                                    "state": "pass",
+                                }
+                            ),
+                        }
+                    return {
+                        "status": "ok",
+                        "returncode": 0,
+                        "stdout": json.dumps(
+                            {
+                                "schema_version": "mncs.projection-health/1",
+                                "code": 0,
+                                "diagnostic": None,
+                            }
+                        ),
+                    }
+
+                def _save(self):
+                    return None
+
+            session_fail = FakeSession(fail_provider=True)
+            with (
+                unittest.mock.patch.object(
+                    projections_module, "_workspace_root", return_value=root
+                ),
+                unittest.mock.patch.object(
+                    projections_module,
+                    "discover_selected_declarations",
+                    return_value=(declarations, []),
+                ),
+                unittest.mock.patch.object(
+                    projections_module, "declaration_digest", return_value="sha256:decl"
+                ),
+                unittest.mock.patch.object(
+                    projections_module, "repo_facts", return_value={"head": "abc"}
+                ),
+                unittest.mock.patch.object(
+                    projections_module, "claim_facts", return_value={}
+                ),
+                unittest.mock.patch.object(
+                    projections_module,
+                    "_read_shared_row",
+                    return_value={"version": 1, "observed_gen": 0, "canonical_gen": 0, "defer_count": 0},
+                ),
+                unittest.mock.patch.object(projections_module, "_retain_shared"),
+                unittest.mock.patch.object(
+                    projections_module, "_write_evidence", return_value="ev:1"
+                ),
+                unittest.mock.patch.object(projections_module, "_append_session_evidence"),
+            ):
+                projections_module.ambient_pass(session_fail, mode="ambient")
+
+            # 6 declarations across 2 repos with failing structure & diagnosis must invoke
+            # DOCTOR_PROJECTION_HEALTH at most once for structure and once for diagnose.
+            self.assertEqual(len(invoke_calls), 2)
+
+            # Successful structure check across 2 repos (6 declarations) invokes once and
+            # populates per-checkout structure_observations for both repositories.
+            invoke_calls.clear()
+            session_ok = FakeSession(fail_provider=False)
+            with (
+                unittest.mock.patch.object(
+                    projections_module, "_workspace_root", return_value=root
+                ),
+                unittest.mock.patch.object(
+                    projections_module,
+                    "discover_selected_declarations",
+                    return_value=(declarations, []),
+                ),
+                unittest.mock.patch.object(
+                    projections_module, "declaration_digest", return_value="sha256:decl"
+                ),
+                unittest.mock.patch.object(
+                    projections_module,
+                    "_reconcile_one",
+                    return_value={"projection": "p", "outcome": "current"},
+                ),
+                unittest.mock.patch.object(
+                    projections_module, "_write_evidence", return_value="ev:2"
+                ),
+                unittest.mock.patch.object(projections_module, "_append_session_evidence"),
+            ):
+                projections_module.ambient_pass(session_ok, mode="ambient")
+
+            self.assertEqual(len(invoke_calls), 1)
+            self.assertEqual(
+                set(session_ok.snapshot["structure_observations"].keys()),
+                {str(root / "repo-a"), str(root / "repo-b")},
+            )
+
+            # Standalone direct calls outside ambient_pass remain uncached by pass state.
+            invoke_calls.clear()
+            projections_module.diagnose_projection(
+                session_ok, declarations[0], [0, 1, 1], [1, 1, 1]
+            )
+            projections_module.diagnose_projection(
+                session_ok, declarations[1], [0, 1, 1], [1, 1, 1]
+            )
+            self.assertEqual(len(invoke_calls), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
