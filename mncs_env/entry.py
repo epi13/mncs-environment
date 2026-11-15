@@ -627,7 +627,7 @@ def _active_checkout_claim_sessions(store, working_checkout: dict[str, str] | No
     if not isinstance(repository, str) or not isinstance(checkout_path, str):
         return set()
     matches: set[str] = set()
-    for record in claims_module.active_claims(read_claims()).values():
+    for record in claims_module.active_claims(claims_module.read_latest_records(store)).values():
         if record.get("repository") != repository:
             continue
         session_id = record.get("session_id")
@@ -696,7 +696,7 @@ def _authoritative_duplicate_session(
             "candidate_sessions": exact or candidates,
         }
 
-    active = claims_module.active_claims(read_claims())
+    active = claims_module.active_claims(claims_module.read_latest_records(store))
     overlapping_claims: list[dict[str, str]] = []
     exact_claim_owners: set[str] = set()
     conflicting_owners: set[str] = set()

@@ -274,6 +274,8 @@ def _evidence_identity(evidence_id: str) -> bytes:
 
 _BINDING_DIRECTORY_MAX_GENERATIONS = 2
 _EVENT_DIRECT_GET_MAX = 4
+_CLAIM_PAYLOAD_CACHE_MAX = 65536
+_SCOPE_GRANT_SESSION_CACHE_MAX = 1024
 
 
 def _decode_utf8(raw: bytes) -> str | None:
@@ -332,16 +334,23 @@ def _index_event_binding(
 
 
 def _index_claim_binding(
-    identity: bytes, claims_latest: dict[str, tuple[int, bytes]],
+    identity: bytes,
+    claims_latest: dict[str, tuple[int, bytes]],
+    claims_all: set[bytes],
+    claims_noncanonical: list[bytes],
 ) -> None:
+    claims_all.add(identity)
     if not identity.startswith(b"claim:"):
+        claims_noncanonical.append(identity)
         return
     claim_bytes, sep, suffix = identity[6:].rpartition(b":")
     if not sep or len(suffix) != 10 or not suffix.isdigit():
+        claims_noncanonical.append(identity)
         return
     version = int(suffix)
     claim_id = _decode_utf8(claim_bytes)
     if version < 1 or claim_id is None:
+        claims_noncanonical.append(identity)
         return
     current = claims_latest.get(claim_id)
     if current is None or version > current[0]:
@@ -378,6 +387,8 @@ class _BindingDirectory:
     checkpoints: dict[str, tuple[bytes, ...]]
     events: dict[str, tuple[tuple[int, bytes, bool], ...]]
     claims_latest: dict[str, tuple[int, bytes]]
+    claims_all: tuple[bytes, ...]
+    claims_noncanonical: tuple[bytes, ...]
     projections: dict[str, tuple[tuple[int, bytes], ...]]
     projection_versions: dict[str, int]
 
@@ -391,6 +402,8 @@ def _build_binding_directory(
     checkpoints_map: dict[str, list[bytes]] = {}
     events_map: dict[str, list[tuple[int, bytes, bool]]] = {}
     claims_latest: dict[str, tuple[int, bytes]] = {}
+    claims_all: set[bytes] = set()
+    claims_noncanonical: list[bytes] = []
     projections_map: dict[str, list[tuple[int, bytes]]] = {}
     projection_versions: dict[str, int] = {}
 
@@ -400,7 +413,7 @@ def _build_binding_directory(
         elif schema == SCHEMA_EVENT:
             _index_event_binding(identity, events_map)
         elif schema == SCHEMA_CLAIM:
-            _index_claim_binding(identity, claims_latest)
+            _index_claim_binding(identity, claims_latest, claims_all, claims_noncanonical)
         elif schema == SCHEMA_PROJECTION:
             _index_projection_binding(identity, projections_map, projection_versions)
 
@@ -424,6 +437,8 @@ def _build_binding_directory(
             for sid, items in events_map.items()
         },
         claims_latest=claims_latest,
+        claims_all=tuple(sorted(claims_all)),
+        claims_noncanonical=tuple(sorted(set(claims_noncanonical))),
         projections={
             proj_id: tuple(sorted(items, reverse=True))
             for proj_id, items in projections_map.items()
@@ -477,18 +492,30 @@ class StoreBackend:
         if self._promotion_owner is not None:
             self._promotion_owner.close()
 
-    def _clear_binding_directory(self) -> None:
+    def _cache_lock(self) -> threading.RLock:
         lock = getattr(self, "_binding_cache_lock", None)
-        cache = getattr(self, "_binding_directories", None)
-        if cache is None:
-            return
-        if lock is not None:
-            with lock:
+        if lock is None:
+            lock = threading.RLock()
+            self._binding_cache_lock = lock
+        return lock
+
+    def _clear_binding_directory(self) -> None:
+        lock = self._cache_lock()
+        with lock:
+            cache = getattr(self, "_binding_directories", None)
+            if cache is not None:
                 cache.clear()
-                self._binding_cache_store = None
-        else:
-            cache.clear()
             self._binding_cache_store = None
+            claim_cache = getattr(self, "_claim_payload_cache", None)
+            if claim_cache is not None:
+                claim_cache.clear()
+            self._claim_cache_store = None
+            self._claim_cache_gen = -1
+            scope_cache = getattr(self, "_scope_grant_event_cache", None)
+            if scope_cache is not None:
+                scope_cache.clear()
+            self._scope_grant_cache_store = None
+            self._scope_grant_cache_gen = -1
 
     def _binding_directory_for(self, generation: Any) -> _BindingDirectory | None:
         if type(generation) is not int:
@@ -557,6 +584,31 @@ class StoreBackend:
             None,
         )
 
+    def _read_bound_objects_batch(
+        self,
+        schema: bytes,
+        identities: list[bytes] | tuple[bytes, ...],
+        *,
+        allow_missing: bool = False,
+    ) -> list[Any]:
+        if not identities:
+            return []
+        if len(identities) == 1:
+            if allow_missing:
+                return [self._read_exact_or_find(schema, identities[0])]
+            return [self._store.get_bound_object(schema, identities[0])]
+        batch_getter = getattr(self._store, "get_bound_objects", None)
+        if callable(batch_getter):
+            try:
+                return list(batch_getter([(schema, identity) for identity in identities]))
+            except Exception as error:
+                if allow_missing and self._is_not_current_store_error(error):
+                    return [self._read_exact_or_find(schema, ident) for ident in identities]
+                raise
+        if allow_missing:
+            return [self._read_exact_or_find(schema, ident) for ident in identities]
+        return [self._store.get_bound_object(schema, ident) for ident in identities]
+
     def _ensure_writable(self) -> None:
         if not getattr(self._store, "read_only", False):
             return
@@ -577,6 +629,7 @@ class StoreBackend:
                 ) from error
             raise
         self._promotion_owner = owner
+        self._clear_binding_directory()
 
     # -- low-level put with CAS retry ------------------------------------
 
@@ -678,12 +731,17 @@ class StoreBackend:
             if not entries:
                 return []
             if (
-                len(entries) <= _EVENT_DIRECT_GET_MAX
+                len(entries) == 1
+                or len(entries) <= _EVENT_DIRECT_GET_MAX
+                or callable(getattr(self._store, "get_bound_objects", None))
                 or not callable(getattr(self._store, "find_bound_objects", None))
             ):
+                items = self._read_bound_objects_batch(
+                    SCHEMA_EVENT, [identity for _, identity, _ in entries], allow_missing=True,
+                )
                 items_with_seq = (
-                    (sequence, self._read_exact_or_find(SCHEMA_EVENT, identity))
-                    for sequence, identity, _is_canonical in entries
+                    (entry[0], item)
+                    for entry, item in zip(entries, items, strict=True)
                 )
             else:
                 items_with_seq = (
@@ -709,6 +767,86 @@ class StoreBackend:
                 continue
         found.sort(key=lambda pair: pair[0])
         return [event for _, event in found]
+
+    def read_scope_grant_events(self, session_id: str) -> list[dict[str, Any]]:
+        """Read immutable authority.scope-granted events for one session incrementally."""
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if directory is None or not callable(getattr(self._store, "get_bound_objects", None)):
+            return [
+                event for event in self.read_events(session_id)
+                if isinstance(event, dict) and event.get("type") == "authority.scope-granted"
+            ]
+        entries = directory.events.get(session_id, ())
+        if not entries:
+            return []
+        store = self._store
+        lock = self._cache_lock()
+        with lock:
+            if (
+                getattr(self, "_scope_grant_cache_store", None) is not store
+                or type(generation) is not int
+                or generation < getattr(self, "_scope_grant_cache_gen", -1)
+            ):
+                cache = getattr(self, "_scope_grant_event_cache", None)
+                if cache is not None:
+                    cache.clear()
+                self._scope_grant_cache_store = store
+                self._scope_grant_cache_gen = -1
+            cache = getattr(self, "_scope_grant_event_cache", None)
+            if cache is None:
+                cache = OrderedDict()
+                self._scope_grant_event_cache = cache
+            cached = cache.get(session_id)
+            if cached is not None:
+                cached_entries, grant_jsons = cached
+                if cached_entries == entries:
+                    cache.move_to_end(session_id)
+                    return [json.loads(raw) for raw in grant_jsons]
+                if (
+                    len(entries) > len(cached_entries)
+                    and entries[:len(cached_entries)] == cached_entries
+                ):
+                    delta = entries[len(cached_entries):]
+                    base_jsons = grant_jsons
+                else:
+                    delta = entries
+                    base_jsons = ()
+            else:
+                delta = entries
+                base_jsons = ()
+
+        items = self._read_bound_objects_batch(
+            SCHEMA_EVENT, [identity for _, identity, _ in delta], allow_missing=True,
+        )
+        new_jsons: list[str] = []
+        all_present = True
+        for item in items:
+            if item is None:
+                all_present = False
+                continue
+            try:
+                raw_text = item.payload.decode("utf-8")
+                event = json.loads(raw_text)
+            except (AttributeError, ValueError, json.JSONDecodeError):
+                continue
+            if isinstance(event, dict) and event.get("type") == "authority.scope-granted":
+                new_jsons.append(raw_text)
+
+        combined = (*base_jsons, *new_jsons)
+        if all_present and type(generation) is int:
+            with lock:
+                if (
+                    self._store is store
+                    and getattr(self, "_scope_grant_cache_store", None) is store
+                    and generation >= getattr(self, "_scope_grant_cache_gen", -1)
+                ):
+                    self._scope_grant_cache_gen = generation
+                    cache[session_id] = (entries, combined)
+                    cache.move_to_end(session_id)
+                    while len(cache) > _SCOPE_GRANT_SESSION_CACHE_MAX:
+                        cache.popitem(last=False)
+        return [json.loads(raw) for raw in combined]
 
     def read_event_tail(
         self, session_id: str, *, limit: int,
@@ -773,17 +911,21 @@ class StoreBackend:
                     heapq.heapreplace(selected, item)
 
         events = []
-        for sequence, identity in sorted(selected):
-            item = self._store.get_bound_object(SCHEMA_EVENT, identity)
-            try:
-                event = json.loads(item.payload.decode("utf-8"))
-            except (AttributeError, UnicodeDecodeError, json.JSONDecodeError):
-                continue
-            if (isinstance(event, dict)
-                    and event.get("session_id") == session_id
-                    and type(event.get("sequence")) is int
-                    and event["sequence"] == sequence):
-                events.append(event)
+        ordered_selected = sorted(selected)
+        if ordered_selected:
+            items = self._read_bound_objects_batch(
+                SCHEMA_EVENT, [identity for _, identity in ordered_selected],
+            )
+            for (sequence, _identity), item in zip(ordered_selected, items, strict=True):
+                try:
+                    event = json.loads(item.payload.decode("utf-8"))
+                except (AttributeError, UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+                if (isinstance(event, dict)
+                        and event.get("session_id") == session_id
+                        and type(event.get("sequence")) is int
+                        and event["sequence"] == sequence):
+                    events.append(event)
         has_older = bool(
             selected and minimum_sequence is not None
             and selected[0][0] > minimum_sequence
@@ -876,6 +1018,42 @@ class StoreBackend:
             f"snapshot section {sec_identity.decode('utf-8', 'replace')} is missing"
         )
 
+    def _read_snapshot_section_payloads(
+        self, identities: list[bytes],
+    ) -> dict[bytes, bytes]:
+        if not identities:
+            return {}
+        unique = list(dict.fromkeys(identities))
+        if len(unique) == 1 or not callable(getattr(self._store, "get_bound_objects", None)):
+            return {
+                sec_identity: self._read_snapshot_section_payload(sec_identity)
+                for sec_identity in unique
+            }
+        _, StoreError, StoreResultCode = getattr(
+            self, "_api", (None, Exception, None)
+        )
+        try:
+            items = self._store.get_bound_objects(
+                [(SCHEMA_SNAPSHOT_SECTION, sec_identity) for sec_identity in unique]
+            )
+        except StoreError as error:
+            if (
+                StoreResultCode is not None
+                and getattr(error, "code", None)
+                in (
+                    StoreResultCode.DENIED,
+                    StoreResultCode.INTEGRITY_FAILURE,
+                )
+            ):
+                raise StoreIntegrityFailure(
+                    f"snapshot section batch is missing or failed verification: {error}"
+                ) from error
+            raise
+        return {
+            sec_identity: bytes(item.payload)
+            for sec_identity, item in zip(unique, items, strict=True)
+        }
+
     def _reconstruct_sectioned_snapshot(
         self, record: dict[str, Any]
     ) -> dict[str, Any]:
@@ -885,49 +1063,56 @@ class StoreBackend:
             raise StoreIntegrityFailure(
                 "snapshot section manifest is not a JSON object"
             )
-        nested_items: list[tuple[str, str, dict[str, Any]]] = []
+        top_items: list[tuple[str, str, int, bytes]] = []
+        nested_items: list[tuple[str, str, str, int, bytes]] = []
+        section_identities: list[bytes] = []
         for sec_key, meta in sections.items():
             if not isinstance(sec_key, str) or not isinstance(meta, dict):
                 raise StoreIntegrityFailure(
                     "snapshot section entry is malformed"
                 )
+            sha256_hex = meta.get("sha256")
+            expected_size = meta.get("size")
+            if (
+                not isinstance(sha256_hex, str)
+                or len(sha256_hex) != 64
+                or type(expected_size) is not int
+                or expected_size < 0
+            ):
+                raise StoreIntegrityFailure(
+                    f"snapshot section {sec_key!r} has invalid metadata"
+                )
+            sec_identity = _snapshot_section_identity(sha256_hex)
+            section_identities.append(sec_identity)
             if "." in sec_key:
                 parent, _, subkey = sec_key.partition(".")
-                nested_items.append((parent, subkey, meta))
-                continue
-            reconstructed[sec_key] = self._decode_verified_section(
-                sec_key, meta
+                nested_items.append((parent, subkey, sha256_hex, expected_size, sec_identity))
+            else:
+                top_items.append((sec_key, sha256_hex, expected_size, sec_identity))
+
+        payloads = self._read_snapshot_section_payloads(section_identities)
+        for sec_key, sha256_hex, expected_size, sec_identity in top_items:
+            reconstructed[sec_key] = self._verify_and_parse_section(
+                sec_key, payloads[sec_identity], sha256_hex, expected_size,
             )
 
-        for parent, subkey, meta in nested_items:
+        for parent, subkey, sha256_hex, expected_size, sec_identity in nested_items:
             parent_val = reconstructed.get(parent)
             if not isinstance(parent_val, dict):
                 raise StoreIntegrityFailure(
                     f"snapshot section parent {parent!r} is not a JSON object"
                 )
             updated_parent = dict(parent_val)
-            updated_parent[subkey] = self._decode_verified_section(
-                f"{parent}.{subkey}", meta
+            updated_parent[subkey] = self._verify_and_parse_section(
+                f"{parent}.{subkey}", payloads[sec_identity], sha256_hex, expected_size,
             )
             reconstructed[parent] = updated_parent
         return reconstructed
 
-    def _decode_verified_section(
-        self, sec_key: str, meta: dict[str, Any]
+    @staticmethod
+    def _verify_and_parse_section(
+        sec_key: str, payload: bytes, sha256_hex: str, expected_size: int,
     ) -> Any:
-        sha256_hex = meta.get("sha256")
-        expected_size = meta.get("size")
-        if (
-            not isinstance(sha256_hex, str)
-            or len(sha256_hex) != 64
-            or type(expected_size) is not int
-            or expected_size < 0
-        ):
-            raise StoreIntegrityFailure(
-                f"snapshot section {sec_key!r} has invalid metadata"
-            )
-        sec_identity = _snapshot_section_identity(sha256_hex)
-        payload = self._read_snapshot_section_payload(sec_identity)
         if (
             len(payload) != expected_size
             or hashlib.sha256(payload).hexdigest() != sha256_hex
@@ -1167,13 +1352,136 @@ class StoreBackend:
             )
         return result
 
+    def _read_claims_for_identities(
+        self, identities: tuple[bytes, ...], generation: int,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        if not identities:
+            return [], False
+        store = self._store
+        lock = self._cache_lock()
+        with lock:
+            if (
+                getattr(self, "_claim_cache_store", None) is not store
+                or generation < getattr(self, "_claim_cache_gen", -1)
+            ):
+                cache = getattr(self, "_claim_payload_cache", None)
+                if cache is not None:
+                    cache.clear()
+                self._claim_cache_store = store
+                self._claim_cache_gen = -1
+            cache = getattr(self, "_claim_payload_cache", None)
+            if cache is None:
+                cache = OrderedDict()
+                self._claim_payload_cache = cache
+            missing = [ident for ident in identities if ident not in cache]
+
+        fetched: dict[bytes, str | None] = {}
+        if missing:
+            items = self._read_bound_objects_batch(SCHEMA_CLAIM, missing, allow_missing=True)
+            for ident, item in zip(missing, items, strict=True):
+                if item is None:
+                    continue
+                raw_text = item.payload.decode("utf-8")
+                try:
+                    json.loads(raw_text)
+                except json.JSONDecodeError:
+                    fetched[ident] = None
+                else:
+                    fetched[ident] = raw_text
+            with lock:
+                if (
+                    self._store is store
+                    and getattr(self, "_claim_cache_store", None) is store
+                    and generation >= getattr(self, "_claim_cache_gen", -1)
+                ):
+                    self._claim_cache_gen = generation
+                    for ident, raw_text in fetched.items():
+                        cache[ident] = raw_text
+                        cache.move_to_end(ident)
+                    while len(cache) > _CLAIM_PAYLOAD_CACHE_MAX:
+                        cache.popitem(last=False)
+        else:
+            with lock:
+                if (
+                    self._store is store
+                    and getattr(self, "_claim_cache_store", None) is store
+                    and generation >= getattr(self, "_claim_cache_gen", -1)
+                ):
+                    self._claim_cache_gen = generation
+
+        out: list[dict[str, Any]] = []
+        had_invalid = False
+        with lock:
+            use_cache = (
+                self._store is store
+                and getattr(self, "_claim_cache_store", None) is store
+            )
+            for ident in identities:
+                if ident in fetched:
+                    raw_text = fetched[ident]
+                elif use_cache and ident in cache:
+                    raw_text = cache[ident]
+                    cache.move_to_end(ident)
+                else:
+                    continue
+                if raw_text is None:
+                    had_invalid = True
+                    continue
+                out.append(json.loads(raw_text))
+        out.sort(key=lambda record: (str(record.get("claim_id", "")), int(record.get("version", 0))))
+        return out, had_invalid
+
     def read_claims(self) -> list[dict[str, Any]]:
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if (
+            directory is not None
+            and type(generation) is int
+            and callable(getattr(self._store, "get_bound_objects", None))
+        ):
+            out, _ = self._read_claims_for_identities(directory.claims_all, generation)
+            return out
         out = []
         for item in self._store.find_bound_objects(SCHEMA_CLAIM):
             try:
                 out.append(json.loads(item.payload.decode("utf-8")))
             except json.JSONDecodeError:
                 continue
+        out.sort(key=lambda record: (str(record.get("claim_id", "")), int(record.get("version", 0))))
+        return out
+
+    def read_latest_claims(self) -> list[dict[str, Any]]:
+        """Read only the latest version of each canonical claim plus non-canonical bindings."""
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if (
+            directory is not None
+            and type(generation) is int
+            and callable(getattr(self._store, "get_bound_objects", None))
+        ):
+            canonical = [ident for _, ident in sorted(directory.claims_latest.values())]
+            identities = tuple(dict.fromkeys([*canonical, *directory.claims_noncanonical]))
+            out, had_invalid = self._read_claims_for_identities(identities, generation)
+            if not had_invalid:
+                return out
+            # Fall back to complete claim history only if a latest payload had invalid JSON.
+            return self.read_claims()
+
+        latest_by_id: dict[str, tuple[int, dict[str, Any]]] = {}
+        unkeyed: list[dict[str, Any]] = []
+        for record in self.read_claims():
+            if not isinstance(record, dict):
+                continue
+            claim_id = record.get("claim_id")
+            version = record.get("version")
+            if isinstance(claim_id, str) and claim_id and type(version) is int:
+                current = latest_by_id.get(claim_id)
+                if current is None or version > current[0]:
+                    latest_by_id[claim_id] = (version, record)
+            else:
+                unkeyed.append(record)
+        out = [pair[1] for pair in latest_by_id.values()]
+        out.extend(unkeyed)
         out.sort(key=lambda record: (str(record.get("claim_id", "")), int(record.get("version", 0))))
         return out
 
@@ -1226,19 +1534,56 @@ class StoreBackend:
                             latest[claim_id] = (version, identity)
 
             out = []
-            for claim_id in requested:
-                selected = latest.get(claim_id)
-                if selected is None:
-                    continue
-                version, identity = selected
-                record = self.get_record_strict(SCHEMA_CLAIM, identity)
-                if (record is None or record.get("claim_id") != claim_id
-                        or type(record.get("version")) is not int
-                        or record["version"] != version):
-                    raise StoreIntegrityFailure(
-                        "latest claim payload does not match its Store identity"
+            selected_entries = [
+                (claim_id, *latest[claim_id])
+                for claim_id in requested
+                if claim_id in latest
+            ]
+            if (
+                len(selected_entries) > 1
+                and callable(getattr(self._store, "get_bound_objects", None))
+            ):
+                _, StoreError, StoreResultCode = getattr(self, "_api", None) or _load_store_api()
+                try:
+                    batch_items = self._store.get_bound_objects(
+                        [(SCHEMA_CLAIM, ident) for _, _, ident in selected_entries]
                     )
-                out.append(record)
+                except StoreError as error:
+                    if (error.code == StoreResultCode.DENIED
+                            and error.message == "Store object binding is not current"):
+                        raise StoreIntegrityFailure(
+                            "latest claim payload does not match its Store identity"
+                        ) from error
+                    if error.code == StoreResultCode.INTEGRITY_FAILURE:
+                        raise StoreIntegrityFailure(str(error)) from error
+                    raise
+                for (claim_id, version, _identity), item in zip(
+                    selected_entries, batch_items, strict=True,
+                ):
+                    try:
+                        record = json.loads(item.payload.decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                        raise StoreIntegrityFailure(
+                            "Store record payload is not valid UTF-8 JSON"
+                        ) from error
+                    if (not isinstance(record, dict)
+                            or record.get("claim_id") != claim_id
+                            or type(record.get("version")) is not int
+                            or record["version"] != version):
+                        raise StoreIntegrityFailure(
+                            "latest claim payload does not match its Store identity"
+                        )
+                    out.append(record)
+            else:
+                for claim_id, version, identity in selected_entries:
+                    record = self.get_record_strict(SCHEMA_CLAIM, identity)
+                    if (record is None or record.get("claim_id") != claim_id
+                            or type(record.get("version")) is not int
+                            or record["version"] != version):
+                        raise StoreIntegrityFailure(
+                            "latest claim payload does not match its Store identity"
+                        )
+                    out.append(record)
             if self._store.current_generation == generation:
                 out.sort(key=lambda record: str(record.get("claim_id", "")))
                 return out
@@ -1254,7 +1599,14 @@ class StoreBackend:
         return self._put_immutable(schema=schema, identity=identity, payload=payload)
 
     def get_record(self, schema: bytes, identity: bytes) -> dict[str, Any] | None:
-        from mncs_store.errors import StoreError  # noqa: E402
+        api = getattr(self, "_api", None)
+        if api is not None:
+            StoreError = api[1]
+        else:
+            try:
+                from mncs_store.errors import StoreError  # noqa: E402
+            except ImportError:
+                StoreError = ()  # type: ignore[assignment]
 
         try:
             # Checkpoints and receipts use exact identities. Route them
@@ -1262,6 +1614,12 @@ class StoreBackend:
             # reads do not enumerate every binding to find one object.
             item = self._store.get_bound_object(schema, identity)
         except StoreError:
+            return None
+        except Exception as error:
+            if type(error).__name__ in {"StoreError", "StoreIntegrityError"} or self._is_not_current_store_error(error):
+                return None
+            raise
+        if item is None:
             return None
         try:
             record = json.loads(item.payload.decode("utf-8"))
@@ -1302,6 +1660,27 @@ class StoreBackend:
                 if schema == SCHEMA_SNAPSHOT and identity.startswith(prefix)
             )
         records = []
+        if len(identities) > 1 and callable(getattr(self._store, "get_bound_objects", None)):
+            try:
+                items = self._read_bound_objects_batch(SCHEMA_SNAPSHOT, identities, allow_missing=True)
+            except Exception as error:
+                if type(error).__name__ in {"StoreError", "StoreIntegrityError"}:
+                    items = None
+                else:
+                    raise
+            if items is not None:
+                for item in items:
+                    if item is None:
+                        continue
+                    try:
+                        record = json.loads(item.payload.decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError):
+                        continue
+                    if (isinstance(record, dict) and record.get("session_id") == session_id
+                            and record.get("identity")):
+                        records.append(record)
+                return sorted(records, key=lambda record: (int(record.get("sequence", 0)),
+                                                           str(record.get("identity", ""))))
         for identity in identities:
             record = self.get_record(SCHEMA_SNAPSHOT, identity)
             if (isinstance(record, dict) and record.get("session_id") == session_id

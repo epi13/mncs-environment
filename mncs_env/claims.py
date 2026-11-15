@@ -379,6 +379,17 @@ def active_claims(all_records: list[dict[str, Any]], *,
             if _alive(record, now)}
 
 
+def read_latest_records(store) -> list[dict[str, Any]]:
+    """Read only latest claim records when the store supports indexed latest lookup."""
+    store_dict = getattr(store, "__dict__", None)
+    if isinstance(store_dict, dict) and "read_claims" in store_dict:
+        return store.read_claims()
+    latest_reader = getattr(store, "read_latest_claims", None)
+    if callable(latest_reader):
+        return latest_reader()
+    return store.read_claims()
+
+
 def recover_stale_conflicts_for_operation(
     store, *, repository: str, session_id: str, consumer_id: str,
     scope: dict[str, Any], reason: str,
@@ -426,7 +437,7 @@ def recover_stale_conflicts_for_operation(
         )
     for _ in range(16):
         generation = store.claim_generation()
-        records = store.read_claims()
+        records = read_latest_records(store)
         if store.claim_generation() != generation:
             continue
         live = active_claims(records, now=now)

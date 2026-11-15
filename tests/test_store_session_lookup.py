@@ -401,3 +401,277 @@ def test_session_lookup_does_not_scale_with_sessions_times_bindings(
         assert counts["gbo"] == 2 * n_sessions
     finally:
         store.close()
+
+
+def test_read_latest_claims_reads_only_latest_caches_and_updates_incrementally(
+    tmp_path: Path, monkeypatch,
+):
+    store = open_store(tmp_path / "claims-state", "store", verify_on_open=False, defer_mutation=False)
+    try:
+        store.save_snapshot("ses_1", {
+            "schema_version": "mncs.environment.session/5",
+            "session_id": "ses_1",
+            "lifecycle": "active",
+            "snapshot_sequence": 1,
+        })
+        c1 = claims.acquire(
+            store,
+            repository="repo-one",
+            session_id="ses_1",
+            consumer_id="agent-1",
+            basis=claims.BASIS_EXPLICIT,
+            reason="initial",
+        )
+        claims.release(store, session_id="ses_1", claim_id=c1["claim_id"], request_id="rel-1")
+        claims.acquire(
+            store,
+            repository="repo-two",
+            session_id="ses_1",
+            consumer_id="agent-1",
+            basis=claims.BASIS_EXPLICIT,
+            reason="second",
+        )
+        store.backend._put_immutable(
+            schema=SCHEMA_CLAIM,
+            identity=b"legacy-noncanonical",
+            payload=json.dumps({
+                "claim_id": "legacy",
+                "version": 1,
+                "repository": "repo-legacy",
+                "status": "held",
+                "session_id": "ses_1",
+                "expires_at": "2099-01-01T00:00:00+00:00",
+            }).encode("utf-8"),
+        )
+
+        reader = open_store(tmp_path / "claims-state", "store", verify_on_open=False, defer_mutation=True)
+        try:
+            raw = reader.backend._store
+            reads = {"fbo": 0, "gbo": 0, "gbos": []}
+            orig_fbo = raw.find_bound_objects
+            orig_gbo = raw.get_bound_object
+            orig_gbos = getattr(raw, "get_bound_objects", None)
+
+            def spy_fbo(schema, prefix=b""):
+                reads["fbo"] += 1
+                return orig_fbo(schema, prefix)
+
+            def spy_gbo(schema, identity):
+                reads["gbo"] += 1
+                return orig_gbo(schema, identity)
+
+            monkeypatch.setattr(raw, "find_bound_objects", spy_fbo)
+            monkeypatch.setattr(raw, "get_bound_object", spy_gbo)
+            if callable(orig_gbos):
+                def spy_gbos(bindings):
+                    items = list(bindings)
+                    reads["gbos"].append(len(items))
+                    return orig_gbos(items)
+
+                monkeypatch.setattr(raw, "get_bound_objects", spy_gbos)
+
+            latest = reader.read_latest_claims()
+            all_records = reader.read_claims()
+            assert len(latest) == 3  # c1 v2 + c2 v1 + legacy-noncanonical (skips c1 v1)
+            assert claims.active_claims(latest) == claims.active_claims(all_records)
+            assert len(all_records) == 4
+            assert reads["fbo"] == 0
+            # Cold read_latest_claims fetched 3 latest entries; read_claims then reused cached 3 and only read c1 v1
+            assert sum(reads["gbos"]) + reads["gbo"] == 4
+
+            # Caller mutation must not corrupt cached dicts
+            latest[0]["repository"] = "mutated-by-caller"
+            all_records[0]["repository"] = "mutated-by-caller"
+
+            reads["gbo"] = 0
+            reads["gbos"].clear()
+            warm_latest = reader.read_latest_claims()
+            warm_all = reader.read_claims()
+            assert [r["claim_id"] for r in warm_latest] != []
+            assert all(r["repository"] != "mutated-by-caller" for r in warm_latest)
+            assert all(r["repository"] != "mutated-by-caller" for r in warm_all)
+            assert reads["fbo"] == 0
+            assert reads["gbo"] == 0
+            assert reads["gbos"] == []
+
+            # Unrelated event generation bump still requires 0 claim object reads
+            store.put_event("ses_1", 1, {"session_id": "ses_1", "sequence": 1, "type": "note"})
+            assert len(reader.read_latest_claims()) == 3
+            assert len(reader.read_claims()) == 4
+            assert reads["gbo"] == 0 and reads["gbos"] == []
+
+            # New claim reads only the single new identity incrementally
+            claims.acquire(
+                store,
+                repository="repo-three",
+                session_id="ses_1",
+                consumer_id="agent-1",
+                basis=claims.BASIS_EXPLICIT,
+                reason="third",
+            )
+            after_latest = reader.read_latest_claims()
+            after_all = reader.read_claims()
+            assert len(after_latest) == 4
+            assert len(after_all) == 5
+            assert reads["fbo"] == 0
+            assert reads["gbo"] == 1
+            assert reads["gbos"] == []
+        finally:
+            reader.close()
+    finally:
+        store.close()
+
+    # Fallback on minimal stub without get_bound_objects / domain_bindings_at
+    stub = _ExactLookupStub(
+        1,
+        [],
+        {(SCHEMA_CLAIM, b"claim:x:0000000001"): json.dumps({"claim_id": "x", "version": 1}).encode()},
+    )
+    stub_backend = StoreBackend.__new__(StoreBackend)
+    stub_backend._store = stub
+    assert stub_backend.read_latest_claims() == [{"claim_id": "x", "version": 1}]
+
+
+def test_events_checkpoints_sections_and_scope_grants_batch_without_find_scans(
+    tmp_path: Path, monkeypatch,
+):
+    store = open_store(tmp_path / "batch-state", "store", verify_on_open=False, defer_mutation=False)
+    try:
+        sid = "ses_batch"
+        large_repos = [
+            {"name": f"repo_{i}", "head": f"{i:040x}", "branch": "main"}
+            for i in range(30)
+        ]
+        store.save_snapshot(sid, {
+            "schema_version": "mncs.environment.session/5",
+            "session_id": sid,
+            "lifecycle": "active",
+            "snapshot_sequence": 1,
+            "workspace": {"root": str(tmp_path), "repositories": large_repos},
+            "campaign": {
+                "identity": "cmp-batch",
+                "repository_refs": [{"repository": f"r{i}", "head": f"{i:040x}"} for i in range(25)],
+            },
+        })
+        for seq in range(1, 9):
+            store.put_event(sid, seq, {"session_id": sid, "sequence": seq, "type": "progress", "payload": {"i": seq}})
+        for idx in range(1, 4):
+            store.save_checkpoint(sid, {"session_id": sid, "identity": f"chk_{idx}", "sequence": idx})
+
+        reader = open_store(tmp_path / "batch-state", "store", verify_on_open=False, defer_mutation=True)
+        try:
+            raw = reader.backend._store
+            reads = {"fbo": 0, "gbo": 0, "gbos": []}
+            orig_fbo = raw.find_bound_objects
+            orig_gbo = raw.get_bound_object
+            orig_gbos = raw.get_bound_objects
+
+            monkeypatch.setattr(raw, "find_bound_objects", lambda sch, pref=b"": (reads.__setitem__("fbo", reads["fbo"] + 1) or orig_fbo(sch, pref)))
+            monkeypatch.setattr(raw, "get_bound_object", lambda sch, ident: (reads.__setitem__("gbo", reads["gbo"] + 1) or orig_gbo(sch, ident)))
+
+            def spy_gbos(bindings):
+                items = list(bindings)
+                reads["gbos"].append(len(items))
+                return orig_gbos(items)
+
+            monkeypatch.setattr(raw, "get_bound_objects", spy_gbos)
+
+            snap = reader.load_snapshot(sid)
+            assert snap is not None and len(snap["workspace"]["repositories"]) == 30
+            evts = reader.read_events(sid)
+            assert [e["sequence"] for e in evts] == list(range(1, 9))
+            chks = reader.list_checkpoints(sid)
+            assert [c["identity"] for c in chks] == ["chk_1", "chk_2", "chk_3"]
+            page = reader.read_event_page(sid, limit=4)
+            assert [e["sequence"] for e in page["events"]] == [5, 6, 7, 8]
+            grants = reader.read_scope_grant_events(sid)
+            assert grants == []
+            assert reads["fbo"] == 0
+            assert len(reads["gbos"]) >= 3
+
+            # Warm scope grant check reads 0 objects cleanly; adding one grant reads only the new event
+            reads["gbo"] = 0
+            reads["gbos"].clear()
+            assert reader.read_scope_grant_events(sid) == []
+            assert reads["gbo"] == 0 and reads["gbos"] == []
+
+            store.put_event(sid, 9, {
+                "session_id": sid,
+                "sequence": 9,
+                "type": "authority.scope-granted",
+                "payload": {"scope_grant": {"identity": "sg-1", "repository": "repo_x"}},
+            })
+            updated_grants = reader.read_scope_grant_events(sid)
+            assert len(updated_grants) == 1
+            assert updated_grants[0]["sequence"] == 9
+            assert reads["gbo"] == 1 and reads["gbos"] == []
+        finally:
+            reader.close()
+    finally:
+        store.close()
+
+
+def test_continuation_capsule_projection_matches_context_without_scanning_claims(
+    tmp_path: Path, monkeypatch,
+):
+    from mncs_env.sessions import Session
+
+    store = open_store(tmp_path / "capsule-state", "store", verify_on_open=False, defer_mutation=False)
+    try:
+        sid = "ses_capsule"
+        snapshot = {
+            "schema_version": "mncs.environment.session/5",
+            "session_id": sid,
+            "lifecycle": "active",
+            "snapshot_sequence": 1,
+            "environment_id": "env-test",
+            "consumer_id": "agent-1",
+            "authenticated_principal_id": "owner-1",
+            "intent": {"identity": "intent-1", "goal": "Verify projection"},
+            "authority": {"writable": ["repo-a"], "protected_repositories": []},
+            "checkpoints": ["chk_1"],
+            "campaign": {
+                "identity": "cmp-capsule",
+                "session_ids": [sid],
+                "repository_refs": [{"repository": "repo-a", "head": "a" * 40, "branch": "main", "clean": True}],
+                "work_intent": {"goal": "Verify projection", "repositories": ["repo-a"]},
+                "unresolved_pressures": [{"identity": "p1"}],
+            },
+            "workspace": {"root": str(tmp_path), "repositories": [], "repository_count": 0},
+            "bindings": [],
+        }
+        store.save_snapshot(sid, snapshot)
+        store.save_checkpoint(sid, {
+            "session_id": sid,
+            "identity": "chk_1",
+            "sequence": 1,
+            "created_at": "2026-11-15T10:00:00Z",
+            "progress": "first step",
+            "remaining": ["next step"],
+        })
+
+        session = Session(store, sid, _initial_snapshot=snapshot)
+        ctx = session.context()
+
+        calls = {"claims": 0, "latest_claims": 0, "checkpoints": 0, "backend_events": 0, "scope_grant_events": 0}
+        orig_chks = store.list_checkpoints
+        orig_grant_events = store.backend.read_scope_grant_events
+        monkeypatch.setattr(store, "read_claims", lambda: (calls.__setitem__("claims", calls["claims"] + 1) or []))
+        monkeypatch.setattr(store, "read_latest_claims", lambda: (calls.__setitem__("latest_claims", calls["latest_claims"] + 1) or []))
+        monkeypatch.setattr(store.backend, "read_events", lambda s: (calls.__setitem__("backend_events", calls["backend_events"] + 1) or []))
+        monkeypatch.setattr(store.backend, "read_scope_grant_events", lambda s: (calls.__setitem__("scope_grant_events", calls["scope_grant_events"] + 1) or orig_grant_events(s)))
+        monkeypatch.setattr(store, "list_checkpoints", lambda s: (calls.__setitem__("checkpoints", calls["checkpoints"] + 1) or orig_chks(s)))
+
+        proj = Session(store, sid, _initial_snapshot=snapshot).continuation_capsule_projection()
+        assert proj["authority"] == ctx["authority"]
+        for key in (
+            "identity", "session_ids", "repositories", "checkpoint_ids",
+            "work_intent", "evidence", "delivery", "unresolved_pressures", "latest_checkpoint",
+        ):
+            assert proj["continuation"][key] == ctx["continuation"][key]
+        assert calls == {
+            "claims": 0, "latest_claims": 0, "checkpoints": 1,
+            "backend_events": 0, "scope_grant_events": 1,
+        }
+    finally:
+        store.close()

@@ -1112,6 +1112,105 @@ def _project_campaign_state(
     return changed
 
 
+def _campaign_charter_evidence_index(all_evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    charter_references = [
+        item for item in all_evidence
+        if is_campaign_charter_evidence_path(item.get("path"))
+    ]
+    return {
+        "references": charter_references[:CAMPAIGN_CHARTER_EVIDENCE_MAX],
+        "count": len(charter_references),
+        "truncated": len(charter_references) > CAMPAIGN_CHARTER_EVIDENCE_MAX,
+    }
+
+
+def _checkpoint_continuation_projection(
+    store: SessionStore, snapshot: dict[str, Any], session_id: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    """Project latest checkpoint and validated campaign_state without scanning claims or events."""
+    campaign = snapshot.get("campaign") or {}
+    checkpoints = [
+        record for record in store.list_checkpoints(session_id)
+        if isinstance(record, dict) and isinstance(record.get("identity"), str)
+    ]
+    latest_checkpoint = None
+    if checkpoints:
+        def checkpoint_order(record: dict[str, Any]) -> tuple[int, str, str]:
+            try:
+                sequence = int(record.get("sequence", 0))
+            except (TypeError, ValueError):
+                sequence = 0
+            return sequence, str(record.get("created_at", "")), str(record["identity"])
+
+        latest = max(checkpoints, key=checkpoint_order)
+        raw_remaining = latest.get("remaining")
+        remaining = [value for value in raw_remaining if isinstance(value, str)] \
+            if isinstance(raw_remaining, list) else []
+        remaining_limit = CONTINUATION_MAX_CHECKPOINT_REMAINING
+        progress = latest.get("progress", "")
+        bounded_progress = _bounded_capsule_text(progress, 320) or ""
+        bounded_remaining = [value[:200] for value in remaining[:remaining_limit]]
+        latest_checkpoint = {
+            "identity": latest["identity"],
+            "sequence": checkpoint_order(latest)[0],
+            "created_at": _bounded_capsule_text(latest.get("created_at"), 64),
+            "progress": bounded_progress,
+            "progress_truncated": isinstance(progress, str) and len(progress) > 320,
+            "remaining": bounded_remaining,
+            "remaining_count": len(remaining),
+            "remaining_truncated": (
+                len(remaining) > remaining_limit
+                or any(len(value) > 200 for value in remaining[:remaining_limit])
+            ),
+        }
+
+    campaign_state_history = _validated_campaign_state_history(
+        checkpoints, campaign.get("identity")
+    )
+    campaign_state_projection = None
+    charter_reference_index = None
+    if campaign_state_history:
+        campaign_state_record, evidence_history = campaign_state_history
+        state = campaign_state_record["campaign_state"]
+        delivery = state["delivery"]
+        delivery_repositories = delivery.get("repositories", [])
+        charter_reference_index = _campaign_charter_evidence_index(evidence_history)
+        campaign_state_projection = {
+            "checkpoint_id": campaign_state_record["identity"],
+            "recorded_at": _bounded_capsule_text(state.get("recorded_at"), 64),
+            "recorded_by": {
+                "consumer_id": _bounded_capsule_text(
+                    state["recorded_by"].get("consumer_id"), 160
+                ),
+                "principal_id": _bounded_capsule_text(
+                    state["recorded_by"].get("principal_id"), 160
+                ),
+            },
+            # The entry capsule is a context projection, not the campaign's
+            # evidence ledger. Keep only its newest references here; the
+            # owner-authorized campaign_state() read provides bounded pages.
+            "evidence": evidence_history[-CONTINUATION_MAX_CAMPAIGN_EVIDENCE:],
+            "evidence_count": len(evidence_history),
+            "evidence_truncated": (
+                len(evidence_history) > CONTINUATION_MAX_CAMPAIGN_EVIDENCE
+            ),
+            "delivery": {
+                **{key: value for key, value in delivery.items()
+                   if key != "repositories"},
+                "repositories": delivery_repositories[:CAMPAIGN_DELIVERY_REPOSITORIES_MAX],
+                "repositories_count": len(delivery_repositories),
+                "repositories_truncated": len(delivery_repositories)
+                > CAMPAIGN_DELIVERY_REPOSITORIES_MAX,
+            },
+        }
+        observation_preflight = state.get("observation_preflight")
+        if isinstance(observation_preflight, dict):
+            campaign_state_projection["observation_preflight"] = (
+                observation_preflight
+            )
+    return latest_checkpoint, campaign_state_projection, charter_reference_index
+
+
 def continuation_observations(
     store: SessionStore, snapshot: dict[str, Any], session_id: str,
 ) -> dict[str, Any]:
@@ -1122,7 +1221,7 @@ def continuation_observations(
     lifecycle as proof that its process is still running.
     """
     campaign = snapshot.get("campaign") or {}
-    all_claims = claims_module.active_claims(store.read_claims())
+    all_claims = claims_module.active_claims(claims_module.read_latest_records(store))
     own_claim_ids = sorted(
         str(record.get("claim_id"))
         for record in all_claims.values()
@@ -1241,83 +1340,9 @@ def continuation_observations(
         status != "observed" for status in owner_liveness_inspection_statuses
     )
 
-    checkpoints = [
-        record for record in store.list_checkpoints(session_id)
-        if isinstance(record, dict) and isinstance(record.get("identity"), str)
-    ]
-    latest_checkpoint = None
-    if checkpoints:
-        def checkpoint_order(record: dict[str, Any]) -> tuple[int, str, str]:
-            try:
-                sequence = int(record.get("sequence", 0))
-            except (TypeError, ValueError):
-                sequence = 0
-            return sequence, str(record.get("created_at", "")), str(record["identity"])
-
-        latest = max(checkpoints, key=checkpoint_order)
-        raw_remaining = latest.get("remaining")
-        remaining = [value for value in raw_remaining if isinstance(value, str)] \
-            if isinstance(raw_remaining, list) else []
-        remaining_limit = CONTINUATION_MAX_CHECKPOINT_REMAINING
-        progress = latest.get("progress", "")
-        bounded_progress = _bounded_capsule_text(progress, 320) or ""
-        bounded_remaining = [value[:200] for value in remaining[:remaining_limit]]
-        latest_checkpoint = {
-            "identity": latest["identity"],
-            "sequence": checkpoint_order(latest)[0],
-            "created_at": _bounded_capsule_text(latest.get("created_at"), 64),
-            "progress": bounded_progress,
-            "progress_truncated": isinstance(progress, str) and len(progress) > 320,
-            "remaining": bounded_remaining,
-            "remaining_count": len(remaining),
-            "remaining_truncated": (
-                len(remaining) > remaining_limit
-                or any(len(value) > 200 for value in remaining[:remaining_limit])
-            ),
-        }
-
-    campaign_state_history = _validated_campaign_state_history(
-        checkpoints, campaign.get("identity")
+    latest_checkpoint, campaign_state_projection, _ = (
+        _checkpoint_continuation_projection(store, snapshot, session_id)
     )
-    campaign_state_projection = None
-    if campaign_state_history:
-        campaign_state_record, evidence_history = campaign_state_history
-        state = campaign_state_record["campaign_state"]
-        delivery = state["delivery"]
-        delivery_repositories = delivery.get("repositories", [])
-        campaign_state_projection = {
-            "checkpoint_id": campaign_state_record["identity"],
-            "recorded_at": _bounded_capsule_text(state.get("recorded_at"), 64),
-            "recorded_by": {
-                "consumer_id": _bounded_capsule_text(
-                    state["recorded_by"].get("consumer_id"), 160
-                ),
-                "principal_id": _bounded_capsule_text(
-                    state["recorded_by"].get("principal_id"), 160
-                ),
-            },
-            # The entry capsule is a context projection, not the campaign's
-            # evidence ledger. Keep only its newest references here; the
-            # owner-authorized campaign_state() read provides bounded pages.
-            "evidence": evidence_history[-CONTINUATION_MAX_CAMPAIGN_EVIDENCE:],
-            "evidence_count": len(evidence_history),
-            "evidence_truncated": (
-                len(evidence_history) > CONTINUATION_MAX_CAMPAIGN_EVIDENCE
-            ),
-            "delivery": {
-                **{key: value for key, value in delivery.items()
-                   if key != "repositories"},
-                "repositories": delivery_repositories[:CAMPAIGN_DELIVERY_REPOSITORIES_MAX],
-                "repositories_count": len(delivery_repositories),
-                "repositories_truncated": len(delivery_repositories)
-                > CAMPAIGN_DELIVERY_REPOSITORIES_MAX,
-            },
-        }
-        observation_preflight = state.get("observation_preflight")
-        if isinstance(observation_preflight, dict):
-            campaign_state_projection["observation_preflight"] = (
-                observation_preflight
-            )
 
     return {
         "claim_ids": own_claim_ids[-16:],
@@ -3686,7 +3711,20 @@ class Session:
         original append-order projection.
         """
         grants: dict[str, dict[str, Any]] = {}
-        for event in self._log():
+        key = self._cache_key()
+        if key is not None and key == self._log_cache_key and self._log_cache is not None:
+            events = self._log()
+        else:
+            store_dict = getattr(self.store, "__dict__", None)
+            scope_reader = getattr(self.store, "read_scope_grant_events", None)
+            if (
+                not (isinstance(store_dict, dict) and "read_events" in store_dict)
+                and callable(scope_reader)
+            ):
+                events = scope_reader(self.session_id)
+            else:
+                events = self._log()
+        for event in events:
             if event.get("type") != "authority.scope-granted":
                 continue
             payload = event.get("payload")
@@ -10106,15 +10144,7 @@ class Session:
             raise LifecycleError("campaign has no persisted state checkpoint")
         checkpoint, all_evidence = history
         state = checkpoint["campaign_state"]
-        charter_references = [
-            item for item in all_evidence
-            if is_campaign_charter_evidence_path(item.get("path"))
-        ]
-        charter_reference_index = {
-            "references": charter_references[:CAMPAIGN_CHARTER_EVIDENCE_MAX],
-            "count": len(charter_references),
-            "truncated": len(charter_references) > CAMPAIGN_CHARTER_EVIDENCE_MAX,
-        }
+        charter_reference_index = _campaign_charter_evidence_index(all_evidence)
         total = len(all_evidence)
         limit = evidence_limit
         while True:
@@ -10909,6 +10939,90 @@ class Session:
                 if len(projects) == limit:
                     return projects
         return projects
+
+    def continuation_capsule_projection(self) -> dict[str, Any]:
+        """Project only the authority and campaign-checkpoint facts needed by Control capsules.
+
+        Unlike ``context()``, this read-only projection avoids redundant full
+        claim, capability, doctor, and unrelated-event scans when the caller
+        already holds the session's claim summary and loaded snapshot.
+        """
+        authority = self.effective_authority()
+        protected = sorted(set(authority.get("protected_repositories", [])))
+        writable = sorted(
+            set(authority.get("writable", [])) - set(protected)
+        )
+        campaign = self.snapshot.get("campaign") or {}
+        intent = self.snapshot.get("intent") or {}
+        latest_checkpoint, persisted_campaign_state, charter_reference_index = (
+            _checkpoint_continuation_projection(self.store, self.snapshot, self.session_id)
+        )
+        campaign_evidence = (
+            persisted_campaign_state.get("evidence", [])
+            if isinstance(persisted_campaign_state, dict)
+            else list(campaign.get("evidence", []))[-8:]
+        )
+        campaign_delivery = (
+            persisted_campaign_state.get("delivery")
+            if isinstance(persisted_campaign_state, dict)
+            else campaign.get("delivery", {"status": "pending"})
+        )
+        continuation: dict[str, Any] = {
+            "identity": campaign.get("identity"),
+            "session_ids": list(campaign.get("session_ids", []))[-8:],
+            "repositories": [
+                {key: item.get(key) for key in
+                 ("repository", "observed_path", "checkout_identity",
+                  "git_common_directory_identity", "branch", "head", "clean",
+                  "observation")}
+                for item in campaign.get("repository_refs", [])[:16]
+                if isinstance(item, dict)
+            ],
+            "checkpoint_ids": list(self.snapshot.get("checkpoints", []))[-4:],
+            "work_intent": campaign.get("work_intent", {
+                "goal": intent.get("goal", ""),
+            }),
+            "evidence": campaign_evidence,
+            "delivery": campaign_delivery,
+            "unresolved_pressures": list(
+                campaign.get("unresolved_pressures", [])
+            )[:12],
+        }
+        if isinstance(persisted_campaign_state, dict):
+            continuation["campaign_state_checkpoint_id"] = (
+                persisted_campaign_state.get("checkpoint_id")
+            )
+            continuation["evidence_count"] = persisted_campaign_state.get(
+                "evidence_count", len(campaign_evidence)
+            )
+            continuation["evidence_truncated"] = persisted_campaign_state.get(
+                "evidence_truncated", False
+            )
+        if latest_checkpoint is not None:
+            continuation["latest_checkpoint"] = latest_checkpoint
+
+        projection: dict[str, Any] = {
+            "authority": {
+                "subject": authority.get("subject"),
+                "readable": list(authority.get("readable", [])),
+                "writable": writable,
+                "invocable": list(authority.get("invocable", [])),
+                "protected_repositories": protected,
+                "escalation_required": list(authority.get("escalation_required", [])),
+                "claim_required_actions": list(authority.get("claim_required_actions", [])),
+                "scope_grants": list(authority.get("scope_grants", [])),
+                "revision": authority.get("revision"),
+            },
+            "continuation": continuation,
+        }
+        if isinstance(persisted_campaign_state, dict):
+            projection["campaign_state"] = {
+                "campaign_identity": campaign.get("identity"),
+                "checkpoint_id": persisted_campaign_state.get("checkpoint_id"),
+                "evidence": persisted_campaign_state.get("evidence", []),
+                "campaign_charter_evidence": charter_reference_index,
+            }
+        return projection
 
     def context(self) -> dict[str, Any]:
         """Return the bounded first-use context for this session.

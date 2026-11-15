@@ -325,6 +325,13 @@ class SessionStore:
         events = self.read_events(session_id)
         return events[-limit:], len(events)
 
+    def read_scope_grant_events(self, session_id: str) -> list[dict[str, Any]]:
+        """Read immutable authority.scope-granted events for one session."""
+        return [
+            event for event in self.read_events(session_id)
+            if isinstance(event, dict) and event.get("type") == "authority.scope-granted"
+        ]
+
     def read_event_page(
         self, session_id: str, *, limit: int, before_sequence: int | None = None,
     ) -> dict[str, Any]:
@@ -397,6 +404,26 @@ class SessionStore:
 
     def read_claims(self) -> list[dict[str, Any]]:
         raise NotImplementedError
+
+    def read_latest_claims(self) -> list[dict[str, Any]]:
+        """Read only the latest record per claim identity when supported."""
+        latest: dict[str, tuple[int, dict[str, Any]]] = {}
+        unkeyed: list[dict[str, Any]] = []
+        for record in self.read_claims():
+            if not isinstance(record, dict):
+                continue
+            claim_id = record.get("claim_id")
+            version = record.get("version")
+            if isinstance(claim_id, str) and claim_id and type(version) is int:
+                current = latest.get(claim_id)
+                if current is None or version > current[0]:
+                    latest[claim_id] = (version, record)
+            else:
+                unkeyed.append(record)
+        out = [pair[1] for pair in latest.values()]
+        out.extend(unkeyed)
+        out.sort(key=lambda record: (str(record.get("claim_id", "")), int(record.get("version", 0))))
+        return out
 
     def read_latest_claims_for(self, claim_ids: list[str]) -> list[dict[str, Any]]:
         """Read only the latest record for each of up to eight claim IDs.
@@ -732,6 +759,12 @@ class StoreSessionStore(SessionStore):
     def read_events(self, session_id: str) -> list[dict[str, Any]]:
         return self.backend.read_events(session_id)
 
+    def read_scope_grant_events(self, session_id: str) -> list[dict[str, Any]]:
+        reader = getattr(self.backend, "read_scope_grant_events", None)
+        if callable(reader):
+            return reader(session_id)
+        return super().read_scope_grant_events(session_id)
+
     def read_event_tail(
         self, session_id: str, *, limit: int,
     ) -> tuple[list[dict[str, Any]], int]:
@@ -872,6 +905,12 @@ class StoreSessionStore(SessionStore):
 
     def read_claims(self) -> list[dict[str, Any]]:
         return self.backend.read_claims()
+
+    def read_latest_claims(self) -> list[dict[str, Any]]:
+        reader = getattr(self.backend, "read_latest_claims", None)
+        if callable(reader):
+            return reader()
+        return super().read_latest_claims()
 
     def read_latest_claims_for(self, claim_ids: list[str]) -> list[dict[str, Any]]:
         if (not isinstance(claim_ids, list) or not claim_ids
