@@ -1,0 +1,74 @@
+{
+  "campaign_id": "campaign-store-session-lookup-20261115",
+  "work_intent_identity": "int_8475157f281c835f",
+  "session_id": "ses_1a25cd9344e76cdd",
+  "repository": "mncs-environment",
+  "branch": "fix/store-session-lookup-20261115",
+  "base_commit": "beda7345fcfe6694a8c8eab099ec3b8c839b48be",
+  "store_generation": 131819,
+  "store_mutated": false,
+  "changed_files": [
+    "mncs_env/store_backend.py",
+    "tests/test_store_session_lookup.py",
+    "outputs/store-session-lookup-20261115/REPORT.md",
+    "outputs/store-session-lookup-20261115/measurements.json",
+    "outputs/store-session-lookup-20261115/delivery.json"
+  ],
+  "verification": {
+    "test_store_session_lookup": {
+      "passed": 8,
+      "failed": 0,
+      "seconds": 13.78
+    },
+    "mncs_environment_full_suite": {
+      "passed": 1327,
+      "skipped": 83,
+      "failed": 0,
+      "subtests_passed": 47,
+      "seconds": 936.12
+    },
+    "vertical_proof": "PASS",
+    "mncs_control_mcp_6_suites_worktree": {
+      "exit_code": 0,
+      "collected": 223
+    }
+  },
+  "measurements": {
+    "not_found_scan_cold_wall_median_s": {
+      "before": 48.7032,
+      "after": 17.6424
+    },
+    "not_found_scan_warm_wall_median_s": {
+      "before": 20.8005,
+      "after": 7.7025
+    },
+    "ready_cold_wall_median_s": {
+      "before": 38.7,
+      "after": 13.4712
+    },
+    "ready_warm_wall_median_s": {
+      "before": 1.2074,
+      "after": 1.0402
+    },
+    "domain_bindings_at_calls_not_found_scan": {
+      "cold": {
+        "before": 764,
+        "after": 2
+      },
+      "warm": {
+        "before": 319,
+        "after": 1
+      }
+    },
+    "find_bound_objects_calls_not_found_scan": {
+      "cold": {
+        "before": 911,
+        "after": 93
+      },
+      "warm": {
+        "before": 466,
+        "after": 93
+      }
+    }
+  }
+}

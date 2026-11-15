@@ -20,7 +20,9 @@ import json
 import os
 import sys
 import threading
+from collections import OrderedDict
 from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -270,6 +272,166 @@ def _evidence_identity(evidence_id: str) -> bytes:
     return str(evidence_id).encode("utf-8")
 
 
+_BINDING_DIRECTORY_MAX_GENERATIONS = 2
+_EVENT_DIRECT_GET_MAX = 4
+
+
+def _decode_utf8(raw: bytes) -> str | None:
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def _index_snapshot_binding(
+    identity: bytes,
+    session_ids: set[str],
+    snapshot_map: dict[str, list[tuple[int, bytes]]],
+    checkpoints_map: dict[str, list[bytes]],
+) -> None:
+    if b":snap:" in identity:
+        text = _decode_utf8(identity)
+        if text and ":snap:" in text:
+            session_ids.add(text.split(":snap:", 1)[0])
+        prefix_bytes, _, suffix = identity.partition(b":snap:")
+        sid = _decode_utf8(prefix_bytes)
+        if sid is not None:
+            try:
+                revision = int(suffix)
+            except ValueError:
+                revision = None
+            if revision is not None:
+                snapshot_map.setdefault(sid, []).append((revision, identity))
+    if b":chk:" in identity:
+        prefix_bytes, _, _ = identity.partition(b":chk:")
+        sid = _decode_utf8(prefix_bytes)
+        if sid is not None:
+            checkpoints_map.setdefault(sid, []).append(identity)
+
+
+def _index_event_binding(
+    identity: bytes, events_map: dict[str, list[tuple[int, bytes, bool]]],
+) -> None:
+    if b":evt:" not in identity:
+        return
+    prefix_bytes, _, suffix = identity.partition(b":evt:")
+    sid = _decode_utf8(prefix_bytes)
+    if sid is None:
+        return
+    try:
+        sequence = int(suffix)
+    except ValueError:
+        return
+    is_canonical = (
+        len(suffix) >= 10
+        and suffix.isdigit()
+        and sequence >= 1
+        and suffix == f"{sequence:010d}".encode("ascii")
+    )
+    events_map.setdefault(sid, []).append((sequence, identity, is_canonical))
+
+
+def _index_claim_binding(
+    identity: bytes, claims_latest: dict[str, tuple[int, bytes]],
+) -> None:
+    if not identity.startswith(b"claim:"):
+        return
+    claim_bytes, sep, suffix = identity[6:].rpartition(b":")
+    if not sep or len(suffix) != 10 or not suffix.isdigit():
+        return
+    version = int(suffix)
+    claim_id = _decode_utf8(claim_bytes)
+    if version < 1 or claim_id is None:
+        return
+    current = claims_latest.get(claim_id)
+    if current is None or version > current[0]:
+        claims_latest[claim_id] = (version, identity)
+
+
+def _index_projection_binding(
+    identity: bytes,
+    projections_map: dict[str, list[tuple[int, bytes]]],
+    projection_versions: dict[str, int],
+) -> None:
+    text = _decode_utf8(identity)
+    if text is None:
+        return
+    projection_id, _, ver_text = text.rpartition(":")
+    if not projection_id:
+        return
+    try:
+        number = int(ver_text)
+    except ValueError:
+        return
+    projections_map.setdefault(projection_id, []).append((number, identity))
+    if number > projection_versions.get(projection_id, 0):
+        projection_versions[projection_id] = number
+
+
+@dataclass(frozen=True)
+class _BindingDirectory:
+    """Derived binding metadata index for one exact Store generation."""
+
+    generation: int
+    session_ids: tuple[str, ...]
+    snapshot_revisions: dict[str, tuple[tuple[int, bytes], ...]]
+    checkpoints: dict[str, tuple[bytes, ...]]
+    events: dict[str, tuple[tuple[int, bytes, bool], ...]]
+    claims_latest: dict[str, tuple[int, bytes]]
+    projections: dict[str, tuple[tuple[int, bytes], ...]]
+    projection_versions: dict[str, int]
+
+
+def _build_binding_directory(
+    generation: int, bindings: tuple[tuple[bytes, bytes], ...] | list[tuple[bytes, bytes]],
+) -> _BindingDirectory:
+    """Index immutable binding identities once for a fixed Store generation."""
+    session_ids: set[str] = set()
+    snapshot_map: dict[str, list[tuple[int, bytes]]] = {}
+    checkpoints_map: dict[str, list[bytes]] = {}
+    events_map: dict[str, list[tuple[int, bytes, bool]]] = {}
+    claims_latest: dict[str, tuple[int, bytes]] = {}
+    projections_map: dict[str, list[tuple[int, bytes]]] = {}
+    projection_versions: dict[str, int] = {}
+
+    for schema, identity in bindings:
+        if schema == SCHEMA_SNAPSHOT:
+            _index_snapshot_binding(identity, session_ids, snapshot_map, checkpoints_map)
+        elif schema == SCHEMA_EVENT:
+            _index_event_binding(identity, events_map)
+        elif schema == SCHEMA_CLAIM:
+            _index_claim_binding(identity, claims_latest)
+        elif schema == SCHEMA_PROJECTION:
+            _index_projection_binding(identity, projections_map, projection_versions)
+
+    return _BindingDirectory(
+        generation=generation,
+        session_ids=tuple(sorted(session_ids)),
+        snapshot_revisions={
+            sid: tuple(sorted(
+                set(revs),
+                key=lambda pair: (pair[0], pair[1] == _snapshot_identity(sid, pair[0]), pair[1]),
+                reverse=True,
+            ))
+            for sid, revs in snapshot_map.items()
+        },
+        checkpoints={
+            sid: tuple(sorted(items))
+            for sid, items in checkpoints_map.items()
+        },
+        events={
+            sid: tuple(sorted(items, key=lambda entry: (entry[0], entry[1])))
+            for sid, items in events_map.items()
+        },
+        claims_latest=claims_latest,
+        projections={
+            proj_id: tuple(sorted(items, reverse=True))
+            for proj_id, items in projections_map.items()
+        },
+        projection_versions=projection_versions,
+    )
+
+
 class StoreBackend:
     """Durable session storage through mncs-store persistent objects."""
 
@@ -293,6 +455,9 @@ class StoreBackend:
         self.path = self.state_dir / "store"
         self._promotion_owner = None
         self._verify_on_open = verify_on_open
+        self._binding_cache_lock = threading.RLock()
+        self._binding_cache_store = None
+        self._binding_directories: OrderedDict[int, _BindingDirectory] = OrderedDict()
         with _selected_store_runtime(self.store_runtime, self.state_dir / "provider-cache" / "mncs-store"):
             if defer_mutation and (self.path / "head").is_file():
                 self._store = EmbeddedStore(self.path, read_only=True)
@@ -307,9 +472,90 @@ class StoreBackend:
             raise StoreIntegrityFailure(f"store recovery reported {recovery}")
 
     def close(self) -> None:
+        self._clear_binding_directory()
         self._store.close()
         if self._promotion_owner is not None:
             self._promotion_owner.close()
+
+    def _clear_binding_directory(self) -> None:
+        lock = getattr(self, "_binding_cache_lock", None)
+        cache = getattr(self, "_binding_directories", None)
+        if cache is None:
+            return
+        if lock is not None:
+            with lock:
+                cache.clear()
+                self._binding_cache_store = None
+        else:
+            cache.clear()
+            self._binding_cache_store = None
+
+    def _binding_directory_for(self, generation: Any) -> _BindingDirectory | None:
+        if type(generation) is not int:
+            return None
+        observe = getattr(self._store, "domain_bindings_at", None)
+        if not callable(observe):
+            return None
+        # Support StoreBackend.__new__ in unit tests that bypass __init__.
+        lock = getattr(self, "_binding_cache_lock", None)
+        if lock is None:
+            lock = threading.RLock()
+            self._binding_cache_lock = lock
+        cache = getattr(self, "_binding_directories", None)
+        if cache is None:
+            cache = OrderedDict()
+            self._binding_directories = cache
+        store = self._store
+        with lock:
+            if getattr(self, "_binding_cache_store", None) is not store:
+                cache.clear()
+                self._binding_cache_store = store
+            cached = cache.get(generation)
+            if cached is not None:
+                cache.move_to_end(generation)
+                return cached
+        bindings = observe(generation)
+        directory = _build_binding_directory(generation, bindings)
+        with lock:
+            if self._store is store and getattr(self, "_binding_cache_store", None) is store:
+                cache[generation] = directory
+                cache.move_to_end(generation)
+                while len(cache) > _BINDING_DIRECTORY_MAX_GENERATIONS:
+                    cache.popitem(last=False)
+        return directory
+
+    def _is_not_current_store_error(self, error: Exception) -> bool:
+        api = getattr(self, "_api", None)
+        if api is not None and len(api) >= 3 and api[1] is not None and api[2] is not None:
+            _, StoreError, StoreResultCode = api
+            return (
+                isinstance(error, StoreError)
+                and error.code == StoreResultCode.DENIED
+                and error.message == "Store object binding is not current"
+            )
+        code = getattr(error, "code", None)
+        return (
+            getattr(code, "name", None) == "DENIED"
+            and getattr(error, "message", None) == "Store object binding is not current"
+        )
+
+    def _read_exact_or_find(self, schema: bytes, identity: bytes) -> Any:
+        get_bound = getattr(self._store, "get_bound_object", None)
+        if callable(get_bound):
+            try:
+                return get_bound(schema, identity)
+            except Exception as error:
+                if self._is_not_current_store_error(error):
+                    return None
+                raise
+        return next(
+            (
+                candidate
+                for candidate in self._store.find_bound_objects(schema, identity)
+                if candidate.domain_identity == identity
+            ),
+            None,
+        )
 
     def _ensure_writable(self) -> None:
         if not getattr(self._store, "read_only", False):
@@ -424,12 +670,42 @@ class StoreBackend:
 
     def read_events(self, session_id: str) -> list[dict[str, Any]]:
         prefix = f"{session_id}:evt:".encode()
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
         found: list[tuple[int, dict[str, Any]]] = []
-        for item in self._store.find_bound_objects(SCHEMA_EVENT, prefix):
+        if directory is not None:
+            entries = directory.events.get(session_id, ())
+            if not entries:
+                return []
+            if (
+                len(entries) <= _EVENT_DIRECT_GET_MAX
+                or not callable(getattr(self._store, "find_bound_objects", None))
+            ):
+                items_with_seq = (
+                    (sequence, self._read_exact_or_find(SCHEMA_EVENT, identity))
+                    for sequence, identity, _is_canonical in entries
+                )
+            else:
+                items_with_seq = (
+                    (None, item)
+                    for item in self._store.find_bound_objects(SCHEMA_EVENT, prefix)
+                )
+        else:
+            items_with_seq = (
+                (None, item)
+                for item in self._store.find_bound_objects(SCHEMA_EVENT, prefix)
+            )
+        for sequence, item in items_with_seq:
+            if item is None:
+                continue
             try:
-                sequence = int(item.domain_identity[len(prefix):])
-                found.append((sequence, json.loads(item.payload.decode("utf-8"))))
-            except (ValueError, json.JSONDecodeError):
+                parsed_seq = (
+                    int(item.domain_identity[len(prefix):])
+                    if sequence is None
+                    else sequence
+                )
+                found.append((parsed_seq, json.loads(item.payload.decode("utf-8"))))
+            except (AttributeError, ValueError, json.JSONDecodeError):
                 continue
         found.sort(key=lambda pair: pair[0])
         return [event for _, event in found]
@@ -452,33 +728,49 @@ class StoreBackend:
             raise ValueError("event page cursor must be a positive sequence")
         prefix = f"{session_id}:evt:".encode()
         generation = self._store.current_generation
+        directory = self._binding_directory_for(generation)
         selected: list[tuple[int, bytes]] = []
         event_count = 0
         minimum_sequence: int | None = None
-        for schema, identity in self._store.domain_bindings_at(generation):
-            if schema != SCHEMA_EVENT or not identity.startswith(prefix):
-                continue
-            suffix = identity[len(prefix):]
-            if len(suffix) < 10 or not suffix.isdigit():
-                continue
-            try:
-                sequence = int(suffix)
-            except ValueError:
-                continue
-            if sequence < 1 or suffix != f"{sequence:010d}".encode():
-                continue
-            event_count += 1
-            minimum_sequence = (
-                sequence if minimum_sequence is None
-                else min(minimum_sequence, sequence)
-            )
-            if before_sequence is not None and sequence >= before_sequence:
-                continue
-            item = (sequence, identity)
-            if len(selected) < limit:
-                heapq.heappush(selected, item)
-            elif sequence > selected[0][0]:
-                heapq.heapreplace(selected, item)
+        if directory is not None:
+            for sequence, identity, is_canonical in directory.events.get(session_id, ()):
+                if not is_canonical:
+                    continue
+                event_count += 1
+                if minimum_sequence is None or sequence < minimum_sequence:
+                    minimum_sequence = sequence
+                if before_sequence is not None and sequence >= before_sequence:
+                    continue
+                item = (sequence, identity)
+                if len(selected) < limit:
+                    heapq.heappush(selected, item)
+                elif sequence > selected[0][0]:
+                    heapq.heapreplace(selected, item)
+        else:
+            for schema, identity in self._store.domain_bindings_at(generation):
+                if schema != SCHEMA_EVENT or not identity.startswith(prefix):
+                    continue
+                suffix = identity[len(prefix):]
+                if len(suffix) < 10 or not suffix.isdigit():
+                    continue
+                try:
+                    sequence = int(suffix)
+                except ValueError:
+                    continue
+                if sequence < 1 or suffix != f"{sequence:010d}".encode():
+                    continue
+                event_count += 1
+                minimum_sequence = (
+                    sequence if minimum_sequence is None
+                    else min(minimum_sequence, sequence)
+                )
+                if before_sequence is not None and sequence >= before_sequence:
+                    continue
+                item = (sequence, identity)
+                if len(selected) < limit:
+                    heapq.heappush(selected, item)
+                elif sequence > selected[0][0]:
+                    heapq.heapreplace(selected, item)
 
         events = []
         for sequence, identity in sorted(selected):
@@ -770,41 +1062,58 @@ class StoreBackend:
             StoreResultCode.CONFLICT, "CAS retries exhausted"
         )
 
-    def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
+    def _snapshot_revisions_for(
+        self, session_id: str, generation: Any,
+    ) -> tuple[tuple[int, bytes], ...]:
+        directory = self._binding_directory_for(generation)
+        if directory is not None:
+            return directory.snapshot_revisions.get(session_id, ())
         prefix = f"{session_id}:snap:".encode()
+        revisions: list[tuple[int, bytes]] = []
+        for schema, identity in self._store.domain_bindings_at(generation):
+            if schema != SCHEMA_SNAPSHOT or not identity.startswith(prefix):
+                continue
+            try:
+                revisions.append((int(identity[len(prefix):]), identity))
+            except ValueError:
+                continue
+        return tuple(sorted(set(revisions), reverse=True))
+
+    def read_snapshot(self, session_id: str) -> dict[str, Any] | None:
         # Select the latest immutable revision from verified binding metadata
         # (no payload reads), then verify and decode only that payload. Older
         # revisions are read only if a newer payload is missing or undecodable.
         # Payload integrity failures still raise; they are never skipped.
-        revisions = []
-        for schema, identity in self._store.domain_bindings_at(self._store.current_generation):
-            if schema != SCHEMA_SNAPSHOT or not identity.startswith(prefix):
-                continue
-            try:
-                revisions.append(int(identity[len(prefix):]))
-            except ValueError:
-                continue
-        for revision in sorted(revisions, reverse=True):
-            identity = _snapshot_identity(session_id, revision)
-            item = next(
-                (
-                    candidate
-                    for candidate in self._store.find_bound_objects(SCHEMA_SNAPSHOT, identity)
-                    if candidate.domain_identity == identity
-                ),
-                None,
-            )
-            if item is None:
-                continue
-            try:
-                record = json.loads(item.payload.decode("utf-8"))
-            except (ValueError, json.JSONDecodeError):
-                continue
-            if not isinstance(record, dict):
-                continue
-            if _SNAPSHOT_SECTIONS_FIELD in record:
-                return self._reconstruct_sectioned_snapshot(record)
-            return record
+        for attempt in range(2):
+            generation = getattr(self._store, "current_generation", None)
+            revisions = self._snapshot_revisions_for(session_id, generation)
+            for _revision, identity in revisions:
+                item = self._read_exact_or_find(SCHEMA_SNAPSHOT, identity)
+                if item is None:
+                    continue
+                try:
+                    record = json.loads(item.payload.decode("utf-8"))
+                except (ValueError, json.JSONDecodeError):
+                    continue
+                if not isinstance(record, dict):
+                    continue
+                if (
+                    attempt == 0
+                    and type(generation) is int
+                    and getattr(self._store, "current_generation", None) != generation
+                ):
+                    break
+                if _SNAPSHOT_SECTIONS_FIELD in record:
+                    return self._reconstruct_sectioned_snapshot(record)
+                return record
+            else:
+                if (
+                    attempt == 0
+                    and type(generation) is int
+                    and getattr(self._store, "current_generation", None) != generation
+                ):
+                    continue
+                return None
         return None
 
     # -- claims ---------------------------------------------------------------
@@ -884,29 +1193,37 @@ class StoreBackend:
         requested = sorted(set(claim_ids))
         for _attempt in range(2):
             generation = self._store.current_generation
-            prefixes = {
-                f"claim:{claim_id}:".encode(): claim_id
-                for claim_id in requested
-            }
-            latest: dict[str, tuple[int, bytes]] = {}
-            for schema, identity in self._store.domain_bindings_at(generation):
-                if schema != SCHEMA_CLAIM:
-                    continue
-                for prefix, claim_id in prefixes.items():
-                    if not identity.startswith(prefix):
+            directory = self._binding_directory_for(generation)
+            if directory is not None:
+                latest = {
+                    claim_id: directory.claims_latest[claim_id]
+                    for claim_id in requested
+                    if claim_id in directory.claims_latest
+                }
+            else:
+                prefixes = {
+                    f"claim:{claim_id}:".encode(): claim_id
+                    for claim_id in requested
+                }
+                latest = {}
+                for schema, identity in self._store.domain_bindings_at(generation):
+                    if schema != SCHEMA_CLAIM:
                         continue
-                    suffix = identity[len(prefix):]
-                    if len(suffix) != 10 or not suffix.isdigit():
-                        continue
-                    try:
-                        version = int(suffix)
-                    except ValueError:
-                        continue
-                    if version < 1 or suffix != f"{version:010d}".encode():
-                        continue
-                    current = latest.get(claim_id)
-                    if current is None or version > current[0]:
-                        latest[claim_id] = (version, identity)
+                    for prefix, claim_id in prefixes.items():
+                        if not identity.startswith(prefix):
+                            continue
+                        suffix = identity[len(prefix):]
+                        if len(suffix) != 10 or not suffix.isdigit():
+                            continue
+                        try:
+                            version = int(suffix)
+                        except ValueError:
+                            continue
+                        if version < 1 or suffix != f"{version:010d}".encode():
+                            continue
+                        current = latest.get(claim_id)
+                        if current is None or version > current[0]:
+                            latest[claim_id] = (version, identity)
 
             out = []
             for claim_id in requested:
@@ -954,7 +1271,7 @@ class StoreBackend:
 
     def get_record_strict(self, schema: bytes, identity: bytes) -> dict[str, Any] | None:
         """Read one bound record, preserving integrity and provider failures."""
-        _, StoreError, StoreResultCode = self._api
+        _, StoreError, StoreResultCode = getattr(self, "_api", None) or _load_store_api()
         try:
             item = self._store.get_bound_object(schema, identity)
         except StoreError as error:
@@ -976,10 +1293,16 @@ class StoreBackend:
         """Read only checkpoint objects bound to one Environment session."""
         prefix = f"{session_id}:chk:".encode("utf-8")
         generation = self._store.current_generation
-        identities = [identity for schema, identity in self._store.domain_bindings_at(generation)
-                      if schema == SCHEMA_SNAPSHOT and identity.startswith(prefix)]
+        directory = self._binding_directory_for(generation)
+        if directory is not None:
+            identities = list(directory.checkpoints.get(session_id, ()))
+        else:
+            identities = sorted(
+                identity for schema, identity in self._store.domain_bindings_at(generation)
+                if schema == SCHEMA_SNAPSHOT and identity.startswith(prefix)
+            )
         records = []
-        for identity in sorted(identities):
+        for identity in identities:
             record = self.get_record(SCHEMA_SNAPSHOT, identity)
             if (isinstance(record, dict) and record.get("session_id") == session_id
                     and record.get("identity")):
@@ -992,6 +1315,20 @@ class StoreBackend:
     def read_projection_row(
             self, projection_id: str) -> tuple[int, dict[str, Any]] | None:
         prefix = _projection_prefix(projection_id)
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if directory is not None and callable(getattr(self._store, "get_bound_object", None)):
+            for version, identity in directory.projections.get(projection_id, ()):
+                item = self._read_exact_or_find(SCHEMA_PROJECTION, identity)
+                if item is None:
+                    continue
+                try:
+                    record = json.loads(item.payload.decode("utf-8"))
+                except (ValueError, json.JSONDecodeError):
+                    continue
+                if isinstance(record, dict):
+                    return (version, record)
+            return None
         best: tuple[int, dict[str, Any]] | None = None
         for item in self._store.find_bound_objects(SCHEMA_PROJECTION,
                                                    prefix):
@@ -1007,6 +1344,10 @@ class StoreBackend:
         return best
 
     def read_projection_versions(self) -> dict[str, int]:
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if directory is not None:
+            return dict(directory.projection_versions)
         versions: dict[str, int] = {}
         for item in self._store.find_bound_objects(SCHEMA_PROJECTION):
             try:
@@ -1122,6 +1463,10 @@ class StoreBackend:
     def list_sessions(self) -> list[str]:
         # Session identities come from verified binding metadata; snapshot
         # payloads are never read for a listing.
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if directory is not None:
+            return list(directory.session_ids)
         found: set[str] = set()
         for schema, identity in self._store.domain_bindings_at(self._store.current_generation):
             if schema != SCHEMA_SNAPSHOT:

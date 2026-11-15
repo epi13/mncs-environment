@@ -1,0 +1,694 @@
+{
+  "revisions": {
+    "mncs_environment_base": "beda734",
+    "mncs_store": "5464f04",
+    "mncs_control_mcp": "55941a6",
+    "mncs_language": "f8742e9"
+  },
+  "unprofiled_benchmark": {
+    "direct": {
+      "main": {
+        "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+        "generation": 131819,
+        "session_count": 616,
+        "list_sessions_first_s": 3.6401,
+        "list_sessions_first_counts": {
+          "dba": 1,
+          "fbo": 0,
+          "gbo": 0,
+          "batches": 0
+        },
+        "load_20_snapshots_s": 1.1281,
+        "list_20_checkpoints_s": 0.6751,
+        "read_20_event_pages_s": 1.3224,
+        "read_projection_versions_s": 2.578,
+        "projection_count": 1370,
+        "read_5_projection_rows_s": 0.0721,
+        "read_latest_claims_for_4_s": 0.0517,
+        "read_latest_claims_count": 4,
+        "post_list_counts": {
+          "dba": 61,
+          "fbo": 27,
+          "gbo": 198,
+          "batches": 198
+        },
+        "max_rss_kib": 617112
+      },
+      "worktree": {
+        "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+        "generation": 131819,
+        "session_count": 616,
+        "list_sessions_first_s": 3.7839,
+        "list_sessions_first_counts": {
+          "dba": 1,
+          "fbo": 0,
+          "gbo": 0,
+          "batches": 0
+        },
+        "load_20_snapshots_s": 0.3347,
+        "list_20_checkpoints_s": 0.0913,
+        "read_20_event_pages_s": 0.7327,
+        "read_projection_versions_s": 0.0,
+        "projection_count": 1370,
+        "read_5_projection_rows_s": 0.031,
+        "read_latest_claims_for_4_s": 0.0191,
+        "read_latest_claims_count": 4,
+        "post_list_counts": {
+          "dba": 0,
+          "fbo": 1,
+          "gbo": 223,
+          "batches": 223
+        },
+        "max_rss_kib": 393932
+      }
+    },
+    "continuation": {
+      "not-found-scan": {
+        "main": {
+          "trials": [
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "not-found-scan",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 48.5491,
+                  "cpu_seconds": 48.2544,
+                  "status": "not-found",
+                  "response_bytes": 258
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 20.8063,
+                  "cpu_seconds": 20.6122,
+                  "status": "not-found",
+                  "response_bytes": 258
+                }
+              ],
+              "max_rss_kib": 642920
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "not-found-scan",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 49.0251,
+                  "cpu_seconds": 48.4974,
+                  "status": "not-found",
+                  "response_bytes": 258
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 20.8005,
+                  "cpu_seconds": 20.6143,
+                  "status": "not-found",
+                  "response_bytes": 258
+                }
+              ],
+              "max_rss_kib": 640784
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "not-found-scan",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 48.7032,
+                  "cpu_seconds": 48.4364,
+                  "status": "not-found",
+                  "response_bytes": 258
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 20.5471,
+                  "cpu_seconds": 20.4495,
+                  "status": "not-found",
+                  "response_bytes": 258
+                }
+              ],
+              "max_rss_kib": 638724
+            }
+          ],
+          "cold_median_s": 48.7032,
+          "cold_cpu_median_s": 48.4364,
+          "warm_median_s": 20.8005,
+          "warm_cpu_median_s": 20.6122,
+          "rss_kib_median": 640784
+        },
+        "worktree": {
+          "trials": [
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "not-found-scan",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 17.5357,
+                  "cpu_seconds": 17.3375,
+                  "status": "not-found",
+                  "response_bytes": 258
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 7.6858,
+                  "cpu_seconds": 7.6011,
+                  "status": "not-found",
+                  "response_bytes": 258
+                }
+              ],
+              "max_rss_kib": 639924
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "not-found-scan",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 17.674,
+                  "cpu_seconds": 17.5224,
+                  "status": "not-found",
+                  "response_bytes": 258
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 7.7847,
+                  "cpu_seconds": 7.7401,
+                  "status": "not-found",
+                  "response_bytes": 258
+                }
+              ],
+              "max_rss_kib": 640220
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "not-found-scan",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 17.6424,
+                  "cpu_seconds": 17.494,
+                  "status": "not-found",
+                  "response_bytes": 258
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 7.7025,
+                  "cpu_seconds": 7.6353,
+                  "status": "not-found",
+                  "response_bytes": 258
+                }
+              ],
+              "max_rss_kib": 640068
+            }
+          ],
+          "cold_median_s": 17.6424,
+          "cold_cpu_median_s": 17.494,
+          "warm_median_s": 7.7025,
+          "warm_cpu_median_s": 7.6353,
+          "rss_kib_median": 640068
+        }
+      },
+      "ready": {
+        "main": {
+          "trials": [
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "ready",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 38.5092,
+                  "cpu_seconds": 37.9457,
+                  "status": "ready",
+                  "response_bytes": 18409
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.2201,
+                  "cpu_seconds": 1.1874,
+                  "status": "ready",
+                  "response_bytes": 18409
+                }
+              ],
+              "max_rss_kib": 644064
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "ready",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 39.0538,
+                  "cpu_seconds": 38.2964,
+                  "status": "ready",
+                  "response_bytes": 18409
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.2074,
+                  "cpu_seconds": 1.179,
+                  "status": "ready",
+                  "response_bytes": 18409
+                }
+              ],
+              "max_rss_kib": 643832
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "ready",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 38.7,
+                  "cpu_seconds": 38.0364,
+                  "status": "ready",
+                  "response_bytes": 18409
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.1986,
+                  "cpu_seconds": 1.1713,
+                  "status": "ready",
+                  "response_bytes": 18409
+                }
+              ],
+              "max_rss_kib": 643884
+            }
+          ],
+          "cold_median_s": 38.7,
+          "cold_cpu_median_s": 38.0364,
+          "warm_median_s": 1.2074,
+          "warm_cpu_median_s": 1.179,
+          "rss_kib_median": 643884
+        },
+        "worktree": {
+          "trials": [
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "ready",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 13.4442,
+                  "cpu_seconds": 12.9729,
+                  "status": "ready",
+                  "response_bytes": 18409
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.0588,
+                  "cpu_seconds": 1.044,
+                  "status": "ready",
+                  "response_bytes": 18409
+                }
+              ],
+              "max_rss_kib": 654860
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "ready",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 13.4712,
+                  "cpu_seconds": 13.1081,
+                  "status": "ready",
+                  "response_bytes": 18409
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.0402,
+                  "cpu_seconds": 1.025,
+                  "status": "ready",
+                  "response_bytes": 18409
+                }
+              ],
+              "max_rss_kib": 654764
+            },
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "ready",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 13.7042,
+                  "cpu_seconds": 13.1932,
+                  "status": "ready",
+                  "response_bytes": 18409
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.0282,
+                  "cpu_seconds": 1.012,
+                  "status": "ready",
+                  "response_bytes": 18409
+                }
+              ],
+              "max_rss_kib": 654652
+            }
+          ],
+          "cold_median_s": 13.4712,
+          "cold_cpu_median_s": 13.1081,
+          "warm_median_s": 1.0402,
+          "warm_cpu_median_s": 1.025,
+          "rss_kib_median": 654764
+        }
+      },
+      "ambiguous-or-denied": {
+        "main": {
+          "trials": [
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+              "case": "ambiguous-or-denied",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 38.064,
+                  "cpu_seconds": 37.9128,
+                  "status": null,
+                  "response_bytes": 157
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 6.0561,
+                  "cpu_seconds": 5.9889,
+                  "status": null,
+                  "response_bytes": 157
+                }
+              ],
+              "max_rss_kib": 636624
+            }
+          ],
+          "cold_median_s": 38.064,
+          "cold_cpu_median_s": 37.9128,
+          "warm_median_s": 6.0561,
+          "warm_cpu_median_s": 5.9889,
+          "rss_kib_median": 636624
+        },
+        "worktree": {
+          "trials": [
+            {
+              "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+              "case": "ambiguous-or-denied",
+              "start_gen": 131819,
+              "end_gen": 131819,
+              "runs": [
+                {
+                  "iteration": 0,
+                  "seconds": 12.9574,
+                  "cpu_seconds": 12.8464,
+                  "status": null,
+                  "response_bytes": 157
+                },
+                {
+                  "iteration": 1,
+                  "seconds": 1.9366,
+                  "cpu_seconds": 1.9019,
+                  "status": null,
+                  "response_bytes": 157
+                }
+              ],
+              "max_rss_kib": 639200
+            }
+          ],
+          "cold_median_s": 12.9574,
+          "cold_cpu_median_s": 12.8464,
+          "warm_median_s": 1.9366,
+          "warm_cpu_median_s": 1.9019,
+          "rss_kib_median": 639200
+        }
+      }
+    },
+    "semantic_parity": {
+      "not-found-scan": {
+        "equal": true,
+        "first_diff": null,
+        "status_main": "not-found",
+        "status_worktree": "not-found"
+      },
+      "ready": {
+        "equal": true,
+        "first_diff": null,
+        "status_main": "ready",
+        "status_worktree": "ready"
+      },
+      "ambiguous-or-denied": {
+        "equal": true,
+        "first_diff": null,
+        "status_main": null,
+        "status_worktree": null
+      }
+    }
+  },
+  "profiled_attribution": {
+    "main": {
+      "env_root": "/home/epi13/Documents/Projects/mncs-environment",
+      "generation": 131819,
+      "gen_entries_count": 0,
+      "gen_parts_entry_bytes": 0,
+      "gen_parts_cache_max_bytes": 16777216,
+      "gen_parts_cache_exceeds_limit": false,
+      "gen_parts_cache_entries_after_read": 3,
+      "gen_parts_cache_entries_after_dba1": 3,
+      "cold_load_snapshot_callers": {
+        "environment_sessions.py:508:_guarded": 763
+      },
+      "warm_load_snapshot_callers": {
+        "environment_sessions.py:508:_guarded": 318
+      },
+      "total_bindings": 132078,
+      "snapshot_bindings": 51291,
+      "event_bindings": 60530,
+      "claim_bindings": 3279,
+      "section_bindings": 176,
+      "direct_open_read_only_s": 1.689,
+      "direct_open_cpu_s": 1.6827,
+      "direct_domain_bindings_at_1st_s": 3.8154,
+      "direct_domain_bindings_at_1st_batches": 0,
+      "direct_domain_bindings_at_2nd_s": 0.0207,
+      "direct_domain_bindings_at_2nd_batches": 0,
+      "direct_single_read_snapshot_s": 0.1433,
+      "direct_single_exact_gbo_s": 0.0049,
+      "direct_exact_gbo_batches": 1,
+      "direct_20_read_snapshots_s": 0.9938,
+      "direct_read_claims_s": 0.4475,
+      "direct_claims_count": 3279,
+      "direct_read_claims_batches": 0,
+      "continuation_runs": [
+        {
+          "iteration": 0,
+          "seconds": 93.4093,
+          "cpu_seconds": 92.8053,
+          "status": "not-found",
+          "response_bytes": 258,
+          "counts": {
+            "store_opens": 1,
+            "load_snapshot": 763,
+            "read_snapshot": 763,
+            "domain_bindings_at": 764,
+            "domain_bindings_yielded": 100907592,
+            "find_bound_objects": 911,
+            "find_bound_matched": 17698,
+            "get_bound_object": 166,
+            "_domain_binding_index_rebuilds": 1,
+            "_read_binding": 150108,
+            "_read_entry": 17864,
+            "_reconstruct_sectioned": 12,
+            "_read_section_payload": 166,
+            "read_claims": 1,
+            "native_batches": 166,
+            "native_calls": 166,
+            "scope_grants_session_open": 0
+          },
+          "timings": {
+            "load_snapshot": 73.1973,
+            "domain_bindings_at": 40.3042,
+            "find_bound_objects": 31.0893,
+            "get_bound_object": 0.9148,
+            "_domain_binding_index": 8.5549,
+            "_read_entry": 5.9192,
+            "_reconstruct_sectioned": 0.9828,
+            "read_claims": 0.9261,
+            "call_batch": 0.7442
+          }
+        },
+        {
+          "iteration": 1,
+          "seconds": 20.6587,
+          "cpu_seconds": 20.59,
+          "status": "not-found",
+          "response_bytes": 258,
+          "counts": {
+            "store_opens": 0,
+            "load_snapshot": 318,
+            "read_snapshot": 318,
+            "domain_bindings_at": 319,
+            "domain_bindings_yielded": 42132882,
+            "find_bound_objects": 466,
+            "find_bound_matched": 17253,
+            "get_bound_object": 42,
+            "_domain_binding_index_rebuilds": 0,
+            "_read_binding": 17337,
+            "_read_entry": 17295,
+            "_reconstruct_sectioned": 4,
+            "_read_section_payload": 42,
+            "read_claims": 1,
+            "native_batches": 42,
+            "native_calls": 42,
+            "scope_grants_session_open": 0
+          },
+          "timings": {
+            "load_snapshot": 15.9903,
+            "domain_bindings_at": 6.0387,
+            "find_bound_objects": 9.7909,
+            "get_bound_object": 0.2071,
+            "_domain_binding_index": 0.0007,
+            "_read_entry": 2.5955,
+            "_reconstruct_sectioned": 0.2201,
+            "read_claims": 0.4289,
+            "call_batch": 0.188
+          }
+        }
+      ],
+      "max_rss_kib": 667956
+    },
+    "worktree": {
+      "env_root": "/home/epi13/Documents/Projects/mncs-environment/.worktrees/store-session-lookup-20261115",
+      "generation": 131819,
+      "gen_entries_count": 0,
+      "gen_parts_entry_bytes": 0,
+      "gen_parts_cache_max_bytes": 16777216,
+      "gen_parts_cache_exceeds_limit": false,
+      "gen_parts_cache_entries_after_read": 3,
+      "gen_parts_cache_entries_after_dba1": 3,
+      "cold_load_snapshot_callers": {
+        "environment_sessions.py:508:_guarded": 763
+      },
+      "warm_load_snapshot_callers": {
+        "environment_sessions.py:508:_guarded": 318
+      },
+      "total_bindings": 132078,
+      "snapshot_bindings": 51291,
+      "event_bindings": 60530,
+      "claim_bindings": 3279,
+      "section_bindings": 176,
+      "direct_open_read_only_s": 1.6933,
+      "direct_open_cpu_s": 1.6882,
+      "direct_domain_bindings_at_1st_s": 3.7555,
+      "direct_domain_bindings_at_1st_batches": 0,
+      "direct_domain_bindings_at_2nd_s": 0.0213,
+      "direct_domain_bindings_at_2nd_batches": 0,
+      "direct_single_read_snapshot_s": 0.3021,
+      "direct_single_exact_gbo_s": 0.0049,
+      "direct_exact_gbo_batches": 1,
+      "direct_20_read_snapshots_s": 0.1691,
+      "direct_read_claims_s": 0.4338,
+      "direct_claims_count": 3279,
+      "direct_read_claims_batches": 0,
+      "continuation_runs": [
+        {
+          "iteration": 0,
+          "seconds": 27.64,
+          "cpu_seconds": 27.5394,
+          "status": "not-found",
+          "response_bytes": 258,
+          "counts": {
+            "store_opens": 1,
+            "load_snapshot": 763,
+            "read_snapshot": 763,
+            "domain_bindings_at": 2,
+            "domain_bindings_yielded": 264156,
+            "find_bound_objects": 93,
+            "find_bound_matched": 16802,
+            "get_bound_object": 1062,
+            "_domain_binding_index_rebuilds": 1,
+            "_read_binding": 151004,
+            "_read_entry": 17864,
+            "_reconstruct_sectioned": 12,
+            "_read_section_payload": 166,
+            "read_claims": 1,
+            "native_batches": 1062,
+            "native_calls": 1062,
+            "scope_grants_session_open": 0
+          },
+          "timings": {
+            "load_snapshot": 8.3847,
+            "domain_bindings_at": 8.8917,
+            "find_bound_objects": 7.1809,
+            "get_bound_object": 6.5265,
+            "_domain_binding_index": 8.6198,
+            "_read_entry": 5.874,
+            "_reconstruct_sectioned": 0.9147,
+            "read_claims": 0.9322,
+            "call_batch": 4.7869
+          }
+        },
+        {
+          "iteration": 1,
+          "seconds": 7.7172,
+          "cpu_seconds": 7.6407,
+          "status": "not-found",
+          "response_bytes": 258,
+          "counts": {
+            "store_opens": 0,
+            "load_snapshot": 318,
+            "read_snapshot": 318,
+            "domain_bindings_at": 1,
+            "domain_bindings_yielded": 132078,
+            "find_bound_objects": 93,
+            "find_bound_matched": 16802,
+            "get_bound_object": 493,
+            "_domain_binding_index_rebuilds": 0,
+            "_read_binding": 17788,
+            "_read_entry": 17295,
+            "_reconstruct_sectioned": 4,
+            "_read_section_payload": 42,
+            "read_claims": 1,
+            "native_batches": 493,
+            "native_calls": 493,
+            "scope_grants_session_open": 0
+          },
+          "timings": {
+            "load_snapshot": 3.2774,
+            "domain_bindings_at": 0.0182,
+            "find_bound_objects": 3.4826,
+            "get_bound_object": 2.8487,
+            "_domain_binding_index": 0.0001,
+            "_read_entry": 2.5811,
+            "_reconstruct_sectioned": 0.2105,
+            "read_claims": 0.4321,
+            "call_batch": 2.2119
+          }
+        }
+      ],
+      "max_rss_kib": 671464
+    }
+  }
+}
