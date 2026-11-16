@@ -21,12 +21,15 @@ import os
 import sys
 import threading
 from collections import OrderedDict
+from collections.abc import Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from . import claims as claims_module
+from . import resources as resources_module
 from . import workspace as workspace_module
 
 SCHEMA_EVENT = b"mncs.environment.session-event/1"
@@ -1823,21 +1826,329 @@ class StoreBackend:
             raise RuntimeError("selected Store provider does not expose bounded delta replay")
         return observe(generation, max_generations=max_generations)
 
-    def generation_inventory(self, *, keep_last: int = 4096) -> dict[str, Any]:
+    def generation_inventory(
+        self,
+        *,
+        keep_last: int = 4096,
+        protected_generations: Sequence[int] = (),
+    ) -> dict[str, Any]:
         # Retention classification stays provider-owned; Environment only
         # forwards the request and reports the result.
         inventory = getattr(self._store, "generation_inventory", None)
         if not callable(inventory):
             raise RuntimeError("selected Store provider does not expose retention inventory")
+        if protected_generations:
+            return dict(inventory(keep_last=keep_last, protected_generations=tuple(protected_generations)))
         return dict(inventory(keep_last=keep_last))
 
-    def reclaim_generations(self, *, keep_last: int = 4096, dry_run: bool = True) -> dict[str, Any]:
+    def reclaim_generations(
+        self,
+        *,
+        keep_last: int = 4096,
+        dry_run: bool = True,
+        protected_generations: Sequence[int] = (),
+        policy_id: str | None = None,
+        reclaim_chunks: bool = False,
+        audit_path: Path | None = None,
+        mark_path: Path | None = None,
+        expected_head: int | None = None,
+        expected_plan_digest: str | None = None,
+        max_files: int = 8192,
+        max_bytes: int = 64 * 1024 * 1024,
+        max_seconds: float = 30.0,
+    ) -> dict[str, Any]:
         # Reclamation stays provider-owned; Environment never interprets or
         # deletes Store generation files itself.
         reclaim = getattr(self._store, "prune_generations", None)
         if not callable(reclaim):
             raise RuntimeError("selected Store provider does not expose generation reclaim")
-        return dict(reclaim(keep_last=keep_last, dry_run=dry_run))
+        if (
+            not protected_generations
+            and policy_id is None
+            and not reclaim_chunks
+            and audit_path is None
+            and mark_path is None
+            and expected_head is None
+            and expected_plan_digest is None
+            and max_files == 8192
+            and max_bytes == 64 * 1024 * 1024
+            and max_seconds == 30.0
+        ):
+            return dict(reclaim(keep_last=keep_last, dry_run=dry_run))
+        return dict(
+            reclaim(
+                keep_last=keep_last,
+                dry_run=dry_run,
+                protected_generations=tuple(protected_generations),
+                policy_id=policy_id,
+                reclaim_chunks=reclaim_chunks,
+                audit_path=audit_path,
+                mark_path=mark_path,
+                expected_head=expected_head,
+                expected_plan_digest=expected_plan_digest,
+                max_files=max_files,
+                max_bytes=max_bytes,
+                max_seconds=max_seconds,
+            )
+        )
+
+    def create_backup(
+        self,
+        destination: Path,
+        *,
+        verify_payloads: bool = False,
+    ) -> dict[str, Any]:
+        backup = getattr(self._store, "create_backup", None)
+        if not callable(backup):
+            raise RuntimeError("selected Store provider does not expose backup creation")
+        return dict(backup(destination, verify_payloads=verify_payloads))
+
+    def verify_backup(
+        self,
+        backup_dir: Path,
+        *,
+        verify_payloads: bool = True,
+    ) -> dict[str, Any]:
+        EmbeddedStore, _, _ = self._api
+        verifier = getattr(EmbeddedStore, "verify_backup", None)
+        if not callable(verifier):
+            raise RuntimeError("selected Store provider does not expose backup verification")
+        return dict(verifier(backup_dir, verify_payloads=verify_payloads))
+
+    def restore_backup(
+        self,
+        backup_dir: Path,
+        target_dir: Path,
+        *,
+        verify_payloads: bool = True,
+    ) -> dict[str, Any]:
+        EmbeddedStore, _, _ = self._api
+        restorer = getattr(EmbeddedStore, "restore_backup", None)
+        if not callable(restorer):
+            raise RuntimeError("selected Store provider does not expose isolated backup restoration")
+        return dict(restorer(backup_dir, target_dir, verify_payloads=verify_payloads))
+
+    def _read_session_header_maps(self) -> list[dict[str, Any]]:
+        generation = getattr(self._store, "current_generation", None)
+        directory = self._binding_directory_for(generation)
+        if (
+            directory is not None
+            and callable(getattr(self._store, "get_bound_objects", None))
+        ):
+            latest_identities = [
+                revs[0][1]
+                for _sid, revs in sorted(directory.snapshot_revisions.items())
+                if revs
+            ]
+            out: list[dict[str, Any]] = []
+            for start in range(0, len(latest_identities), 128):
+                batch = latest_identities[start : start + 128]
+                items = self._read_bound_objects_batch(SCHEMA_SNAPSHOT, batch, allow_missing=True)
+                for item in items:
+                    if item is None:
+                        continue
+                    try:
+                        parsed = json.loads(item.payload.decode("utf-8"))
+                    except (AttributeError, ValueError, json.JSONDecodeError):
+                        parsed = None
+                    if isinstance(parsed, dict):
+                        out.append(parsed)
+                    else:
+                        out.append({"_corrupt_snapshot": True})
+            return out
+        return [
+            self.read_snapshot(sid) or {"_corrupt_snapshot": True}
+            for sid in self.list_sessions()
+        ]
+
+    def retention_pins(self) -> dict[str, Any]:
+        """Collect mandatory Environment Store generation pins read-only."""
+        head = self.generation()
+        mandatory: set[int] = set()
+        reconciler_cursors: dict[str, int] = {}
+        selection_cursors: dict[str, int] = {}
+        active_sessions = 0
+        handed_off_sessions = 0
+        discovery_complete = True
+        diagnostics: list[str] = []
+
+        for header in self._read_session_header_maps():
+            if header.get("_corrupt_snapshot"):
+                discovery_complete = False
+                diagnostics.append("unreadable session snapshot header")
+                continue
+            lifecycle = header.get("lifecycle")
+            if lifecycle == "handed_off":
+                handed_off_sessions += 1
+            elif lifecycle not in ("completed", "failed"):
+                active_sessions += 1
+            if (
+                header.get("consumer_id") == "environment-reconciler"
+                and lifecycle not in ("completed", "failed")
+                and isinstance(header.get("session_id"), str)
+            ):
+                full_snap = self.read_snapshot(header["session_id"])
+                if not isinstance(full_snap, dict):
+                    discovery_complete = False
+                    diagnostics.append(f"reconciler snapshot unreadable: {header['session_id']}")
+                    continue
+                cursor_raw = (
+                    (full_snap.get("reconciler") or {}).get("cursors", {}).get("store-replay")
+                )
+                if cursor_raw is not None:
+                    try:
+                        cursor_gen = int(cursor_raw)
+                        if not 0 <= cursor_gen <= head:
+                            raise ValueError("out of range")
+                    except (TypeError, ValueError):
+                        discovery_complete = False
+                        diagnostics.append(f"invalid reconciler store-replay cursor: {cursor_raw!r}")
+                    else:
+                        mandatory.add(cursor_gen)
+                        reconciler_cursors[header["session_id"]] = cursor_gen
+
+        all_latest_claims = self.read_latest_claims()
+        active_claims = claims_module.active_claims(all_latest_claims)
+
+        for row_id in sorted(self.read_projection_versions()):
+            if not row_id.startswith("entry:index/"):
+                continue
+            row = self.read_projection_row(row_id)
+            if not row:
+                continue
+            sel = row[1].get("selection")
+            gen = sel.get("generation") if isinstance(sel, dict) else None
+            if type(gen) is int and 0 <= gen <= head:
+                selection_cursors[row_id] = gen
+
+        return {
+            "head": head,
+            "mandatory_protected_generations": sorted(mandatory),
+            "reconciler_replay_cursors": reconciler_cursors,
+            "recoverable_selection_cursors": selection_cursors,
+            "active_sessions_count": active_sessions,
+            "handed_off_sessions_count": handed_off_sessions,
+            "active_claims_count": len(active_claims),
+            "pin_discovery_complete": discovery_complete,
+            "fail_closed": not discovery_complete,
+            "diagnostics": diagnostics,
+            "external_consumers_note": (
+                "Store consumers outside Environment are not discoverable from Environment metadata "
+                "and require explicit caller pins or consumer drain before destructive maintenance."
+            ),
+        }
+
+    def maintenance_readiness(
+        self,
+        *,
+        keep_last: int | None = None,
+        protected_generations: Sequence[int] = (),
+        reclaim_chunks: bool = False,
+        mark_path: Path | None = None,
+        max_files: int = 8192,
+        max_bytes: int = 64 * 1024 * 1024,
+        max_seconds: float = 10.0,
+        min_free_disk_bytes: int = 512 * 1024 * 1024,
+        min_available_memory_bytes: int = 256 * 1024 * 1024,
+    ) -> dict[str, Any]:
+        """Assess Store maintenance readiness without performing destructive reclamation."""
+        pins_info = self.retention_pins()
+        all_pins = sorted(set(pins_info["mandatory_protected_generations"]) | set(protected_generations))
+        staging_dir = self.path / "staging"
+        pending_staging = staging_dir.is_dir() and any(staging_dir.iterdir())
+
+        system_obs = resources_module.observe([os.getpid()]).get("system", {})
+        mem_avail = system_obs.get("memory_available_bytes")
+        try:
+            fs_stat = os.statvfs(self.path)
+            disk_free_bytes = fs_stat.f_bavail * fs_stat.f_frsize
+        except OSError:
+            disk_free_bytes = None
+
+        blockers: list[str] = []
+        if pending_staging:
+            blockers.append("pending-staging-recovery")
+        if pins_info["fail_closed"]:
+            blockers.append("pin-discovery-incomplete")
+        if pins_info["active_claims_count"] > 0:
+            blockers.append("active-workspace-claims")
+        if type(mem_avail) is int and mem_avail < min_available_memory_bytes:
+            blockers.append("insufficient-available-memory")
+        if type(disk_free_bytes) is int and disk_free_bytes < min_free_disk_bytes:
+            blockers.append("insufficient-free-disk-space")
+
+        if keep_last is None:
+            inventory = self.generation_inventory(
+                keep_last=(1 << 64) - 1,
+                protected_generations=all_pins,
+            )
+            plan = None
+            disposition = (
+                "deferred-recovery" if pending_staging
+                else "deferred-pin-uncertainty" if pins_info["fail_closed"]
+                else "deferred-active-claims" if pins_info["active_claims_count"] > 0
+                else "deferred-resource-pressure" if (
+                    "insufficient-available-memory" in blockers
+                    or "insufficient-free-disk-space" in blockers
+                )
+                else "policy-required"
+            )
+        else:
+            inventory = self.generation_inventory(
+                keep_last=keep_last,
+                protected_generations=all_pins,
+            )
+            if blockers:
+                plan = None
+                disposition = (
+                    "deferred-recovery" if pending_staging
+                    else "deferred-pin-uncertainty" if pins_info["fail_closed"]
+                    else "deferred-active-claims" if pins_info["active_claims_count"] > 0
+                    else "deferred-resource-pressure"
+                )
+            else:
+                plan = self.reclaim_generations(
+                    keep_last=keep_last,
+                    dry_run=True,
+                    protected_generations=all_pins,
+                    reclaim_chunks=reclaim_chunks,
+                    mark_path=mark_path,
+                    max_files=max_files,
+                    max_bytes=max_bytes,
+                    max_seconds=max_seconds,
+                )
+                disposition = (
+                    "dry-run-planned" if plan.get("status") == "complete"
+                    else "incomplete-resumable" if plan.get("mark_resumable")
+                    else "unknown"
+                )
+
+        return {
+            "schema_version": "mncs.environment.store-maintenance-readiness/1",
+            "autonomous_deletion_enabled": False,
+            "dry_run_only": True,
+            "policy_required": keep_last is None,
+            "keep_last": keep_last,
+            "disposition": disposition,
+            "blockers": blockers,
+            "own_store_handle_open": True,
+            "resources": {
+                "memory_available_bytes": mem_avail,
+                "disk_free_bytes": disk_free_bytes,
+                "min_available_memory_bytes": min_available_memory_bytes,
+                "min_free_disk_bytes": min_free_disk_bytes,
+            },
+            "pins": pins_info,
+            "protected_generations": all_pins,
+            "inventory": inventory,
+            "dry_run_plan": plan,
+            "activation_prerequisites_unmet": [
+                "explicit-retention-window-and-policy-authorization",
+                "offline-or-upgraded-consumer-drain",
+                "verified-isolated-backup-and-restore-drill",
+                *(["resumable-chunk-mark-completion"] if reclaim_chunks and (plan is None or plan.get("status") != "complete") else []),
+            ],
+        }
 
     def list_sessions(self) -> list[str]:
         # Session identities come from verified binding metadata; snapshot

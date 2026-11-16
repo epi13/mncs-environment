@@ -2636,6 +2636,21 @@ def cmd_store(args: argparse.Namespace) -> int:
         if args.verify:
             out(store.backend.verify())
             return 0
+        if args.inventory:
+            window = args.keep_last if args.keep_last is not None else (1 << 64) - 1
+            pins = store.backend.retention_pins()
+            out(store.backend.generation_inventory(
+                keep_last=window,
+                protected_generations=pins["mandatory_protected_generations"],
+            ))
+            return 0
+        if args.maintenance_readiness:
+            out(store.backend.maintenance_readiness(
+                keep_last=args.keep_last,
+                reclaim_chunks=args.reclaim_chunks,
+                mark_path=args.mark_path,
+            ))
+            return 0
         if args.generation:
             out({"generation": store.backend.generation()})
             return 0
@@ -3171,6 +3186,16 @@ def build_parser() -> argparse.ArgumentParser:
     store_reads.add_argument("--generation", action="store_true",
                              help="read the selected canonical Store generation only")
     store_reads.add_argument("--verify", action="store_true")
+    store_reads.add_argument("--inventory", action="store_true",
+                             help="read-only generation retention classification")
+    store_reads.add_argument("--maintenance-readiness", action="store_true",
+                             help="non-destructive maintenance readiness and dry-run planning assessment")
+    store.add_argument("--keep-last", type=int, default=None,
+                       help="explicit hypothetical keep-last window for dry-run inspection only")
+    store.add_argument("--reclaim-chunks", action="store_true",
+                       help="evaluate dry-run v2 chunk reachability readiness")
+    store.add_argument("--mark-path", type=Path, default=None,
+                       help="external resumable mark directory for bounded dry-run analysis")
     store.set_defaults(func=cmd_store)
 
     artifact_read = sub.add_parser(
