@@ -1632,7 +1632,8 @@ def _run_bounded(
     head_each = output_limit_bytes // 2
     deadline = time.monotonic() + timeout_seconds
     process = subprocess.Popen(
-        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        command, cwd=cwd, stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         env=env, start_new_session=(os.name == "posix"),
     )
     assert process.stdout is not None and process.stderr is not None

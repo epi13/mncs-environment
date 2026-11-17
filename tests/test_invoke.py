@@ -107,3 +107,43 @@ def test_invoke_uses_declared_timeout_unless_caller_overrides_it() -> None:
     assert session.invoke.call_args.kwargs["request_surface"] == (
         "mncs-env-invoke-cli"
     )
+
+
+def test_run_bounded_closes_live_consumer_stdin(tmp_path: Path) -> None:
+    """Capability invocations must not block on an open consumer stdin pipe."""
+    import subprocess
+    import sys
+
+    source_root = Path(__file__).resolve().parents[1]
+    script = """
+import json, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from mncs_env import capabilities
+result = capabilities._run_bounded(
+    {"binding_id": "probe", "capability": "test"},
+    [sys.executable, "-c", "import sys; print(len(sys.stdin.read()))"],
+    cwd=sys.argv[2],
+    timeout_seconds=5,
+    output_limit_bytes=4096,
+)
+print(json.dumps(result))
+assert result["status"] == "ok", result
+assert result["returncode"] == 0, result
+assert result["stdout"].strip() == "0", result
+"""
+    process = subprocess.Popen(
+        [sys.executable, "-c", script, str(source_root), str(tmp_path)],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    try:
+        # Keep parent stdin open; communicate() would close it and mask inheritance.
+        process.wait(timeout=8)
+        assert process.returncode == 0, process.stderr.read().decode()
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        process.stdin.close()
+        process.stdout.close()
+        process.stderr.close()
