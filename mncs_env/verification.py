@@ -345,6 +345,9 @@ def _measured_current(session, obligation: dict) -> tuple[dict | None, str | Non
     sources = executor.get("source_paths") or []
     if not sources:
         return None, "suite-undeclared"
+    patterns = executor.get("declaration_identities") or []
+    if not patterns:
+        return None, "declarations-undeclared"
     suite = checkout / sources[0]
     if not suite.is_file():
         return None, "suite-missing"
