@@ -436,8 +436,16 @@ def observe_externals(session, rows: dict[str, dict[str, Any]],
             "run_present": run_present, "run": run,
             "context": context,
         })
-    externals.sort(key=lambda item: str(item["obligation"]))
-    return externals[:MAX_OBLIGATIONS], observed
+    externals.sort(key=lambda item: (
+        not (bool(item.get("evidence_present"))
+             or isinstance((item.get("context") or {}).get("staged"), dict)),
+        not bool(item.get("run_present")),
+        not bool(item.get("has_workflow_binding")),
+        str(item["obligation"]),
+    ))
+    selected = sorted(externals[:MAX_OBLIGATIONS],
+                      key=lambda item: str(item["obligation"]))
+    return selected, observed
 
 
 def _refresh_remote(session, context: dict[str, Any],
@@ -930,6 +938,7 @@ def _finish(session, started: str, clock_started: float,
     native = (coherence or {}).get("summary") or {}
     summary = {"obligations": len(results),
                "observed": observed,
+               "overflow": max(0, observed - len(results)),
                "current": 0, "pending": 0, "eligible": 0,
                "dispatched": 0, "deferred": 0,
                "unsupported": int(native.get("unsupported", 0)),

@@ -109,6 +109,17 @@ class FakeSession:
                                      "resolved_test_identities": ["t-case-1"],
                                      "unresolved_count": 0})
                     queue.append(item["identity"])
+                elif (item.get("external_evidence_present")
+                      and (item.get("external_evidence") or {}).get("verdict") in ("PASS", "FAIL")):
+                    ext = item["external_evidence"]
+                    verdicts.append({"identity": item["identity"],
+                                     "status": "current",
+                                     "reason": "external_evidence_current",
+                                     "deferred": False, "verdict_known": True,
+                                     "verdict": ext["verdict"],
+                                     "evidence_id": ext.get("evidence_id", ""),
+                                     "resolved_test_identities": [],
+                                     "unresolved_count": 0})
                 else:
                     verdicts.append({"identity": item["identity"],
                                      "status": "not_selected",
@@ -451,6 +462,81 @@ class AmbientPassTests(VerificationFixture):
         self.assertNotIn("--library", self.session.executions[0])
         roots = self.session.last_test_env.get("MNCS_LIBRARY_PATH", "")
         self.assertIn(str(self.repo / "tests"), roots)
+
+    def test_more_than_32_external_obligations_do_not_starve_trailing_native_suites(self):
+        for name in ("alpha.mncs", "beta.mncs", "gamma.mncs"):
+            (self.repo / "tests" / name).write_text(SUITE_SOURCE)
+        externals = []
+        for idx in range(40):
+            entry = json.loads(json.dumps(HOST_OBLIGATION))
+            entry["identity"] = f"a-compiler.ext-{idx:02d}"
+            externals.append(entry)
+        admitted_ext = json.loads(json.dumps(HOST_OBLIGATION))
+        admitted_ext["identity"] = "m-actions.ext-admitted"
+        native_suites = []
+        for label, filename in (("alpha", "alpha.mncs"),
+                                ("beta", "beta.mncs"),
+                                ("gamma", "gamma.mncs")):
+            suite = json.loads(json.dumps(OBLIGATION))
+            suite["identity"] = f"z-test.native-{label}"
+            suite["invalidation_dependencies"] = [f"tests/{filename}"]
+            suite["executor"]["source_paths"] = [f"tests/{filename}"]
+            native_suites.append(suite)
+        self.write_obligations(externals + [admitted_ext] + native_suites)
+        self.session.snapshot["actions_state"] = {
+            "m-actions.ext-admitted": {
+                "evidence": {
+                    "obligation": "m-actions.ext-admitted",
+                    "subject_digest": "sha256:admitted",
+                    "run_identity": "9001",
+                    "verdict": "passed",
+                    "claim": "established",
+                    "complete": True,
+                },
+                "evidence_id": "ext-9001",
+                "subject_digest": "sha256:admitted",
+            }
+        }
+        discovered, invalid = verification_module.discover_obligations(self.workspace)
+        self.assertEqual(invalid, [])
+        self.assertEqual(len(discovered), 44)
+
+        outcome = verification_module.ambient_pass(self.session)
+        summary = outcome["summary"]
+        self.assertEqual(summary["invalid"], 0)
+        self.assertEqual(summary["blockers"], 0)
+        self.assertEqual(summary["obligations"], 44)
+        self.assertEqual(summary["executed"], 3)
+        self.assertEqual(summary["current"], 4)
+        self.assertEqual(summary["overflow"], 12)
+        self.assertEqual(summary["deferred"], 12)
+        self.assertEqual(len(summary["overflow_ids"]), 12)
+        self.assertEqual(summary["overflow_ids"][0], "a-compiler.ext-28")
+        self.assertEqual(summary["overflow_ids"][-1], "a-compiler.ext-39")
+
+        request = self.session.coherence_calls[-1]
+        self.assertEqual(len(request["obligations"]), verification_module.MAX_OBLIGATIONS)
+        routed_ids = [item["identity"] for item in request["obligations"]]
+        self.assertIn("z-test.native-alpha", routed_ids)
+        self.assertIn("z-test.native-beta", routed_ids)
+        self.assertIn("z-test.native-gamma", routed_ids)
+        self.assertIn("m-actions.ext-admitted", routed_ids)
+
+        evidence = verification_module.read_evidence(self.session)["evidence"]
+        self.assertEqual(len(evidence["overflow"]), 12)
+        by_id = {row["obligation"]: row for row in evidence["results"]}
+        for label in ("alpha", "beta", "gamma"):
+            self.assertEqual(by_id[f"z-test.native-{label}"]["outcome"], "passed")
+            self.assertTrue(by_id[f"z-test.native-{label}"]["ran"])
+        self.assertEqual(by_id["m-actions.ext-admitted"]["outcome"], "passed")
+        self.assertEqual(by_id["m-actions.ext-admitted"]["evidence_id"], "ext-9001")
+        self.assertEqual(by_id["a-compiler.ext-39"]["outcome"], "deferred")
+        self.assertTrue(by_id["a-compiler.ext-39"]["overflow"])
+        self.assertEqual(by_id["a-compiler.ext-39"]["reason"], "obligation_window_overflow")
+
+        terse = verification_module.terse(self.session)
+        self.assertEqual(terse["verification"]["overflow"], 12)
+        self.assertEqual(terse["verification"]["deferred"], 12)
 
 
 if __name__ == "__main__":

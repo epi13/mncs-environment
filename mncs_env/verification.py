@@ -40,6 +40,7 @@ COHERENCE_RESULT_SCHEMA = "mncs.test-verification-coherence/1"
 EVIDENCE_SCHEMA = "mncs.session-evidence/1"
 MAX_HISTORY = 10
 MAX_OBLIGATIONS = 32
+MAX_DISCOVERED_OBLIGATIONS = 256
 MAX_INVENTORY_IDS = 64
 MAX_IDENTITY_BYTES = 1024
 MAX_PATTERNS = 8
@@ -179,12 +180,65 @@ def discover_obligations(workspace_root: Path, checkouts: dict[str, Path] | None
             obligations.append({"repository": repository, "checkout": str(child),
                                 "declaration": entry})
     obligations.sort(key=lambda item: str(item["declaration"].get("identity")))
-    if len(obligations) > MAX_OBLIGATIONS:
-        for item in obligations[MAX_OBLIGATIONS:]:
+    if len(obligations) > MAX_DISCOVERED_OBLIGATIONS:
+        for item in obligations[MAX_DISCOVERED_OBLIGATIONS:]:
             invalid.append({"repository": item["repository"], "reason": "obligation-bound-exceeded",
                             "identity": item["declaration"].get("identity")})
-        obligations = obligations[:MAX_OBLIGATIONS]
+        obligations = obligations[:MAX_DISCOVERED_OBLIGATIONS]
     return obligations, invalid
+
+
+def _routing_priority(obligation: dict, measured: dict[str, dict | None],
+                      actions_rows: dict[str, Any]) -> tuple[int, str]:
+    from . import actions as actions_module
+
+    declaration = obligation["declaration"]
+    identity = str(declaration.get("identity", ""))
+    lifecycle = str(declaration.get("lifecycle", ""))
+    kind = str(declaration.get("executor", {}).get("kind", ""))
+    active = lifecycle in ("permanent", "transitional")
+    if kind == "native_first_class_test" and active and measured.get(identity) is not None:
+        tier = 0
+    elif kind == "native_first_class_test":
+        tier = 1
+    elif actions_module.external_admission(actions_rows, identity) is not None:
+        tier = 2
+    elif active:
+        tier = 3
+    else:
+        tier = 4
+    return (tier, identity)
+
+
+def route_verification_obligations(
+    obligations: list[dict],
+    measured: dict[str, dict | None],
+    actions_rows: dict[str, Any],
+    limit: int = MAX_OBLIGATIONS,
+) -> tuple[list[dict], list[dict]]:
+    """Select up to `limit` obligations for native coherence policy evaluation.
+
+    Runnable native first-class suites and obligations with admitted external
+    evidence route ahead of non-native obligations without admitted evidence,
+    preventing large external inventories from starving native suites whose
+    identities sort later. Selected and overflow entries preserve canonical
+    identity order.
+    """
+    if len(obligations) <= limit:
+        return list(obligations), []
+    ranked = sorted(
+        obligations,
+        key=lambda item: _routing_priority(item, measured, actions_rows),
+    )
+    selected = sorted(
+        ranked[:limit],
+        key=lambda item: str(item["declaration"].get("identity", "")),
+    )
+    overflow = sorted(
+        ranked[limit:],
+        key=lambda item: str(item["declaration"].get("identity", "")),
+    )
+    return selected, overflow
 
 
 def _digest_files(checkout: Path, relpaths: list[str]) -> tuple[str | None, str | None]:
@@ -630,13 +684,18 @@ def ambient_pass(session, *, mode: str = "ambient",
         return _finish(session, started, clock_started, [], rows, invalid,
                        mode, {"reason": "coherence-unavailable"},
                        f"uncached:{mode}:{epoch}", None)
-    request = _coherence_request(session, obligations, measured, rows, max_executions)
+    actions_rows = session.snapshot.get("actions_state")
+    if not isinstance(actions_rows, dict):
+        actions_rows = {}
+    routed_obligations, overflow_obligations = route_verification_obligations(
+        obligations, measured, actions_rows, MAX_OBLIGATIONS)
+    request = _coherence_request(session, routed_obligations, measured, rows, max_executions)
     coherence = request_coherence(session, request)
     if coherence is None:
         return _finish(session, started, clock_started, [], rows, invalid,
                        mode, {"reason": "coherence-failed"},
                        f"uncached:{mode}:{epoch}", None)
-    by_identity = {str(item["declaration"]["identity"]): item for item in obligations}
+    by_identity = {str(item["declaration"]["identity"]): item for item in routed_obligations}
     verdicts = {item["identity"]: item for item in coherence.get("verdicts", [])
                 if isinstance(item, dict) and isinstance(item.get("identity"), str)}
     queue = [identity for identity in coherence.get("run_queue", [])
@@ -742,6 +801,26 @@ def ambient_pass(session, *, mode: str = "ambient",
         else:
             record["outcome"] = "unknown"
         results.append(record)
+    for item in overflow_obligations:
+        declaration = item["declaration"]
+        identity = str(declaration["identity"])
+        inactive = declaration.get("lifecycle") in ("scheduled", "reference_only", "retired")
+        outcome = "excluded" if inactive else "deferred"
+        results.append({
+            "obligation": identity,
+            "repository": item["repository"],
+            "executor_kind": declaration["executor"]["kind"],
+            "status": "not_selected" if inactive else "deferred_overflow",
+            "reason": "obligation_window_overflow",
+            "deferred": not inactive,
+            "overflow": True,
+            "unmeasurable": unmeasurable.get(identity),
+            "outcome": outcome,
+        })
+        if not inactive:
+            session._emit("verification.deferred", "environment",
+                          {"obligation": identity, "reason": "obligation_window_overflow"})
+    results.sort(key=lambda entry: str(entry.get("obligation", "")))
     return _finish(session, started, clock_started, results, rows,
                    invalid, mode, failure, epoch, coherence)
 
@@ -751,15 +830,23 @@ def _finish(session, started: str, clock_started: float,
             mode: str, failure: dict | None,
             epoch: str, coherence: dict | None) -> dict[str, Any]:
     native = (coherence or {}).get("summary") or {}
-    summary = {"obligations": len(results),
-               "current": 0, "executed": 0, "failed": 0, "unknown": 0,
-               "unsupported": int(native.get("unsupported", 0)),
-               "unresolved": int(native.get("unresolved", 0)),
-               "contradictory": int(native.get("contradictory", 0)),
-               "excluded": int(native.get("excluded", 0)),
-               "deferred": int(native.get("deferred", 0)),
-               "invalid": len(invalid), "blockers": 0,
-               "epoch_reused": False}
+    overflow_records = [record for record in results if record.get("overflow")]
+    overflow_ids = [str(record.get("obligation")) for record in overflow_records]
+    overflow_deferred = sum(1 for record in overflow_records if record.get("deferred"))
+    overflow_excluded = sum(1 for record in overflow_records if record.get("outcome") == "excluded")
+    summary: dict[str, Any] = {
+        "obligations": len(results),
+        "current": 0, "executed": 0, "failed": 0, "unknown": 0,
+        "unsupported": int(native.get("unsupported", 0)),
+        "unresolved": int(native.get("unresolved", 0)),
+        "contradictory": int(native.get("contradictory", 0)),
+        "excluded": int(native.get("excluded", 0)) + overflow_excluded,
+        "deferred": int(native.get("deferred", 0)) + overflow_deferred,
+        "overflow": len(overflow_records),
+        "overflow_ids": overflow_ids,
+        "invalid": len(invalid), "blockers": 0,
+        "epoch_reused": False,
+    }
     failed_ids: list[str] = []
     for record in results:
         outcome = record.get("outcome")
@@ -779,6 +866,7 @@ def _finish(session, started: str, clock_started: float,
     evidence = {"schema_version": SCHEMA, "mode": mode,
                 "started_at": started, "finished_at": utcnow(),
                 "summary": summary, "results": results,
+                "overflow": overflow_records,
                 "invalid": invalid, "failure": failure,
                 "coherence_summary": dict(native)}
     evidence_ref = _write_evidence(session, evidence, mode)
@@ -873,14 +961,18 @@ def terse(session) -> dict[str, Any]:
     """Compact verification status for normal agent context."""
     stored = session.snapshot.get("verification_epoch") or {}
     summary = dict(stored.get("summary") or {})
-    return {"verification": {
+    capsule: dict[str, Any] = {
         "current": summary.get("current", 0),
         "executed": summary.get("executed", 0),
         "failed": summary.get("failed", 0),
         "deferred": summary.get("deferred", 0),
         "blockers": summary.get("blockers", 0),
         "failed_ids": summary.get("failed_ids", []),
-        "evidence": stored.get("evidence_ref")}}
+        "evidence": stored.get("evidence_ref"),
+    }
+    if summary.get("overflow", 0):
+        capsule["overflow"] = summary.get("overflow", 0)
+    return {"verification": capsule}
 
 
 def read_evidence(session) -> dict[str, Any]:
