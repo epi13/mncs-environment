@@ -629,6 +629,8 @@ def cmd_diagnostic(args: argparse.Namespace) -> int:
                        "summary": result["summary"],
                        "reused": result["reused"],
                        "evidence": result.get("evidence")}
+            if isinstance(result.get("compiler_investigation"), dict):
+                payload["compiler_investigation"] = result["compiler_investigation"]
             out(payload)
             return 5 if result["summary"]["blockers"] else 0
         finally:

@@ -47,6 +47,13 @@ MAX_CAPSULE_IDS = 8
 COHERENCE_CAPABILITY = "mncs.debug-diagnostic-coherence/1"
 DEBUG_CAPABILITY = "mncs.debugger/1"
 TEST_CAPABILITY = "mncs.test-result/1"
+COMPILER_DIAGNOSIS_CAPABILITY = "mncs-compiler:selected-callable-diagnosis"
+COMPILER_DIAGNOSIS_SCHEMA = "mncs.compiler.selected-callable-diagnosis/1"
+SIBLING_INVESTIGATION_CAPABILITIES = (
+    ("mncs-language-service", ("mncs-language-service:resident-status",)),
+    ("mncs-doctor", ("mncs-doctor:compiler-vm-health", "mncs-doctor:repository-diagnostics")),
+    ("mncs-debug", ("mncs-debug:debugger", DEBUG_CAPABILITY)),
+)
 DEFAULT_MAX_CAPTURES = 4
 CAPTURE_TIMEOUT_SECONDS = 300
 DEPTHS = ("minimal", "standard", "deep")
@@ -523,6 +530,269 @@ def capture_witness(session, failure: dict[str, Any], obligation: dict[str, Any]
     return witness, None
 
 
+def _compiler_checkout(session) -> Path | None:
+    """Locate the selected mncs-compiler checkout for this session, if any."""
+    binding = verification_module.session_binding(session, COMPILER_DIAGNOSIS_CAPABILITY)
+    if isinstance(binding, dict):
+        prov_root = binding.get("provider_root")
+        if isinstance(prov_root, str) and Path(prov_root).is_dir():
+            return Path(prov_root)
+        prov = binding.get("provenance") or {}
+        checkout = prov.get("checkout")
+        if isinstance(checkout, dict) and isinstance(checkout.get("path"), str) and Path(checkout["path"]).is_dir():
+            return Path(checkout["path"])
+        if isinstance(checkout, str) and Path(checkout).is_dir():
+            return Path(checkout)
+    workspace = session.snapshot.get("workspace") or {}
+    working = workspace.get("working_checkout") or {}
+    if working.get("repository") == "mncs-compiler" and isinstance(working.get("path"), str):
+        p = Path(working["path"])
+        if p.is_dir():
+            return p
+    for proj in workspace.get("projects") or []:
+        if isinstance(proj, dict) and proj.get("repository") == "mncs-compiler":
+            raw = proj.get("path")
+            if isinstance(raw, str):
+                p = Path(raw)
+                if p.is_dir():
+                    return p
+    return None
+
+
+def _sibling_provider_statuses(session) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for repo_name, caps in SIBLING_INVESTIGATION_CAPABILITIES:
+        state = "unbound"
+        for cap in caps:
+            binding = verification_module.session_binding(session, cap)
+            if binding is not None:
+                avail = str((binding.get("availability") or {}).get("status", "unknown"))
+                if avail == "available":
+                    state = "available"
+                    break
+                state = avail
+        statuses[repo_name] = state
+    return statuses
+
+
+def _compiler_investigation_epoch(session) -> dict[str, Any] | None:
+    binding = verification_module.session_binding(session, COMPILER_DIAGNOSIS_CAPABILITY)
+    if binding is None:
+        return None
+    avail = str((binding.get("availability") or {}).get("status", "unknown"))
+    checkout = _compiler_checkout(session)
+    if checkout is None:
+        return {
+            "binding_status": avail,
+            "checkout": None,
+            "siblings": _sibling_provider_statuses(session),
+        }
+    cache_path = checkout / ".mncs/cache/selected-callable-diagnosis.json"
+    covered_sources: dict[str, str] = {}
+    if cache_path.is_file():
+        try:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            src_digests = ((cached.get("invalidation") or {}).get("inputs") or {}).get("source_digests") or {}
+            if isinstance(src_digests, dict):
+                for rel_src in sorted(src_digests)[:32]:
+                    p = Path(rel_src)
+                    full = p if p.is_absolute() else (checkout / p)
+                    covered_sources[rel_src] = _file_sha(str(full))
+        except (OSError, ValueError):
+            pass
+    return {
+        "binding_status": avail,
+        "checkout": str(checkout),
+        "head": verification_module.repo_revision(checkout),
+        "emitter_sha": _file_sha(str(checkout / "src/compiler/vm_emit.mncs")),
+        "matrix_sha": _file_sha(str(checkout / "evidence/SELF-HOST-MATRIX.json")),
+        "cache_sha": _file_sha(str(cache_path)),
+        "covered_sources": covered_sources,
+        "siblings": _sibling_provider_statuses(session),
+    }
+
+
+def _compact_compiler_investigation(
+    doc: dict[str, Any], *, reused: bool = False,
+) -> dict[str, Any]:
+    """Bounded inline capsule (<~1.2 KiB) for ordinary entry & session re-entry."""
+    prov = doc.get("compiler_provenance") if isinstance(doc.get("compiler_provenance"), dict) else {}
+    boot = doc.get("bootstrap_status") if isinstance(doc.get("bootstrap_status"), dict) else {}
+    diag = doc.get("diagnosis") if isinstance(doc.get("diagnosis"), dict) else None
+    providers = doc.get("providers") if isinstance(doc.get("providers"), dict) else {}
+    meas = doc.get("measurements") if isinstance(doc.get("measurements"), dict) else {}
+
+    owner = prov.get("owner") if isinstance(prov.get("owner"), dict) else {}
+    owner_str = (
+        f"{owner.get('repository')}:{owner.get('component')}"
+        if owner.get("repository") and owner.get("component")
+        else str(prov.get("compiler_repository") or "mncs-compiler")
+    )
+    matrix_obj = boot.get("self_host_matrix") if isinstance(boot.get("self_host_matrix"), dict) else {}
+    supp_obj = boot.get("supporting_evidence") if isinstance(boot.get("supporting_evidence"), dict) else {}
+    missing_rebuild = boot.get("missing_rebuild_evidence")
+    missing_count = len(missing_rebuild) if isinstance(missing_rebuild, list) else 0
+
+    capsule: dict[str, Any] = {
+        "status": str(doc.get("status") or "unknown"),
+        "freshness": str(doc.get("freshness") or "unknown"),
+        "reused": bool(reused or doc.get("reused")),
+        "delivery_completeness": str(doc.get("delivery_completeness") or "partial"),
+        "unavailable_providers": list(doc.get("unavailable_providers") or [])[:8],
+        "provenance": {
+            "compiler": str(prov.get("compiler") or ""),
+            "revision": str(prov.get("compiler_revision") or "")[:12],
+            "target": prov.get("selected_target"),
+            "last_completed_phase": prov.get("last_completed_phase"),
+            "failing_phase": prov.get("failing_phase"),
+            "owner": owner_str,
+        },
+        "bootstrap": {
+            "stage1_to_stage2_rebuild": str(boot.get("stage1_to_stage2_rebuild") or "UNKNOWN"),
+            "stage1_claimed": bool(boot.get("stage1_claimed", False)),
+            "stage2_claimed": bool(boot.get("stage2_claimed", False)),
+            "matrix": matrix_obj.get("path"),
+            "supporting_evidence": supp_obj.get("path"),
+            "missing_rebuild_evidence_count": missing_count,
+        },
+    }
+    if doc.get("invalidated_reasons"):
+        capsule["invalidated_reasons"] = list(doc.get("invalidated_reasons") or [])[:6]
+    if diag is not None:
+        ssa_op = diag.get("ssa_operation") if isinstance(diag.get("ssa_operation"), dict) else {}
+        types = diag.get("types") if isinstance(diag.get("types"), dict) else {}
+        decls = diag.get("authoritative_declarations") if isinstance(diag.get("authoritative_declarations"), dict) else {}
+        src_loc = None
+        err_callable = diag.get("error_callable")
+        obs_nom = types.get("observed_nominal_identity")
+        for candidate_id in (err_callable, obs_nom):
+            if isinstance(candidate_id, str) and candidate_id in decls:
+                d_entry = decls[candidate_id]
+                if isinstance(d_entry, dict) and d_entry.get("file"):
+                    line = ssa_op.get("source_line") if candidate_id == err_callable and ssa_op.get("source_line") else d_entry.get("line")
+                    src_loc = f"{d_entry['file']}:{line}" if line else str(d_entry["file"])
+                    break
+        capsule["diagnosis"] = {
+            "ok": bool(diag.get("ok")),
+            "error_code": int(diag.get("error_code", 0)),
+            "error_label": diag.get("error_label"),
+            "callable": err_callable,
+            "ssa_op": ssa_op.get("kind"),
+            "observed_type": types.get("observed"),
+            "observed_nominal": obs_nom,
+            "source": src_loc,
+        }
+    doc_findings = (providers.get("doctor") or {}).get("findings") if isinstance(providers.get("doctor"), dict) else []
+    capsule["providers"] = {
+        "language_service": (providers.get("language_service") or {}).get("status") if isinstance(providers.get("language_service"), dict) else "unknown",
+        "doctor": (providers.get("doctor") or {}).get("status") if isinstance(providers.get("doctor"), dict) else "unknown",
+        "debug": (providers.get("debug") or {}).get("status") if isinstance(providers.get("debug"), dict) else "unknown",
+        "doctor_findings_count": len(doc_findings) if isinstance(doc_findings, list) else 0,
+    }
+    capsule["measurements"] = {
+        "provider_launches": 0 if reused else int(meas.get("provider_launches", 0)),
+        "heavyweight_compile_launched": False,
+    }
+    return capsule
+
+
+def _observe_compiler_investigation(session) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Query bound read-only compiler diagnosis projection (0 compiles)."""
+    binding = verification_module.session_binding(session, COMPILER_DIAGNOSIS_CAPABILITY)
+    if binding is None:
+        return None, None
+    avail = str((binding.get("availability") or {}).get("status", "unknown"))
+    siblings = _sibling_provider_statuses(session)
+    if avail != "available":
+        partial = {
+            "schema_version": COMPILER_DIAGNOSIS_SCHEMA,
+            "status": "provider_unavailable",
+            "freshness": "unavailable",
+            "reused": False,
+            "delivery_completeness": "partial",
+            "unavailable_providers": [COMPILER_DIAGNOSIS_CAPABILITY],
+            "reason": f"binding availability is {avail}",
+            "compiler_provenance": {"compiler_repository": "mncs-compiler"},
+            "bootstrap_status": {"stage1_to_stage2_rebuild": "UNKNOWN", "stage1_claimed": False, "stage2_claimed": False},
+            "measurements": {"provider_launches": 0, "heavyweight_compile_launched": False},
+        }
+        return partial, _compact_compiler_investigation(partial, reused=False)
+
+    argv: list[str] = []
+    checkout = _compiler_checkout(session)
+    if checkout is not None:
+        argv = ["--checkout", str(checkout)]
+    try:
+        res = session.invoke(
+            COMPILER_DIAGNOSIS_CAPABILITY, argv,
+            timeout_seconds=15, output_limit_bytes=65536,
+        )
+    except Exception as exc:
+        partial = {
+            "schema_version": COMPILER_DIAGNOSIS_SCHEMA,
+            "status": "provider_unavailable",
+            "freshness": "unavailable",
+            "reused": False,
+            "delivery_completeness": "partial",
+            "unavailable_providers": [COMPILER_DIAGNOSIS_CAPABILITY],
+            "reason": f"provider invocation failed: {exc}"[:200],
+            "compiler_provenance": {"compiler_repository": "mncs-compiler"},
+            "bootstrap_status": {"stage1_to_stage2_rebuild": "UNKNOWN", "stage1_claimed": False, "stage2_claimed": False},
+            "measurements": {"provider_launches": 1, "heavyweight_compile_launched": False},
+        }
+        return partial, _compact_compiler_investigation(partial, reused=False)
+
+    if not isinstance(res, dict) or res.get("status") != "ok":
+        detail = str((res or {}).get("stderr") or (res or {}).get("status") or "error")[:200]
+        partial = {
+            "schema_version": COMPILER_DIAGNOSIS_SCHEMA,
+            "status": "provider_unavailable",
+            "freshness": "unavailable",
+            "reused": False,
+            "delivery_completeness": "partial",
+            "unavailable_providers": [COMPILER_DIAGNOSIS_CAPABILITY],
+            "reason": f"provider returned {detail}",
+            "compiler_provenance": {"compiler_repository": "mncs-compiler"},
+            "bootstrap_status": {"stage1_to_stage2_rebuild": "UNKNOWN", "stage1_claimed": False, "stage2_claimed": False},
+            "measurements": {"provider_launches": 1, "heavyweight_compile_launched": False},
+        }
+        return partial, _compact_compiler_investigation(partial, reused=False)
+
+    try:
+        doc = json.loads(res.get("stdout") or "")
+    except ValueError as exc:
+        partial = {
+            "schema_version": COMPILER_DIAGNOSIS_SCHEMA,
+            "status": "provider_unavailable",
+            "freshness": "unavailable",
+            "reused": False,
+            "delivery_completeness": "partial",
+            "unavailable_providers": [COMPILER_DIAGNOSIS_CAPABILITY],
+            "reason": f"invalid provider JSON: {exc}"[:200],
+            "compiler_provenance": {"compiler_repository": "mncs-compiler"},
+            "bootstrap_status": {"stage1_to_stage2_rebuild": "UNKNOWN", "stage1_claimed": False, "stage2_claimed": False},
+            "measurements": {"provider_launches": 1, "heavyweight_compile_launched": False},
+        }
+        return partial, _compact_compiler_investigation(partial, reused=False)
+
+    if not isinstance(doc, dict) or doc.get("schema_version") != COMPILER_DIAGNOSIS_SCHEMA:
+        return None, None
+
+    # Reflect any sibling providers missing/unavailable in the session scope
+    unavail = list(doc.get("unavailable_providers") or [])
+    for repo_name, status in siblings.items():
+        if status != "available" and repo_name not in unavail:
+            unavail.append(repo_name)
+    doc["unavailable_providers"] = sorted(set(unavail))
+    if doc["unavailable_providers"]:
+        doc["delivery_completeness"] = "partial"
+    meas = dict(doc.get("measurements") or {})
+    meas["provider_launches"] = int(meas.get("provider_launches", 0)) + 1
+    meas["heavyweight_compile_launched"] = False
+    doc["measurements"] = meas
+    return doc, _compact_compiler_investigation(doc, reused=False)
+
+
 def _epoch_inputs(session, failures: list[dict[str, Any]],
                   depth: str) -> dict[str, Any]:
     bindings: dict[str, str] = {}
@@ -532,7 +802,7 @@ def _epoch_inputs(session, failures: list[dict[str, Any]],
             bindings[capability] = "unbound"
         else:
             bindings[capability] = str(binding.get("availability", {}).get("status"))
-    return {
+    inputs: dict[str, Any] = {
         "failures": {str(item["failure_key"]): digest_hex(
             {"class": item["failure_class"], "subject": item["subject_sha"],
              "request": item["request_digest"],
@@ -544,6 +814,10 @@ def _epoch_inputs(session, failures: list[dict[str, Any]],
         "lifecycle": session.snapshot.get("lifecycle", "active"),
         "depth": depth,
     }
+    comp_epoch = _compiler_investigation_epoch(session)
+    if comp_epoch is not None:
+        inputs["compiler_investigation"] = comp_epoch
+    return inputs
 
 
 def ambient_pass(session, *, mode: str = "ambient",
@@ -582,8 +856,19 @@ def ambient_pass(session, *, mode: str = "ambient",
         summary = dict(stored.get("summary") or {})
         summary["epoch_reused"] = True
         summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
-        return {"summary": summary, "reused": True,
-                "evidence": stored.get("evidence_ref")}
+        out_res: dict[str, Any] = {"summary": summary, "reused": True,
+                                   "evidence": stored.get("evidence_ref")}
+        cached_comp = stored.get("compiler_investigation")
+        if isinstance(cached_comp, dict):
+            reused_comp = dict(cached_comp)
+            reused_comp["reused"] = True
+            reused_comp["measurements"] = {
+                "provider_launches": 0,
+                "heavyweight_compile_launched": False,
+            }
+            out_res["compiler_investigation"] = reused_comp
+        return out_res
+    comp_full, comp_capsule = _observe_compiler_investigation(session)
     if not failures:
         # Reactive fast path: nothing fails, so there is nothing to
         # decide. The empty epoch still caches, so healthy re-entry
@@ -592,11 +877,15 @@ def ambient_pass(session, *, mode: str = "ambient",
                              "deferred": 0, "unsupported": 0, "escalated": 0},
                  "diagnostics": [], "capture_queue": []}
         return _finish(session, started, clock_started, [], {}, observed,
-                       mode, depth, None, epoch, empty)
+                       mode, depth, None, epoch, empty,
+                       compiler_investigation_full=comp_full,
+                       compiler_investigation_capsule=comp_capsule)
     if not verification_module.binding_available(session, COHERENCE_CAPABILITY):
         return _finish(session, started, clock_started, [], rows, observed,
                        mode, depth, {"reason": "coherence-unavailable"},
-                       f"uncached:{mode}:{epoch}", None)
+                       f"uncached:{mode}:{epoch}", None,
+                       compiler_investigation_full=comp_full,
+                       compiler_investigation_capsule=comp_capsule)
     provider_available = verification_module.binding_available(
         session, DEBUG_CAPABILITY)
     request = _coherence_request(session, failures, rows, max_captures,
@@ -605,7 +894,9 @@ def ambient_pass(session, *, mode: str = "ambient",
     if coherence is None:
         return _finish(session, started, clock_started, [], rows, observed,
                        mode, depth, {"reason": "coherence-failed"},
-                       f"uncached:{mode}:{epoch}", None)
+                       f"uncached:{mode}:{epoch}", None,
+                       compiler_investigation_full=comp_full,
+                       compiler_investigation_capsule=comp_capsule)
     by_key = {str(item["failure_key"]): item for item in failures}
     verdicts = {item["failure_key"]: item
                 for item in coherence.get("diagnostics", [])
@@ -754,14 +1045,18 @@ def ambient_pass(session, *, mode: str = "ambient",
             rows = next_rows
     return _finish(session, started, clock_started, results, rows,
                    observed, mode, depth, failure, epoch, coherence,
-                   observation_complete=not observation_incomplete)
+                   observation_complete=not observation_incomplete,
+                   compiler_investigation_full=comp_full,
+                   compiler_investigation_capsule=comp_capsule)
 
 
 def _finish(session, started: str, clock_started: float,
             results: list[dict], rows: dict, observed: int,
             mode: str, depth: str, failure: dict | None,
             epoch: str, coherence: dict | None, *,
-            observation_complete: bool = True) -> dict[str, Any]:
+            observation_complete: bool = True,
+            compiler_investigation_full: dict[str, Any] | None = None,
+            compiler_investigation_capsule: dict[str, Any] | None = None) -> dict[str, Any]:
     native = (coherence or {}).get("summary") or {}
     summary = {"failures": len(results),
                "observed": observed,
@@ -829,6 +1124,8 @@ def _finish(session, started: str, clock_started: float,
                 "summary": summary, "results": results,
                 "failure": failure,
                 "coherence_summary": dict(native)}
+    if compiler_investigation_full is not None:
+        evidence["compiler_investigation"] = compiler_investigation_full
     evidence_ref = _write_evidence(session, evidence, mode)
     summary["elapsed_seconds"] = round(time.monotonic() - clock_started, 3)
     if failure is None:
@@ -845,10 +1142,13 @@ def _finish(session, started: str, clock_started: float,
         stored_epoch = epoch
     else:
         stored_epoch = f"uncached:{mode}:{epoch}"
-    session.snapshot["diagnostic_epoch"] = {
+    epoch_record: dict[str, Any] = {
         "epoch": stored_epoch,
         "summary": dict(summary), "evidence_ref": evidence_ref,
         "at": utcnow()}
+    if compiler_investigation_capsule is not None:
+        epoch_record["compiler_investigation"] = compiler_investigation_capsule
+    session.snapshot["diagnostic_epoch"] = epoch_record
     _append_session_evidence(session, summary, results, mode, depth)
     try:
         session._save()
@@ -856,8 +1156,11 @@ def _finish(session, started: str, clock_started: float,
         summary["persisted"] = False
     else:
         summary["persisted"] = True
-    return {"summary": summary, "reused": False,
-            "evidence": evidence_ref}
+    out_val: dict[str, Any] = {"summary": summary, "reused": False,
+                               "evidence": evidence_ref}
+    if compiler_investigation_capsule is not None:
+        out_val["compiler_investigation"] = compiler_investigation_capsule
+    return out_val
 
 
 def _write_evidence(session, evidence: dict[str, Any],
@@ -919,14 +1222,19 @@ def terse(session) -> dict[str, Any]:
     """Compact diagnostic status for normal agent context."""
     stored = session.snapshot.get("diagnostic_epoch") or {}
     summary = dict(stored.get("summary") or {})
-    return {"diagnostic": {
+    diag_block: dict[str, Any] = {
         "failures": summary.get("failures", 0),
         "current": summary.get("current", 0),
         "captured": summary.get("captured", 0),
         "escalated": summary.get("escalated", 0),
         "blockers": summary.get("blockers", 0),
         "capsule_ids": summary.get("capsule_ids", []),
-        "evidence": stored.get("evidence_ref")}}
+        "evidence": stored.get("evidence_ref"),
+    }
+    comp = stored.get("compiler_investigation")
+    if isinstance(comp, dict):
+        diag_block["compiler_investigation"] = comp
+    return {"diagnostic": diag_block}
 
 
 def read_evidence(session) -> dict[str, Any]:

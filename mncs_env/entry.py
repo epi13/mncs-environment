@@ -359,13 +359,30 @@ def _ambient_diagnostics(session, definition: dict) -> dict | None:
         raise EntryError("diagnostics max_captures must be an integer between 1 and 32",
                          "definition-invalid", next="fix the definition diagnostics knob")
     outcome = diagnostics.ambient_pass(session, max_captures=budget)
-    summary = outcome["summary"]
-    if summary.get("failures", 0) == 0 and summary.get("blockers", 0) == 0:
+    summary = dict(outcome["summary"])
+    comp_inv = outcome.get("compiler_investigation")
+    if (summary.get("failures", 0) == 0 and summary.get("blockers", 0) == 0
+            and not isinstance(comp_inv, dict)):
         return incremental.quiet_owner_pass_result(
             "no-diagnostic-findings",
         )
-    return {"summary": summary, "reused": outcome["reused"],
-            "evidence": outcome.get("evidence")}
+    if (summary.get("failures", 0) == 0 and summary.get("blockers", 0) == 0
+            and isinstance(comp_inv, dict)):
+        summary = {
+            "failures": 0,
+            "blockers": 0,
+            "epoch_reused": bool(summary.get("epoch_reused", False)),
+            "elapsed_seconds": summary.get("elapsed_seconds", 0.0),
+        }
+    block: dict[str, Any] = {"summary": summary, "reused": outcome["reused"],
+                             "evidence": outcome.get("evidence")}
+    if isinstance(comp_inv, dict):
+        if (comp_inv.get("status") in ("refused", "provider_unavailable")
+                or comp_inv.get("freshness") == "invalidated"
+                or comp_inv.get("delivery_completeness") == "partial"):
+            summary["degraded"] = max(int(summary.get("degraded", 0)), 1)
+        block["compiler_investigation"] = comp_inv
+    return block
 
 
 def _ambient_semantics(session, definition: dict) -> dict | None:
