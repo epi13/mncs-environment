@@ -91,6 +91,22 @@ def _artifact_directory(session, *parts: str) -> Path:
     return path
 
 
+def _elaboration_cache_directory(session) -> Path | None:
+    """Return Environment's shared, bounded provider cache directory for
+    Language's module elaboration cache, keeping cached artifacts outside
+    any repository checkout."""
+    store = getattr(session, "store", None)
+    state_dir = getattr(store, "state_dir", None)
+    if state_dir is None:
+        return None
+    state_root = Path(state_dir).resolve()
+    path = (state_root / "provider-cache" / "module-elaboration").resolve()
+    if not path.is_relative_to(state_root):
+        return None
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return path
+
+
 def _workspace_root(session) -> Path | None:
     root = session.snapshot.get("workspace", {}).get("root")
     if not root:
@@ -1081,7 +1097,14 @@ def execute_suite(session, obligation: dict, measured: dict,
     inherited = os.environ.get("MNCS_LIBRARY_PATH", "")
     if inherited:
         libraries.append(inherited)
-    child_env = {"MNCS_LIBRARY_PATH": ":".join(libraries)} if libraries else None
+    env_overrides: dict[str, str] = {}
+    if libraries:
+        env_overrides["MNCS_LIBRARY_PATH"] = ":".join(libraries)
+    if "MNCS_MODULE_ELABORATION_CACHE_DIR" not in os.environ:
+        cache_dir = _elaboration_cache_directory(session)
+        if cache_dir is not None:
+            env_overrides["MNCS_MODULE_ELABORATION_CACHE_DIR"] = str(cache_dir)
+    child_env = env_overrides or None
     try:
         directory = _artifact_directory(session, "runs", run_tag)
         result = session.invoke(TEST_CAPABILITY, argv, cwd=str(directory),

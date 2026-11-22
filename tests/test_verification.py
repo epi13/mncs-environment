@@ -812,6 +812,23 @@ class ResolvedClosureV2Tests(VerificationFixture):
         third = verification_module.ambient_pass(self.session)
         self.assertEqual(third["summary"]["executed"], 1)
 
+    def test_execute_suite_passes_shared_state_elaboration_cache_dir(self):
+        import os
+        prior = os.environ.pop("MNCS_MODULE_ELABORATION_CACHE_DIR", None)
+        try:
+            verification_module.ambient_pass(self.session)
+            expected = str(
+                (self.session.store.state_dir / "provider-cache" / "module-elaboration").resolve()
+            )
+            self.assertEqual(
+                self.session.last_test_env.get("MNCS_MODULE_ELABORATION_CACHE_DIR"),
+                expected,
+            )
+            self.assertTrue(Path(expected).is_dir())
+        finally:
+            if prior is not None:
+                os.environ["MNCS_MODULE_ELABORATION_CACHE_DIR"] = prior
+
 
 if __name__ == "__main__":
     unittest.main()
