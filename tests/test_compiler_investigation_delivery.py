@@ -402,6 +402,60 @@ class CompilerInvestigationDeliveryTests(unittest.TestCase):
             self.assertEqual(reentry["session_id"], entry["session_id"])
             self.assertEqual((comp / ".provider_launches").read_text(), launches)
 
+
+    def test_healthy_budget_retains_executed_compiler_investigation(self):
+        with tempfile.TemporaryDirectory() as td:
+            state_dir = Path(td) / "state"
+            _, comp = _make_workspace(Path(td), include_ls=True)
+            definition_path = comp / ".mncs/environment.json"
+            definition = json.loads(definition_path.read_text())
+            definition["context_budget"] = {"healthy_bytes": 768}
+            definition_path.write_text(json.dumps(definition))
+
+            cache = comp / ".mncs/cache/selected-callable-diagnosis.json"
+            doc = json.loads(cache.read_text())
+            target = "mncs:0.2:function:mncs.test.parse_use_caller.v1::call_parse_use"
+            declaration = "mncs:0.2:function:mncs.compiler.decl.v1::parse_use"
+            artifact = "sha256:" + "a" * 64
+            doc["status"] = "executed"
+            doc["compiler_provenance"].update({
+                "selected_target": target,
+                "selected_specialization": "mncs.compiler.decl.v1::parse_use<4,32>",
+                "declaration_identity": declaration,
+                "last_completed_phase": "execution",
+                "failing_phase": None,
+                "artifact_id": artifact,
+            })
+            doc["diagnosis"] = {
+                "ok": True,
+                "error_code": 0,
+                "error_label": "ok",
+                "authoritative_declarations": {
+                    declaration: {"identity": declaration, "file": "src/compiler/decl.mncs",
+                                  "byte_span": [239243, 240406], "provider": "mncs-language-service"},
+                },
+            }
+            cache.write_text(json.dumps(doc))
+
+            entry = _run_env(state_dir, comp, "enter", "--consumer", "agent")
+            diagnostic = entry["diagnostic"]
+            self.assertTrue(diagnostic.get("budgeted"), diagnostic)
+            current = diagnostic["compiler_investigation"]
+            self.assertEqual(current["status"], "executed")
+            self.assertEqual(current["freshness"], "current")
+            self.assertEqual(current["provenance"]["target"], target)
+            self.assertEqual(current["provenance"]["compiler"], doc["compiler_provenance"]["compiler"])
+            self.assertEqual(current["provenance"]["revision"], _git(comp, "rev-parse", "HEAD")[:12])
+            self.assertEqual(current["provenance"]["last_completed_phase"], "execution")
+            full = json.loads((state_dir / diagnostic["evidence"]).read_text())
+            self.assertEqual(full["compiler_investigation"]["provenance"]["artifact_id"], artifact)
+            self.assertEqual(full["compiler_investigation"]["declaration"]["byte_span"], [239243, 240406])
+
+            launches = (comp / ".provider_launches").read_text()
+            reentry = _run_env(state_dir, comp, "enter", "--consumer", "agent")
+            self.assertTrue(reentry["diagnostic"]["compiler_investigation"]["reused"])
+            self.assertEqual((comp / ".provider_launches").read_text(), launches)
+
     def test_failing_compiler_diagnosis_provider_yields_explicit_partial_result(self):
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)

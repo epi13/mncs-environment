@@ -657,6 +657,8 @@ def _compact_compiler_investigation(
             "missing_rebuild_evidence_count": missing_count,
         },
     }
+    if isinstance(prov.get("artifact_id"), str):
+        capsule["provenance"]["artifact_id"] = prov["artifact_id"]
     if doc.get("invalidated_reasons"):
         capsule["invalidated_reasons"] = list(doc.get("invalidated_reasons") or [])[:6]
     if diag is not None:

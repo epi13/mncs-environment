@@ -66,9 +66,29 @@ def _retain_compiler_investigation(key: str, block: dict, handle: dict, limit: i
         ) if name in investigation
     }
     result = {**handle, "compiler_investigation": compact}
+    optional = ("diagnosis", "measurements", "declaration", "bootstrap", "providers")
     if len(canonical_bytes(result)) > limit:
-        return handle
-    for name in ("diagnosis", "measurements", "declaration", "bootstrap", "providers"):
+        # Successful investigations use the smaller healthy budget. Keep the
+        # producer, target, revision and phase even when the full provenance
+        # and ancillary status flags must move behind the evidence handle.
+        compact.clear()
+        compact.update({
+            field: investigation[field]
+            for field in ("status", "freshness", "reused")
+            if field in investigation
+        })
+        provenance = investigation.get("provenance")
+        if isinstance(provenance, dict):
+            compact["provenance"] = {
+                field: provenance[field] for field in (
+                    "compiler", "revision", "target", "last_completed_phase", "failing_phase",
+                ) if provenance.get(field) is not None
+            }
+        if len(canonical_bytes(result)) > limit:
+            return handle
+        optional = ("declaration", "measurements", "diagnosis", "delivery_completeness",
+                    "unavailable_providers", "invalidated_reasons", "bootstrap", "providers")
+    for name in optional:
         if name in investigation:
             compact[name] = investigation[name]
             if len(canonical_bytes(result)) > limit:
