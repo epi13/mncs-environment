@@ -539,5 +539,279 @@ class AmbientPassTests(VerificationFixture):
         self.assertEqual(terse["verification"]["deferred"], 12)
 
 
+class FakeV2Session(FakeSession):
+    """Fake session implementing exact `verification_coherence_v2.mncs` closure_admits."""
+
+    def __init__(self, workspace_root: Path, state_dir: Path):
+        super().__init__(workspace_root, state_dir)
+        self.snapshot["bindings"].insert(
+            0,
+            {"capability": verification_module.COHERENCE_CAPABILITY_V2,
+             "availability": {"status": "available"}},
+        )
+        self.mid_run_mutate_path: Path | None = None
+
+    def invoke(self, capability: str, argv: list[str], *,
+               cwd=None, timeout_seconds=None,
+               output_limit_bytes=None, env=None) -> dict:
+        if capability == verification_module.COHERENCE_CAPABILITY_V2:
+            return self._invoke_coherence_v2(argv, cwd, env)
+        return super().invoke(capability, argv, cwd=cwd,
+                              timeout_seconds=timeout_seconds,
+                              output_limit_bytes=output_limit_bytes, env=env)
+
+    def _invoke_test(self, argv: list[str], cwd, env) -> dict:
+        if self.mid_run_mutate_path is not None:
+            with open(self.mid_run_mutate_path, "a", encoding="utf-8") as handle:
+                handle.write("\n// mid-run library edit\n")
+            self.mid_run_mutate_path = None
+        return super()._invoke_test(argv, cwd, env)
+
+    @staticmethod
+    def _legacy_admits(ev: dict, cur: dict) -> bool:
+        keys = (
+            "definition_identity", "subject_identity", "subject_fingerprint",
+            "executor_identity", "invalidation_identity", "toolchain_identity",
+            "inventory_identity", "repository_revision", "repository_fingerprint",
+        )
+        return all(ev.get(k) == cur.get(k) for k in keys)
+
+    @staticmethod
+    def _closure_admits(ev: dict, cur: dict) -> bool:
+        if not (ev.get("closure_trusted") is True and cur.get("closure_trusted") is True):
+            return False
+        if not ev.get("closure_identity") or not cur.get("closure_identity"):
+            return False
+        keys = (
+            "closure_fileset", "closure_identity",
+            "definition_identity", "subject_identity", "subject_fingerprint",
+            "executor_identity", "invalidation_identity", "toolchain_identity",
+            "inventory_identity",
+        )
+        return all(ev.get(k) == cur.get(k) for k in keys)
+
+    def _invoke_coherence_v2(self, argv: list[str], cwd, env) -> dict:
+        workdir = Path(cwd)
+        request = json.loads((workdir / argv[0]).read_text(encoding="utf-8"))
+        assert request["schema_version"] == verification_module.COHERENCE_REQUEST_SCHEMA_V2
+        self.coherence_calls.append(request)
+        verdicts = []
+        queue = []
+        for item in request["obligations"]:
+            if not item["evidence_present"]:
+                if item["executor_kind"] == "native_first_class_test" and item["runnable_native"]:
+                    verdicts.append({"identity": item["identity"],
+                                     "status": "new_execution_required",
+                                     "reason": "no_evidence", "deferred": False,
+                                     "verdict_known": False, "verdict": "UNKNOWN",
+                                     "evidence_id": "",
+                                     "resolved_test_identities": ["t-case-1"],
+                                     "unresolved_count": 0})
+                    queue.append(item["identity"])
+                else:
+                    verdicts.append({"identity": item["identity"],
+                                     "status": "not_selected",
+                                     "reason": "executor_not_runnable",
+                                     "deferred": False, "verdict_known": False,
+                                     "verdict": "UNKNOWN", "evidence_id": "",
+                                     "resolved_test_identities": [],
+                                     "unresolved_count": 0})
+            else:
+                ev = item["evidence"]
+                cur = item["current"]
+                if self._legacy_admits(ev, cur):
+                    verdicts.append({"identity": item["identity"],
+                                     "status": "current",
+                                     "reason": "evidence_current",
+                                     "deferred": False, "verdict_known": True,
+                                     "verdict": ev["verdict"],
+                                     "evidence_id": ev["evidence_id"],
+                                     "resolved_test_identities": [],
+                                     "unresolved_count": 0})
+                elif self._closure_admits(ev, cur):
+                    verdicts.append({"identity": item["identity"],
+                                     "status": "current",
+                                     "reason": "closure_current",
+                                     "deferred": False, "verdict_known": True,
+                                     "verdict": ev["verdict"],
+                                     "evidence_id": ev["evidence_id"],
+                                     "resolved_test_identities": [],
+                                     "unresolved_count": 0})
+                else:
+                    verdicts.append({"identity": item["identity"],
+                                     "status": "stale",
+                                     "reason": "input_changed",
+                                     "deferred": False, "verdict_known": True,
+                                     "verdict": ev["verdict"],
+                                     "evidence_id": ev["evidence_id"],
+                                     "resolved_test_identities": ["t-case-1"],
+                                     "unresolved_count": 0})
+                    queue.append(item["identity"])
+        result = {
+            "schema_version": verification_module.COHERENCE_RESULT_SCHEMA,
+            "verdicts": verdicts,
+            "run_queue": queue[:request["max_executions"]],
+            "summary": {
+                "obligations": len(verdicts),
+                "current": sum(1 for v in verdicts if v["status"] == "current"),
+                "queued": len(queue), "deferred": 0, "failed": 0, "unknown": 0,
+                "contradictory": 0, "unsupported": 0, "unresolved": 0, "excluded": 0,
+            },
+        }
+        (workdir / argv[1]).write_text(json.dumps(result), encoding="utf-8")
+        return {"status": "ok", "stdout": "", "stderr": ""}
+
+
+class ResolvedClosureV2Tests(VerificationFixture):
+    def setUp(self):
+        super().setUp()
+        (self.repo / "src" / "lib").mkdir(parents=True)
+        (self.repo / "src" / "lib" / "shared.mncs").write_text(
+            "mncs 0.18;\nmodule lib.shared.v1;\nfn s() -> (r: u64) { return 1; }\n"
+        )
+        (self.repo / "src" / "lib" / "only_a.mncs").write_text(
+            "mncs 0.18;\nmodule lib.only_a.v1;\nuse lib.shared.v1 as shared;\nfn a() -> (r: u64) { return shared.s(); }\n"
+        )
+        (self.repo / "src" / "lib" / "only_b.mncs").write_text(
+            "mncs 0.18;\nmodule lib.only_b.v1;\nuse lib.shared.v1 as shared;\nfn b() -> (r: u64) { return shared.s(); }\n"
+        )
+        (self.repo / "tests" / "suite_a.mncs").write_text(
+            "mncs 0.18;\nmodule fixture.suite_a;\nuse lib.only_a.v1 as only_a;\n"
+        )
+        (self.repo / "tests" / "suite_b.mncs").write_text(
+            "mncs 0.18;\nmodule fixture.suite_b;\nuse lib.only_b.v1 as only_b;\n"
+        )
+        self.ob_a = {
+            "identity": "fixture.suite-a",
+            "title": "Suite A",
+            "lifecycle": "permanent",
+            "scope": "repository_canonical",
+            "invalidation_dependencies": ["tests/suite_a.mncs"],
+            "executor": {
+                "provider": "mncs-test", "kind": "native_first_class_test",
+                "entrypoint": "mncs-test run",
+                "source_paths": ["tests/suite_a.mncs"],
+                "library_paths": ["src"],
+                "declaration_identities": ["*"],
+                "verifier_identity": "mncs-test-runner/0.2.1",
+            },
+        }
+        self.ob_b = {
+            "identity": "fixture.suite-b",
+            "title": "Suite B",
+            "lifecycle": "permanent",
+            "scope": "repository_canonical",
+            "invalidation_dependencies": ["tests/suite_b.mncs"],
+            "executor": {
+                "provider": "mncs-test", "kind": "native_first_class_test",
+                "entrypoint": "mncs-test run",
+                "source_paths": ["tests/suite_b.mncs"],
+                "library_paths": ["src"],
+                "declaration_identities": ["*"],
+                "verifier_identity": "mncs-test-runner/0.2.1",
+            },
+        }
+        self.write_obligations([self.ob_a, self.ob_b])
+        git(self.repo, "add", ".")
+        git(self.repo, "-c", "user.name=Test", "-c", "user.email=t@invalid",
+            "commit", "-qm", "add two suites with shared import")
+        self.session = FakeV2Session(self.workspace, self.state)
+
+    def test_v2_suite_only_and_shared_import_selective_invalidation(self):
+        # 1. Cold pass runs both suites.
+        first = verification_module.ambient_pass(self.session)
+        self.assertEqual(first["summary"]["executed"], 2)
+        self.assertEqual(first["summary"]["current"], 2)
+
+        # 2. Unchanged re-entry reuses epoch with zero provider launches.
+        coherence_before = len(self.session.coherence_calls)
+        execs_before = len(self.session.executions)
+        second = verification_module.ambient_pass(self.session)
+        self.assertTrue(second["reused"])
+        self.assertEqual(len(self.session.coherence_calls), coherence_before)
+        self.assertEqual(len(self.session.executions), execs_before)
+
+        # 3. Suite-only comment edit reruns ONLY suite_a; suite_b stays closure_current.
+        (self.repo / "tests" / "suite_a.mncs").write_text(
+            "mncs 0.18;\nmodule fixture.suite_a;\nuse lib.only_a.v1 as only_a;\n// comment\n"
+        )
+        third = verification_module.ambient_pass(self.session)
+        self.assertFalse(third["reused"])
+        self.assertEqual(third["summary"]["executed"], 1)
+        self.assertEqual(third["summary"]["current"], 2)
+        by_id = {r["obligation"]: r for r in verification_module.read_evidence(self.session)["evidence"]["results"]}
+        self.assertTrue(by_id["fixture.suite-a"].get("ran"))
+        self.assertFalse(by_id["fixture.suite-b"].get("ran", False))
+        self.assertEqual(by_id["fixture.suite-b"]["reason"], "closure_current")
+
+        # 4. Private imported module edit (not listed in invalidation_dependencies)
+        #    reruns ONLY suite_a; suite_b stays closure_current.
+        (self.repo / "src" / "lib" / "only_a.mncs").write_text(
+            "mncs 0.18;\nmodule lib.only_a.v1;\nuse lib.shared.v1 as shared;\nfn a() -> (r: u64) { return shared.s() + 1; }\n"
+        )
+        fourth = verification_module.ambient_pass(self.session)
+        self.assertEqual(fourth["summary"]["executed"], 1)
+        by_id = {r["obligation"]: r for r in verification_module.read_evidence(self.session)["evidence"]["results"]}
+        self.assertTrue(by_id["fixture.suite-a"].get("ran"))
+        self.assertEqual(by_id["fixture.suite-b"]["reason"], "closure_current")
+
+        # 5. Shared transitive import edit reruns BOTH suites.
+        (self.repo / "src" / "lib" / "shared.mncs").write_text(
+            "mncs 0.18;\nmodule lib.shared.v1;\nfn s() -> (r: u64) { return 2; }\n"
+        )
+        fifth = verification_module.ambient_pass(self.session)
+        self.assertEqual(fifth["summary"]["executed"], 2)
+        self.assertEqual(fifth["summary"]["current"], 2)
+
+    def test_v2_untrusted_closure_falls_back_conservatively(self):
+        first = verification_module.ambient_pass(self.session)
+        self.assertEqual(first["summary"]["executed"], 2)
+        # Add an unresolved import to suite_b -> closure_trusted becomes False.
+        (self.repo / "tests" / "suite_b.mncs").write_text(
+            "mncs 0.18;\nmodule fixture.suite_b;\nuse lib.does_not_exist.v1;\n"
+        )
+        # suite_a still has trusted closure -> stays closure_current;
+        # suite_b has untrusted closure -> falls back to legacy dirty check -> stale!
+        second = verification_module.ambient_pass(self.session)
+        self.assertEqual(second["summary"]["executed"], 1)
+        req = self.session.coherence_calls[-1]
+        cur_by_id = {o["identity"]: o["current"] for o in req["obligations"]}
+        self.assertTrue(cur_by_id["fixture.suite-a"]["closure_trusted"])
+        self.assertFalse(cur_by_id["fixture.suite-b"]["closure_trusted"])
+        self.assertEqual(cur_by_id["fixture.suite-b"]["closure_identity"], "")
+
+    def test_v2_mid_run_external_library_mutation_rejected(self):
+        # Put an imported library outside `self.repo` via adapter_library_paths.
+        ext_lib = self.base / "ext-lib"
+        (ext_lib / "ext").mkdir(parents=True)
+        ext_mod = ext_lib / "ext" / "helper.mncs"
+        ext_mod.write_text("mncs 0.18;\nmodule ext.helper.v1;\n")
+        for b in self.session.snapshot["bindings"]:
+            if b["capability"] == verification_module.TEST_CAPABILITY:
+                b["provenance"] = {"adapter_library_paths": [str(ext_lib)]}
+        (self.repo / "tests" / "suite_a.mncs").write_text(
+            "mncs 0.18;\nmodule fixture.suite_a;\nuse ext.helper.v1;\n"
+        )
+        self.write_obligations([self.ob_a])
+        self.session.mid_run_mutate_path = ext_mod
+        outcome = verification_module.ambient_pass(self.session)
+        self.assertEqual(outcome["operation_status"], "retry")
+        self.assertEqual(outcome["summary"]["blockers"], 2)
+        ev = verification_module.read_evidence(self.session)["evidence"]
+        self.assertEqual(ev["results"][0]["detail"], "state-changed-during-execution")
+
+    def test_v2_toolchain_or_selection_change_invalidates_closure(self):
+        verification_module.ambient_pass(self.session)
+        # Change toolchain revision -> invalidates both suites even on clean repo.
+        self.session.snapshot["toolchain"]["revision"] = "rev-2"
+        second = verification_module.ambient_pass(self.session)
+        self.assertEqual(second["summary"]["executed"], 2)
+        # Change selected tests pattern on suite_a only -> invalidates only suite_a.
+        self.ob_a["executor"]["declaration_identities"] = ["t-case-1"]
+        self.write_obligations([self.ob_a, self.ob_b])
+        third = verification_module.ambient_pass(self.session)
+        self.assertEqual(third["summary"]["executed"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
