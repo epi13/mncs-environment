@@ -643,6 +643,7 @@ def _compact_compiler_investigation(
             "compiler": str(prov.get("compiler") or ""),
             "revision": str(prov.get("compiler_revision") or "")[:12],
             "target": prov.get("selected_target"),
+            "specialization": prov.get("selected_specialization"),
             "last_completed_phase": prov.get("last_completed_phase"),
             "failing_phase": prov.get("failing_phase"),
             "owner": owner_str,
@@ -672,9 +673,10 @@ def _compact_compiler_investigation(
                     line = ssa_op.get("source_line") if candidate_id == err_callable and ssa_op.get("source_line") else d_entry.get("line")
                     src_loc = f"{d_entry['file']}:{line}" if line else str(d_entry["file"])
                     break
+        code = diag.get("error_code", 0)
         capsule["diagnosis"] = {
             "ok": bool(diag.get("ok")),
-            "error_code": int(diag.get("error_code", 0)),
+            "error_code": code if type(code) is int else None,
             "error_label": diag.get("error_label"),
             "callable": err_callable,
             "ssa_op": ssa_op.get("kind"),
@@ -682,6 +684,20 @@ def _compact_compiler_investigation(
             "observed_nominal": obs_nom,
             "source": src_loc,
         }
+        request = diag.get("request_failure")
+        if isinstance(request, dict):
+            capsule["diagnosis"]["request_failure"] = {
+                key: request[key] for key in ("phase", "rejecting_component", "classification",
+                                             "supplied_capacity", "required_capacity")
+                if key in request
+            }
+        selected = prov.get("declaration_identity")
+        declaration = decls.get(selected) if isinstance(selected, str) else None
+        if isinstance(declaration, dict):
+            capsule["declaration"] = {
+                key: declaration[key] for key in ("identity", "file", "byte_span", "provider")
+                if key in declaration
+            }
     doc_findings = (providers.get("doctor") or {}).get("findings") if isinstance(providers.get("doctor"), dict) else []
     capsule["providers"] = {
         "language_service": (providers.get("language_service") or {}).get("status") if isinstance(providers.get("language_service"), dict) else "unknown",

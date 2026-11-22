@@ -345,6 +345,63 @@ class CompilerInvestigationDeliveryTests(unittest.TestCase):
             self.assertEqual(ci["delivery_completeness"], "partial")
             self.assertIn("mncs-language-service", ci["unavailable_providers"])
 
+    def test_budgeted_entry_replaces_historical_refusal_with_capacity_diagnosis(self):
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            state_dir = tmp / "state"
+            _, comp = _make_workspace(tmp, include_ls=True)
+            definition_path = comp / ".mncs/environment.json"
+            definition = json.loads(definition_path.read_text())
+            definition["context_budget"] = {"degraded_bytes": 1200}
+            definition_path.write_text(json.dumps(definition))
+            first = _run_env(state_dir, comp, "enter", "--consumer", "agent")
+            prior = first["diagnostic"]["compiler_investigation"]
+            self.assertEqual(prior["diagnosis"]["observed_nominal"],
+                             "mncs:0.2:finite-type:mncs.compiler.lexer.v1::TokenList")
+
+            target = "mncs:0.2:function:mncs.test.parse_use_caller.v1::call_parse_use"
+            declaration = "mncs:0.2:function:mncs.compiler.decl.v1::parse_use"
+            cache = comp / ".mncs/cache/selected-callable-diagnosis.json"
+            doc = json.loads(cache.read_text())
+            doc["compiler_provenance"].update({
+                "selected_target": target,
+                "selected_specialization": "mncs.compiler.decl.v1::parse_use<4,32>",
+                "declaration_identity": declaration,
+                "last_completed_phase": "none",
+                "failing_phase": "project_request_capacity",
+            })
+            capacity = {
+                "phase": "project_request_capacity",
+                "rejecting_component": "mncs-compiler:tools/test_native_decl_vm_emit.py",
+                "supplied_capacity": 1024,
+                "required_capacity": 1031,
+            }
+            doc["diagnosis"] = {
+                "ok": False, "error_code": None, "error_label": capacity["phase"],
+                "request_failure": capacity, "error_function_index": None,
+                "error_block": None, "error_instruction": None,
+                "authoritative_declarations": {
+                    declaration: {"identity": declaration, "file": "src/compiler/decl.mncs",
+                                  "byte_span": [239243, 240406], "provider": "mncs-language-service"},
+                },
+            }
+            cache.write_text(json.dumps(doc))
+            entry = _run_env(state_dir, comp, "enter", "--consumer", "agent")
+            diagnostic = entry["diagnostic"]
+            self.assertTrue(diagnostic.get("budgeted"), diagnostic)
+            current = diagnostic["compiler_investigation"]
+            self.assertEqual(current["provenance"]["target"], target)
+            self.assertEqual(current["provenance"]["revision"], _git(comp, "rev-parse", "HEAD")[:12])
+            self.assertEqual(current["diagnosis"]["request_failure"], capacity)
+            self.assertNotIn("error_function_index", current["diagnosis"])
+            self.assertNotIn("TokenList", json.dumps(current))
+            full = json.loads((state_dir / diagnostic["evidence"]).read_text())
+            self.assertEqual(full["compiler_investigation"]["declaration"]["byte_span"], [239243, 240406])
+            launches = (comp / ".provider_launches").read_text()
+            reentry = _run_env(state_dir, comp, "enter", "--consumer", "agent")
+            self.assertEqual(reentry["session_id"], entry["session_id"])
+            self.assertEqual((comp / ".provider_launches").read_text(), launches)
+
     def test_failing_compiler_diagnosis_provider_yields_explicit_partial_result(self):
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)

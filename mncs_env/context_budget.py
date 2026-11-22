@@ -51,6 +51,31 @@ def _compact_summaries(summary: dict[str, Any]) -> tuple[dict[str, Any], dict[st
     return compact, minimal
 
 
+def _retain_compiler_investigation(key: str, block: dict, handle: dict, limit: int) -> dict:
+    """Carry current invocation facts alongside the bounded expansion handle."""
+    investigation = block.get("compiler_investigation") if key == "diagnostic" else None
+    if not isinstance(investigation, dict):
+        return handle
+    full = {**handle, "compiler_investigation": investigation}
+    if len(canonical_bytes(full)) <= limit:
+        return full
+    compact = {
+        name: investigation[name] for name in (
+            "status", "freshness", "reused", "provenance", "delivery_completeness",
+            "unavailable_providers", "invalidated_reasons",
+        ) if name in investigation
+    }
+    result = {**handle, "compiler_investigation": compact}
+    if len(canonical_bytes(result)) > limit:
+        return handle
+    for name in ("diagnosis", "measurements", "declaration", "bootstrap", "providers"):
+        if name in investigation:
+            compact[name] = investigation[name]
+            if len(canonical_bytes(result)) > limit:
+                del compact[name]
+    return result
+
+
 def _native_materials(session, blocks: dict[str, dict[str, Any]], budget: dict):
     """Prepare byte measurements and equivalent handles for the native planner."""
     from .native_context_budget import MAX_NATIVE_INPUT_BYTES, MAX_NATIVE_INTEGER
@@ -102,10 +127,13 @@ def _native_materials(session, blocks: dict[str, dict[str, Any]], budget: dict):
         }
         if attention:
             full_handle["attention_count"] = attention_count
+        limit = budget["degraded_bytes" if degraded else "healthy_bytes"]
         minimal_handle = {
             **full_handle,
             "summary": minimal_summary,
         }
+        full_handle = _retain_compiler_investigation(key, block, full_handle, limit)
+        minimal_handle = _retain_compiler_investigation(key, block, minimal_handle, limit)
         full_handle_bytes = len(canonical_bytes(full_handle))
         minimal_handle_bytes = len(canonical_bytes(minimal_handle))
         values = (
@@ -134,7 +162,7 @@ def _native_materials(session, blocks: dict[str, dict[str, Any]], budget: dict):
             "full_handle_bytes": full_handle_bytes,
             "minimal_handle_bytes": minimal_handle_bytes,
             "attention_count": attention_count,
-            "limit": budget["degraded_bytes" if degraded else "healthy_bytes"],
+            "limit": limit,
         })
     return rows, materials
 
@@ -226,6 +254,7 @@ def _apply_python(session, context: dict, budget: dict,
             context[key]["attention_count"] = len(attention)
         if len(canonical_bytes(context[key])) > limit:
             context[key]["summary"] = {name: compact[name] for name in ("blockers", "status") if name in compact}
+        context[key] = _retain_compiler_investigation(key, block, context[key], limit)
         if len(canonical_bytes(context[key])) > limit:
             raise ValueError("context expansion handle exceeds its declared budget")
         total -= len(canonical_bytes(block)) - len(canonical_bytes(context[key]))
